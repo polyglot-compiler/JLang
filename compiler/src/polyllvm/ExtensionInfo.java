@@ -1,7 +1,5 @@
 package polyllvm;
 
-<<<<<<<HEAD
-
 import java.io.Reader;
 import java.util.Set;
 
@@ -23,24 +21,6 @@ import polyllvm.types.PolyLLVMTypeSystem_c;
 
 /**
  * Extension information for polyllvm extension.
-=======
-import polyglot.lex.Lexer;
-import polyllvm.parse.Lexer_c;
-import polyllvm.parse.Grm;
-import polyllvm.ast.*;
-import polyllvm.types.*;
-import polyglot.ast.*;
-import polyglot.frontend.*;
-import polyglot.main.*;
-import polyglot.types.*;
-import polyglot.util.*;
-
-import java.io.*;
-import java.util.Set;
-
-/**
- * Extension information for PolyLLVM extension.
->>>>>>> 92481ea628bc4270d08ad51a6decb42ec21671b3
  */
 public class ExtensionInfo extends polyglot.frontend.JLExtensionInfo {
     static {
@@ -51,20 +31,12 @@ public class ExtensionInfo extends polyglot.frontend.JLExtensionInfo {
 
     @Override
     public String defaultFileExtension() {
-<<<<<<< HEAD
         return "java";
-=======
-        return "pll";
->>>>>>> 92481ea628bc4270d08ad51a6decb42ec21671b3
     }
 
     @Override
     public String compilerName() {
-<<<<<<< HEAD
         return "polyllvmc";
-=======
-        return "PolyLLVMc";
->>>>>>> 92481ea628bc4270d08ad51a6decb42ec21671b3
     }
 
     @Override
@@ -76,21 +48,13 @@ public class ExtensionInfo extends polyglot.frontend.JLExtensionInfo {
 
     @Override
     public Set<String> keywords() {
-<<<<<<< HEAD
         return new Lexer_c(null).keywords();
-=======
-	return new Lexer_c(null).keywords();
->>>>>>> 92481ea628bc4270d08ad51a6decb42ec21671b3
     }
 
     @Override
     protected NodeFactory createNodeFactory() {
-<<<<<<< HEAD
         return new PolyLLVMNodeFactory_c(PolyLLVMLang_c.instance,
                                          new PolyLLVMExtFactory_c());
-=======
-        return new PolyLLVMNodeFactory_c(PolyLLVMLang_c.instance, new PolyLLVMExtFactory_c());
->>>>>>> 92481ea628bc4270d08ad51a6decb42ec21671b3
     }
 
     @Override
