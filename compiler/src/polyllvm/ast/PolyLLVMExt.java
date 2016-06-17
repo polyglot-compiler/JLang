@@ -30,6 +30,8 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
         return PolyLLVMLang_c.instance;
     }
 
+    <<<<<<<HEAD
+
     @Override
     public Node print(PrintVisitor v) {
         System.out.println("NODE: " + node());
@@ -57,4 +59,7 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
         return node();
     }
 
+    =======
+    // TODO:  Override operation methods for overridden AST operations.
+    >>>>>>>92481ea 628 bc4270d08ad51a6decb42ec21671b3
 }

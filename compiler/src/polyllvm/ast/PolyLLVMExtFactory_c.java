@@ -122,5 +122,4 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     protected Ext extCallImpl() {
         return new PolyLLVMCallExt();
     }
-
 }
