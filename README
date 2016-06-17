@@ -1,0 +1,11 @@
+This directory contains a skeleton for a Polyglot extension.  Run
+the script <polyglot>/bin/newext.sh to create a new extension us-
+ing this skeleton.
+
+The skeleton includes its own build.xml file.  Building the gen-
+erated extension requires that Polyglot be installed and in your
+classpath.  Adjust the classpath to include polyglot.jar, ja-
+va_cup.jar, and JFlex.jar or add these jar files to the new
+<ext>/lib directory.
+
+

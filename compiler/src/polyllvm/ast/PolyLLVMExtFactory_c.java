@@ -1,0 +1,126 @@
+package polyllvm.ast;
+
+import polyglot.ast.Ext;
+import polyglot.ast.ExtFactory;
+import polyllvm.extension.PolyLLVMAssignExt;
+import polyllvm.extension.PolyLLVMBinaryExt;
+import polyllvm.extension.PolyLLVMBlockExt;
+import polyllvm.extension.PolyLLVMCallExt;
+import polyllvm.extension.PolyLLVMCanonicalTypeNodeExt;
+import polyllvm.extension.PolyLLVMClassBodyExt;
+import polyllvm.extension.PolyLLVMClassDeclExt;
+import polyllvm.extension.PolyLLVMEvalExt;
+import polyllvm.extension.PolyLLVMFormalExt;
+import polyllvm.extension.PolyLLVMIntLitExt;
+import polyllvm.extension.PolyLLVMLocalDeclExt;
+import polyllvm.extension.PolyLLVMLocalExt;
+import polyllvm.extension.PolyLLVMMethodDeclExt;
+import polyllvm.extension.PolyLLVMReturnExt;
+import polyllvm.extension.PolyLLVMSourceFileExt;
+import polyllvm.extension.PolyLLVMStringLitExt;
+import polyllvm.extension.PolyLLVMTypeNodeExt;
+
+public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
+
+    public PolyLLVMExtFactory_c() {
+        super();
+    }
+
+    public PolyLLVMExtFactory_c(ExtFactory nextExtFactory) {
+        super(nextExtFactory);
+    }
+
+    @Override
+    protected Ext extNodeImpl() {
+        return new PolyLLVMExt();
+    }
+
+    // TODO: Override factory methods for new extension nodes in the current
+    // extension.
+
+    @Override
+    protected Ext extStringLitImpl() {
+        return new PolyLLVMStringLitExt();
+    }
+
+    @Override
+    protected Ext extIntLitImpl() {
+        return new PolyLLVMIntLitExt();
+    }
+
+    @Override
+    protected Ext extLocalDeclImpl() {
+        return new PolyLLVMLocalDeclExt();
+    }
+
+    @Override
+    protected Ext extAssignImpl() {
+        return new PolyLLVMAssignExt();
+    }
+
+    @Override
+    protected Ext extBinaryImpl() {
+        return new PolyLLVMBinaryExt();
+    }
+
+    @Override
+    protected Ext extLocalImpl() {
+        return new PolyLLVMLocalExt();
+    }
+
+    @Override
+    protected Ext extBlockImpl() {
+        return new PolyLLVMBlockExt();
+    }
+
+    @Override
+    protected Ext extEvalImpl() {
+        return new PolyLLVMEvalExt();
+    }
+
+    @Override
+    protected Ext extMethodDeclImpl() {
+        return new PolyLLVMMethodDeclExt();
+    }
+
+    @Override
+    protected Ext extTypeNodeImpl() {
+        return new PolyLLVMTypeNodeExt();
+    }
+
+    @Override
+    protected Ext extCanonicalTypeNodeImpl() {
+        return new PolyLLVMCanonicalTypeNodeExt();
+    }
+
+    @Override
+    protected Ext extFormalImpl() {
+        return new PolyLLVMFormalExt();
+    }
+
+    @Override
+    protected Ext extReturnImpl() {
+        return new PolyLLVMReturnExt();
+    }
+
+    @Override
+    protected Ext extClassBodyImpl() {
+        return new PolyLLVMClassBodyExt();
+    }
+
+    @Override
+    protected Ext extSourceFileImpl() {
+        return new PolyLLVMSourceFileExt();
+    }
+
+    @Override
+    protected Ext extClassDeclImpl() {
+        return new PolyLLVMClassDeclExt();
+    }
+
+    @Override
+    protected Ext extCallImpl() {
+        return new PolyLLVMCallExt();
+    }
+
+}

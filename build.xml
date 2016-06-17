@@ -1,0 +1,444 @@
+<project name="polyllvm" default="compile-all" basedir=".">
+    <description>
+      PolyLLVM build file
+    </description>
+
+
+    <!-- ****************************************
+       set global properties for this build
+       ****************************************  -->
+
+    <!-- extension package name -->
+    <property name="package.dir" value="polyllvm"/>
+
+    <!-- extension language name -->
+    <property name="name" value="polyllvm"/>
+
+    <!-- extension compiler script name -->
+    <property name="compiler.name" value="${name}c"/>
+
+    <!-- extension interpreter script name -->
+    <property name="interp.sh.name" value="${name}"/>
+
+    <!-- jar file names -->
+    <property name="runtime.jar.name" value="${name}-rt.jar"/>
+    <property name="compiler.jar.name" value="${name}.jar"/>
+
+    <!-- source directory -->
+    <property name="compiler.src" location="${basedir}/compiler/src" />
+
+    <!-- directory for class file targets -->
+    <property name="compiler.classes" location="${basedir}/compiler/classes" />
+
+    <!-- binaries directory -->
+    <property name="bin.dir" location="${basedir}/bin" />
+
+    <!-- directory for shared libraries -->
+    <property name="lib.dir" location="${basedir}/lib" />
+
+    <!-- runtime source directory -->
+    <property name="runtime.src" location="${basedir}/runtime/src" />
+
+    <!-- directory for class file targets of runtime source code -->
+    <property name="runtime.classes" location="${basedir}/runtime/classes" />
+
+    <!-- distribution directory -->
+    <property name="dist" location="${basedir}/dist" />
+
+    <property name="compiler.sh" location="${bin.dir}/${compiler.name}"/>
+    <property name="compiler.bat" location="${bin.dir}/${compiler.name}.bat"/>
+    <property name="interp.sh" location="${bin.dir}/${interp.sh.name}"/>
+    <property name="compiler.jar" location="${lib.dir}/${compiler.jar.name}"/>
+    <property name="runtime.jar" location="${lib.dir}/${runtime.jar.name}"/>
+
+    <!-- set the prefix for accessing environment variables -->
+    <property environment="env" />
+
+    <!-- the standard classpath -->
+    <path id="standard.classpath">
+        <!-- our generated classes -->
+        <pathelement location="${compiler.classes}" />
+        <pathelement location="${runtime.classes}" />
+
+        <!-- the java classpath -->
+        <pathelement path="${java.class.path}" />
+
+        <!-- jar files in the lib directory, excluding generated jars -->
+        <fileset dir="${lib.dir}">
+            <include name="*.jar" />
+            <exclude name="${name}.jar" />
+            <exclude name="${name}-rt.jar" />
+        </fileset>
+    </path>
+
+
+    <!-- ****************************************
+       Clean up targets and other admin tasks
+       ****************************************  -->
+    <target name="clean" description="clean up">
+        <!-- Delete the ${compiler.classes} and ${dist} directory trees -->
+        <delete dir="${compiler.classes}" />
+        <delete dir="${runtime.classes}" />
+        <delete dir="${dist}" />
+        <delete includeemptydirs="true">
+            <fileset dir="${basedir}/tests">
+                <include name="**/*.class" />
+                <include name="**/*~" />
+                <include name="pthOutput*/**/*" />
+                <include name="pthOutput*" />
+            </fileset>
+        </delete>
+    </target>
+
+    <target name="clobber" depends="clean" description="removes all generated files">
+        <delete includeemptydirs="true">
+            <fileset dir="${compiler.src}">
+                <include name="**/Grm.java" />
+                <include name="**/sym.java" />
+                <include name="**/Lexer_c.java" />
+                <include name="**/*_ppg.cup" />
+            </fileset>
+            <fileset dir="${lib.dir}">
+                <include name="${compiler.jar.name}" />
+                <include name="${runtime.jar.name}" />
+            </fileset>
+        </delete>
+        <delete file="${interp.sh}" />
+        <delete file="${compiler.sh}" />
+        <delete file="${compiler.bat}" />
+    </target>
+
+    <!-- initialize the build -->
+    <target name="init">
+        <!-- Create the time stamp -->
+        <tstamp />
+        <!-- Create the build directory structures used by compile -->
+        <mkdir dir="${compiler.classes}" />
+        <mkdir dir="${runtime.classes}" />
+        <!-- Check if runtime exists -->
+        <condition property="has-runtime">
+            <available file="${runtime.src}" type="dir"/>
+        </condition>
+    </target>
+
+
+    <!-- ****************************************
+       Configuration
+       ****************************************  -->
+    <target name="configure" description="Configure the extension">
+        <antcall target="check-classpath" />
+    </target>
+
+    <target name="check-classpath" description="Check the classpath contains the appropriate directories/jars">
+        <available classname="polyglot.main.Main"
+	           classpathref="standard.classpath"
+	           property="cp_existence.polyglot"/>
+        <available classname="java_cup.Main"
+	           classpathref="standard.classpath"
+	           property="cp_existence.java_cup"/>
+        <available classname="jflex.Main"
+	           classpathref="standard.classpath"
+	           property="cp_existence.jflex"/>
+
+        <fail unless="cp_existence.polyglot"
+	      message="The polyglot classes must be on the classpath. Try adding polyglot.jar to the classpath."/>
+        <fail unless="cp_existence.java_cup"
+	      message="The java_cup classes must be on the classpath. Try adding java_cup.jar to the classpath."/>
+        <fail unless="cp_existence.jflex"
+	      message="The jflex classes must be on the classpath. Try adding jflex.jar to the classpath."/>
+    </target>
+
+    <!-- ****************************************
+       targets
+       ****************************************  -->
+
+    <target name="compile-all" depends="compiler,runtime" description="Build the compiler and libraries"/>
+
+    <target name="compiler" depends="init,configure">
+        <antcall target="standard-ext">
+            <param name="ext" value="${name}" />
+            <param name="ext.pkg" value="${package.dir}" />
+            <param name="parser.type" value="ppg" />
+        </antcall>
+    </target>
+
+    <target name="runtime" depends="init,configure" description="compile the runtime" if="has-runtime">
+        <mkdir dir="${runtime.classes}" />
+        <javac source="1.7" target="1.7" srcdir="${runtime.src}" destdir="${runtime.classes}" debug="on" includes="**" includeantruntime="false">
+            <classpath>
+                <path refid="standard.classpath" />
+            </classpath>
+        </javac>
+    </target>
+
+
+    <!-- ****************************************
+       Javadoc and distribution targets
+       ****************************************  -->
+
+    <target name="jar" depends="compile-all">
+        <jar jarfile="${compiler.jar}" basedir="${compiler.classes}" includes="${package.dir}/**" />
+        <jar jarfile="${runtime.jar}" basedir="${runtime.classes}" includes="${package.dir}/**" />
+    </target>
+
+
+    <target name="javadoc" depends="compiler">
+        <javadoc sourcepath="${compiler.src}" destdir="${basedir}/doc/${name}-api" defaultexcludes="yes" classpathref="standard.classpath">
+            <packageset dir="${compiler.src}" defaultexcludes="yes">
+                <include name="**" />
+            </packageset>
+        </javadoc>
+        <javadoc sourcepath="${runtime.src}" destdir="${basedir}/doc/${name}-runtime-api" defaultexcludes="yes" classpathref="standard.classpath">
+          <packageset dir="${runtime.src}" defaultexcludes="yes">
+                <include name="**" />
+            </packageset>
+        </javadoc>
+    </target>
+
+    <!-- generate the distribution -->
+    <target name="dist" description="generate the distribution">
+        <!-- Create the distribution directory -->
+        <mkdir dir="${dist}" />
+
+        <!-- Clobber everything so we're in a clean state -->
+        <antcall target="clobber" />
+
+        <!-- Copy src files over. -->
+        <copy todir="${dist}" includeEmptyDirs="no">
+            <fileset dir="${basedir}" defaultexcludes="yes">
+                <include name="compiler/src/**" />
+                <include name="runtime/src/**" />
+
+                <include name="tests/*" />
+                <include name="README" />
+                <include name="LICENSE" />
+                <include name="CHANGES" />
+                <include name="build.xml" />
+            </fileset>
+        </copy>
+
+        <!-- Create the Javadoc, and copy the documentation -->
+        <antcall target="javadoc" />
+        <copy todir="${dist}" includeEmptyDirs="no">
+            <fileset dir="${basedir}" defaultexcludes="yes">
+                <include name="doc/*api/**" />
+                <include name="doc/*.html" />
+                <include name="doc/*.css" />
+            </fileset>
+        </copy>
+
+        <!-- Create the jar files and copy all the jars over -->
+        <antcall target="jar" />
+        <copy todir="${dist}" includeEmptyDirs="no">
+            <fileset dir="${basedir}" defaultexcludes="yes">
+                <include name="lib/*.jar" />
+            </fileset>
+        </copy>
+
+    </target>
+
+
+
+    <!-- ****************************************
+       "Reusable" targets
+       ****************************************  -->
+
+    <!-- compile a single extension.
+       @param ${ext}         the name of the extension
+       @param ${ext.pkg}     the package directory of the extension
+    -->
+    <target name="compile-ext">
+        <javac source="1.7" target="1.7" srcdir="${compiler.src}" destdir="${compiler.classes}" debug="on" includes="${ext.pkg}/**" includeantruntime="false">
+            <classpath refid="standard.classpath" />
+        </javac>
+    </target>
+
+    <!-- Build a PPG parser based on parameters supplied to the target.
+       @param parser.dir    The directory, relative to $basedir, in which
+                            the PPG file is located.
+       @param ppg.file      The name of the PPG file.
+       @param cup.file      The name of the CUP file to output.
+       @param parser.class  The name to be passed to CUP with -parser.
+       @param symbol.class  The name to be passed to CUP with -symbols.
+   -->
+    <target name="ppg-parser" depends="ppg-parser-deps" unless="ppg.parser.up-to-date">
+        <java classname="ppg.PPG" fork="true" dir="${parser.dir}" failonerror="true">
+            <classpath refid="standard.classpath" />
+            <arg value="${ppg.file}" />
+            <arg value="-o" />
+            <arg value="${parser.dir}/${cup.file}" />
+        </java>
+        <antcall target="cup-parser" />
+    </target>
+
+    <!-- Set the property ppg.parser.up-to-date if the parser is in fact
+       up to date.  Called by the ppg-parser target.
+   -->
+    <target name="ppg-parser-deps">
+        <dependset>
+            <srcfileset dir="${parser.dir}" includes="${ppg.file}" />
+            <targetfileset dir="${parser.dir}">
+                <include name="${cup.file}" />
+                <include name="${parser.class}.java" />
+                <include name="${symbol.class}.java" />
+            </targetfileset>
+        </dependset>
+        <condition property="ppg.parser.up-to-date">
+            <and>
+                <available file="${parser.dir}/${cup.file}" />
+                <available file="${parser.dir}/${parser.class}.java" />
+                <available file="${parser.dir}/${symbol.class}.java" />
+            </and>
+        </condition>
+    </target>
+
+    <!-- Build a CUP parser based on parameters supplied to the target.
+       @param parser.dir    The directory, relative to $basedir, in which
+                            the CUP file is located.
+       @param parser.class  The name to be passed to CUP with -parser.
+       @param symbol.class  The name to be passed to CUP with -symbols.
+       @param cup.file      The name of the CUP file.
+   -->
+    <target name="cup-parser" depends="cup-parser-using-jar" unless="cup.parser.up-to-date">
+    </target>
+
+    <!-- The following target builds a cup parser using the version of
+       cup already sitting in the java_cup.jar file. This is needed to
+       allow the building of cup to be bootstrapped. -->
+    <target name="cup-parser-using-jar" depends="cup-parser-deps" unless="cup.parser.up-to-date">
+        <java classname="java_cup.Main" fork="true" dir="${parser.dir}" failonerror="true">
+            <classpath refid="standard.classpath" />
+            <arg value="-nopositions" />
+            <arg value="-parser"/>
+            <arg value="${parser.class}"/>
+            <arg value="-symbols"/>
+            <arg value="${symbol.class}"/>
+            <arg value="${cup.file}"/>
+        </java>
+    </target>
+
+    <!-- Set the property cup.parser.up-to-date if the parser is in fact
+       up to date.  Called by the cup-parser-using-jar target.
+   -->
+    <target name="cup-parser-deps">
+        <dependset>
+            <srcfileset dir="${parser.dir}" includes="${cup.file}" />
+            <targetfileset dir="${parser.dir}">
+                <include name="${parser.class}.java" />
+                <include name="${symbol.class}.java" />
+            </targetfileset>
+        </dependset>
+        <condition property="cup.parser.up-to-date">
+            <and>
+                <available file="${parser.dir}/${parser.class}.java" />
+                <available file="${parser.dir}/${symbol.class}.java" />
+            </and>
+        </condition>
+    </target>
+
+    <!-- Build a JFlex lexer based on parameters supplied to the target.
+       @param lexer.dir     The directory, relative to $basedir, in which
+                            the JFlex file is located.
+       @param lexer.class   The name of the lexer as declared with %class
+                            in the JFlex file.
+       @param jflex.file    The name of the JFlex file.
+   -->
+    <target name="jflex-lexer" depends="jflex-lexer-deps" unless="jflex.lexer.up-to-date">
+        <java classname="jflex.Main" fork="true" dir="${lexer.dir}" failonerror="true">
+            <classpath refid="standard.classpath" />
+            <arg value="--noinputstreamctor" />
+            <arg value="${jflex.file}" />
+        </java>
+    </target>
+
+    <!-- Set the property jflex.lexer.up-to-date if the lexer is in fact
+       up to date.  Called by the jflex-lexer target.
+   -->
+    <target name="jflex-lexer-deps">
+        <dependset>
+            <srcfileset dir="${lexer.dir}" includes="${jflex.file}" />
+            <targetfileset dir="${lexer.dir}" includes="${lexer.class}.java" />
+        </dependset>
+        <available property="jflex.lexer.up-to-date" file="${lexer.dir}/${lexer.class}.java" />
+    </target>
+
+
+    <!-- Build the quasi-quote parser and lexer for an extension, assuming the
+       standard names and places.
+       @param ext    The extension name.
+   -->
+    <target name="standard-ext-qq">
+        <antcall target="jflex-lexer">
+          <param name="lexer.dir" value="${compiler.src}/${ext.pkg}/qq" />
+            <param name="lexer.class" value="Lexer_c" />
+            <param name="jflex.file" value="qq.flex" />
+        </antcall>
+        <antcall target="ppg-parser">
+          <param name="parser.dir" value="${compiler.src}/${ext.pkg}/qq" />
+            <param name="ppg.file" value="qq.ppg" />
+            <param name="cup.file" value="qq_ppg.cup" />
+            <param name="parser.class" value="Grm" />
+            <param name="symbol.class" value="sym" />
+        </antcall>
+    </target>
+
+    <!-- Build the PPG parser for an extension, assuming that
+       it is located in the standard place and named
+       the standard name that we usually use.
+       @param ext    The extension name.
+   -->
+    <target name="standard-ext-ppg-parser">
+        <antcall target="ppg-parser">
+          <param name="parser.dir" value="${compiler.src}/${ext.pkg}/parse" />
+            <param name="ppg.file" value="${ext}.ppg" />
+            <param name="cup.file" value="${ext}_ppg.cup" />
+            <param name="parser.class" value="Grm" />
+            <param name="symbol.class" value="sym" />
+        </antcall>
+    </target>
+
+    <!-- Build the CUP parser for an extension, assuming that
+       it is located in the standard place and named
+       the standard name that we usually use.
+       @param ext    The extension name.
+   -->
+    <target name="standard-ext-cup-parser">
+        <antcall target="cup-parser">
+          <param name="parser.dir" value="${compiler.src}/${ext.pkg}/parse" />
+            <param name="cup.file" value="${ext}.cup" />
+            <param name="parser.class" value="Grm" />
+            <param name="symbol.class" value="sym" />
+        </antcall>
+    </target>
+
+    <!-- Build the lexer for an extension, assuming that
+       they it is located in the standard place and named
+       the standard name that we usually use.
+       @param ext    The extension name.
+   -->
+    <target name="standard-ext-lexer">
+        <antcall target="jflex-lexer">
+          <param name="lexer.dir" value="${compiler.src}/${ext.pkg}/parse" />
+            <param name="lexer.class" value="Lexer_c" />
+            <param name="jflex.file" value="${ext}.flex" />
+        </antcall>
+    </target>
+
+    <target name="standard-ext-qq-dep" if="has-qq">
+        <antcall target="standard-ext-qq" />
+    </target>
+
+    <!-- Build a standard extension
+       @param ext          The name of the extension.
+       @param parser.type  Either "cup" or "ppg".
+       @param has-qq       Pass in iff the extension has a qq package.
+   -->
+    <target name="standard-ext">
+        <antcall target="standard-ext-lexer" />
+        <antcall target="standard-ext-${parser.type}-parser" />
+        <antcall target="standard-ext-qq-dep" />
+        <antcall target="compile-ext" />
+    </target>
+
+</project>
+
