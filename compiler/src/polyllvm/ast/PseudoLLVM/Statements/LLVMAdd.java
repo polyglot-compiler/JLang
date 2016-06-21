@@ -4,7 +4,7 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
 
-public interface LLVMAdd extends LLVMInstruction {
+public interface LLVMAdd extends LLVMBinaryOperandInstruction {
     /**
      * Return a new LLVMAdd with the result variable {@code o}
      */
@@ -19,17 +19,14 @@ public interface LLVMAdd extends LLVMInstruction {
     /**
      * Return a new LLVMAdd with the new left operand being {@code l}
      */
+    @Override
     LLVMAdd left(LLVMOperand l);
 
     /**
      * Return a new LLVMAdd with the new right operand being {@code r}
      */
+    @Override
     LLVMAdd right(LLVMOperand r);
-
-    /**
-     * @return The result variable of this instruction
-     */
-    LLVMVariable result();
 
     /**
      * @return The int type of this instruction
@@ -39,10 +36,12 @@ public interface LLVMAdd extends LLVMInstruction {
     /**
      * @return The left operand of this instruction
      */
+    @Override
     LLVMOperand left();
 
     /**
      * @return The right operand of this instruction
      */
+    @Override
     LLVMOperand right();
 }

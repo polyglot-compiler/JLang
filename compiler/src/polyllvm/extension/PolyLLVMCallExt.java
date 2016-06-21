@@ -16,6 +16,7 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.util.PolyLLVMMangler;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
@@ -25,10 +26,13 @@ public class PolyLLVMCallExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Call n = (Call) node();
-        System.out.println(n.methodInstance());
+
         PolyLLVMNodeFactory nf = v.nodeFactory();
         LLVMVariable func = nf.LLVMVariable(Position.compilerGenerated(),
-                                            n.name(),
+                                            PolyLLVMMangler.mangleMethodName(n.methodInstance()
+                                                                              .container()
+                                                                              .toString(),
+                                                                             n.name()),
                                             VarType.GLOBAL,
                                             null);
         List<Pair<LLVMTypeNode, LLVMOperand>> arguments = new ArrayList<>();

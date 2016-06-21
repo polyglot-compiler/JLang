@@ -14,4 +14,9 @@ public interface LLVMInstruction extends LLVMNode {
      */
     LLVMInstruction result(LLVMVariable o);
 
+    /**
+     * @return The result variable of this instruction
+     */
+    LLVMVariable result();
+
 }

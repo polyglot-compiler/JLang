@@ -15,8 +15,9 @@ import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.LLVMArgDecl;
 import polyllvm.ast.PseudoLLVM.LLVMBlock;
-import polyllvm.ast.PseudoLLVM.LLVMFunction;
+import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.AddVoidReturnVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 
@@ -28,9 +29,6 @@ public class PolyLLVMMethodDeclExt extends PolyLLVMExt {
         MethodDecl n = (MethodDecl) node();
         MethodInstance mi = n.methodInstance();
         PolyLLVMNodeFactory nf = v.nodeFactory();
-        if (mi.flags().contains(Flags.NATIVE)) {
-            return super.translatePseudoLLVM(v);
-        }
         if (mi.flags().contains(Flags.STATIC)) {
             List<LLVMArgDecl> args = new ArrayList<>();
             for (Formal t : n.formals()) {
@@ -38,19 +36,26 @@ public class PolyLLVMMethodDeclExt extends PolyLLVMExt {
             }
             LLVMTypeNode retType =
                     (LLVMTypeNode) v.getTranslation(n.returnType());
-            LLVMBlock code = (LLVMBlock) v.getTranslation(n.body());
-            System.out.println("Current Class name: "
-                    + v.getCurrentClass().name());
-            String name;
-            if (n.name().equals("main"))
-                name = n.name();
-            else name = "_" + v.getCurrentClass().name() + "_" + n.name();
-            LLVMFunction f = nf.LLVMFunction(Position.compilerGenerated(),
-                                             name,
-                                             args,
-                                             retType,
-                                             code);
+            String name =
+                    PolyLLVMMangler.mangleMethodName(v.getCurrentClass().name(),
+                                                     n.name());
+            LLVMNode f;
+            if (mi.flags().contains(Flags.NATIVE)) {
+                f = nf.LLVMFunctionDeclaration(Position.compilerGenerated(),
+                                               name,
+                                               args,
+                                               retType);
+            }
+            else {
+                LLVMBlock code = (LLVMBlock) v.getTranslation(n.body());
+                f = nf.LLVMFunction(Position.compilerGenerated(),
+                                    name,
+                                    args,
+                                    retType,
+                                    code);
+            }
             v.addTranslation(node(), f);
+
         }
         else {
             throw new InternalCompilerError("Cannot compile non-static methods");

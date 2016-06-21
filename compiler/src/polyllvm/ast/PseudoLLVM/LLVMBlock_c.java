@@ -8,7 +8,9 @@ import polyglot.util.CodeWriter;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.PrettyPrinter;
+import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
 
 public class LLVMBlock_c extends LLVMNode_c implements LLVMBlock {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -43,6 +45,11 @@ public class LLVMBlock_c extends LLVMNode_c implements LLVMBlock {
     }
 
     @Override
+    public LLVMSeq instructions(PolyLLVMNodeFactory nf) {
+        return nf.LLVMSeq(Position.compilerGenerated(), instructions);
+    }
+
+    @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
         for (int i = 0; i < instructions.size() - 1; i++) {
             print(instructions.get(i), w, pp);
@@ -69,4 +76,5 @@ public class LLVMBlock_c extends LLVMNode_c implements LLVMBlock {
         if (s.length() > 0) s.deleteCharAt(s.length() - 1);
         return s.toString();
     }
+
 }

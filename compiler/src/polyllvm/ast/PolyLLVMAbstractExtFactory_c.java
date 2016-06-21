@@ -68,6 +68,30 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     }
 
     @Override
+    public final Ext extLLVMBinaryOperandInstruction() {
+        Ext e = extLLVMBinaryOperandInstructionImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMBinaryOperandInstruction();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMBinaryOperandInstruction(e);
+    }
+
+    protected Ext extLLVMBinaryOperandInstructionImpl() {
+        return extLLVMInstructionImpl();
+    }
+
+    protected Ext postExtLLVMBinaryOperandInstruction(Ext e) {
+        return postExtLLVMInstruction(e);
+    }
+
+    @Override
     public final Ext extLLVMAdd() {
         Ext e = extLLVMAddImpl();
 
@@ -84,11 +108,11 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     }
 
     protected Ext extLLVMAddImpl() {
-        return extLLVMInstructionImpl();
+        return extLLVMBinaryOperandInstructionImpl();
     }
 
     protected Ext postExtLLVMAdd(Ext e) {
-        return postExtLLVMInstruction(e);
+        return postExtLLVMBinaryOperandInstruction(e);
     }
 
     @Override
@@ -330,4 +354,255 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     protected Ext postExtLLVMCall(Ext e) {
         return postExtLLVMInstruction(e);
     }
+
+    @Override
+    public Ext extLLVMFunctionDeclaration() {
+        Ext e = extLLVMFunctionDeclarationImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMFunctionDeclaration();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMFunctionDeclaration(e);
+
+    }
+
+    protected Ext extLLVMFunctionDeclarationImpl() {
+        return extLLVMNodeImpl();
+    }
+
+    protected Ext postExtLLVMFunctionDeclaration(Ext e) {
+        return postExtLLVMNode(e);
+    }
+
+    @Override
+    public Ext extLLVMLabel() {
+        Ext e = extLLVMLabelImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMLabel();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMLabel(e);
+
+    }
+
+    protected Ext extLLVMLabelImpl() {
+        return extLLVMExprImpl();
+    }
+
+    protected Ext postExtLLVMLabel(Ext e) {
+        return postExtLLVMExpr(e);
+    }
+
+    @Override
+    public Ext extLLVMExpr() {
+        Ext e = extLLVMExprImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMExpr();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMExpr(e);
+
+    }
+
+    protected Ext extLLVMExprImpl() {
+        return extLLVMNodeImpl();
+    }
+
+    protected Ext postExtLLVMExpr(Ext e) {
+        return postExtLLVMNode(e);
+    }
+
+    @Override
+    public Ext extLLVMTypedOperand() {
+        Ext e = extLLVMTypedOperandImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMTypedOperand();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMTypedOperand(e);
+
+    }
+
+    protected Ext extLLVMTypedOperandImpl() {
+        return extLLVMOperandImpl();
+    }
+
+    protected Ext postExtLLVMTypedOperand(Ext e) {
+        return postExtLLVMOperand(e);
+    }
+
+    @Override
+    public Ext extLLVMOperand() {
+        Ext e = extLLVMOperandImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMOperand();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMOperand(e);
+
+    }
+
+    protected Ext extLLVMOperandImpl() {
+        return extLLVMExprImpl();
+    }
+
+    protected Ext postExtLLVMOperand(Ext e) {
+        return postExtLLVMExpr(e);
+    }
+
+    @Override
+    public Ext extLLVMBr() {
+        Ext e = extLLVMBrImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMBr();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMBr(e);
+
+    }
+
+    protected Ext extLLVMBrImpl() {
+        return extLLVMInstructionImpl();
+    }
+
+    protected Ext postExtLLVMBr(Ext e) {
+        return postExtLLVMInstruction(e);
+    }
+
+    @Override
+    public Ext extLLVMSeq() {
+        Ext e = extLLVMSeqImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMSeq();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMSeq(e);
+
+    }
+
+    protected Ext extLLVMSeqImpl() {
+        return extLLVMInstructionImpl();
+    }
+
+    protected Ext postExtLLVMSeq(Ext e) {
+        return postExtLLVMInstruction(e);
+    }
+
+    @Override
+    public Ext extLLVMSeqLabel() {
+        Ext e = extLLVMSeqLabelImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMSeqLabel();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMSeqLabel(e);
+
+    }
+
+    protected Ext extLLVMSeqLabelImpl() {
+        return extLLVMInstructionImpl();
+    }
+
+    protected Ext postExtLLVMSeqLabel(Ext e) {
+        return postExtLLVMInstruction(e);
+    }
+
+    @Override
+    public Ext extLLVMCmp() {
+        Ext e = extLLVMCmpImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMCmp();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMCmp(e);
+
+    }
+
+    protected Ext extLLVMCmpImpl() {
+        return extLLVMBinaryOperandInstructionImpl();
+    }
+
+    protected Ext postExtLLVMCmp(Ext e) {
+        return postExtLLVMBinaryOperandInstruction(e);
+    }
+
+    @Override
+    public Ext extLLVMICmp() {
+        Ext e = extLLVMICmpImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMICmp();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMICmp(e);
+
+    }
+
+    protected Ext extLLVMICmpImpl() {
+        return extLLVMCmpImpl();
+    }
+
+    protected Ext postExtLLVMICmp(Ext e) {
+        return postExtLLVMCmp(e);
+    }
+
 }

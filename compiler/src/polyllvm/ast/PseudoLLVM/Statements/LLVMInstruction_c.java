@@ -27,4 +27,9 @@ public abstract class LLVMInstruction_c extends LLVMNode_c
         n.result = result;
         return n;
     }
+
+    @Override
+    public LLVMVariable result() {
+        return result;
+    }
 }

@@ -5,6 +5,7 @@ import polyglot.ast.Ext_c;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.visit.AddVoidReturnVisitor;
 import polyllvm.visit.PrintVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
@@ -54,6 +55,12 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
 
     @Override
     public Node addVoidReturn(AddVoidReturnVisitor v) {
+        return node();
+    }
+
+    @Override
+    public Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
+            LLVMLabel trueLabel, LLVMLabel falseLabel) {
         return node();
     }
 

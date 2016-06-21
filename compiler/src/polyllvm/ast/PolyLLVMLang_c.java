@@ -6,6 +6,7 @@ import polyglot.ast.Lang;
 import polyglot.ast.Node;
 import polyglot.ast.NodeOps;
 import polyglot.util.InternalCompilerError;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.visit.AddVoidReturnVisitor;
 import polyllvm.visit.PrintVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
@@ -65,6 +66,14 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     @Override
     public Node addVoidReturn(Node n, AddVoidReturnVisitor v) {
         return PolyLLVMOps(n).addVoidReturn(v);
+    }
+
+    @Override
+    public Node translatePseudoLLVMConditional(Node n, PseudoLLVMTranslator v,
+            LLVMLabel trueLabel, LLVMLabel falseLabel) {
+        return PolyLLVMOps(n).translatePseudoLLVMConditional(v,
+                                                             trueLabel,
+                                                             falseLabel);
     }
 
 }

@@ -2,6 +2,7 @@ package polyllvm.ast;
 
 import polyglot.ast.JLang;
 import polyglot.ast.Node;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.visit.AddVoidReturnVisitor;
 import polyllvm.visit.PrintVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
@@ -18,6 +19,9 @@ public interface PolyLLVMLang extends JLang {
             PseudoLLVMTranslator v);
 
     Node translatePseudoLLVM(Node n, PseudoLLVMTranslator v);
+
+    Node translatePseudoLLVMConditional(Node n, PseudoLLVMTranslator v,
+            LLVMLabel trueLabel, LLVMLabel falseLabel);
 
     Node addVoidReturn(Node n, AddVoidReturnVisitor addVoidReturnVisitor);
 }

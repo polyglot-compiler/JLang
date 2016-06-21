@@ -5,9 +5,8 @@ import polyglot.util.CodeWriter;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.PrettyPrinter;
-import polyllvm.ast.PseudoLLVM.LLVMNode_c;
 
-public class LLVMIntLiteral_c extends LLVMNode_c implements LLVMIntLiteral {
+public class LLVMIntLiteral_c extends LLVMExpr_c implements LLVMIntLiteral {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     protected int value;

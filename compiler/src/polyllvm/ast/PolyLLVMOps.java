@@ -2,6 +2,7 @@ package polyllvm.ast;
 
 import polyglot.ast.Node;
 import polyglot.ast.NodeOps;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.visit.AddVoidReturnVisitor;
 import polyllvm.visit.PrintVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
@@ -19,6 +20,9 @@ public interface PolyLLVMOps extends NodeOps {
     PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v);
 
     Node translatePseudoLLVM(PseudoLLVMTranslator v);
+
+    Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
+            LLVMLabel trueLabel, LLVMLabel falseLabel);
 
     Node addVoidReturn(AddVoidReturnVisitor v);
 

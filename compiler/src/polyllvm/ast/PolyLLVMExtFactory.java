@@ -13,6 +13,8 @@ public interface PolyLLVMExtFactory extends ExtFactory {
 
     Ext extLLVMInstruction();
 
+    Ext extLLVMBinaryOperandInstruction();
+
     Ext extLLVMAdd();
 
     Ext extLLVMIntLiteral();
@@ -34,5 +36,25 @@ public interface PolyLLVMExtFactory extends ExtFactory {
     Ext extLLVMSourceFile();
 
     Ext extLLVMCall();
+
+    Ext extLLVMFunctionDeclaration();
+
+    Ext extLLVMLabel();
+
+    Ext extLLVMExpr();
+
+    Ext extLLVMTypedOperand();
+
+    Ext extLLVMBr();
+
+    Ext extLLVMOperand();
+
+    Ext extLLVMSeq();
+
+    Ext extLLVMSeqLabel();
+
+    Ext extLLVMCmp();
+
+    Ext extLLVMICmp();
 
 }

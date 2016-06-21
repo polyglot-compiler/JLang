@@ -37,7 +37,16 @@ public class LLVMVariable_c extends LLVMOperand_c implements LLVMVariable {
 
     @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
-        w.write(toString());
+        switch (varType) {
+        case LOCAL:
+            w.write("%" + name);
+            return;
+        case GLOBAL:
+            w.write("@" + name);
+            return;
+        }
+        throw new InternalCompilerError("Switch statement not exaustive: "
+                + varType);
     }
 
     @Override

@@ -12,7 +12,9 @@ import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMICmp;
 import polyllvm.util.PolyLLVMStringUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringLiteralRemover;
@@ -68,34 +70,106 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
 
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
-        Binary b = (Binary) node();
+        Binary n = (Binary) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
-        LLVMOperand left = (LLVMOperand) v.getTranslation(b.left());
-        LLVMOperand right = (LLVMOperand) v.getTranslation(b.right());
-        Operator op = b.operator();
-        if (b.type().isLongOrLess()) {
-            int intSize = Math.max(numBitsOfIntegralType(b.left().type()),
-                                   numBitsOfIntegralType(b.right().type()));
+        LLVMOperand left = (LLVMOperand) v.getTranslation(n.left());
+        LLVMOperand right = (LLVMOperand) v.getTranslation(n.right());
+        Operator op = n.operator();
+        if (n.left().type().isLongOrLess() && n.right().type().isLongOrLess()) {
+            int intSize = Math.max(numBitsOfIntegralType(n.left().type()),
+                                   numBitsOfIntegralType(n.right().type()));
+            LLVMNode translation;
             if (op == Binary.ADD) {
-                v.addTranslation(node(),
-                                 nf.LLVAdd(Position.compilerGenerated(),
-                                           nf.LLVMIntType(Position.compilerGenerated(),
-                                                          intSize,
-                                                          nf.PolyLLVMExtFactory()
-                                                            .extLLVMIntType()),
-                                           left,
-                                           right,
-                                           nf.PolyLLVMExtFactory()
-                                             .extLLVMAdd()));
+                translation =
+                        nf.LLVMAdd(Position.compilerGenerated(),
+                                   nf.LLVMIntType(Position.compilerGenerated(),
+                                                  intSize),
+                                   left,
+                                   right,
+                                   nf.PolyLLVMExtFactory().extLLVMAdd());
             }
+//            else if (op == Binary.SUB) {
+//            }
+//            else if (op == Binary.MUL) {
+//            }
+//            else if (op == Binary.DIV) {
+//            }
+//            else if (op == Binary.MOD) {
+//            }
+//            else if (op == Binary.BIT_OR) {
+//            }
+//            else if (op == Binary.BIT_AND) {
+//            }
+//            else if (op == Binary.BIT_XOR) {
+//            }
+//            else if (op == Binary.SHL) {
+//            }
+//            else if (op == Binary.SHR) {
+//            }
+//            else if (op == Binary.USHR) {
+//            }
+            else if (op == Binary.GT) {
+                translation = nf.LLVMICmp(Position.compilerGenerated(),
+                                          LLVMICmp.sgt,
+                                          nf.LLVMIntType(Position.compilerGenerated(),
+                                                         intSize),
+                                          left,
+                                          right);
+
+            }
+            else if (op == Binary.LT) {
+                translation = nf.LLVMICmp(Position.compilerGenerated(),
+                                          LLVMICmp.slt,
+                                          nf.LLVMIntType(Position.compilerGenerated(),
+                                                         intSize),
+                                          left,
+                                          right);
+            }
+            else if (op == Binary.EQ) {
+                translation = nf.LLVMICmp(Position.compilerGenerated(),
+                                          LLVMICmp.eq,
+                                          nf.LLVMIntType(Position.compilerGenerated(),
+                                                         intSize),
+                                          left,
+                                          right);
+            }
+            else if (op == Binary.LE) {
+                translation = nf.LLVMICmp(Position.compilerGenerated(),
+                                          LLVMICmp.sle,
+                                          nf.LLVMIntType(Position.compilerGenerated(),
+                                                         intSize),
+                                          left,
+                                          right);
+            }
+            else if (op == Binary.GE) {
+                translation = nf.LLVMICmp(Position.compilerGenerated(),
+                                          LLVMICmp.sge,
+                                          nf.LLVMIntType(Position.compilerGenerated(),
+                                                         intSize),
+                                          left,
+                                          right);
+            }
+            else if (op == Binary.NE) {
+                translation = nf.LLVMICmp(Position.compilerGenerated(),
+                                          LLVMICmp.ne,
+                                          nf.LLVMIntType(Position.compilerGenerated(),
+                                                         intSize),
+                                          left,
+                                          right);
+            }
+//            else if (op == Binary.COND_AND) {
+//            }
+//            else if (op == Binary.COND_OR) {
+//            }
             else {
                 throw new InternalCompilerError("Only add operator currently supported");
             }
+            v.addTranslation(n, translation);
         }
-        else if (b.type().isFloat()) {
+        else if (n.type().isFloat()) {
             throw new InternalCompilerError("Adding floats temporarily not supported");
         }
-        else if (b.type().isDouble()) {
+        else if (n.type().isDouble()) {
             throw new InternalCompilerError("Adding doubles temporarily not supported");
         }
         return super.translatePseudoLLVM(v);

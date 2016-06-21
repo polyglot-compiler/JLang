@@ -5,12 +5,14 @@ import polyglot.ast.ExtFactory;
 import polyllvm.extension.PolyLLVMAssignExt;
 import polyllvm.extension.PolyLLVMBinaryExt;
 import polyllvm.extension.PolyLLVMBlockExt;
+import polyllvm.extension.PolyLLVMBooleanLitExt;
 import polyllvm.extension.PolyLLVMCallExt;
 import polyllvm.extension.PolyLLVMCanonicalTypeNodeExt;
 import polyllvm.extension.PolyLLVMClassBodyExt;
 import polyllvm.extension.PolyLLVMClassDeclExt;
 import polyllvm.extension.PolyLLVMEvalExt;
 import polyllvm.extension.PolyLLVMFormalExt;
+import polyllvm.extension.PolyLLVMIfExt;
 import polyllvm.extension.PolyLLVMIntLitExt;
 import polyllvm.extension.PolyLLVMLocalDeclExt;
 import polyllvm.extension.PolyLLVMLocalExt;
@@ -121,5 +123,15 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     @Override
     protected Ext extCallImpl() {
         return new PolyLLVMCallExt();
+    }
+
+    @Override
+    protected Ext extIfImpl() {
+        return new PolyLLVMIfExt();
+    }
+
+    @Override
+    protected Ext extBooleanLitImpl() {
+        return new PolyLLVMBooleanLitExt();
     }
 }

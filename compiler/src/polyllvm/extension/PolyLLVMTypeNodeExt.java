@@ -13,7 +13,6 @@ public class PolyLLVMTypeNodeExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         TypeNode n = (TypeNode) node();
 
-        System.out.println(n.getClass());
         return super.translatePseudoLLVM(v);
     }
 }

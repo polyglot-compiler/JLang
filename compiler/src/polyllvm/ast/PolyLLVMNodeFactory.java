@@ -14,16 +14,23 @@ import polyllvm.ast.PseudoLLVM.LLVMFunctionDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMGlobalDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMSourceFile;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMIntLiteral;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMVoidType;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMAdd;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMBr;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMICmp;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMICmp.IConditionCode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMRet;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMSeqLabel;
 
 /**
  * NodeFactory for polyllvm extension.
@@ -48,6 +55,9 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
     LLVMFunction LLVMFunction(Position compilerGenerated, String name,
             List<LLVMArgDecl> args, LLVMTypeNode retType, LLVMBlock code);
 
+    LLVMFunctionDeclaration LLVMFunctionDeclaration(Position pos, String name,
+            List<LLVMArgDecl> args, LLVMTypeNode retType);
+
     LLVMArgDecl LLVMArgDecl(Position pos, LLVMTypeNode typeNode, String name);
 
     /*
@@ -58,11 +68,16 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     LLVMVariable LLVMVariable(Position pos, String name, VarType t, Ext e);
 
+    LLVMTypedOperand LLVMTypedOperand(Position pos, LLVMOperand op,
+            LLVMTypeNode tn);
+
+    LLVMLabel LLVMLabel(Position pos, String name);
+
     /*
      * LLVM Type Nodes
      */
 
-    LLVMIntType LLVMIntType(Position pos, int intSize, Ext e);
+    LLVMIntType LLVMIntType(Position pos, int intSize);
 
     LLVMVoidType LLVMVoidType(Position pos);
 
@@ -70,11 +85,22 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
      * LLVM Statements (complete instructions)
      */
 
-    LLVMAdd LLVAdd(Position pos, LLVMVariable r, LLVMIntType t,
+    LLVMAdd LLVMAdd(Position pos, LLVMVariable r, LLVMIntType t,
             LLVMOperand left, LLVMOperand right, Ext e);
 
-    LLVMAdd LLVAdd(Position pos, LLVMIntType t, LLVMOperand left,
+    LLVMAdd LLVMAdd(Position pos, LLVMIntType t, LLVMOperand left,
             LLVMOperand right, Ext e);
+
+    LLVMICmp LLVMICmp(Position pos, LLVMVariable result, IConditionCode cc,
+            LLVMIntType tn, LLVMOperand left, LLVMOperand right);
+
+    LLVMICmp LLVMICmp(Position pos, IConditionCode cc, LLVMIntType tn,
+            LLVMOperand left, LLVMOperand right);
+
+    LLVMBr LLVMBr(Position pos, LLVMTypedOperand cond, LLVMLabel trueLabel,
+            LLVMLabel falseLabel);
+
+    LLVMBr LLVMBr(Position pos, LLVMLabel l);
 
     LLVMCall LLVMCall(Position pos, LLVMVariable function,
             List<Pair<LLVMTypeNode, LLVMOperand>> arguments,
@@ -83,5 +109,15 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
     LLVMRet LLVMRet(Position pos);
 
     LLVMRet LLVMRet(Position pos, LLVMTypeNode t, LLVMOperand o);
+
+    /*
+     * PseudoLLVM constructs
+     */
+
+    LLVMSeq LLVMSeq(Position pos, List<LLVMInstruction> instructions);
+
+    LLVMSeqLabel LLVMSeqLabel(Position pos, String name);
+
+    LLVMSeqLabel LLVMSeqLabel(LLVMLabel l);
 
 }

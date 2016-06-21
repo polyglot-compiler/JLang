@@ -2,27 +2,22 @@ package polyllvm.ast.PseudoLLVM.Statements;
 
 import polyglot.ast.Ext;
 import polyglot.util.CodeWriter;
+import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 
-public class LLVMAdd_c extends LLVMInstruction_c implements LLVMAdd {
+public class LLVMAdd_c extends LLVMBinaryOperandInstruction_c
+        implements LLVMAdd {
     private static final long serialVersionUID = SerialVersionUID.generate();
-
-    protected LLVMIntType intType;
-    protected LLVMOperand left;
-    protected LLVMOperand right;
 
     public LLVMAdd_c(Position pos, LLVMVariable r, LLVMIntType t,
             LLVMOperand left, LLVMOperand right, Ext e) {
-        super(pos, e);
-        result = r;
-        intType = t;
-        this.left = left;
-        this.right = right;
+        super(pos, r, t, left, right, e);
     }
 
     public LLVMAdd_c(Position pos, LLVMIntType t, LLVMOperand left,
@@ -34,7 +29,7 @@ public class LLVMAdd_c extends LLVMInstruction_c implements LLVMAdd {
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
         if (result == null) {
             w.write("add ");
-            print(intType, w, pp);
+            print(intType(), w, pp);
             w.write(" ");
             print(left, w, pp);
             w.write(", ");
@@ -43,7 +38,7 @@ public class LLVMAdd_c extends LLVMInstruction_c implements LLVMAdd {
         else {
             print(result, w, pp);
             w.write(" = add ");
-            print(intType, w, pp);
+            print(intType(), w, pp);
             w.write(" ");
             print(left, w, pp);
             w.write(", ");
@@ -54,10 +49,10 @@ public class LLVMAdd_c extends LLVMInstruction_c implements LLVMAdd {
     @Override
     public String toString() {
         if (result == null) {
-            return "add " + intType + " " + left + ", " + right;
+            return "add " + intType() + " " + left + ", " + right;
         }
         else {
-            return result + " = add " + intType + " " + left + ", " + right;
+            return result + " = add " + intType() + " " + left + ", " + right;
         }
     }
 
@@ -68,58 +63,30 @@ public class LLVMAdd_c extends LLVMInstruction_c implements LLVMAdd {
 
     @Override
     public LLVMAdd intType(LLVMIntType i) {
-        return intType(this, i);
-    }
-
-    @Override
-    public LLVMAdd left(LLVMOperand l) {
-        return left(this, l);
+        return typeNode(i);
     }
 
     @Override
     public LLVMAdd right(LLVMOperand r) {
-        return right(this, r);
-    }
-
-    protected <N extends LLVMAdd_c> N intType(N n, LLVMIntType intType) {
-        if (n.intType == intType) return n;
-        n = copyIfNeeded(n);
-        n.intType = intType;
-        return n;
-    }
-
-    protected <N extends LLVMAdd_c> N left(N n, LLVMOperand left) {
-        if (n.left == left) return n;
-        n = copyIfNeeded(n);
-        n.left = left;
-        return n;
-    }
-
-    protected <N extends LLVMAdd_c> N right(N n, LLVMOperand right) {
-        if (n.right == right) return n;
-        n = copyIfNeeded(n);
-        n.right = right;
-        return n;
+        return (LLVMAdd) super.right(r);
     }
 
     @Override
-    public LLVMVariable result() {
-        return result;
+    public LLVMAdd left(LLVMOperand l) {
+        return (LLVMAdd) super.left(l);
+    }
+
+    @Override
+    public LLVMAdd typeNode(LLVMTypeNode tn) {
+        if (!(tn instanceof LLVMIntType)) {
+            throw new InternalCompilerError("Trying to change integer "
+                    + "addition to use non integer type.");
+        }
+        return (LLVMAdd) super.typeNode(tn);
     }
 
     @Override
     public LLVMIntType intType() {
-        return intType;
+        return (LLVMIntType) typeNode;
     }
-
-    @Override
-    public LLVMOperand left() {
-        return left;
-    }
-
-    @Override
-    public LLVMOperand right() {
-        return right;
-    }
-
 }
