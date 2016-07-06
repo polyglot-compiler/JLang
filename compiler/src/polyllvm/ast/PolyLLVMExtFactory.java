@@ -57,4 +57,32 @@ public interface PolyLLVMExtFactory extends ExtFactory {
 
     Ext extLLVMICmp();
 
+    Ext extLLVMSub();
+
+    Ext extLLVMAlloca();
+
+    Ext extLLVMLoad();
+
+    Ext extLLVMStore();
+
+    Ext extLLVMMul();
+
+    Ext extLLVMESeq();
+
+    Ext extLLVMFunctionType();
+
+    Ext extLLVMPointerType();
+
+    Ext extLLVMConversion();
+
+    Ext extLLVMFloatType();
+
+    Ext extLLVMDoubleType();
+
+    Ext extLLVMFloatLiteral();
+
+    Ext extLLVMDoubleLiteral();
+
+    Ext extLLVMFAdd();
+
 }

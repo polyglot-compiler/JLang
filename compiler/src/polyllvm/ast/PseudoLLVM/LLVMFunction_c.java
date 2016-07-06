@@ -3,9 +3,12 @@ package polyllvm.ast.PseudoLLVM;
 import java.util.List;
 
 import polyglot.ast.Ext;
+import polyglot.ast.Node;
 import polyglot.util.CodeWriter;
+import polyglot.util.ListUtil;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
+import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 
@@ -75,6 +78,55 @@ public class LLVMFunction_c extends LLVMNode_c implements LLVMFunction {
         }
         s.append("\n}");
         return s.toString();
+    }
+
+    @Override
+    public List<LLVMBlock> blocks() {
+        return ListUtil.copy(blocks, false);
+    }
+
+    @Override
+    public LLVMFunction blocks(List<LLVMBlock> bs) {
+        return blocks(this, bs);
+    }
+
+    @Override
+    public Node visitChildren(NodeVisitor v) {
+        List<LLVMArgDecl> ads = visitList(args, v);
+        LLVMTypeNode rt = visitChild(retType, v);
+        List<LLVMBlock> bs = visitList(blocks, v);
+        return reconstruct(this, bs, ads, rt);
+    }
+
+    /** Reconstruct the LLVM Function. */
+    protected <N extends LLVMFunction_c> N reconstruct(N n, List<LLVMBlock> bs,
+            List<LLVMArgDecl> ads, LLVMTypeNode tn) {
+        n = blocks(n, bs);
+        n = args(n, ads);
+        n = retType(n, tn);
+        return n;
+    }
+
+    protected <N extends LLVMFunction_c> N blocks(N n, List<LLVMBlock> bs) {
+        bs = ListUtil.copy(bs, false);
+        if (n.blocks == bs) return n;
+        n = copyIfNeeded(n);
+        n.blocks = bs;
+        return n;
+    }
+
+    protected <N extends LLVMFunction_c> N args(N n, List<LLVMArgDecl> ad) {
+        if (n.args == ad) return n;
+        n = copyIfNeeded(n);
+        n.args = ad;
+        return n;
+    }
+
+    protected <N extends LLVMFunction_c> N retType(N n, LLVMTypeNode tn) {
+        if (n.retType == tn) return n;
+        n = copyIfNeeded(n);
+        n.retType = tn;
+        return n;
     }
 
 }

@@ -17,7 +17,6 @@ public class PolyLLVMReturnExt extends PolyLLVMExt {
 
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
-//        if(node().)
         Return n = (Return) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
         Expr expr = n.expr();
@@ -32,7 +31,6 @@ public class PolyLLVMReturnExt extends PolyLLVMExt {
                              nf.LLVMRet(Position.compilerGenerated(),
                                         llvmType,
                                         o));
-
         }
 
         return super.translatePseudoLLVM(v);

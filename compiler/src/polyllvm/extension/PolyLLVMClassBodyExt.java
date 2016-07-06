@@ -26,11 +26,6 @@ public class PolyLLVMClassBodyExt extends PolyLLVMExt {
                                                null,
                                                null,
                                                null);
-//        LLVMSourceFile llf = nf.LLVMSourceFile (Position.compilerGenerated(),
-//                                               null,
-//                                               null,
-//                                               null,
-//                                               null);
         for (ClassMember cm : n.members()) {
             if (cm instanceof MethodDecl && ((MethodDecl) cm).flags().isStatic()
                     && !((MethodDecl) cm).flags().isNative()) {

@@ -2,6 +2,7 @@ package polyllvm.ast.PseudoLLVM.Statements;
 
 import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 
 /**
  * @author Daniel
@@ -18,5 +19,10 @@ public interface LLVMInstruction extends LLVMNode {
      * @return The result variable of this instruction
      */
     LLVMVariable result();
+
+    /**
+     * The type that this instruction returns
+     */
+    LLVMTypeNode retType();
 
 }

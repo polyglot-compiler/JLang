@@ -1,11 +1,21 @@
 package polyllvm.ast.PseudoLLVM.Statements;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import polyglot.ast.Ext;
+import polyglot.ast.Node;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
+import polyglot.visit.NodeVisitor;
+import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.ast.PseudoLLVM.LLVMNode;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.util.PolyLLVMFreshGen;
+import polyllvm.visit.RemoveESeqVisitor;
 
 public abstract class LLVMBinaryOperandInstruction_c extends LLVMInstruction_c
         implements LLVMBinaryOperandInstruction {
@@ -79,7 +89,7 @@ public abstract class LLVMBinaryOperandInstruction_c extends LLVMInstruction_c
     }
 
     @Override
-    public LLVMTypeNode typeNode() {
+    public LLVMTypeNode retType() {
         return typeNode;
     }
 
@@ -91,6 +101,81 @@ public abstract class LLVMBinaryOperandInstruction_c extends LLVMInstruction_c
     @Override
     public LLVMOperand right() {
         return right;
+    }
+
+    @Override
+    public Node visitChildren(NodeVisitor v) {
+        LLVMBinaryOperandInstruction_c n =
+                (LLVMBinaryOperandInstruction_c) super.visitChildren(v);
+        LLVMTypeNode tn = visitChild(typeNode, v);
+        LLVMOperand l = visitChild(left, v);
+        LLVMOperand r = visitChild(right, v);
+        return reconstruct(n, tn, l, r);
+    }
+
+    protected <N extends LLVMBinaryOperandInstruction_c> N reconstruct(N n,
+            LLVMTypeNode tn, LLVMOperand l, LLVMOperand r) {
+        n = typeNode(n, tn);
+        n = left(n, l);
+        n = right(n, r);
+        return n;
+    }
+
+    @Override
+    public LLVMNode removeESeq(RemoveESeqVisitor v) {
+        PolyLLVMNodeFactory nf = v.nodeFactory();
+        if (left instanceof LLVMESeq && right instanceof LLVMESeq) {
+            LLVMESeq l = (LLVMESeq) left;
+            LLVMESeq r = (LLVMESeq) right;
+            //sl⃗ ; MOVE(TEMP(tl ), el′ ); s⃗r ; OP(TEMP(tr ), er′ )
+            //sl ; Alloc tl; store el -> tl ; sr; Load tl -> freshtemp; OP(freshtemp, er')
+            LLVMTypeNode ptrType =
+                    nf.LLVMPointerType(Position.compilerGenerated(), typeNode);
+            LLVMVariable tempPointer =
+                    PolyLLVMFreshGen.freshLocalVar(nf, ptrType);
+            LLVMAlloca allocTemp =
+                    nf.LLVMAlloca(Position.compilerGenerated(), typeNode);
+            allocTemp = allocTemp.result(tempPointer);
+            LLVMStore moveLeft = nf.LLVMStore(Position.compilerGenerated(),
+                                              typeNode,
+                                              l.expr(),
+                                              tempPointer);
+
+            LLVMVariable freshTemp =
+                    PolyLLVMFreshGen.freshLocalVar(nf, typeNode);
+            LLVMLoad loadLeft = nf.LLVMLoad(Position.compilerGenerated(),
+                                            freshTemp,
+                                            typeNode,
+                                            tempPointer);
+
+            List<LLVMInstruction> instructions = new ArrayList<>();
+            instructions.add(l.instruction());
+            instructions.add(allocTemp);
+            instructions.add(moveLeft);
+            instructions.add(r.instruction());
+            instructions.add(loadLeft);
+            instructions.add(reconstruct(this, typeNode, freshTemp, r.expr()));
+            return nf.LLVMSeq(Position.compilerGenerated(), instructions);
+        }
+        else if (left instanceof LLVMESeq) {
+            LLVMESeq l = (LLVMESeq) left;
+
+            List<LLVMInstruction> instructions = new ArrayList<>();
+            instructions.add(l.instruction());
+            instructions.add(reconstruct(this, typeNode, l.expr(), right));
+            return nf.LLVMSeq(Position.compilerGenerated(), instructions);
+        }
+        else if (right instanceof LLVMESeq) {
+            LLVMESeq r = (LLVMESeq) right;
+
+            List<LLVMInstruction> instructions = new ArrayList<>();
+            instructions.add(r.instruction());
+            instructions.add(reconstruct(this, typeNode, left, r.expr()));
+            return nf.LLVMSeq(Position.compilerGenerated(), instructions);
+        }
+        else {
+            return this;
+        }
     }
 
 }

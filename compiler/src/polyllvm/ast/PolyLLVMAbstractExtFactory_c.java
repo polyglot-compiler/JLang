@@ -3,6 +3,11 @@ package polyllvm.ast;
 import polyglot.ast.AbstractExtFactory_c;
 import polyglot.ast.Ext;
 import polyglot.ast.ExtFactory;
+import polyllvm.extension.PseudoLLVM.PolyLLVMArgDeclExt;
+import polyllvm.extension.PseudoLLVM.PolyLLVMBinaryOperandInstructionExt;
+import polyllvm.extension.PseudoLLVM.PolyLLVMBrExt;
+import polyllvm.extension.PseudoLLVM.PolyLLVMCallExt;
+import polyllvm.extension.PseudoLLVM.PolyLLVMFunctionExt;
 
 public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
         implements PolyLLVMExtFactory {
@@ -84,7 +89,7 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     }
 
     protected Ext extLLVMBinaryOperandInstructionImpl() {
-        return extLLVMInstructionImpl();
+        return new PolyLLVMBinaryOperandInstructionExt();
     }
 
     protected Ext postExtLLVMBinaryOperandInstruction(Ext e) {
@@ -112,6 +117,54 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     }
 
     protected Ext postExtLLVMAdd(Ext e) {
+        return postExtLLVMBinaryOperandInstruction(e);
+    }
+
+    @Override
+    public final Ext extLLVMSub() {
+        Ext e = extLLVMSubImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMSub();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMSub(e);
+    }
+
+    protected Ext extLLVMSubImpl() {
+        return extLLVMBinaryOperandInstructionImpl();
+    }
+
+    protected Ext postExtLLVMSub(Ext e) {
+        return postExtLLVMBinaryOperandInstruction(e);
+    }
+
+    @Override
+    public final Ext extLLVMMul() {
+        Ext e = extLLVMMulImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMMul();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMMul(e);
+    }
+
+    protected Ext extLLVMMulImpl() {
+        return extLLVMBinaryOperandInstructionImpl();
+    }
+
+    protected Ext postExtLLVMMul(Ext e) {
         return postExtLLVMBinaryOperandInstruction(e);
     }
 
@@ -160,6 +213,150 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     }
 
     protected Ext postExtLLVMIntType(Ext e) {
+        return postExtNode(e);
+    }
+
+    @Override
+    public final Ext extLLVMFloatLiteral() {
+        Ext e = extLLVMFloatLiteralImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMFloatLiteral();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMFloatLiteral(e);
+    }
+
+    protected Ext extLLVMFloatLiteralImpl() {
+        return extNode();
+    }
+
+    protected Ext postExtLLVMFloatLiteral(Ext e) {
+        return postExtNode(e);
+    }
+
+    @Override
+    public final Ext extLLVMFloatType() {
+        Ext e = extLLVMFloatTypeImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMFloatType();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMFloatType(e);
+    }
+
+    protected Ext extLLVMFloatTypeImpl() {
+        return extNode();
+    }
+
+    protected Ext postExtLLVMFloatType(Ext e) {
+        return postExtNode(e);
+    }
+
+    @Override
+    public final Ext extLLVMDoubleLiteral() {
+        Ext e = extLLVMDoubleLiteralImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMDoubleLiteral();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMDoubleLiteral(e);
+    }
+
+    protected Ext extLLVMDoubleLiteralImpl() {
+        return extNode();
+    }
+
+    protected Ext postExtLLVMDoubleLiteral(Ext e) {
+        return postExtNode(e);
+    }
+
+    @Override
+    public final Ext extLLVMDoubleType() {
+        Ext e = extLLVMDoubleTypeImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMDoubleType();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMDoubleType(e);
+    }
+
+    protected Ext extLLVMDoubleTypeImpl() {
+        return extNode();
+    }
+
+    protected Ext postExtLLVMDoubleType(Ext e) {
+        return postExtNode(e);
+    }
+
+    @Override
+    public final Ext extLLVMFunctionType() {
+        Ext e = extLLVMFunctionTypeImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMFunctionType();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMFunctionType(e);
+    }
+
+    protected Ext extLLVMFunctionTypeImpl() {
+        return extNode(); //TODO : implement extension for LLVMTypeNode
+    }
+
+    protected Ext postExtLLVMFunctionType(Ext e) {
+        return postExtNode(e);
+    }
+
+    @Override
+    public final Ext extLLVMPointerType() {
+        Ext e = extLLVMPointerTypeImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMPointerType();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMPointerType(e);
+    }
+
+    protected Ext extLLVMPointerTypeImpl() {
+        return extNode(); //TODO : implement extension for LLVMTypeNode
+    }
+
+    protected Ext postExtLLVMPointerType(Ext e) {
         return postExtNode(e);
     }
 
@@ -228,7 +425,7 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     }
 
     protected Ext extLLVMFunctionImpl() {
-        return extLLVMNode();
+        return new PolyLLVMFunctionExt();
     }
 
     protected Ext postExtLLVMFunction(Ext e) {
@@ -252,7 +449,7 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     }
 
     protected Ext extLLVMArgDeclImpl() {
-        return extLLVMNode();
+        return new PolyLLVMArgDeclExt();
     }
 
     protected Ext postExtLLVMArgDecl(Ext e) {
@@ -348,7 +545,7 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     }
 
     protected Ext extLLVMCallImpl() {
-        return extLLVMInstructionImpl();
+        return new PolyLLVMCallExt();
     }
 
     protected Ext postExtLLVMCall(Ext e) {
@@ -498,7 +695,7 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     }
 
     protected Ext extLLVMBrImpl() {
-        return extLLVMInstructionImpl();
+        return new PolyLLVMBrExt();
     }
 
     protected Ext postExtLLVMBr(Ext e) {
@@ -603,6 +800,156 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
 
     protected Ext postExtLLVMICmp(Ext e) {
         return postExtLLVMCmp(e);
+    }
+
+    @Override
+    public Ext extLLVMAlloca() {
+        Ext e = extLLVMAllocaImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMAlloca();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMAlloca(e);
+
+    }
+
+    protected Ext extLLVMAllocaImpl() {
+        return extLLVMInstructionImpl();
+    }
+
+    protected Ext postExtLLVMAlloca(Ext e) {
+        return postExtLLVMInstruction(e);
+    }
+
+    @Override
+    public Ext extLLVMLoad() {
+        Ext e = extLLVMLoadImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMLoad();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMLoad(e);
+
+    }
+
+    protected Ext extLLVMLoadImpl() {
+        return extLLVMInstructionImpl();
+    }
+
+    protected Ext postExtLLVMLoad(Ext e) {
+        return postExtLLVMInstruction(e);
+    }
+
+    @Override
+    public Ext extLLVMStore() {
+        Ext e = extLLVMStoreImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMStore();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMStore(e);
+
+    }
+
+    protected Ext extLLVMStoreImpl() {
+        return extLLVMInstructionImpl();
+    }
+
+    protected Ext postExtLLVMStore(Ext e) {
+        return postExtLLVMInstruction(e);
+    }
+
+    @Override
+    public Ext extLLVMESeq() {
+        Ext e = extLLVMESeqImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMESeq();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMESeq(e);
+
+    }
+
+    protected Ext extLLVMESeqImpl() {
+        return extLLVMOperandImpl();
+    }
+
+    protected Ext postExtLLVMESeq(Ext e) {
+        return postExtLLVMOperand(e);
+    }
+
+    @Override
+    public Ext extLLVMConversion() {
+        Ext e = extLLVMConversionImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMConversion();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMConversion(e);
+
+    }
+
+    protected Ext extLLVMConversionImpl() {
+        return extLLVMInstructionImpl();
+    }
+
+    protected Ext postExtLLVMConversion(Ext e) {
+        return postExtLLVMInstruction(e);
+    }
+
+    @Override
+    public Ext extLLVMFAdd() {
+        Ext e = extLLVMFAddImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMFAdd();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMFAdd(e);
+
+    }
+
+    protected Ext extLLVMFAddImpl() {
+        return extLLVMBinaryOperandInstructionImpl();
+    }
+
+    protected Ext postExtLLVMFAdd(Ext e) {
+        return postExtLLVMBinaryOperandInstruction(e);
     }
 
 }

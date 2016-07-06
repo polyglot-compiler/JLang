@@ -5,7 +5,9 @@ import polyglot.ast.Node;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMIntLiteral_c;
+import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMIntLitExt extends PolyLLVMExt {
@@ -14,10 +16,20 @@ public class PolyLLVMIntLitExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         IntLit n = (IntLit) node();
-        v.addTranslation(n,
-                         new LLVMIntLiteral_c(Position.compilerGenerated(),
-                                              (int) n.value(),
-                                              new PolyLLVMExt()));
+        PolyLLVMNodeFactory nf = v.nodeFactory();
+        LLVMTypeNode tn = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+        if (n.type().isLongOrLess()) {
+            v.addTranslation(n,
+                             nf.LLVMIntLiteral(Position.compilerGenerated(),
+                                               tn,
+                                               (int) n.value()));
+        }
+        else if (n.type().isFloat()) {
+            v.addTranslation(n, nf.LLVMFloatLiteral(tn, n.value()));
+        }
+        else if (n.type().isDouble()) {
+            v.addTranslation(n, nf.LLVMDoubleLiteral(tn, n.value()));
+        }
         return super.translatePseudoLLVM(v);
     }
 }

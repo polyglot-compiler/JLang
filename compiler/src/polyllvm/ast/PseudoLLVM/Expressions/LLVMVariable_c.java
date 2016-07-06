@@ -6,6 +6,7 @@ import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.PrettyPrinter;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 
 public class LLVMVariable_c extends LLVMOperand_c implements LLVMVariable {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -15,12 +16,15 @@ public class LLVMVariable_c extends LLVMOperand_c implements LLVMVariable {
     }
 
     protected String name;
+    protected LLVMTypeNode typeNode;
     private VarType varType;
 
-    public LLVMVariable_c(Position pos, String name, VarType t, Ext e) {
+    public LLVMVariable_c(Position pos, String name, LLVMTypeNode tn, VarType t,
+            Ext e) {
         super(pos, e);
         this.name = name;
         varType = t;
+        typeNode = tn;
     }
 
     @Override
@@ -59,5 +63,15 @@ public class LLVMVariable_c extends LLVMOperand_c implements LLVMVariable {
         }
         throw new InternalCompilerError("Switch statement not exaustive: "
                 + varType);
+    }
+
+    @Override
+    public String name() {
+        return name;
+    }
+
+    @Override
+    public LLVMTypeNode typeNode() {
+        return typeNode;
     }
 }

@@ -3,10 +3,12 @@ package polyllvm.ast.PseudoLLVM;
 import java.util.ArrayList;
 import java.util.List;
 
+import polyglot.ast.Node;
 import polyglot.frontend.Source;
 import polyglot.util.CodeWriter;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
+import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
 
 public class LLVMSourceFile_c extends LLVMNode_c implements LLVMSourceFile {
@@ -154,6 +156,24 @@ public class LLVMSourceFile_c extends LLVMNode_c implements LLVMSourceFile {
             print(f, w, pp);
             w.write("\n\n");
         }
+    }
+
+    @Override
+    public Node visitChildren(NodeVisitor v) {
+        List<LLVMFunction> fs = visitList(funcs, v);
+        List<LLVMFunctionDeclaration> fds = visitList(funcdecls, v);
+        List<LLVMGlobalDeclaration> gds = visitList(globals, v);
+        return reconstruct(this, fs, fds, gds);
+    }
+
+    /** Reconstruct the LLVM SourceFile. */
+    protected <N extends LLVMSourceFile_c> N reconstruct(N n,
+            List<LLVMFunction> fs, List<LLVMFunctionDeclaration> fds,
+            List<LLVMGlobalDeclaration> gds) {
+        n = functions(n, fs);
+        n = functionDeclarations(n, fds);
+        n = globals(n, gds);
+        return n;
     }
 
     @Override

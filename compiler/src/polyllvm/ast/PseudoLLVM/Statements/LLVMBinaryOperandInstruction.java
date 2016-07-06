@@ -30,7 +30,7 @@ public interface LLVMBinaryOperandInstruction extends LLVMInstruction {
     LLVMBinaryOperandInstruction right(LLVMOperand r);
 
     /**
-     * @return The type node of this instruction
+     * @return The type node of the operands of this instruction
      */
     LLVMTypeNode typeNode();
 

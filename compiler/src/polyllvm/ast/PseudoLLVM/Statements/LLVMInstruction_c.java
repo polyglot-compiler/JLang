@@ -1,8 +1,12 @@
 package polyllvm.ast.PseudoLLVM.Statements;
 
 import polyglot.ast.Ext;
+import polyglot.ast.Node;
+import polyglot.util.CodeWriter;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
+import polyglot.visit.NodeVisitor;
+import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PseudoLLVM.LLVMNode_c;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 
@@ -32,4 +36,22 @@ public abstract class LLVMInstruction_c extends LLVMNode_c
     public LLVMVariable result() {
         return result;
     }
+
+    /**
+     * Print out the result and equals sign if result is non-null
+     */
+    @Override
+    public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
+        if (result != null) {
+            print(result, w, pp);
+            w.write(" = ");
+        }
+    }
+
+    @Override
+    public Node visitChildren(NodeVisitor v) {
+        LLVMVariable r = visitChild(result, v);
+        return result(r);
+    }
+
 }

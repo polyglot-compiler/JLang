@@ -32,16 +32,4 @@ public interface LLVMAdd extends LLVMBinaryOperandInstruction {
      * @return The int type of this instruction
      */
     LLVMIntType intType();
-
-    /**
-     * @return The left operand of this instruction
-     */
-    @Override
-    LLVMOperand left();
-
-    /**
-     * @return The right operand of this instruction
-     */
-    @Override
-    LLVMOperand right();
 }

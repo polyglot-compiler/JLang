@@ -4,6 +4,8 @@ import polyglot.ast.Eval;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
+import polyllvm.ast.PseudoLLVM.LLVMNode;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMEvalExt extends PolyLLVMExt {
@@ -11,7 +13,13 @@ public class PolyLLVMEvalExt extends PolyLLVMExt {
 
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
-        v.addTranslation(node(), v.getTranslation(((Eval) node()).expr()));
+        LLVMNode translation = v.getTranslation(((Eval) node()).expr());
+        if (translation instanceof LLVMESeq) {
+            v.addTranslation(node(), ((LLVMESeq) translation).instruction());
+        }
+        else {
+            v.addTranslation(node(), translation);
+        }
         return super.translatePseudoLLVM(v);
     }
 }

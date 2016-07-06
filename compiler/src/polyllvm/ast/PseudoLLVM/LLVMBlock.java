@@ -28,4 +28,9 @@ public interface LLVMBlock extends LLVMNode {
      */
     LLVMSeq instructions(PolyLLVMNodeFactory nf);
 
+    /**
+     * Return the list of instructions in this block
+     */
+    List<LLVMInstruction> instructions();
+
 }

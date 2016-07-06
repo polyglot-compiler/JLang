@@ -6,4 +6,6 @@ package polyllvm.ast.PseudoLLVM.Expressions;
  */
 public interface LLVMVariable extends LLVMOperand {
     public LLVMVariable name(String s);
+
+    public String name();
 }

@@ -25,8 +25,7 @@ public class PolyLLVMBlockExt extends PolyLLVMExt {
         for (Stmt s : n.statements()) {
             x.add((LLVMInstruction) v.getTranslation(s));
         }
-        LLVMBlock translation =
-                nf.LLVMBlock(Position.compilerGenerated(), x, null);
+        LLVMBlock translation = nf.LLVMBlock(Position.compilerGenerated(), x);
         v.addTranslation(node(), translation);
         return super.translatePseudoLLVM(v);
     }

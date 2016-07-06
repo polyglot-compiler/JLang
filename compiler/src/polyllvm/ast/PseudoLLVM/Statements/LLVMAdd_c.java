@@ -89,4 +89,9 @@ public class LLVMAdd_c extends LLVMBinaryOperandInstruction_c
     public LLVMIntType intType() {
         return (LLVMIntType) typeNode;
     }
+
+    @Override
+    public LLVMTypeNode typeNode() {
+        return intType();
+    }
 }

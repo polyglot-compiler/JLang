@@ -7,9 +7,12 @@ import polyglot.ast.Node;
 import polyglot.ast.NodeOps;
 import polyglot.util.InternalCompilerError;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
+import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.AddVoidReturnVisitor;
+import polyllvm.visit.LLVMVarToStack;
 import polyllvm.visit.PrintVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.RemoveESeqVisitor;
 import polyllvm.visit.StringLiteralRemover;
 
 public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
@@ -74,6 +77,22 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
         return PolyLLVMOps(n).translatePseudoLLVMConditional(v,
                                                              trueLabel,
                                                              falseLabel);
+    }
+
+    @Override
+    public Node llvmVarToStack(Node n, LLVMVarToStack v) {
+        return PolyLLVMOps(n).llvmVarToStack(v);
+    }
+
+    @Override
+    public Node removeESeq(Node n, RemoveESeqVisitor v) {
+        return PolyLLVMOps(n).removeESeq(v);
+    }
+
+    @Override
+    public Node addPrimitiveWideningCasts(Node n,
+            AddPrimitiveWideningCastsVisitor v) {
+        return PolyLLVMOps(n).addPrimitiveWideningCasts(v);
     }
 
 }

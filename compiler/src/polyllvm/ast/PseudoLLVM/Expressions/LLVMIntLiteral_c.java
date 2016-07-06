@@ -5,15 +5,18 @@ import polyglot.util.CodeWriter;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.PrettyPrinter;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 
 public class LLVMIntLiteral_c extends LLVMExpr_c implements LLVMIntLiteral {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     protected int value;
+    protected LLVMTypeNode typeNode;
 
-    public LLVMIntLiteral_c(Position pos, int value, Ext ext) {
+    public LLVMIntLiteral_c(Position pos, int value, LLVMTypeNode tn, Ext ext) {
         super(pos, ext);
         this.value = value;
+        typeNode = tn;
     }
 
     protected <N extends LLVMIntLiteral_c> N value(N n, int value) {
@@ -35,6 +38,11 @@ public class LLVMIntLiteral_c extends LLVMExpr_c implements LLVMIntLiteral {
     @Override
     public String toString() {
         return Integer.toString(value);
+    }
+
+    @Override
+    public LLVMTypeNode typeNode() {
+        return typeNode;
     }
 
 }

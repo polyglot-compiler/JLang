@@ -3,9 +3,11 @@ package polyllvm.ast.PseudoLLVM;
 import java.util.List;
 
 import polyglot.ast.Ext;
+import polyglot.ast.Node;
 import polyglot.util.CodeWriter;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
+import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 
@@ -39,6 +41,37 @@ public class LLVMFunctionDeclaration_c extends LLVMNode_c
             print(args.get(args.size() - 1), w, pp);
         }
         w.write(")\n");
+    }
+
+    @Override
+    public Node visitChildren(NodeVisitor v) {
+        LLVMTypeNode tn = visitChild(retType, v);
+        List<LLVMArgDecl> ad = visitList(args, v);
+        return reconstruct(this, tn, ad);
+    }
+
+    /** Reconstruct the LLVM SourceFile. */
+    protected <N extends LLVMFunctionDeclaration_c> N reconstruct(N n,
+            LLVMTypeNode tn, List<LLVMArgDecl> ad) {
+        n = args(n, ad);
+        n = retType(n, tn);
+        return n;
+    }
+
+    protected <N extends LLVMFunctionDeclaration_c> N args(N n,
+            List<LLVMArgDecl> ad) {
+        if (n.args == ad) return n;
+        n = copyIfNeeded(n);
+        n.args = ad;
+        return n;
+    }
+
+    protected <N extends LLVMFunctionDeclaration_c> N retType(N n,
+            LLVMTypeNode tn) {
+        if (n.retType == tn) return n;
+        n = copyIfNeeded(n);
+        n.retType = tn;
+        return n;
     }
 
 }

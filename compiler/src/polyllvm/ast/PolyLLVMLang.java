@@ -3,9 +3,12 @@ package polyllvm.ast;
 import polyglot.ast.JLang;
 import polyglot.ast.Node;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
+import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.AddVoidReturnVisitor;
+import polyllvm.visit.LLVMVarToStack;
 import polyllvm.visit.PrintVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.RemoveESeqVisitor;
 import polyllvm.visit.StringLiteralRemover;
 
 public interface PolyLLVMLang extends JLang {
@@ -24,4 +27,10 @@ public interface PolyLLVMLang extends JLang {
             LLVMLabel trueLabel, LLVMLabel falseLabel);
 
     Node addVoidReturn(Node n, AddVoidReturnVisitor addVoidReturnVisitor);
+
+    Node llvmVarToStack(Node n, LLVMVarToStack llvmVarToStack);
+
+    Node removeESeq(Node n, RemoveESeqVisitor removeESeqVisitor);
+
+    Node addPrimitiveWideningCasts(Node n, AddPrimitiveWideningCastsVisitor v);
 }

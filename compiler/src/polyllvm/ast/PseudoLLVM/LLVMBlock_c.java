@@ -4,9 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import polyglot.ast.Ext;
+import polyglot.ast.Node;
 import polyglot.util.CodeWriter;
+import polyglot.util.ListUtil;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
+import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
@@ -50,6 +53,11 @@ public class LLVMBlock_c extends LLVMNode_c implements LLVMBlock {
     }
 
     @Override
+    public List<LLVMInstruction> instructions() {
+        return ListUtil.copy(instructions, false);
+    }
+
+    @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
         for (int i = 0; i < instructions.size() - 1; i++) {
             print(instructions.get(i), w, pp);
@@ -75,6 +83,19 @@ public class LLVMBlock_c extends LLVMNode_c implements LLVMBlock {
         }
         if (s.length() > 0) s.deleteCharAt(s.length() - 1);
         return s.toString();
+    }
+
+    @Override
+    public Node visitChildren(NodeVisitor v) {
+        List<LLVMInstruction> is = visitList(instructions, v);
+        return reconstruct(this, is);
+    }
+
+    /** Reconstruct the LLVM Block. */
+    protected <N extends LLVMBlock_c> N reconstruct(N n,
+            List<LLVMInstruction> is) {
+        n = instructions(n, is);
+        return n;
     }
 
 }

@@ -12,14 +12,15 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
 public class LLVMICmp_c extends LLVMCmp_c implements LLVMICmp {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
-    public LLVMICmp_c(Position pos, LLVMVariable result, IConditionCode cc,
-            LLVMIntType tn, LLVMOperand left, LLVMOperand right, Ext e) {
-        super(pos, result, cc, tn, left, right, e);
+    public LLVMICmp_c(Position pos, LLVMVariable result, LLVMIntType returnType,
+            IConditionCode cc, LLVMIntType tn, LLVMOperand left,
+            LLVMOperand right, Ext e) {
+        super(pos, result, returnType, cc, tn, left, right, e);
     }
 
-    public LLVMICmp_c(Position pos, IConditionCode cc, LLVMIntType tn,
-            LLVMOperand left, LLVMOperand right, Ext e) {
-        super(pos, cc, tn, left, right, e);
+    public LLVMICmp_c(Position pos, LLVMIntType returnType, IConditionCode cc,
+            LLVMIntType tn, LLVMOperand left, LLVMOperand right, Ext e) {
+        super(pos, returnType, cc, tn, left, right, e);
     }
 
     @Override
