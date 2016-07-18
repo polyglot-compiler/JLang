@@ -2,7 +2,6 @@ package polyllvm.extension;
 
 import polyglot.ast.CharLit;
 import polyglot.ast.Node;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -17,10 +16,9 @@ public class PolyLLVMCharLitExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         CharLit n = (CharLit) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
-        LLVMTypeNode type = nf.LLVMIntType(Position.compilerGenerated(), 16);
+        LLVMTypeNode type = nf.LLVMIntType(16);
         LLVMIntLiteral translation =
-                nf.LLVMIntLiteral(Position.compilerGenerated(),
-                                  type,
+                nf.LLVMIntLiteral(type,
                                   n.value());
         v.addTranslation(n, translation);
         return super.translatePseudoLLVM(v);

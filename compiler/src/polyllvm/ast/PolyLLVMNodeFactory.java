@@ -11,12 +11,16 @@ import polyllvm.ast.PseudoLLVM.LLVMBlock;
 import polyllvm.ast.PseudoLLVM.LLVMFunction;
 import polyllvm.ast.PseudoLLVM.LLVMFunctionDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMGlobalDeclaration;
+import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
+import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration.GlobalVariableKind;
 import polyllvm.ast.PseudoLLVM.LLVMSourceFile;
+import polyllvm.ast.PseudoLLVM.LLVMTypeDeclaration;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMDoubleLiteral;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMFloatLiteral;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMIntLiteral;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMNullLiteral;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
@@ -26,7 +30,9 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFloatType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMVariableType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMVoidType;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMAdd;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMAlloca;
@@ -35,6 +41,7 @@ import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion.Instruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMFAdd;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMGetElementPtr;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMICmp;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMICmp.IConditionCode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
@@ -73,21 +80,28 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     LLVMArgDecl LLVMArgDecl(Position pos, LLVMTypeNode typeNode, String name);
 
+    LLVMTypeDeclaration LLVMTypeDeclaration(LLVMTypeNode tn);
+
+    LLVMGlobalVarDeclaration LLVMGlobalVarDeclaration(String name,
+            boolean isExtern, GlobalVariableKind kind, LLVMTypeNode typeNode,
+            LLVMOperand initializerConstant);
+
     /*
      * LLVM Expressions
      */
 
-    LLVMIntLiteral LLVMIntLiteral(Position pos, LLVMTypeNode tn, int value);
+    LLVMIntLiteral LLVMIntLiteral(LLVMTypeNode tn, long value);
 
     LLVMFloatLiteral LLVMFloatLiteral(LLVMTypeNode typeNode, float value);
 
     LLVMDoubleLiteral LLVMDoubleLiteral(LLVMTypeNode typeNode, double value);
 
+    LLVMNullLiteral LLVMNullLiteral(LLVMTypeNode typeNode);
+
     LLVMVariable LLVMVariable(Position pos, String name, LLVMTypeNode tn,
             VarType t);
 
-    LLVMTypedOperand LLVMTypedOperand(Position pos, LLVMOperand op,
-            LLVMTypeNode tn);
+    LLVMTypedOperand LLVMTypedOperand(LLVMOperand op, LLVMTypeNode tn);
 
     LLVMLabel LLVMLabel(Position pos, String name);
 
@@ -95,15 +109,19 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
      * LLVM Type Nodes
      */
 
-    LLVMIntType LLVMIntType(Position pos, int intSize);
+    LLVMIntType LLVMIntType(int intSize);
 
     LLVMDoubleType LLVMDoubleType();
 
     LLVMFloatType LLVMFloatType();
 
-    LLVMVoidType LLVMVoidType(Position pos);
+    LLVMVariableType LLVMVariableType(String name);
 
-    LLVMPointerType LLVMPointerType(Position pos, LLVMTypeNode tn);
+    LLVMStructureType LLVMStructureType(List<LLVMTypeNode> typeList);
+
+    LLVMVoidType LLVMVoidType();
+
+    LLVMPointerType LLVMPointerType(LLVMTypeNode tn);
 
     LLVMFunctionType LLVMFunctionType(Position compilerGenerated,
             List<LLVMTypeNode> formalTypes, LLVMTypeNode returnType);
@@ -163,11 +181,9 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
     LLVMAlloca LLVMAlloca(Position pos, LLVMTypeNode typeNode, int numElements,
             int alignment);
 
-    LLVMLoad LLVMLoad(Position pos, LLVMVariable result, LLVMTypeNode typeNode,
-            LLVMVariable ptr);
+    LLVMLoad LLVMLoad(LLVMVariable result, LLVMTypeNode typeNode, LLVMOperand ptr);
 
-    LLVMStore LLVMStore(Position pos, LLVMTypeNode typeNode, LLVMOperand value,
-            LLVMVariable ptr);
+    LLVMStore LLVMStore(LLVMTypeNode typeNode, LLVMOperand value, LLVMOperand ptr);
 
     LLVMConversion LLVMConversion(Position pos, Instruction instruction,
             LLVMVariable result, LLVMTypeNode valueType, LLVMOperand value,
@@ -175,6 +191,9 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     LLVMConversion LLVMConversion(Position pos, Instruction instruction,
             LLVMTypeNode valueType, LLVMOperand value, LLVMTypeNode toType);
+
+    LLVMGetElementPtr LLVMGetElementPtr(LLVMVariable ptrVar,
+            List<LLVMTypedOperand> l);
 
     /*
      * PseudoLLVM constructs
@@ -186,7 +205,6 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     LLVMSeqLabel LLVMSeqLabel(LLVMLabel l);
 
-    LLVMESeq LLVMESeq(Position pos, LLVMInstruction instruction,
-            LLVMOperand expr);
+    LLVMESeq LLVMESeq(LLVMInstruction instruction, LLVMOperand expr);
 
 }

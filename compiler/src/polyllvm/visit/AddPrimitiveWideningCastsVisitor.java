@@ -1,5 +1,9 @@
 package polyllvm.visit;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+import polyglot.ast.MethodDecl;
 import polyglot.ast.Node;
 import polyglot.types.TypeSystem;
 import polyglot.visit.NodeVisitor;
@@ -17,17 +21,24 @@ public class AddPrimitiveWideningCastsVisitor extends NodeVisitor {
 
     private PolyLLVMNodeFactory nf;
     private TypeSystem ts;
+    private Deque<MethodDecl> methods;
 
     public AddPrimitiveWideningCastsVisitor(PolyLLVMNodeFactory nf,
             TypeSystem ts) {
         super(nf.lang());
         this.nf = nf;
         this.ts = ts;
+        methods = new ArrayDeque<>();
     }
 
     @Override
     public PolyLLVMLang lang() {
         return (PolyLLVMLang) super.lang();
+    }
+
+    @Override
+    public NodeVisitor enter(Node n) {
+        return lang().enterAddPrimitiveWideningCasts(n, this);
     }
 
     @Override
@@ -47,4 +58,26 @@ public class AddPrimitiveWideningCastsVisitor extends NodeVisitor {
     public TypeSystem typeSystem() {
         return ts;
     }
+
+    /**
+     * Remove the current method from the stack of methods being visited
+     */
+    public void popCurrentMethod() {
+        methods.pop();
+    }
+
+    /**
+     * Set {@code m} as the new current method
+     */
+    public void setCurrentMethod(MethodDecl m) {
+        methods.push(m);
+    }
+
+    /**
+     * Return the current method
+     */
+    public MethodDecl getCurrentMethod() {
+        return methods.peek();
+    }
+
 }

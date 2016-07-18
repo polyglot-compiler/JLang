@@ -61,8 +61,7 @@ public class PolyLLVMAssignExt extends PolyLLVMExt {
                                                    VarType.LOCAL);
 
                 LLVMOperand value = (LLVMOperand) expr;
-                LLVMStore store = nf.LLVMStore(Position.compilerGenerated(),
-                                               tn,
+                LLVMStore store = nf.LLVMStore(tn,
                                                value,
                                                ptr);
                 v.addTranslation(node(), store);
@@ -70,7 +69,8 @@ public class PolyLLVMAssignExt extends PolyLLVMExt {
             }
             else {
                 throw new InternalCompilerError("Expression `" + n.right()
-                        + "` was not translated to an LLVMOperand " + "("
+                        + "` (" + n.right().getClass()
+                        + ") was not translated to an LLVMOperand " + "("
                         + v.getTranslation(n.right()) + ")");
             }
         }

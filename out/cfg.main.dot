@@ -1,0 +1,5 @@
+digraph "CFG for 'main' function" {
+	label="CFG for 'main' function";
+
+	Node0x7fef90415b10 [shape=record,label="{%0:\l  %c = alloca i16, i16 1\l  %x = alloca i32\l  store i16 0, i16* %c\l  store i32 0, i32* %x\l  store i16 97, i16* %c\l  %temp.2 = load i16, i16* %c\l  %temp.3 = zext i16 %temp.2 to i32\l  store i32 %temp.3, i32* %x\l  %temp.5 = zext i16 98 to i32\l  %temp.6 = add i32 %temp.5, 4\l  store i32 %temp.6, i32* %x\l  %temp.8 = zext i16 98 to i32\l  %temp.33 = alloca i32\l  store i32 %temp.8, i32* %temp.33\l  %temp.9 = zext i16 99 to i32\l  %temp.34 = load i32, i32* %temp.33\l  %temp.10 = add i32 %temp.34, %temp.9\l  store i32 %temp.10, i32* %x\l  %temp.12 = zext i16 98 to i32\l  store i32 %temp.12, i32* %x\l  %temp.13 = load i32, i32* %x\l  %temp.35 = alloca i32\l  store i32 %temp.13, i32* %temp.35\l  %temp.36 = load i32, i32* %temp.35\l  call void @_IntAdd_print(i32 %temp.36)\l  ret void\l}"];
+}

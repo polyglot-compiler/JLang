@@ -51,7 +51,7 @@ public class PolyLLVMScheduler extends JLScheduler {
         Goal g = new VisitorGoal(job, new StringLiteralRemover(ts, nf));
         try {
             // Make sure we have type information before we translate things.
-            g.addPrerequisiteGoal(Serialized(job), this);
+            g.addPrerequisiteGoal(Serialized(job), this);//Validated(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);

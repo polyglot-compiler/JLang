@@ -123,8 +123,7 @@ public class LLVMBr_c extends LLVMInstruction_c implements LLVMBr {
             if (untypedOp instanceof LLVMESeq) {
                 LLVMESeq e = (LLVMESeq) untypedOp;
                 LLVMTypedOperand llvmTypedOperand =
-                        nf.LLVMTypedOperand(Position.compilerGenerated(),
-                                            e.expr(),
+                        nf.LLVMTypedOperand(e.expr(),
                                             cond.typeNode());
 
                 List<LLVMInstruction> instructions = new ArrayList<>();

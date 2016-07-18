@@ -54,7 +54,7 @@ public class PolyLLVMFreshGen {
     public static LLVMVariable freshLocalVar(PolyLLVMNodeFactory nf,
             LLVMTypeNode tn) {
         return nf.LLVMVariable(Position.compilerGenerated(),
-                               instance().freshString("temp."),
+                               instance().freshString("_temp."),
                                tn,
                                VarType.LOCAL);
     }

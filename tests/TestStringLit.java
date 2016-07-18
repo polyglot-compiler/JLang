@@ -1,5 +1,5 @@
-public class TestByte {
+public class TestStringLit {
     public static void main(String[] args) {
-	String s = "HIIIII";
+        String s = "HIIIII";
     }
 }

@@ -79,6 +79,12 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     }
 
     @Override
+    public AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(
+            AddPrimitiveWideningCastsVisitor v) {
+        return v;
+    }
+
+    @Override
     public Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v) {
         return node();
     }

@@ -22,6 +22,8 @@ import polyllvm.extension.PolyLLVMLabeledExt;
 import polyllvm.extension.PolyLLVMLocalDeclExt;
 import polyllvm.extension.PolyLLVMLocalExt;
 import polyllvm.extension.PolyLLVMMethodDeclExt;
+import polyllvm.extension.PolyLLVMNewExt;
+import polyllvm.extension.PolyLLVMNullLitExt;
 import polyllvm.extension.PolyLLVMReturnExt;
 import polyllvm.extension.PolyLLVMSourceFileExt;
 import polyllvm.extension.PolyLLVMStringLitExt;
@@ -175,5 +177,15 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     @Override
     protected Ext extFloatLitImpl() {
         return new PolyLLVMFloatLitExt();
+    }
+
+    @Override
+    protected Ext extNullLitImpl() {
+        return new PolyLLVMNullLitExt();
+    }
+
+    @Override
+    protected Ext extNewImpl() {
+        return new PolyLLVMNewExt();
     }
 }

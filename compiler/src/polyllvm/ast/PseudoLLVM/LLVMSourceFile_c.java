@@ -144,6 +144,8 @@ public class LLVMSourceFile_c extends LLVMNode_c implements LLVMSourceFile {
 
     @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
+        System.out.println("I am about to pretty print, the globals are: "
+                + globals);
         for (LLVMGlobalDeclaration g : globals) {
             print(g, w, pp);
             w.write("\n");

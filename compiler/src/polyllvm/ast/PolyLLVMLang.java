@@ -32,5 +32,8 @@ public interface PolyLLVMLang extends JLang {
 
     Node removeESeq(Node n, RemoveESeqVisitor removeESeqVisitor);
 
+    AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(Node n,
+            AddPrimitiveWideningCastsVisitor v);
+
     Node addPrimitiveWideningCasts(Node n, AddPrimitiveWideningCastsVisitor v);
 }

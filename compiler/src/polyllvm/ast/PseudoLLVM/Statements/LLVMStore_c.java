@@ -14,7 +14,6 @@ import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.visit.RemoveESeqVisitor;
 
@@ -23,10 +22,10 @@ public class LLVMStore_c extends LLVMInstruction_c implements LLVMStore {
 
     protected LLVMTypeNode typeNode;
     protected LLVMOperand value;
-    protected LLVMVariable ptr;
+    protected LLVMOperand ptr;
 
     public LLVMStore_c(Position pos, LLVMTypeNode typeNode, LLVMOperand value,
-            LLVMVariable ptr, Ext e) {
+            LLVMOperand ptr, Ext e) {
         super(pos, e);
         this.typeNode = typeNode;
         this.value = value;
@@ -51,13 +50,13 @@ public class LLVMStore_c extends LLVMInstruction_c implements LLVMStore {
         LLVMStore_c n = (LLVMStore_c) super.visitChildren(v);
         LLVMTypeNode tn = visitChild(typeNode, v);
         LLVMOperand val = visitChild(value, v);
-        LLVMVariable p = visitChild(ptr, v);
+        LLVMOperand p = visitChild(ptr, v);
 
         return reconstruct(n, tn, val, p);
     }
 
     protected <N extends LLVMStore_c> N reconstruct(N n, LLVMTypeNode tn,
-            LLVMOperand val, LLVMVariable p) {
+            LLVMOperand val, LLVMOperand p) {
         n = typeNode(n, tn);
         n = value(n, val);
         n = ptr(n, p);
@@ -78,7 +77,7 @@ public class LLVMStore_c extends LLVMInstruction_c implements LLVMStore {
         return n;
     }
 
-    protected <N extends LLVMStore_c> N ptr(N n, LLVMVariable p) {
+    protected <N extends LLVMStore_c> N ptr(N n, LLVMOperand p) {
         if (n.ptr == p) return n;
         n = copyIfNeeded(n);
         n.ptr = p;
@@ -92,7 +91,27 @@ public class LLVMStore_c extends LLVMInstruction_c implements LLVMStore {
 
     @Override
     public LLVMNode removeESeq(RemoveESeqVisitor v) {
-        if (value instanceof LLVMESeq) {
+        if (value instanceof LLVMESeq && ptr instanceof LLVMESeq) {
+            //TODO: Might need to make this case more complicated!
+            PolyLLVMNodeFactory nf = v.nodeFactory();
+
+            LLVMESeq valueESeq = (LLVMESeq) value;
+            LLVMESeq ptrESeq = (LLVMESeq) ptr;
+
+            List<LLVMInstruction> instructions = new ArrayList<>();
+            instructions.add(valueESeq.instruction());
+            instructions.add(ptrESeq.instruction());
+            instructions.add(reconstruct(this,
+                                         typeNode,
+                                         valueESeq.expr(),
+                                         ptrESeq.expr()));
+            LLVMSeq llvmSeq =
+                    nf.LLVMSeq(Position.compilerGenerated(), instructions);
+
+            return llvmSeq;
+
+        }
+        else if (value instanceof LLVMESeq) {
             PolyLLVMNodeFactory nf = v.nodeFactory();
 
             LLVMESeq eseq = (LLVMESeq) value;
@@ -105,6 +124,21 @@ public class LLVMStore_c extends LLVMInstruction_c implements LLVMStore {
 
             return llvmSeq;
         }
+        else if (ptr instanceof LLVMESeq) {
+            PolyLLVMNodeFactory nf = v.nodeFactory();
+
+            LLVMESeq eseq = (LLVMESeq) ptr;
+
+            List<LLVMInstruction> instructions = new ArrayList<>();
+            instructions.add(eseq.instruction());
+            instructions.add(reconstruct(this, typeNode, value, eseq.expr()));
+            LLVMSeq llvmSeq =
+                    nf.LLVMSeq(Position.compilerGenerated(), instructions);
+
+            return llvmSeq;
+
+        }
+
         return this;
     }
 

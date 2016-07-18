@@ -130,21 +130,19 @@ public abstract class LLVMBinaryOperandInstruction_c extends LLVMInstruction_c
             //sl⃗ ; MOVE(TEMP(tl ), el′ ); s⃗r ; OP(TEMP(tr ), er′ )
             //sl ; Alloc tl; store el -> tl ; sr; Load tl -> freshtemp; OP(freshtemp, er')
             LLVMTypeNode ptrType =
-                    nf.LLVMPointerType(Position.compilerGenerated(), typeNode);
+                    nf.LLVMPointerType(typeNode);
             LLVMVariable tempPointer =
                     PolyLLVMFreshGen.freshLocalVar(nf, ptrType);
             LLVMAlloca allocTemp =
                     nf.LLVMAlloca(Position.compilerGenerated(), typeNode);
             allocTemp = allocTemp.result(tempPointer);
-            LLVMStore moveLeft = nf.LLVMStore(Position.compilerGenerated(),
-                                              typeNode,
+            LLVMStore moveLeft = nf.LLVMStore(typeNode,
                                               l.expr(),
                                               tempPointer);
 
             LLVMVariable freshTemp =
                     PolyLLVMFreshGen.freshLocalVar(nf, typeNode);
-            LLVMLoad loadLeft = nf.LLVMLoad(Position.compilerGenerated(),
-                                            freshTemp,
+            LLVMLoad loadLeft = nf.LLVMLoad(freshTemp,
                                             typeNode,
                                             tempPointer);
 

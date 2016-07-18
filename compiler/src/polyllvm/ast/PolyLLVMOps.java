@@ -33,6 +33,9 @@ public interface PolyLLVMOps extends NodeOps {
 
     Node removeESeq(RemoveESeqVisitor v);
 
+    AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(
+            AddPrimitiveWideningCastsVisitor v);
+
     Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v);
 
 }

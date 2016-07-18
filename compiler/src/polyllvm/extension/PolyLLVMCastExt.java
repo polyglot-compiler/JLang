@@ -85,8 +85,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
                     PolyLLVMFreshGen.freshLocalVar(nf, castTypeNode);
             conv = conv.result(result);
             v.addTranslation(n,
-                             nf.LLVMESeq(Position.compilerGenerated(),
-                                         conv,
+                             nf.LLVMESeq(conv,
                                          result));
 
         }

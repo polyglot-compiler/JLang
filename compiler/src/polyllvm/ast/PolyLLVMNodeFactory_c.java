@@ -17,8 +17,13 @@ import polyllvm.ast.PseudoLLVM.LLVMFunctionDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMFunctionDeclaration_c;
 import polyllvm.ast.PseudoLLVM.LLVMFunction_c;
 import polyllvm.ast.PseudoLLVM.LLVMGlobalDeclaration;
+import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
+import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration.GlobalVariableKind;
+import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration_c;
 import polyllvm.ast.PseudoLLVM.LLVMSourceFile;
 import polyllvm.ast.PseudoLLVM.LLVMSourceFile_c;
+import polyllvm.ast.PseudoLLVM.LLVMTypeDeclaration;
+import polyllvm.ast.PseudoLLVM.LLVMTypeDeclaration_c;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMDoubleLiteral;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMDoubleLiteral_c;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
@@ -29,6 +34,8 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMIntLiteral;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMIntLiteral_c;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel_c;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMNullLiteral;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMNullLiteral_c;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand_c;
@@ -45,7 +52,11 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType_c;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType_c;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType_c;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMVariableType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMVariableType_c;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMVoidType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMVoidType_c;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMAdd;
@@ -61,6 +72,8 @@ import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion.Instruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion_c;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMFAdd;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMFAdd_c;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMGetElementPtr;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMGetElementPtr_c;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMICmp;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMICmp.IConditionCode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMICmp_c;
@@ -145,15 +158,18 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     }
 
     @Override
-    public LLVMIntLiteral LLVMIntLiteral(Position pos, LLVMTypeNode tn,
-            int value) {
-        LLVMIntLiteral n = new LLVMIntLiteral_c(pos, value, tn, null);
+    public LLVMIntLiteral LLVMIntLiteral(LLVMTypeNode tn, long value) {
+        LLVMIntLiteral n = new LLVMIntLiteral_c(Position.compilerGenerated(),
+                                                value,
+                                                tn,
+                                                null);
         return ext(n, extFactory().extLLVMIntLiteral());
     }
 
     @Override
-    public LLVMIntType LLVMIntType(Position pos, int intSize) {
-        LLVMIntType n = new LLVMIntType_c(pos, intSize, null);
+    public LLVMIntType LLVMIntType(int intSize) {
+        LLVMIntType n =
+                new LLVMIntType_c(Position.compilerGenerated(), intSize, null);
         return ext(n, extFactory().extLLVMIntType());
     }
 
@@ -194,8 +210,8 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     }
 
     @Override
-    public LLVMVoidType LLVMVoidType(Position pos) {
-        LLVMVoidType n = new LLVMVoidType_c(pos);
+    public LLVMVoidType LLVMVoidType() {
+        LLVMVoidType n = new LLVMVoidType_c(Position.compilerGenerated());
         return ext(n, extFactory().extLLVMVoidType());
     }
 
@@ -243,9 +259,12 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     }
 
     @Override
-    public LLVMTypedOperand LLVMTypedOperand(Position pos, LLVMOperand op,
-            LLVMTypeNode tn) {
-        LLVMTypedOperand n = new LLVMTypedOperand_c(pos, op, tn, null);//(pos, name, t, tn, null);
+    public LLVMTypedOperand LLVMTypedOperand(LLVMOperand op, LLVMTypeNode tn) {
+        LLVMTypedOperand n =
+                new LLVMTypedOperand_c(Position.compilerGenerated(),
+                                       op,
+                                       tn,
+                                       null);//(pos, name, t, tn, null);
         return ext(n, extFactory().extLLVMTypedOperand());
     }
 
@@ -329,23 +348,33 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     }
 
     @Override
-    public LLVMLoad LLVMLoad(Position pos, LLVMVariable var,
-            LLVMTypeNode typeNode, LLVMVariable ptr) {
-        LLVMLoad n = new LLVMLoad_c(pos, var, typeNode, ptr, null);
+    public LLVMLoad LLVMLoad(LLVMVariable var, LLVMTypeNode typeNode,
+            LLVMOperand ptr) {
+        LLVMLoad n = new LLVMLoad_c(Position.compilerGenerated(),
+                                    var,
+                                    typeNode,
+                                    ptr,
+                                    null);
         return ext(n, extFactory().extLLVMLoad());
     }
 
     @Override
-    public LLVMStore LLVMStore(Position pos, LLVMTypeNode typeNode,
-            LLVMOperand value, LLVMVariable ptr) {
-        LLVMStore n = new LLVMStore_c(pos, typeNode, value, ptr, null);
+    public LLVMStore LLVMStore(LLVMTypeNode typeNode, LLVMOperand value,
+            LLVMOperand ptr) {
+        LLVMStore n = new LLVMStore_c(Position.compilerGenerated(),
+                                      typeNode,
+                                      value,
+                                      ptr,
+                                      null);
         return ext(n, extFactory().extLLVMStore());
     }
 
     @Override
-    public LLVMESeq LLVMESeq(Position pos, LLVMInstruction instruction,
-            LLVMOperand expr) {
-        LLVMESeq n = new LLVMESeq_c(pos, instruction, expr, null);
+    public LLVMESeq LLVMESeq(LLVMInstruction instruction, LLVMOperand expr) {
+        LLVMESeq n = new LLVMESeq_c(Position.compilerGenerated(),
+                                    instruction,
+                                    expr,
+                                    null);
         return ext(n, extFactory().extLLVMESeq());
     }
 
@@ -358,8 +387,9 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     }
 
     @Override
-    public LLVMPointerType LLVMPointerType(Position pos, LLVMTypeNode tn) {
-        LLVMPointerType n = new LLVMPointerType_c(pos, tn, null);
+    public LLVMPointerType LLVMPointerType(LLVMTypeNode tn) {
+        LLVMPointerType n =
+                new LLVMPointerType_c(Position.compilerGenerated(), tn, null);
         return ext(n, extFactory().extLLVMPointerType());
     }
 
@@ -439,6 +469,64 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
             LLVMOperand right) {
         LLVMFAdd n = new LLVMFAdd_c(pos, tn, left, right, null);
         return ext(n, extFactory().extLLVMFAdd());
+    }
+
+    @Override
+    public LLVMStructureType LLVMStructureType(List<LLVMTypeNode> typeList) {
+        LLVMStructureType n =
+                new LLVMStructureType_c(Position.compilerGenerated(),
+                                        typeList,
+                                        null);
+        return ext(n, extFactory().extLLVMStructureType());
+    }
+
+    @Override
+    public LLVMVariableType LLVMVariableType(String name) {
+        LLVMVariableType n =
+                new LLVMVariableType_c(Position.compilerGenerated(),
+                                       name,
+                                       null);
+        return ext(n, extFactory().extLLVMVariableType());
+    }
+
+    @Override
+    public LLVMTypeDeclaration LLVMTypeDeclaration(LLVMTypeNode tn) {
+        LLVMTypeDeclaration n = new LLVMTypeDeclaration_c(null, tn, null);
+        return ext(n, extFactory().extLLVMTypeDeclaration());
+    }
+
+    @Override
+    public LLVMNullLiteral LLVMNullLiteral(LLVMTypeNode typeNode) {
+        LLVMNullLiteral n = new LLVMNullLiteral_c(Position.compilerGenerated(),
+                                                  typeNode,
+                                                  null);
+        return ext(n, extFactory().extLLVMNullLiteral());
+    }
+
+    @Override
+    public LLVMGlobalVarDeclaration LLVMGlobalVarDeclaration(String name,
+            boolean isExtern, GlobalVariableKind kind, LLVMTypeNode typeNode,
+            LLVMOperand initializerConstant) {
+        LLVMGlobalVarDeclaration n =
+                new LLVMGlobalVarDeclaration_c(Position.compilerGenerated(),
+                                               name,
+                                               isExtern,
+                                               kind,
+                                               typeNode,
+                                               initializerConstant,
+                                               null);
+        return ext(n, extFactory().extLLVMGlobalVarDeclaration());
+    }
+
+    @Override
+    public LLVMGetElementPtr LLVMGetElementPtr(LLVMVariable ptrVar,
+            List<LLVMTypedOperand> l) {
+        LLVMGetElementPtr n =
+                new LLVMGetElementPtr_c(Position.compilerGenerated(),
+                                        ptrVar,
+                                        l,
+                                        null);
+        return ext(n, extFactory().extLLVMGetElementPtr());
     }
 
     // TODO:  Override factory methods for overridden AST nodes.

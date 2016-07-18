@@ -2,7 +2,6 @@ package polyllvm.extension;
 
 import polyglot.ast.IntLit;
 import polyglot.ast.Node;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -20,9 +19,8 @@ public class PolyLLVMIntLitExt extends PolyLLVMExt {
         LLVMTypeNode tn = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
         if (n.type().isLongOrLess()) {
             v.addTranslation(n,
-                             nf.LLVMIntLiteral(Position.compilerGenerated(),
-                                               tn,
-                                               (int) n.value()));
+                             nf.LLVMIntLiteral(tn,
+                                               n.value()));
         }
         else if (n.type().isFloat()) {
             v.addTranslation(n, nf.LLVMFloatLiteral(tn, n.value()));

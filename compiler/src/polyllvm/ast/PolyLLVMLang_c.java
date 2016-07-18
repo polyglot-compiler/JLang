@@ -90,6 +90,12 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     }
 
     @Override
+    public AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(
+            Node n, AddPrimitiveWideningCastsVisitor v) {
+        return PolyLLVMOps(n).enterAddPrimitiveWideningCasts(v);
+    }
+
+    @Override
     public Node addPrimitiveWideningCasts(Node n,
             AddPrimitiveWideningCastsVisitor v) {
         return PolyLLVMOps(n).addPrimitiveWideningCasts(v);

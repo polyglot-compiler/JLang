@@ -42,8 +42,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
                                 v.varName(n.name()),
                                 typeNode,
                                 VarType.LOCAL);
-        LLVMStore store = nf.LLVMStore(Position.compilerGenerated(),
-                                       typeNode,
+        LLVMStore store = nf.LLVMStore(typeNode,
                                        (LLVMOperand) decl,
                                        ptr);
         v.addTranslation(n, store);

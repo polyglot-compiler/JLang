@@ -40,9 +40,9 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
                                 typeNode,
                                 VarType.LOCAL);
         LLVMInstruction instruction =
-                nf.LLVMLoad(Position.compilerGenerated(), expr, typeNode, ptr);
+                nf.LLVMLoad(expr, typeNode, ptr);
         LLVMNode translation =
-                nf.LLVMESeq(Position.compilerGenerated(), instruction, expr);
+                nf.LLVMESeq(instruction, expr);
         v.addTranslation(n, translation);
         return super.translatePseudoLLVM(v);
     }
@@ -52,10 +52,8 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
             LLVMLabel trueLabel, LLVMLabel falseLabel) {
         PolyLLVMNodeFactory nf = v.nodeFactory();
         LLVMTypedOperand typedTranslation =
-                nf.LLVMTypedOperand(Position.compilerGenerated(),
-                                    (LLVMOperand) v.getTranslation(node()),
-                                    nf.LLVMIntType(Position.compilerGenerated(),
-                                                   1));
+                nf.LLVMTypedOperand((LLVMOperand) v.getTranslation(node()),
+                                    nf.LLVMIntType(1));
         LLVMInstruction translation =
                 nf.LLVMBr(Position.compilerGenerated(),
                           typedTranslation,

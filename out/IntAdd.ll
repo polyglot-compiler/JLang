@@ -1,53 +1,93 @@
+%class.IntAdd = type opaque
+@_J_size_6IntAdd = global i64 0
 declare void @_IntAdd_print(i32 %i)
 
+declare i8* @malloc(i64 %size)
+
 define void @main() {
-%flat$$$0 = alloca i32, i32 1
-%temp.1 = call i32 @_IntAdd_f(i32 0, i32 10)
-store i32 %temp.1, i32* %flat$$$0
-%temp.2 = load i32, i32* %flat$$$0
-call void @_IntAdd_print(i32 %temp.2)
+%x = alloca i32, i32 1
+%flat$1 = alloca i32, i32 1
+%flat$2 = alloca i1, i32 1
+%flat$0 = alloca i32, i32 1
+store i32 0, i32* %x
+%_temp.1 = add i32 1, 2
+store i32 %_temp.1, i32* %x
+
+%_temp.2 = load i32, i32* %x
+%_temp.20 = alloca i32, i32 1
+store i32 %_temp.2, i32* %_temp.20
+%_temp.21 = load i32, i32* %_temp.20
+%_temp.3 = call i32 @_IntAdd_f(i32 4, i32 %_temp.21)
+
+store i32 %_temp.3, i32* %flat$0
+
+%_temp.4 = load i32, i32* %x
+%_temp.22 = alloca i32, i32 1
+store i32 %_temp.4, i32* %_temp.22
+%_temp.5 = load i32, i32* %flat$0
+%_temp.23 = load i32, i32* %_temp.22
+%_temp.6 = add i32 %_temp.23, %_temp.5
+
+store i32 %_temp.6, i32* %flat$1
+
+%_temp.7 = load i32, i32* %flat$1
+%_temp.24 = alloca i32, i32 1
+store i32 %_temp.7, i32* %_temp.24
+%_temp.25 = load i32, i32* %_temp.24
+call void @_IntAdd_print(i32 %_temp.25)
+
+%_temp.9 = load i32, i32* %x
+%_temp.10 = icmp eq i32 %_temp.9, 3
+
+store i1 %_temp.10, i1* %flat$2
+
+%_temp.11 = load i1, i1* %flat$2
+br i1 %_temp.11, label %label.3, label %label.4
+
+label.3:
+call void @_IntAdd_print(i32 1)
+
+
+br label %label.5
+label.4:
+br label %label.1
+label.0:
+call void @_IntAdd_print(i32 0)
+
+
+br label %label.2
+label.1:
+call void @_IntAdd_print(i32 123)
+
+
+br label %label.2
+label.2:
+
+
+br label %label.5
+label.5:
+
 ret void
 }
 
-define i32 @_IntAdd_f(i32 %x, i32 %y) {
-%temp.0 = alloca i1, i1 1
-%flat$$$1 = alloca i1, i1 1
-%arg_x = alloca i32, i32 1
-store i32 %x, i32* %arg_x
+define i32 @_IntAdd_f(i32 %w, i32 %y) {
+%x = alloca i32, i32 1
+%arg_w = alloca i32, i32 1
+store i32 %w, i32* %arg_w
 %arg_y = alloca i32, i32 1
 store i32 %y, i32* %arg_y
-br label %label.3
-label.3:
-%temp.3 = load i32, i32* %arg_x
-%temp.4 = load i32, i32* %arg_y
-%temp.5 = icmp slt i32 %temp.3, %temp.4
-store i1 %temp.5, i1* %temp.0
-%temp.6 = load i1, i1* %temp.0
-br i1 %temp.6, label %label.5, label %label.4
-label.5:
-%temp.7 = load i32, i32* %arg_x
-call void @_IntAdd_print(i32 %temp.7)
-%temp.8 = load i32, i32* %arg_y
-call void @_IntAdd_print(i32 %temp.8)
-%temp.9 = load i32, i32* %arg_x
-%temp.10 = add i32 %temp.9, 1
-store i32 %temp.10, i32* %arg_x
-%temp.11 = load i32, i32* %arg_y
-%temp.12 = sub i32 %temp.11, 1
-store i32 %temp.12, i32* %arg_y
-%temp.13 = load i32, i32* %arg_x
-%temp.14 = icmp slt i32 %temp.13, 0
-store i1 %temp.14, i1* %flat$$$1
-%temp.15 = load i1, i1* %flat$$$1
-br i1 %temp.15, label %label.0, label %label.1
-label.0:
-ret i32 1
-br label %label.2
-label.1:
-br label %label.2
-label.2:
-br label %label.3
-label.4:
-ret i32 0
+store i32 0, i32* %x
+%_temp.16 = load i32, i32* %arg_w
+%_temp.26 = alloca i32, i32 1
+store i32 %_temp.16, i32* %_temp.26
+%_temp.17 = load i32, i32* %arg_y
+%_temp.27 = load i32, i32* %_temp.26
+%_temp.18 = add i32 %_temp.27, %_temp.17
+
+store i32 %_temp.18, i32* %x
+
+%_temp.19 = load i32, i32* %x
+ret i32 %_temp.19
+
 }
 

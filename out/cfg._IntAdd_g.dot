@@ -1,0 +1,11 @@
+digraph "CFG for '_IntAdd_g' function" {
+	label="CFG for '_IntAdd_g' function";
+
+	Node0x7fef90418cd0 [shape=record,label="{%0:\l  br label %loophead.1\l}"];
+	Node0x7fef90418cd0 -> Node0x7fef90418d60;
+	Node0x7fef90418d60 [shape=record,label="{loophead.1:                                       \l  br label %label.7\l}"];
+	Node0x7fef90418d60 -> Node0x7fef90418e80;
+	Node0x7fef90418e80 [shape=record,label="{label.7:                                          \l  br label %loophead.1\l}"];
+	Node0x7fef90418e80 -> Node0x7fef90418d60;
+	Node0x7fef90418f30 [shape=record,label="{loopend.1:                                        \l  ret i32 0\l}"];
+}

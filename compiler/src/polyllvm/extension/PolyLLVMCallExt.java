@@ -60,10 +60,11 @@ public class PolyLLVMCallExt extends PolyLLVMExt {
 
         PolyLLVMNodeFactory nf = v.nodeFactory();
         String mangledFuncName =
-                PolyLLVMMangler.mangleMethodName(n.methodInstance()
-                                                  .container()
-                                                  .toString(),
-                                                 n.name());
+                PolyLLVMMangler.mangleMethodName(n.methodInstance());
+//                PolyLLVMMangler.mangleMethodName(n.methodInstance()
+//                                                  .container()
+//                                                  .toString(),
+//                                                 n.name());
         LLVMTypeNode tn =
                 PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf,
                                                            n.methodInstance()
@@ -99,8 +100,7 @@ public class PolyLLVMCallExt extends PolyLLVMExt {
         }
 
         v.addTranslation(n,
-                         nf.LLVMESeq(Position.compilerGenerated(),
-                                     llvmCall,
+                         nf.LLVMESeq(llvmCall,
                                      result));
         return super.translatePseudoLLVM(v);
     }

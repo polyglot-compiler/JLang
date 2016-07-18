@@ -27,12 +27,11 @@ public class PolyLLVMClassBodyExt extends PolyLLVMExt {
                                                null,
                                                null);
         for (ClassMember cm : n.members()) {
-            if (cm instanceof MethodDecl && ((MethodDecl) cm).flags().isStatic()
+            if (cm instanceof MethodDecl
                     && !((MethodDecl) cm).flags().isNative()) {
                 llf = llf.appendFunction((LLVMFunction) v.getTranslation(cm));
             }
             else if (cm instanceof MethodDecl
-                    && ((MethodDecl) cm).flags().isStatic()
                     && ((MethodDecl) cm).flags().isNative()) {
                 llf = llf.appendFunctionDeclaration((LLVMFunctionDeclaration) v.getTranslation(cm));
             }

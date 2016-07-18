@@ -137,16 +137,14 @@ public class LLVMCall_c extends LLVMInstruction_c implements LLVMCall {
             if (p.part2() instanceof LLVMESeq) {
                 LLVMESeq e = (LLVMESeq) p.part2();
                 LLVMTypeNode ptrType =
-                        nf.LLVMPointerType(Position.compilerGenerated(),
-                                           p.part1());
+                        nf.LLVMPointerType(p.part1());
                 LLVMVariable tempPointer =
                         PolyLLVMFreshGen.freshLocalVar(nf, ptrType);
                 LLVMAlloca allocTemp =
                         nf.LLVMAlloca(Position.compilerGenerated(), p.part1());
                 allocTemp = allocTemp.result(tempPointer);
                 LLVMStore moveArg =
-                        nf.LLVMStore(Position.compilerGenerated(),
-                                     p.part1(),
+                        nf.LLVMStore(p.part1(),
                                      e.expr(),
                                      tempPointer);
 
@@ -160,8 +158,7 @@ public class LLVMCall_c extends LLVMInstruction_c implements LLVMCall {
                 newArgs.add(new Pair<>(p.part1(), ft));
 
                 LLVMLoad loadArg =
-                        nf.LLVMLoad(Position.compilerGenerated(),
-                                    freshTemp,
+                        nf.LLVMLoad(freshTemp,
                                     p.part1(),
                                     tempPointer);
                 loads.add(loadArg);

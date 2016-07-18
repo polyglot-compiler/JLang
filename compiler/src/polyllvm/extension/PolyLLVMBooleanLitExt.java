@@ -19,10 +19,9 @@ public class PolyLLVMBooleanLitExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
         int value = n.value() ? 1 : 0;
-        LLVMIntType type = nf.LLVMIntType(Position.compilerGenerated(), 1);
+        LLVMIntType type = nf.LLVMIntType(1);
         v.addTranslation(node(),
-                         nf.LLVMIntLiteral(Position.compilerGenerated(),
-                                           type,
+                         nf.LLVMIntLiteral(type,
                                            value));
         return super.translatePseudoLLVM(v);
     }

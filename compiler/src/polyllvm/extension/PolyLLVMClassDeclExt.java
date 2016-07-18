@@ -12,15 +12,16 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
     @Override
     public PseudoLLVMTranslator enterTranslatePseudoLLVM(
             PseudoLLVMTranslator v) {
-        v.setCurrentClass((ClassDecl) node());
+        v.enterClass((ClassDecl) node());
         return super.enterTranslatePseudoLLVM(v);
     }
 
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         ClassDecl n = (ClassDecl) node();
+        System.out.println("SuperClass of " + n.name() + ": " + n.superClass());
         v.addTranslation(n, v.getTranslation(n.body()));
-        v.clearCurrentClass();
+        v.leaveClass();
         return super.translatePseudoLLVM(v);
     }
 

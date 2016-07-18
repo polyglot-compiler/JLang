@@ -88,8 +88,7 @@ public class LLVMVarToStack extends NodeVisitor {
                                                 varName(e.getKey()),
                                                 e.getValue(),
                                                 VarType.LOCAL)));
-            allocs.add(nf.LLVMStore(Position.compilerGenerated(),
-                                    e.getValue(),
+            allocs.add(nf.LLVMStore(e.getValue(),
                                     nf.LLVMVariable(Position.compilerGenerated(),
                                                     e.getKey(),
                                                     e.getValue(),
