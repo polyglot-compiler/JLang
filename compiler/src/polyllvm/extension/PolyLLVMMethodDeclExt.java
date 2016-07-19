@@ -115,10 +115,10 @@ public class PolyLLVMMethodDeclExt extends PolyLLVMExt {
         List<LLVMArgDecl> args = new ArrayList<>();
         if (!mi.flags().isStatic()) {
             LLVMTypeNode objType =
-                    PolyLLVMTypeUtils.polyLLVMObjectType(nf,
-                                                         v.getCurrentClass());
-            LLVMPointerType objPointerType =
-                    nf.LLVMPointerType(objType);
+                    PolyLLVMTypeUtils.polyLLVMObjectVariableType(v,
+                                                                 v.getCurrentClass()
+                                                                  .type());
+            LLVMPointerType objPointerType = nf.LLVMPointerType(objType);
             args.add(nf.LLVMArgDecl(Position.compilerGenerated(),
                                     objPointerType,
                                     PolyLLVMConstants.thisString));

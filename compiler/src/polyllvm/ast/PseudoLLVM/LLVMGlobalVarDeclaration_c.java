@@ -46,6 +46,9 @@ public class LLVMGlobalVarDeclaration_c extends LLVMGlobalDeclaration_c
             w.write(" ");
             print(initializerConstant, w, pp);
         }
+        else if (initializerConstant == null && !isExtern) {
+            w.write(" zeroinitializer");
+        }
     }
 
     @Override

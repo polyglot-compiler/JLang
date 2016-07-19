@@ -181,9 +181,10 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     }
 
     @Override
-    public LLVMBlock LLVMBlock(Position pos,
-            List<LLVMInstruction> instructions) {
-        LLVMBlock n = new LLVMBlock_c(pos, instructions, null);
+    public LLVMBlock LLVMBlock(List<LLVMInstruction> instructions) {
+        LLVMBlock n = new LLVMBlock_c(Position.compilerGenerated(),
+                                      instructions,
+                                      null);
         return ext(n, extFactory().extLLVMBlock());
     }
 
@@ -490,8 +491,10 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     }
 
     @Override
-    public LLVMTypeDeclaration LLVMTypeDeclaration(LLVMTypeNode tn) {
-        LLVMTypeDeclaration n = new LLVMTypeDeclaration_c(null, tn, null);
+    public LLVMTypeDeclaration LLVMTypeDeclaration(String typeName,
+            LLVMTypeNode tn) {
+        LLVMTypeDeclaration n =
+                new LLVMTypeDeclaration_c(null, typeName, tn, null);
         return ext(n, extFactory().extLLVMTypeDeclaration());
     }
 

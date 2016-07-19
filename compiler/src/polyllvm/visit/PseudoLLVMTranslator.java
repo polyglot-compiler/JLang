@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Consumer;
 
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Labeled;
@@ -26,17 +25,20 @@ import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
 import polyglot.util.CollectionUtil;
 import polyglot.util.InternalCompilerError;
+import polyglot.util.ListUtil;
 import polyglot.util.Pair;
 import polyglot.util.Position;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.ast.PseudoLLVM.LLVMArgDecl;
 import polyllvm.ast.PseudoLLVM.LLVMFunction;
 import polyllvm.ast.PseudoLLVM.LLVMGlobalDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMIntLiteral;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
@@ -62,7 +64,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
     private List<ClassDecl> classesVisited;
 
-    private List<LLVMTypeNode> classTypes;
+    private HashMap<String, LLVMTypeNode> classTypes;
     private List<LLVMGlobalVarDeclaration> globalSizes;
     private List<LLVMFunction> ctorsFunctions;
 
@@ -118,105 +120,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
      * Remove the current class from the stack of classes being visited
      */
     public void leaveClass() {
-        ClassDecl leaving = classes.pop();
-//        ClassBody body = leaving.body();
-//
-//        List<MethodDecl> dvMethods = new ArrayList<>();
-//        List<FieldDecl> fields = new ArrayList<>();
-//
-//        for (ClassMember cm : body.members()) {
-//            if (cm instanceof MethodDecl) {
-//                MethodDecl m = (MethodDecl) cm;
-//                if (!m.methodInstance().flags().isStatic()) {
-//                    dvMethods.add(m);
-//                }
-//            }
-//            else if (cm instanceof FieldDecl) {
-//                FieldDecl f = (FieldDecl) cm;
-//                fields.add(f);
-//            }
-//
-//        }
-//
-//        dvMethods.sort(new Comparator<MethodDecl>() {
-//            @Override
-//            public int compare(MethodDecl o1, MethodDecl o2) {
-//                return o1.name().compareTo(o2.name());
-//            }
-//        });
-//
-//        fields.sort(new Comparator<FieldDecl>() {
-//            @Override
-//            public int compare(FieldDecl o1, FieldDecl o2) {
-//                return o1.name().compareTo(o2.name());
-//            }
-//        });
-//
-//        System.out.println("Sorted fields: " + fields);
-//        System.out.println("Sorted methods: " + dvMethods);
-
-//        if (leaving.superClass() != null) {
-//
-//        }
-//
-//        List<LLVMBlock> blocks = null;
-//
-//        List<MethodDecl> dvMethods = new ArrayList<>();
-//        List<FieldDecl> fields = new ArrayList<>();
-//
-//        for (ClassMember cm : body.members()) {
-//            if (cm instanceof MethodDecl) {
-//                MethodDecl m = (MethodDecl) cm;
-//                if (!m.methodInstance().flags().isStatic()) {
-//                    dvMethods.add(m);
-//                    for (MethodInstance mi : m.methodInstance().overrides()) {
-//                        System.out.println("        " + mi + " -- "
-//                                + mi.container() + " -- "
-//                                + mi.container().members());
-//                    }
-//                    System.out.println(m.methodInstance().overrides());
-//                }
-//                MemberInstance memberInstance = m.memberInstance();
-//                System.out.println("Container: " + memberInstance.container());
-//                List<MethodInstance> overrides = m.methodInstance().overrides();
-//                for (MethodInstance mi : overrides) {
-//
-//                    Declaration d = mi.declaration();
-//
-//                }
-//                //TODO: do something with this - m.methodInstance().overrides();
-//
-//            }
-//            else if (cm instanceof FieldDecl) {
-//                FieldDecl f = (FieldDecl) cm;
-//                fields.add(f);
-//            }
-//        }
-//
-//        dvMethods.sort(new Comparator<MethodDecl>() {
-//            @Override
-//            public int compare(MethodDecl o1, MethodDecl o2) {
-//                return o1.name().compareTo(o2.name());
-//            }
-//        });
-//
-//        fields.sort(new Comparator<FieldDecl>() {
-//            @Override
-//            public int compare(FieldDecl o1, FieldDecl o2) {
-//                return o1.name().compareTo(o2.name());
-//            }
-//        });
-//
-//        System.out.println("Sorted fields: " + fields);
-//        System.out.println("Sorted methods: " + dvMethods);
-//
-//        String setupFuncName = PolyLLVMMangler.classInitFunction(leaving);
-//        LLVMFunction ctorFunc = nf.LLVMFunction(Position.compilerGenerated(),
-//                                                setupFuncName,
-//                                                new ArrayList<LLVMArgDecl>(),
-//                                                nf.LLVMVoidType(),
-//                                                blocks);
-
+        classes.pop();
     }
 
     /**
@@ -225,28 +129,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     public void enterClass(ClassDecl n) {
         classes.push(n);
         classesVisited.add(n);
-
-//        classTypes.add(PolyLLVMTypeUtils.polyLLVMObjectType(nf, n));
-//
-//        String name = PolyLLVMMangler.sizeVariable(n);
-//        LLVMIntType i64Type = nf.LLVMIntType(Position.compilerGenerated(), 64);
-//        LLVMIntLiteral sizeInit;
-//        boolean isExtern;
-//        if (n.body() != null) {
-//            sizeInit =
-//                    nf.LLVMIntLiteral(Position.compilerGenerated(), i64Type, 0);
-//            isExtern = false;
-//        }
-//        else {
-//            sizeInit = null;
-//            isExtern = true;
-//        }
-//        globalSizes.add(nf.LLVMGlobalVarDeclaration(name,
-//                                                    isExtern,
-//                                                    LLVMGlobalVarDeclaration.GLOBAL,
-//                                                    i64Type,
-//                                                    sizeInit));
-
     }
 
     /**
@@ -258,8 +140,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     }
 
     private boolean isOverridden(MethodDecl m) {
-        MethodInstance methodInstance = m.methodInstance();
-        return isOverridden(methodInstance);
+        return isOverridden(m.methodInstance());
     }
 
     private boolean isOverridden(MethodInstance methodInstance) {
@@ -276,30 +157,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                         return o1.descendsFrom(o2) ? -1 : 1;
                     }
                 });
-
-//        System.out.println("\nStarting type: " + highestSuperType);
-//        ReferenceType x = highestSuperType;
-//        while (x.superType() != null) {
-//            if (x.superType() instanceof ReferenceType) {
-//                x = (ReferenceType) x.superType();
-//                System.out.println("IS A REF TYPE: " + x + " - members - "
-//                        + x.members());
-//            }
-//            else {
-//                System.out.println("NOT A REF TYPE: " + x.superType());
-//                break;
-//            }
-//        }
-//        System.out.println("While loop done\n");
-
-//        System.out.println();
-//        refTypes.stream().forEach(new Consumer<ReferenceType>() {
-//            @Override
-//            public void accept(ReferenceType rt) {
-//                System.out.println("Ref Type " + rt + " ----- " + rt.methods());
-//            }
-//        });
-//        System.out.println("\nREFTYPES ---- " + refTypes);
         return !methodInstance.container().typeEquals(highestSuperType);
     }
 
@@ -308,7 +165,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                 && ctorsFunctions != null) {
             return;
         }
-        classTypes = new ArrayList<>();
+        classTypes = new HashMap<>();
         globalSizes = new ArrayList<>();
         ctorsFunctions = new ArrayList<>();
 
@@ -318,8 +175,21 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
     }
 
-    private Pair<List<MethodInstance>, List<FieldInstance>> layouts(
+    /**
+    * Stores the layouts for classes.
+    */
+    private HashMap<String, Pair<List<MethodInstance>, List<FieldInstance>>> layouts =
+            new HashMap<>();
+
+    /**
+     * Get the field and method layout for a given class
+     */
+    public Pair<List<MethodInstance>, List<FieldInstance>> layouts(
             ReferenceType rt) {
+        if (layouts.containsKey(rt.toString())) {
+            return layouts.get(rt.toString());
+        }
+
         List<MethodInstance> dvLayout = new ArrayList<>();
         List<FieldInstance> objLayout = new ArrayList<>();
 
@@ -336,7 +206,11 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
             superClass = (ReferenceType) superClass.superType();
         }
-        return new Pair<>(dvLayout, objLayout);
+
+        Pair<List<MethodInstance>, List<FieldInstance>> result =
+                new Pair<>(dvLayout, objLayout);
+        layouts.put(rt.toString(), result);
+        return result;
     }
 
     private Pair<List<MethodInstance>, List<FieldInstance>> nonOverriddenClassMembers(
@@ -423,51 +297,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
             List<LLVMInstruction> instrs = new ArrayList<>();
 
-//            ClassBody body = cd.body();
-//
-//            Triple<List<MethodInstance>, List<MethodInstance>, List<FieldInstance>> triple =
-//                    classMembers(cd.type());
-//
-//            List<MethodInstance> dvMethods = triple.part1();
-//            List<MethodInstance> dvOverridenMethods = triple.part2();
-//            List<FieldInstance> fields = triple.part3();
-
-//            List<MethodInstance> dvLayout = new ArrayList<>();
-//
-//            Queue<ReferenceType> superTypes = new ArrayDeque<>();
-//            ReferenceType superClass = cd.type();
-//            while (superClass != null) {
-//                superTypes.add(superClass);
-//                superClass = (ReferenceType) superClass.superType();
-//            }
-//
-//            ((ArrayDeque) superTypes).pollLast(); //TODO : This removes Object as a supertype, it is only temporary
-//
-//            for (ReferenceType rt : superTypes) {
-//                Triple<List<MethodInstance>, List<MethodInstance>, List<FieldInstance>> triple =
-//                        classMembers(rt);
-//
-//                List<MethodInstance> dvMethods = triple.part1();
-//                List<MethodInstance> dvOverridenMethods = triple.part2();
-//                List<FieldInstance> fields = triple.part3();
-//
-//                dvLayout.addAll(0, dvMethods);
-//            }
-//
-//            System.out.println("\nSuperTypes are: " + superTypes);
-//            System.out.println("DV Layout is: ");
-//            dvLayout.stream().forEach(new Consumer<MethodInstance>() {
-//                @Override
-//                public void accept(MethodInstance t) {
-//                    System.out.println("    ● " + t);
-//                }
-//            });
-
-//            System.out.println("Sorted fields: " + fields);
-//            System.out.println("Sorted methods: " + dvMethods);
-//            System.out.println("Sorted overridden methods: "
-//                    + dvOverridenMethods);
-
             List<MethodInstance> overridenMethods =
                     classMembers(cd.type()).part2();
             List<MethodInstance> newMethods = classMembers(cd.type()).part1();
@@ -475,32 +304,10 @@ public class PseudoLLVMTranslator extends NodeVisitor {
             Pair<List<MethodInstance>, List<FieldInstance>> layouts =
                     layouts(cd.type());
 
-            System.out.println("\nObject layout for " + cd + "is: ");
-            layouts.part2().stream().forEach(new Consumer<FieldInstance>() {
-                @Override
-                public void accept(FieldInstance t) {
-                    System.out.println("    ● " + t);
-                }
-            });
-
-            System.out.println("DV layout for " + cd + "is: ");
-            layouts.part1().stream().forEach(new Consumer<MethodInstance>() {
-                @Override
-                public void accept(MethodInstance t) {
-                    System.out.println("    ● " + t);
-                }
-            });
-
-            System.out.println("\nOverridden Methods are: " + overridenMethods);
-            System.out.println("\nRough CTOR: ");
             String dvVar = PolyLLVMMangler.dispatchVectorVariable(cd);
             LLVMTypeNode dvType =
-                    PolyLLVMTypeUtils.polyLLVMDispatchVectorType(nf, cd);
-            String superDvVar =
-                    PolyLLVMMangler.dispatchVectorVariable(cd.superClass());
-            LLVMTypeNode superDvType =
-                    PolyLLVMTypeUtils.polyLLVMDispatchVectorType(nf,
-                                                                 cd.superClass());
+                    PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this,
+                                                                         cd.type());
 
             LLVMVariable llvmDvVar =
                     nf.LLVMVariable(Position.compilerGenerated(),
@@ -516,141 +323,146 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                 MethodInstance newMethod = methodInList(mi, newMethods);
 
                 if (overridenMethod != null) {
-//                    System.out.println("    " + i
-//                            + ". Write new implmentation of : " + mi + " --> "
-//                            + PolyLLVMMangler.mangleMethodName(mi));
                     List<LLVMTypedOperand> l =
                             CollectionUtil.list(nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
                                                                                       0),
-                                                                    nf.LLVMPointerType(nf.LLVMIntType(8))),
+                                                                    nf.LLVMIntType(32)),
                                                 nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
-                                                                                      i),
-                                                                    nf.LLVMPointerType(nf.LLVMIntType(8))));
+                                                                                      i + 1),
+                                                                    nf.LLVMIntType(32)));
 
                     LLVMGetElementPtr gep = nf.LLVMGetElementPtr(llvmDvVar, l);
                     LLVMVariable gepResult =
                             PolyLLVMFreshGen.freshLocalVar(nf,
                                                            nf.LLVMPointerType(nf.LLVMPointerType(nf.LLVMIntType(8))));
-                    LLVMESeq eseq = nf.LLVMESeq(gep, gepResult);
+                    LLVMESeq eseq =
+                            nf.LLVMESeq(gep.result(gepResult), gepResult);
+
+                    LLVMTypeNode classTypePointer =
+                            nf.LLVMPointerType(nf.LLVMVariableType(PolyLLVMMangler.classTypeName(cd)));
+                    LLVMTypeNode funcType =
+                            PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf,
+                                                                       newMethod.formalTypes(),
+                                                                       newMethod.returnType())
+                                             .prependFormalTypeNode(classTypePointer);
+
                     LLVMStore store =
-                            nf.LLVMStore(nf.LLVMPointerType(nf.LLVMIntType(8)),
+                            nf.LLVMStore(funcType,
                                          nf.LLVMVariable(Position.compilerGenerated(),
                                                          PolyLLVMMangler.mangleMethodName(overridenMethod),
-                                                         nf.LLVMPointerType(nf.LLVMIntType(8)),
-                                                         VarType.LOCAL),
+                                                         funcType,
+                                                         VarType.GLOBAL),
                                          eseq);
+                    System.out.println("Function type is yooooooo: "
+                            + PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf,
+                                                                         overridenMethod.formalTypes(),
+                                                                         overridenMethod.returnType()));
                     instrs.add(store);
-
-//                    System.out.println("        %ptr.0 = getelementptr "
-//                            + dvType + ", " + dvType + "* @" + dvVar
-//                            + ", i8* 0, i8* " + i);
-//                    System.out.println("        store i8* %"
-//                            + PolyLLVMMangler.mangleMethodName(overridenMethod)
-//                            + ", i8** %ptr.0");
 
                 }
                 else if (newMethod != null) {
-//                    System.out.println("    " + i
-//                            + ". Wow thats a new method of the class "
-//                            + cd.name() + " : " + mi + " --> "
-//                            + PolyLLVMMangler.mangleMethodName(mi));
 
                     List<LLVMTypedOperand> l =
                             CollectionUtil.list(nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
                                                                                       0),
-                                                                    nf.LLVMPointerType(nf.LLVMIntType(8))),
+                                                                    nf.LLVMIntType(32)),
                                                 nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
-                                                                                      i),
-                                                                    nf.LLVMPointerType(nf.LLVMIntType(8))));
-
+                                                                                      i + 1),
+                                                                    nf.LLVMIntType(32)));
                     LLVMGetElementPtr gep = nf.LLVMGetElementPtr(llvmDvVar, l);
                     LLVMVariable gepResult =
                             PolyLLVMFreshGen.freshLocalVar(nf,
                                                            nf.LLVMPointerType(nf.LLVMPointerType(nf.LLVMIntType(8))));
-                    LLVMESeq eseq = nf.LLVMESeq(gep, gepResult);
+                    LLVMESeq eseq =
+                            nf.LLVMESeq(gep.result(gepResult), gepResult);
+                    LLVMTypeNode classTypePointer =
+                            nf.LLVMPointerType(nf.LLVMVariableType(PolyLLVMMangler.classTypeName(cd)));
+                    LLVMTypeNode funcType =
+                            PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf,
+                                                                       newMethod.formalTypes(),
+                                                                       newMethod.returnType())
+                                             .prependFormalTypeNode(classTypePointer);
                     LLVMStore store =
-                            nf.LLVMStore(nf.LLVMPointerType(nf.LLVMIntType(8)),
+                            nf.LLVMStore(funcType,
                                          nf.LLVMVariable(Position.compilerGenerated(),
                                                          PolyLLVMMangler.mangleMethodName(newMethod),
-                                                         nf.LLVMPointerType(nf.LLVMIntType(8)),
-                                                         VarType.LOCAL),
+                                                         funcType,
+                                                         VarType.GLOBAL),
                                          eseq);
                     instrs.add(store);
-
-//                    System.out.println("        %ptr.0 = getelementptr "
-//                            + dvType + ", " + dvType + "* @" + dvVar
-//                            + ", i8* 0, i8* " + i);
-//                    System.out.println("        store i8* %"
-//                            + PolyLLVMMangler.mangleMethodName(newMethod)
-//                            + ", i8** %ptr.0");
-
                 }
                 else {
-//                    System.out.println("    " + i
-//                            + ". Copy old implmentation of : " + mi);
-                    LLVMVariable llvmSuperDvVar =
-                            nf.LLVMVariable(Position.compilerGenerated(),
-                                            superDvVar,
-                                            nf.LLVMPointerType(superDvType),
-                                            VarType.GLOBAL);
+                    if (cd.superClass() != null) {
 
-                    List<LLVMTypedOperand> l =
-                            CollectionUtil.list(nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
-                                                                                      0),
-                                                                    nf.LLVMPointerType(nf.LLVMIntType(8))),
-                                                nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
-                                                                                      i),
-                                                                    nf.LLVMPointerType(nf.LLVMIntType(8))));
+                        String superDvVar =
+                                PolyLLVMMangler.dispatchVectorVariable(cd.superClass());
+                        LLVMTypeNode superDvType =
+                                PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this,
+                                                                                     (ReferenceType) cd.superClass()
+                                                                                                       .type());
 
-                    LLVMGetElementPtr gepVal =
-                            nf.LLVMGetElementPtr(llvmSuperDvVar, l);
-                    LLVMGetElementPtr gepStore =
-                            nf.LLVMGetElementPtr(llvmDvVar, l);
-                    LLVMVariable gepResultVal =
-                            PolyLLVMFreshGen.freshLocalVar(nf,
-                                                           nf.LLVMPointerType(nf.LLVMPointerType(nf.LLVMIntType(8))));
-                    LLVMVariable gepResultStore =
-                            PolyLLVMFreshGen.freshLocalVar(nf,
-                                                           nf.LLVMPointerType(nf.LLVMPointerType(nf.LLVMIntType(8))));
-                    LLVMESeq eseqVal = nf.LLVMESeq(gepVal, gepResultVal);
-                    LLVMESeq eseqStore = nf.LLVMESeq(gepStore, gepResultStore);
+                        LLVMVariable llvmSuperDvVar =
+                                nf.LLVMVariable(Position.compilerGenerated(),
+                                                superDvVar,
+                                                nf.LLVMPointerType(superDvType),
+                                                VarType.GLOBAL);
 
-                    LLVMVariable loadResult =
-                            PolyLLVMFreshGen.freshLocalVar(nf,
-                                                           nf.LLVMPointerType(nf.LLVMIntType(8)));
+                        List<LLVMTypedOperand> l =
+                                CollectionUtil.list(nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
+                                                                                          0),
+                                                                        nf.LLVMIntType(32)),
+                                                    nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
+                                                                                          i + 1),
+                                                                        nf.LLVMIntType(32)));
 
-                    LLVMLoad load = nf.LLVMLoad(loadResult,
-                                                nf.LLVMPointerType(nf.LLVMIntType(8)),
-                                                eseqVal);
-                    LLVMStore store =
-                            nf.LLVMStore(nf.LLVMPointerType(nf.LLVMIntType(8)),
-                                         loadResult,
-                                         eseqStore);
+                        LLVMGetElementPtr gepVal =
+                                nf.LLVMGetElementPtr(llvmSuperDvVar, l);
+                        LLVMGetElementPtr gepStore =
+                                nf.LLVMGetElementPtr(llvmDvVar, l);
+                        LLVMVariable gepResultVal =
+                                PolyLLVMFreshGen.freshLocalVar(nf,
+                                                               nf.LLVMPointerType(nf.LLVMPointerType(nf.LLVMIntType(8))));
+                        LLVMVariable gepResultStore =
+                                PolyLLVMFreshGen.freshLocalVar(nf,
+                                                               nf.LLVMPointerType(nf.LLVMPointerType(nf.LLVMIntType(8))));
+                        LLVMESeq eseqVal =
+                                nf.LLVMESeq(gepVal.result(gepResultVal),
+                                            gepResultVal);
+                        LLVMESeq eseqStore =
+                                nf.LLVMESeq(gepStore.result(gepResultStore),
+                                            gepResultStore);
 
-//                    System.out.println("\n\n");
-//                    load.prettyPrint(nf.lang(), System.out);
-//                    System.out.println();
-//                    store.prettyPrint(nf.lang(), System.out);
-//                    System.out.println("\n\n");
+                        LLVMVariable loadResult =
+                                PolyLLVMFreshGen.freshLocalVar(nf,
+                                                               nf.LLVMPointerType(nf.LLVMIntType(8)));
 
-                    instrs.add(load);
-                    instrs.add(store);
+                        LLVMLoad load = nf.LLVMLoad(loadResult,
+                                                    nf.LLVMPointerType(nf.LLVMIntType(8)),
+                                                    eseqVal);
+                        LLVMStore store =
+                                nf.LLVMStore(nf.LLVMPointerType(nf.LLVMIntType(8)),
+                                             loadResult,
+                                             eseqStore);
 
-                    System.out.println("        %ptr.0 = getelementptr "
-                            + superDvType + ", " + superDvType + "* @"
-                            + superDvVar + ", i8* 0, i8* " + i);
-                    System.out.println("        %ptr.1 = getelementptr "
-                            + dvType + ", " + dvType + "* @" + dvVar
-                            + ", i8* 0, i8* " + i);
-
-                    System.out.println("        %val.0 = load i8*, i8** %ptr.0");
-                    System.out.println("        store i8* %val.0, i8** %ptr.1");
+                        instrs.add(load);
+                        instrs.add(store);
+                    }
+                    else {
+                        throw new InternalCompilerError("Trying to copy over non-existent method");
+                    }
 
                 }
-            }
-            System.out.println();
 
-            System.out.println("DV is : " + dvVar + "\n");
+            }
+            instrs.add(nf.LLVMRet(Position.compilerGenerated()));
+            LLVMFunction ctor =
+                    nf.LLVMFunction(Position.compilerGenerated(),
+                                    PolyLLVMMangler.classInitFunction(cd),
+                                    new ArrayList<LLVMArgDecl>(),
+                                    nf.LLVMVoidType(),
+                                    nf.LLVMBlock(instrs));
+            ctorsFunctions.add(ctor);
+
         }
     }
 
@@ -676,6 +488,18 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                                                         LLVMGlobalVarDeclaration.GLOBAL,
                                                         i64Type,
                                                         sizeInit));
+
+            name = PolyLLVMMangler.dispatchVectorVariable(cd);
+            LLVMTypeNode dvTypeVariable =
+                    PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this,
+                                                                         cd.type());
+            LLVMOperand init = null;
+            isExtern = false;
+            globalSizes.add(nf.LLVMGlobalVarDeclaration(name,
+                                                        isExtern,
+                                                        LLVMGlobalVarDeclaration.GLOBAL,
+                                                        dvTypeVariable,
+                                                        init));
             classesAdded.add(cd.name());
         }
         for (ClassDecl cd : classesVisited) {
@@ -698,16 +522,20 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         Set<String> classesAdded = new HashSet<>();
         for (ClassDecl cd : classesVisited) {
             if (!classesAdded.contains(cd.name())) {
-                classTypes.add(PolyLLVMTypeUtils.polyLLVMObjectType(nf, cd));
-                classTypes.add(PolyLLVMTypeUtils.polyLLVMDispatchVectorType(nf,
+                classTypes.put(PolyLLVMMangler.classTypeName(cd),
+                               PolyLLVMTypeUtils.polyLLVMObjectType(this, cd));
+                classTypes.put(PolyLLVMMangler.dispatchVectorTypeName(cd),
+                               PolyLLVMTypeUtils.polyLLVMDispatchVectorType(this,
                                                                             cd));
                 classesAdded.add(cd.name());
             }
             if (cd.superClass() != null
                     && !classesAdded.contains(cd.superClass().name())) {
-                classTypes.add(PolyLLVMTypeUtils.polyLLVMObjectType(nf,
+                classTypes.put(PolyLLVMMangler.classTypeName(cd.superClass()),
+                               PolyLLVMTypeUtils.polyLLVMObjectType(this,
                                                                     cd.superClass()));
-                classTypes.add(PolyLLVMTypeUtils.polyLLVMDispatchVectorType(nf,
+                classTypes.put(PolyLLVMMangler.dispatchVectorTypeName(cd.superClass()),
+                               PolyLLVMTypeUtils.polyLLVMDispatchVectorType(this,
                                                                             cd.superClass()));
 
                 classesAdded.add(cd.superClass().name());
@@ -723,11 +551,19 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     public List<LLVMGlobalDeclaration> globalDeclarations() {
         setupClassData();
         List<LLVMGlobalDeclaration> typeDecls = new ArrayList<>();
-        for (LLVMTypeNode tn : classTypes) {
-            typeDecls.add(nf.LLVMTypeDeclaration(tn));
+        for (Entry<String, LLVMTypeNode> e : classTypes.entrySet()) {
+            typeDecls.add(nf.LLVMTypeDeclaration(e.getKey(), e.getValue()));
         }
         typeDecls.addAll(globalSizes);
         return typeDecls;
+    }
+
+    /**
+     * Return a list of ctor functions to run before application is started.
+     * @return
+     */
+    public List<LLVMFunction> ctorFunctions() {
+        return ListUtil.copy(ctorsFunctions, false);
     }
 
     /*

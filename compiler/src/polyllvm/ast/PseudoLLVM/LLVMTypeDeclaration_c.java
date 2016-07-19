@@ -12,17 +12,23 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 public class LLVMTypeDeclaration_c extends LLVMGlobalDeclaration_c
         implements LLVMTypeDeclaration {
     private static final long serialVersionUID = SerialVersionUID.generate();
+    protected String typeName;
     protected LLVMTypeNode typeNode;
 
-    public LLVMTypeDeclaration_c(Position pos, LLVMTypeNode tn, Ext e) {
+    public LLVMTypeDeclaration_c(Position pos, String typeName, LLVMTypeNode tn,
+            Ext e) {
         super(pos, e);
+        this.typeName = typeName;
         typeNode = tn;
     }
 
     @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
+        w.write("%");
+        w.write(typeName);
+        w.write(" = type ");
         print(typeNode, w, pp);
-        w.write(" = type opaque");
+
     }
 
     @Override

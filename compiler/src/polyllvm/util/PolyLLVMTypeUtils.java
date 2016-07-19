@@ -5,11 +5,18 @@ import java.util.List;
 
 import polyglot.ast.ClassDecl;
 import polyglot.ast.TypeNode;
+import polyglot.types.FieldInstance;
+import polyglot.types.MethodInstance;
+import polyglot.types.ReferenceType;
 import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
+import polyglot.util.Pair;
 import polyglot.util.Position;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMTypeUtils {
 
@@ -62,8 +69,9 @@ public class PolyLLVMTypeUtils {
         }
     }
 
-    public static LLVMTypeNode polyLLVMFunctionTypeNode(PolyLLVMNodeFactory nf,
-            List<? extends Type> formalTypes, Type returnType) {
+    public static LLVMFunctionType polyLLVMFunctionTypeNode(
+            PolyLLVMNodeFactory nf, List<? extends Type> formalTypes,
+            Type returnType) {
         List<LLVMTypeNode> formals = new ArrayList<>();
         for (Type type : formalTypes) {
             formals.add(polyLLVMTypeNode(nf, type));
@@ -73,28 +81,84 @@ public class PolyLLVMTypeUtils {
                                    polyLLVMTypeNode(nf, returnType));
     }
 
-    public static LLVMTypeNode polyLLVMObjectType(PolyLLVMNodeFactory nf,
-            ClassDecl currentClass) {
-        String s = currentClass.name();
-        return nf.LLVMVariableType("class." + s);
+    private static LLVMTypeNode polyLLVMObjectType(PseudoLLVMTranslator v,
+            ReferenceType rt) {
+        Pair<List<MethodInstance>, List<FieldInstance>> layouts = v.layouts(rt);
+        List<LLVMTypeNode> typeList = new ArrayList<>();
+        typeList.add(v.nodeFactory()
+                      .LLVMPointerType(polyLLVMDispatchVectorVariableType(v,
+                                                                          rt)));
+        for (FieldInstance f : layouts.part2()) {
+            typeList.add(polyLLVMTypeNode(v.nodeFactory(), f.type()));
+        }
+        LLVMStructureType structureType =
+                v.nodeFactory().LLVMStructureType(typeList);
+
+        System.out.println("\n\nHere is a structure Type!");
+        structureType.prettyPrint(v.nodeFactory().lang(), System.out);
+        System.out.println("\n\n");
+        return structureType;
     }
 
-    public static LLVMTypeNode polyLLVMObjectType(PolyLLVMNodeFactory nf,
+    public static LLVMTypeNode polyLLVMObjectType(PseudoLLVMTranslator v,
+            ClassDecl cd) {
+        return polyLLVMObjectType(v, cd.type());
+    }
+
+    public static LLVMTypeNode polyLLVMObjectType(PseudoLLVMTranslator v,
             TypeNode superClass) {
-        String s = superClass.name();
-        return nf.LLVMVariableType("class." + s);
+        return polyLLVMObjectType(v, (ReferenceType) superClass.type());
     }
 
     public static LLVMTypeNode polyLLVMDispatchVectorType(
-            PolyLLVMNodeFactory nf, ClassDecl currentClass) {
-        String s = currentClass.name();
-        return nf.LLVMVariableType("dv." + s);
+            PseudoLLVMTranslator v, TypeNode superClass) {
+        return polyLLVMDispatchVectorType(v, (ReferenceType) superClass.type());
+
     }
 
     public static LLVMTypeNode polyLLVMDispatchVectorType(
-            PolyLLVMNodeFactory nf, TypeNode superClass) {
-        String s = superClass.name();
-        return nf.LLVMVariableType("dv." + s);
+            PseudoLLVMTranslator v, ClassDecl cd) {
+        return polyLLVMDispatchVectorType(v, cd.type());
+    }
+
+    /**
+     *
+     */
+    private static LLVMTypeNode polyLLVMDispatchVectorType(
+            PseudoLLVMTranslator v, ReferenceType type) {
+        List<MethodInstance> layout = v.layouts(type).part1();
+        List<LLVMTypeNode> typeList = new ArrayList<>();
+        typeList.add(v.nodeFactory()
+                      .LLVMPointerType(v.nodeFactory().LLVMIntType(8)));
+        for (int i = 0; i < layout.size(); i++) {
+            PolyLLVMNodeFactory nf = v.nodeFactory();
+            LLVMTypeNode classTypePointer =
+                    nf.LLVMPointerType(nf.LLVMVariableType(PolyLLVMMangler.classTypeName(type)));
+            LLVMTypeNode funcType =
+                    PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf,
+                                                               layout.get(i)
+                                                                     .formalTypes(),
+                                                               layout.get(i)
+                                                                     .returnType())
+                                     .prependFormalTypeNode(classTypePointer);
+
+            typeList.add(funcType);
+        }
+        LLVMStructureType structureType =
+                v.nodeFactory().LLVMStructureType(typeList);
+        return structureType;
+    }
+
+    public static LLVMTypeNode polyLLVMDispatchVectorVariableType(
+            PseudoLLVMTranslator v, ReferenceType rt) {
+        return v.nodeFactory()
+                .LLVMVariableType(PolyLLVMMangler.dispatchVectorTypeName(rt));
+    }
+
+    public static LLVMTypeNode polyLLVMObjectVariableType(
+            PseudoLLVMTranslator v, ReferenceType rt) {
+        return v.nodeFactory()
+                .LLVMVariableType(PolyLLVMMangler.classTypeName(rt));
     }
 
 }

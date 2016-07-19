@@ -67,7 +67,7 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
             List<LLVMFunction> funcs, List<LLVMFunctionDeclaration> funcdecls,
             List<LLVMGlobalDeclaration> globals);
 
-    LLVMBlock LLVMBlock(Position pos, List<LLVMInstruction> instructions);
+    LLVMBlock LLVMBlock(List<LLVMInstruction> instructions);
 
     LLVMFunction LLVMFunction(Position pos, String name, List<LLVMArgDecl> args,
             LLVMTypeNode retType, List<LLVMBlock> blocks);
@@ -80,7 +80,7 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     LLVMArgDecl LLVMArgDecl(Position pos, LLVMTypeNode typeNode, String name);
 
-    LLVMTypeDeclaration LLVMTypeDeclaration(LLVMTypeNode tn);
+    LLVMTypeDeclaration LLVMTypeDeclaration(String typeName, LLVMTypeNode tn);
 
     LLVMGlobalVarDeclaration LLVMGlobalVarDeclaration(String name,
             boolean isExtern, GlobalVariableKind kind, LLVMTypeNode typeNode,
@@ -181,9 +181,11 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
     LLVMAlloca LLVMAlloca(Position pos, LLVMTypeNode typeNode, int numElements,
             int alignment);
 
-    LLVMLoad LLVMLoad(LLVMVariable result, LLVMTypeNode typeNode, LLVMOperand ptr);
+    LLVMLoad LLVMLoad(LLVMVariable result, LLVMTypeNode typeNode,
+            LLVMOperand ptr);
 
-    LLVMStore LLVMStore(LLVMTypeNode typeNode, LLVMOperand value, LLVMOperand ptr);
+    LLVMStore LLVMStore(LLVMTypeNode typeNode, LLVMOperand value,
+            LLVMOperand ptr);
 
     LLVMConversion LLVMConversion(Position pos, Instruction instruction,
             LLVMVariable result, LLVMTypeNode valueType, LLVMOperand value,

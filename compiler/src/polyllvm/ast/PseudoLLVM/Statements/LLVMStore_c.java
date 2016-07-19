@@ -91,6 +91,9 @@ public class LLVMStore_c extends LLVMInstruction_c implements LLVMStore {
 
     @Override
     public LLVMNode removeESeq(RemoveESeqVisitor v) {
+        System.out.println("REMoving them eseqs yo:");
+        prettyPrint(System.out);
+        System.out.println();
         if (value instanceof LLVMESeq && ptr instanceof LLVMESeq) {
             //TODO: Might need to make this case more complicated!
             PolyLLVMNodeFactory nf = v.nodeFactory();

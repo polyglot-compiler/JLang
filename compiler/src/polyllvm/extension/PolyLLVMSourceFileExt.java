@@ -11,6 +11,7 @@ import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.LLVMArgDecl;
+import polyllvm.ast.PseudoLLVM.LLVMFunction;
 import polyllvm.ast.PseudoLLVM.LLVMFunctionDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMGlobalDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMSourceFile;
@@ -39,6 +40,9 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         for (LLVMGlobalDeclaration d : v.globalDeclarations()) {
             llf = llf.appendGlobal(d);
         }
+        for (LLVMFunction ctorFunc : v.ctorFunctions()) {
+            llf = llf.appendFunction(ctorFunc);
+        }
 
         //Add malloc function: i8* @malloc(i64)
         LLVMIntType i64Type = nf.LLVMIntType(64);
@@ -46,8 +50,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
                 Arrays.asList(nf.LLVMArgDecl(Position.compilerGenerated(),
                                              i64Type,
                                              "size"));
-        LLVMPointerType llvmPointerType =
-                nf.LLVMPointerType(nf.LLVMIntType(8));
+        LLVMPointerType llvmPointerType = nf.LLVMPointerType(nf.LLVMIntType(8));
         LLVMFunctionDeclaration malloc =
                 nf.LLVMFunctionDeclaration(Position.compilerGenerated(),
                                            "malloc",
