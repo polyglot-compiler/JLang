@@ -4,7 +4,6 @@ import polyglot.ast.Cast;
 import polyglot.ast.Node;
 import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -76,17 +75,28 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
                         + n);
             }
             LLVMInstruction conv =
-                    nf.LLVMConversion(Position.compilerGenerated(),
-                                      instructionType,
+                    nf.LLVMConversion(instructionType,
                                       exprTypeNode,
                                       exprTranslation,
                                       castTypeNode);
             LLVMVariable result =
                     PolyLLVMFreshGen.freshLocalVar(nf, castTypeNode);
             conv = conv.result(result);
-            v.addTranslation(n,
-                             nf.LLVMESeq(conv,
-                                         result));
+            v.addTranslation(n, nf.LLVMESeq(conv, result));
+
+        }
+        //This cast is an implicit Reference Cast
+        else if (!castType.isPrimitive() && !exprType.isPrimitive()
+                && exprType.isImplicitCastValid(castType)) {
+            LLVMInstruction conv =
+                    nf.LLVMConversion(LLVMConversion.BITCAST,
+                                      exprTypeNode,
+                                      exprTranslation,
+                                      castTypeNode);
+            LLVMVariable result =
+                    PolyLLVMFreshGen.freshLocalVar(nf, castTypeNode);
+            conv = conv.result(result);
+            v.addTranslation(n, nf.LLVMESeq(conv, result));
 
         }
         return super.translatePseudoLLVM(v);

@@ -24,9 +24,12 @@ public class LLVMSeq_c extends LLVMInstruction_c implements LLVMSeq {
 
     @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
-        for (LLVMInstruction i : instructions) {
-            print(i, w, pp);
-            w.newline();
+        for (int i = 0; i < instructions.size(); i++) {
+            LLVMInstruction instr = instructions.get(i);
+            print(instr, w, pp);
+            if (i != instructions.size() - 1) {
+                w.newline();
+            }
         }
     }
 

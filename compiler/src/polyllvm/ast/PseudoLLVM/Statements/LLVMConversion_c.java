@@ -72,7 +72,7 @@ public class LLVMConversion_c extends LLVMInstruction_c
             List<LLVMInstruction> instructions = new ArrayList<>();
             instructions.add(val.instruction());
             instructions.add(reconstruct(this, valueType, val.expr(), toType));
-            return nf.LLVMSeq(Position.compilerGenerated(), instructions);
+            return nf.LLVMSeq(instructions);
         }
         return super.removeESeq(v);
     }

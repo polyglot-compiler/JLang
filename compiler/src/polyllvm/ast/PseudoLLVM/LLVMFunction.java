@@ -4,6 +4,11 @@ import java.util.List;
 
 public interface LLVMFunction extends LLVMNode {
     /**
+     * Return the name of this function
+     */
+    String name();
+
+    /**
      * Return a list of all blocks in this function
      */
     List<LLVMBlock> blocks();

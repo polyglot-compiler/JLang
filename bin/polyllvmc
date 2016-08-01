@@ -32,10 +32,10 @@ args=
 vmargs=
 classpath=
 java=java
-ext=PolyLLVM
+ext=polyllvm
 
 polyglot() {
-  eval "$java" "$vmargs" -classpath "'$classpath'" PolyLLVM.Main "$@"
+  eval "$java" "$vmargs" -classpath "'$classpath'" polyllvm.Main "$@"
 }
 
 while true; do
@@ -73,9 +73,9 @@ while true; do
     esac
 done
 
-if [ -n "$ext" ]; then
-  args="-ext '$ext' $args"
-fi
+#if [ -n "$ext" ]; then
+#  args="-ext '$ext' $args"
+#fi
 
 
 classpath="$dir/compiler/classes:$dir/runtime/classes:$dir/lib/polyglot.jar:$dir/lib/java_cup.jar"

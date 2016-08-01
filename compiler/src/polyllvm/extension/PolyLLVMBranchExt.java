@@ -3,7 +3,6 @@ package polyllvm.extension;
 import polyglot.ast.Branch;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -20,24 +19,16 @@ public class PolyLLVMBranchExt extends PolyLLVMExt {
 
         LLVMBr br;
         if (n.kind() == Branch.BREAK && n.label() != null) {
-            br = nf.LLVMBr(Position.compilerGenerated(),
-                           nf.LLVMLabel(Position.compilerGenerated(),
-                                        v.getLoopEnd(n.label())));
+            br = nf.LLVMBr(nf.LLVMLabel(v.getLoopEnd(n.label())));
         }
         else if (n.kind() == Branch.BREAK && n.label() == null) {
-            br = nf.LLVMBr(Position.compilerGenerated(),
-                           nf.LLVMLabel(Position.compilerGenerated(),
-                                        v.getLoopEnd()));
+            br = nf.LLVMBr(nf.LLVMLabel(v.getLoopEnd()));
         }
         else if (n.kind() == Branch.CONTINUE && n.label() != null) {
-            br = nf.LLVMBr(Position.compilerGenerated(),
-                           nf.LLVMLabel(Position.compilerGenerated(),
-                                        v.getLoopHead(n.label())));
+            br = nf.LLVMBr(nf.LLVMLabel(v.getLoopHead(n.label())));
         }
         else if (n.kind() == Branch.CONTINUE && n.label() == null) {
-            br = nf.LLVMBr(Position.compilerGenerated(),
-                           nf.LLVMLabel(Position.compilerGenerated(),
-                                        v.getLoopHead()));
+            br = nf.LLVMBr(nf.LLVMLabel(v.getLoopHead()));
         }
         else {
             throw new InternalCompilerError("Unknown branch type: " + n.kind());

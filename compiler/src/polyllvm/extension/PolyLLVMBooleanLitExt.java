@@ -2,7 +2,6 @@ package polyllvm.extension;
 
 import polyglot.ast.BooleanLit;
 import polyglot.ast.Node;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -20,9 +19,7 @@ public class PolyLLVMBooleanLitExt extends PolyLLVMExt {
 
         int value = n.value() ? 1 : 0;
         LLVMIntType type = nf.LLVMIntType(1);
-        v.addTranslation(node(),
-                         nf.LLVMIntLiteral(type,
-                                           value));
+        v.addTranslation(node(), nf.LLVMIntLiteral(type, value));
         return super.translatePseudoLLVM(v);
     }
 
@@ -32,10 +29,10 @@ public class PolyLLVMBooleanLitExt extends PolyLLVMExt {
         BooleanLit n = (BooleanLit) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
         if (n.value()) {
-            return nf.LLVMBr(Position.compilerGenerated(), trueLabel);
+            return nf.LLVMBr(trueLabel);
         }
         else {
-            return nf.LLVMBr(Position.compilerGenerated(), falseLabel);
+            return nf.LLVMBr(falseLabel);
         }
     }
 }

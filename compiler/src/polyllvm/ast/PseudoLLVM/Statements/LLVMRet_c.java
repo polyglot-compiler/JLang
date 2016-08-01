@@ -105,8 +105,7 @@ public class LLVMRet_c extends LLVMInstruction_c implements LLVMRet {
             instructions.add(reconstruct(this,
                                          Optional.of(new Pair<>(ri.part1(),
                                                                 e.expr()))));
-            return v.nodeFactory().LLVMSeq(Position.compilerGenerated(),
-                                           instructions);
+            return v.nodeFactory().LLVMSeq(instructions);
 
         }
         else {

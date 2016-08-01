@@ -29,4 +29,8 @@ public interface LLVMSourceFile extends LLVMNode {
 
     LLVMSourceFile appendGlobal(LLVMGlobalDeclaration gd);
 
+    LLVMSourceFile addCtor(LLVMFunction ctorFunc);
+
+    boolean containsFunction(LLVMFunctionDeclaration functionDeclaration);
+
 }

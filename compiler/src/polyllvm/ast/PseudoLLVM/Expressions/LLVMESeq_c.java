@@ -60,7 +60,7 @@ public class LLVMESeq_c extends LLVMOperand_c implements LLVMESeq {
             instructions.add(instruction());
             instructions.add(eseq.instruction());
             LLVMSeq seq =
-                    nf.LLVMSeq(Position.compilerGenerated(), instructions);
+                    nf.LLVMSeq(instructions);
             return eseq.instruction(seq);
         }
         return this;

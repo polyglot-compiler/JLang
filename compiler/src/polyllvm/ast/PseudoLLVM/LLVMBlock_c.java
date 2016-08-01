@@ -49,7 +49,7 @@ public class LLVMBlock_c extends LLVMNode_c implements LLVMBlock {
 
     @Override
     public LLVMSeq instructions(PolyLLVMNodeFactory nf) {
-        return nf.LLVMSeq(Position.compilerGenerated(), instructions);
+        return nf.LLVMSeq(instructions);
     }
 
     @Override

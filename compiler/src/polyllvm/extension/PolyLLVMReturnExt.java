@@ -38,16 +38,13 @@ public class PolyLLVMReturnExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
         Expr expr = n.expr();
         if (expr == null) {
-            v.addTranslation(n, nf.LLVMRet(Position.compilerGenerated()));
+            v.addTranslation(n, nf.LLVMRet());
         }
         else {
             LLVMOperand o = (LLVMOperand) v.getTranslation(expr);
             LLVMTypeNode llvmType =
                     PolyLLVMTypeUtils.polyLLVMTypeNode(nf, expr.type());
-            v.addTranslation(n,
-                             nf.LLVMRet(Position.compilerGenerated(),
-                                        llvmType,
-                                        o));
+            v.addTranslation(n, nf.LLVMRet(llvmType, o));
         }
 
         return super.translatePseudoLLVM(v);

@@ -5,7 +5,6 @@ import polyglot.ast.Binary.Operator;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
-import polyglot.types.Type;
 import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
@@ -36,8 +35,9 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         Binary n = (Binary) node();
         NodeFactory nf = v.nodeFactory();
         TypeSystem ts = v.typeSystem();
-        if (n.left().type().isSubtype(ts.String())
-                || n.right().type().isSubtype(ts.String())) {
+        if (n.left().type().isSubtype(ts.String()) && !n.left().type().isNull()
+                || n.right().type().isSubtype(ts.String())
+                        && !n.right().type().isNull()) {
             Expr left = n.left();
             Expr right = n.right();
             if (left.toString().equals("null")) {
@@ -194,31 +194,25 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         LLVMOperand right = (LLVMOperand) v.getTranslation(n.right());
         Operator op = n.operator();
         if (n.left().type().isLongOrLess() && n.right().type().isLongOrLess()) {
-            int intSize = Math.max(numBitsOfIntegralType(n.left().type()),
-                                   numBitsOfIntegralType(n.right().type()));
+            int intSize =
+                    Math.max(PolyLLVMTypeUtils.numBitsOfIntegralType(n.left()
+                                                                      .type()),
+                             PolyLLVMTypeUtils.numBitsOfIntegralType(n.right()
+                                                                      .type()));
             LLVMInstruction translation;
             LLVMTypeNode tn;
             if (op == Binary.ADD) {
                 tn = nf.LLVMIntType(intSize);
-                translation = nf.LLVMAdd(Position.compilerGenerated(),
-                                         (LLVMIntType) tn,
-                                         left,
-                                         right);
+                translation = nf.LLVMAdd((LLVMIntType) tn, left, right);
             }
             else if (op == Binary.SUB) {
                 tn = nf.LLVMIntType(intSize);
-                translation = nf.LLVMSub(Position.compilerGenerated(),
-                                         (LLVMIntType) tn,
-                                         left,
-                                         right);
+                translation = nf.LLVMSub((LLVMIntType) tn, left, right);
 
             }
             else if (op == Binary.MUL) {
                 tn = nf.LLVMIntType(intSize);
-                translation = nf.LLVMMul(Position.compilerGenerated(),
-                                         (LLVMIntType) tn,
-                                         left,
-                                         right);
+                translation = nf.LLVMMul((LLVMIntType) tn, left, right);
 
             }
 //            else if (op == Binary.DIV) {
@@ -239,8 +233,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
 //            }
             else if (op == Binary.GT) {
                 tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp(Position.compilerGenerated(),
-                                          (LLVMIntType) tn,
+                translation = nf.LLVMICmp((LLVMIntType) tn,
                                           LLVMICmp.sgt,
                                           nf.LLVMIntType(intSize),
                                           left,
@@ -249,8 +242,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
             }
             else if (op == Binary.LT) {
                 tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp(Position.compilerGenerated(),
-                                          (LLVMIntType) tn,
+                translation = nf.LLVMICmp((LLVMIntType) tn,
                                           LLVMICmp.slt,
                                           nf.LLVMIntType(intSize),
                                           left,
@@ -258,8 +250,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
             }
             else if (op == Binary.EQ) {
                 tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp(Position.compilerGenerated(),
-                                          (LLVMIntType) tn,
+                translation = nf.LLVMICmp((LLVMIntType) tn,
                                           LLVMICmp.eq,
                                           nf.LLVMIntType(intSize),
                                           left,
@@ -267,8 +258,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
             }
             else if (op == Binary.LE) {
                 tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp(Position.compilerGenerated(),
-                                          (LLVMIntType) tn,
+                translation = nf.LLVMICmp((LLVMIntType) tn,
                                           LLVMICmp.sle,
                                           nf.LLVMIntType(intSize),
                                           left,
@@ -276,8 +266,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
             }
             else if (op == Binary.GE) {
                 tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp(Position.compilerGenerated(),
-                                          (LLVMIntType) tn,
+                translation = nf.LLVMICmp((LLVMIntType) tn,
                                           LLVMICmp.sge,
                                           nf.LLVMIntType(intSize),
                                           left,
@@ -285,8 +274,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
             }
             else if (op == Binary.NE) {
                 tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp(Position.compilerGenerated(),
-                                          (LLVMIntType) tn,
+                translation = nf.LLVMICmp((LLVMIntType) tn,
                                           LLVMICmp.ne,
                                           nf.LLVMIntType(intSize),
                                           left,
@@ -303,9 +291,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
 
             LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, tn);
             translation = translation.result(result);
-            v.addTranslation(n,
-                             nf.LLVMESeq(translation,
-                                         result));
+            v.addTranslation(n, nf.LLVMESeq(translation, result));
         }
         else if (n.type().isFloat()) {
             throw new InternalCompilerError("Adding floats temporarily not supported");
@@ -315,10 +301,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
             LLVMTypeNode tn;
             if (op == Binary.ADD) {
                 tn = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
-                translation = nf.LLVMFAdd(Position.compilerGenerated(),
-                                          tn,
-                                          left,
-                                          right);
+                translation = nf.LLVMFAdd(tn, left, right);
             }
             // else if (op == Binary.SUB) {
 
@@ -364,23 +347,9 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
 
             LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, tn);
             translation = translation.result(result);
-            v.addTranslation(n,
-                             nf.LLVMESeq(translation,
-                                         result));
+            v.addTranslation(n, nf.LLVMESeq(translation, result));
         }
         return super.translatePseudoLLVM(v);
-    }
-
-    private int numBitsOfIntegralType(Type t) {
-        if (t.isByte())
-            return 8;
-        else if (t.isShort() || t.isChar())
-            return 16;
-        else if (t.isInt())
-            return 32;
-        else if (t.isLong()) return 64;
-        throw new InternalCompilerError("Type " + t
-                + " is not an integral type");
     }
 
     @Override
@@ -420,16 +389,11 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
 //            LLVMVariable tmp = PolyLLVMFreshGen.freshLocalVar(nf);
 //            cmp = cmp.result(tmp);
             LLVMTypeNode tn = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
-            LLVMTypedOperand cond =
-                    nf.LLVMTypedOperand(translation,
-                                        tn);
-            LLVMBr br = nf.LLVMBr(Position.compilerGenerated(),
-                                  cond,
-                                  trueLabel,
-                                  falseLabel);
+            LLVMTypedOperand cond = nf.LLVMTypedOperand(translation, tn);
+            LLVMBr br = nf.LLVMBr(cond, trueLabel, falseLabel);
 //            List<LLVMInstruction> instructions = new ArrayList<>();
 //            instructions.add(br);
-            return br;//nf.LLVMSeq(Position.compilerGenerated(), instructions);
+            return br;//nf.LLVMSeq( instructions);
         }
 //        return super.translatePseudoLLVMConditional(v, trueLabel, falseLabel);
     }

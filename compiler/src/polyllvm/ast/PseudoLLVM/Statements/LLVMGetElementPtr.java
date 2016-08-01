@@ -1,5 +1,8 @@
 package polyllvm.ast.PseudoLLVM.Statements;
 
-public interface LLVMGetElementPtr extends LLVMInstruction {
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 
+public interface LLVMGetElementPtr extends LLVMInstruction {
+    @Override
+    LLVMGetElementPtr result(LLVMVariable o);
 }

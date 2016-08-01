@@ -18,6 +18,8 @@ public class LLVMSourceFile_c extends LLVMNode_c implements LLVMSourceFile {
     protected List<LLVMFunctionDeclaration> funcdecls;
     protected List<LLVMGlobalDeclaration> globals;
 
+    protected List<String> ctors;
+
     protected Source source;
     protected String name;
 
@@ -32,6 +34,7 @@ public class LLVMSourceFile_c extends LLVMNode_c implements LLVMSourceFile {
                 ? new ArrayList<LLVMFunctionDeclaration>() : funcdecls;
         this.globals = globals == null
                 ? new ArrayList<LLVMGlobalDeclaration>() : globals;
+        ctors = new ArrayList<>();
     }
 
     @Override
@@ -144,12 +147,26 @@ public class LLVMSourceFile_c extends LLVMNode_c implements LLVMSourceFile {
 
     @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
-        System.out.println("I am about to pretty print, the globals are: "
-                + globals);
         for (LLVMGlobalDeclaration g : globals) {
             print(g, w, pp);
             w.write("\n");
         }
+
+        if (!ctors.isEmpty()) {
+            w.write("%__ctortype = type { i32, void ()*, i8* }\n");
+            w.write("@llvm.global_ctors = appending global [" + ctors.size()
+                    + " x %__ctortype] [");
+            for (int i = 0; i < ctors.size(); i++) {
+                String ctor = ctors.get(i);
+                w.write("%__ctortype { i32 65535, void ()* @" + ctor
+                        + ", i8* null }");
+                if (i != ctors.size() - 1) {
+                    w.write(", ");
+                }
+            }
+            w.write("]\n");
+        }
+
         for (LLVMFunctionDeclaration fd : funcdecls) {
             print(fd, w, pp);
             w.write("\n");
@@ -185,6 +202,20 @@ public class LLVMSourceFile_c extends LLVMNode_c implements LLVMSourceFile {
             s.append(g.toString());
             s.append("\n");
         }
+        if (!ctors.isEmpty()) {
+            s.append("%__ctortype = type { i32, void ()*, i8* }\n");
+            s.append("@llvm.global_ctors = appending global [" + ctors.size()
+                    + " x %__ctortype] [");
+            for (int i = 0; i < ctors.size(); i++) {
+                String ctor = ctors.get(i);
+                s.append("%__ctortype { i32 65535, void ()* @" + ctor
+                        + ", i8* null }");
+                if (i != ctors.size() - 1) {
+                    s.append(", ");
+                }
+            }
+            s.append("]\n");
+        }
         for (LLVMFunctionDeclaration fd : funcdecls) {
             s.append(fd.toString());
             s.append("\n");
@@ -204,6 +235,44 @@ public class LLVMSourceFile_c extends LLVMNode_c implements LLVMSourceFile {
     @Override
     public String fileName() {
         return name;
+    }
+
+    private LLVMSourceFile appendCtor(String funcName) {
+        List<String> l = new ArrayList<>(ctors.size() + 1);
+        l.addAll(ctors);
+        l.add(funcName);
+        return ctors(this, l);
+    }
+
+    protected <N extends LLVMSourceFile_c> N ctors(N n, List<String> ctors) {
+        if (n.ctors == ctors) return n;
+        n = copyIfNeeded(n);
+        n.ctors = ctors;
+        return n;
+    }
+
+    @Override
+    public LLVMSourceFile addCtor(LLVMFunction ctorFunc) {
+        LLVMSourceFile sf = appendCtor(ctorFunc.name());
+        sf = sf.appendFunction(ctorFunc);
+        return sf;
+    }
+
+    @Override
+    public boolean containsFunction(
+            LLVMFunctionDeclaration functionDeclaration) {
+        for (LLVMFunction f : funcs) {
+            if (functionDeclaration.name().equals(f.name())) {
+                return true;
+            }
+        }
+
+        for (LLVMFunctionDeclaration f : funcdecls) {
+            if (functionDeclaration.name().equals(f.name())) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

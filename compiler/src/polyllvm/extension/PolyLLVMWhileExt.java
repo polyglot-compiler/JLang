@@ -6,7 +6,6 @@ import java.util.List;
 import polyglot.ast.Node;
 import polyglot.ast.While;
 import polyglot.util.Pair;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -34,14 +33,12 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
 
         Pair<String, String> labels = v.leaveLoop();
 
-        LLVMLabel head =
-                nf.LLVMLabel(Position.compilerGenerated(), labels.part1());
-        LLVMLabel end =
-                nf.LLVMLabel(Position.compilerGenerated(), labels.part2());
+        LLVMLabel head = nf.LLVMLabel(labels.part1());
+        LLVMLabel end = nf.LLVMLabel(labels.part2());
         LLVMLabel l1 = PolyLLVMFreshGen.freshLabel(nf);
 
         List<LLVMInstruction> instrs = new ArrayList<>();
-        instrs.add(nf.LLVMBr(Position.compilerGenerated(), head));
+        instrs.add(nf.LLVMBr(head));
         instrs.add(nf.LLVMSeqLabel(head));
         instrs.add((LLVMInstruction) lang().translatePseudoLLVMConditional(n.cond(),
                                                                            v,
@@ -50,10 +47,10 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
         instrs.add(nf.LLVMSeqLabel(l1));
         LLVMBlock bodyTranslation = (LLVMBlock) v.getTranslation(n.body());
         instrs.add(bodyTranslation.instructions(nf));
-        instrs.add(nf.LLVMBr(Position.compilerGenerated(), head));
+        instrs.add(nf.LLVMBr(head));
         instrs.add(nf.LLVMSeqLabel(end));
 
-        LLVMSeq seq = nf.LLVMSeq(Position.compilerGenerated(), instrs);
+        LLVMSeq seq = nf.LLVMSeq(instrs);
 
         v.addTranslation(n, seq);
 

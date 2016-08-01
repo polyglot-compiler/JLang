@@ -1,5 +1,6 @@
 package polyllvm.ast.PseudoLLVM.Statements;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import polyglot.ast.Ext;
@@ -11,10 +12,14 @@ import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
+import polyllvm.ast.PseudoLLVM.LLVMNode;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.visit.RemoveESeqVisitor;
 
 public class LLVMGetElementPtr_c extends LLVMInstruction_c
         implements LLVMGetElementPtr {
@@ -22,10 +27,10 @@ public class LLVMGetElementPtr_c extends LLVMInstruction_c
 
     protected LLVMTypeNode typeNode;
     protected LLVMPointerType ptrType;
-    protected LLVMVariable variable;
+    protected LLVMOperand variable;
     protected List<LLVMTypedOperand> dereferenceList;
 
-    public LLVMGetElementPtr_c(Position pos, LLVMVariable ptrVar,
+    public LLVMGetElementPtr_c(Position pos, LLVMOperand ptrVar,
             List<LLVMTypedOperand> l, Ext e) {
         super(pos, e);
         ptrType = (LLVMPointerType) ptrVar.typeNode();
@@ -43,13 +48,13 @@ public class LLVMGetElementPtr_c extends LLVMInstruction_c
     public Node visitChildren(NodeVisitor v) {
         LLVMTypeNode tn = visitChild(typeNode, v);
         LLVMPointerType ptr = visitChild(ptrType, v);
-        LLVMVariable var = visitChild(variable, v);
+        LLVMOperand var = visitChild(variable, v);
         List<LLVMTypedOperand> dl = visitList(dereferenceList, v);
         return reconstruct(this, tn, ptr, var, dl);
     }
 
     protected <N extends LLVMGetElementPtr_c> N reconstruct(N n,
-            LLVMTypeNode tn, LLVMPointerType ptr, LLVMVariable var,
+            LLVMTypeNode tn, LLVMPointerType ptr, LLVMOperand var,
             List<LLVMTypedOperand> dl) {
         n = typeNode(n, tn);
         n = ptrType(n, ptr);
@@ -73,8 +78,7 @@ public class LLVMGetElementPtr_c extends LLVMInstruction_c
         return n;
     }
 
-    protected <N extends LLVMGetElementPtr_c> N variable(N n,
-            LLVMVariable var) {
+    protected <N extends LLVMGetElementPtr_c> N variable(N n, LLVMOperand var) {
         if (n.variable == var) return n;
         n = copyIfNeeded(n);
         n.variable = var;
@@ -102,6 +106,30 @@ public class LLVMGetElementPtr_c extends LLVMInstruction_c
             w.write(", ");
             print(t, w, pp);
         }
+    }
+
+    @Override
+    public LLVMNode removeESeq(RemoveESeqVisitor v) {
+        if (variable instanceof LLVMESeq) {
+            LLVMESeq var = (LLVMESeq) variable;
+
+            List<LLVMInstruction> instructions = new ArrayList<>();
+            instructions.add(var.instruction());
+            instructions.add(reconstruct(this,
+                                         typeNode,
+                                         ptrType,
+                                         var.expr(),
+                                         dereferenceList));
+            return v.nodeFactory().LLVMSeq(instructions);
+        }
+        else {
+            return this;
+        }
+    }
+
+    @Override
+    public LLVMGetElementPtr result(LLVMVariable o) {
+        return (LLVMGetElementPtr) super.result(o);
     }
 
 }

@@ -129,4 +129,9 @@ public class LLVMFunction_c extends LLVMNode_c implements LLVMFunction {
         return n;
     }
 
+    @Override
+    public String name() {
+        return name;
+    }
+
 }

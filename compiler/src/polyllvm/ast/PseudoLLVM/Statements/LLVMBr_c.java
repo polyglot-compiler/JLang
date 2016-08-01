@@ -132,7 +132,7 @@ public class LLVMBr_c extends LLVMInstruction_c implements LLVMBr {
                                              llvmTypedOperand,
                                              trueLabel,
                                              falseLabel));
-                return nf.LLVMSeq(Position.compilerGenerated(), instructions);
+                return nf.LLVMSeq(instructions);
             }
         }
         return this;

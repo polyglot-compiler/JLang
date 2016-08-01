@@ -129,22 +129,16 @@ public abstract class LLVMBinaryOperandInstruction_c extends LLVMInstruction_c
             LLVMESeq r = (LLVMESeq) right;
             //sl⃗ ; MOVE(TEMP(tl ), el′ ); s⃗r ; OP(TEMP(tr ), er′ )
             //sl ; Alloc tl; store el -> tl ; sr; Load tl -> freshtemp; OP(freshtemp, er')
-            LLVMTypeNode ptrType =
-                    nf.LLVMPointerType(typeNode);
+            LLVMTypeNode ptrType = nf.LLVMPointerType(typeNode);
             LLVMVariable tempPointer =
                     PolyLLVMFreshGen.freshLocalVar(nf, ptrType);
-            LLVMAlloca allocTemp =
-                    nf.LLVMAlloca(Position.compilerGenerated(), typeNode);
+            LLVMAlloca allocTemp = nf.LLVMAlloca(typeNode);
             allocTemp = allocTemp.result(tempPointer);
-            LLVMStore moveLeft = nf.LLVMStore(typeNode,
-                                              l.expr(),
-                                              tempPointer);
+            LLVMStore moveLeft = nf.LLVMStore(typeNode, l.expr(), tempPointer);
 
             LLVMVariable freshTemp =
                     PolyLLVMFreshGen.freshLocalVar(nf, typeNode);
-            LLVMLoad loadLeft = nf.LLVMLoad(freshTemp,
-                                            typeNode,
-                                            tempPointer);
+            LLVMLoad loadLeft = nf.LLVMLoad(freshTemp, typeNode, tempPointer);
 
             List<LLVMInstruction> instructions = new ArrayList<>();
             instructions.add(l.instruction());
@@ -153,7 +147,7 @@ public abstract class LLVMBinaryOperandInstruction_c extends LLVMInstruction_c
             instructions.add(r.instruction());
             instructions.add(loadLeft);
             instructions.add(reconstruct(this, typeNode, freshTemp, r.expr()));
-            return nf.LLVMSeq(Position.compilerGenerated(), instructions);
+            return nf.LLVMSeq(instructions);
         }
         else if (left instanceof LLVMESeq) {
             LLVMESeq l = (LLVMESeq) left;
@@ -161,7 +155,7 @@ public abstract class LLVMBinaryOperandInstruction_c extends LLVMInstruction_c
             List<LLVMInstruction> instructions = new ArrayList<>();
             instructions.add(l.instruction());
             instructions.add(reconstruct(this, typeNode, l.expr(), right));
-            return nf.LLVMSeq(Position.compilerGenerated(), instructions);
+            return nf.LLVMSeq(instructions);
         }
         else if (right instanceof LLVMESeq) {
             LLVMESeq r = (LLVMESeq) right;
@@ -169,7 +163,7 @@ public abstract class LLVMBinaryOperandInstruction_c extends LLVMInstruction_c
             List<LLVMInstruction> instructions = new ArrayList<>();
             instructions.add(r.instruction());
             instructions.add(reconstruct(this, typeNode, left, r.expr()));
-            return nf.LLVMSeq(Position.compilerGenerated(), instructions);
+            return nf.LLVMSeq(instructions);
         }
         else {
             return this;

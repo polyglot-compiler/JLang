@@ -88,7 +88,7 @@ public class LLVMLoad_c extends LLVMInstruction_c implements LLVMLoad {
             instructions.add(eseq.instruction());
             instructions.add(reconstruct(this, typeNode, eseq.expr()));
             LLVMSeq llvmSeq =
-                    nf.LLVMSeq(Position.compilerGenerated(), instructions);
+                    nf.LLVMSeq(instructions);
 
             return llvmSeq;
         }

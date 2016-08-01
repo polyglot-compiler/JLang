@@ -119,9 +119,8 @@ public class PolyLLVMMethodDeclExt extends PolyLLVMExt {
                                                                  v.getCurrentClass()
                                                                   .type());
             LLVMPointerType objPointerType = nf.LLVMPointerType(objType);
-            args.add(nf.LLVMArgDecl(Position.compilerGenerated(),
-                                    objPointerType,
-                                    PolyLLVMConstants.thisString));
+            args.add(nf.LLVMArgDecl(objPointerType,
+                                    PolyLLVMConstants.THISSTRING));
         }
         for (Formal t : n.formals()) {
             args.add((LLVMArgDecl) v.getTranslation(t));
@@ -130,10 +129,7 @@ public class PolyLLVMMethodDeclExt extends PolyLLVMExt {
         String name = PolyLLVMMangler.mangleMethodName(mi);
         LLVMNode f;
         if (mi.flags().contains(Flags.NATIVE)) {
-            f = nf.LLVMFunctionDeclaration(Position.compilerGenerated(),
-                                           name,
-                                           args,
-                                           retType);
+            f = nf.LLVMFunctionDeclaration(name, args, retType);
         }
         else {
             LLVMBlock code = (LLVMBlock) v.getTranslation(n.body());
@@ -142,11 +138,7 @@ public class PolyLLVMMethodDeclExt extends PolyLLVMExt {
             instrs.addAll(0, v.allocationInstructions());
             code = code.instructions(instrs);
 
-            f = nf.LLVMFunction(Position.compilerGenerated(),
-                                name,
-                                args,
-                                retType,
-                                code);
+            f = nf.LLVMFunction(name, args, retType, code);
         }
         v.addTranslation(node(), f);
 

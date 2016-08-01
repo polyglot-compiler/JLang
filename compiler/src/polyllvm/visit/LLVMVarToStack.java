@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import polyglot.ast.Node;
-import polyglot.util.Position;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -74,27 +73,21 @@ public class LLVMVarToStack extends NodeVisitor {
         List<LLVMInstruction> allocs = new ArrayList<>();
         for (Entry<String, LLVMTypeNode> e : allocations.entrySet()) {
             System.out.println("Adding allocation: " + e);
-            LLVMAlloca a =
-                    nf.LLVMAlloca(Position.compilerGenerated(), e.getValue());
-            allocs.add(a.result(nf.LLVMVariable(Position.compilerGenerated(),
-                                                varName(e.getKey()),
+            LLVMAlloca a = nf.LLVMAlloca(e.getValue());
+            allocs.add(a.result(nf.LLVMVariable(varName(e.getKey()),
                                                 e.getValue(),
                                                 VarType.LOCAL)));
         }
         for (Entry<String, LLVMTypeNode> e : arguments.entrySet()) {
-            LLVMAlloca a =
-                    nf.LLVMAlloca(Position.compilerGenerated(), e.getValue());
-            allocs.add(a.result(nf.LLVMVariable(Position.compilerGenerated(),
-                                                varName(e.getKey()),
+            LLVMAlloca a = nf.LLVMAlloca(e.getValue());
+            allocs.add(a.result(nf.LLVMVariable(varName(e.getKey()),
                                                 e.getValue(),
                                                 VarType.LOCAL)));
             allocs.add(nf.LLVMStore(e.getValue(),
-                                    nf.LLVMVariable(Position.compilerGenerated(),
-                                                    e.getKey(),
+                                    nf.LLVMVariable(e.getKey(),
                                                     e.getValue(),
                                                     VarType.LOCAL),
-                                    nf.LLVMVariable(Position.compilerGenerated(),
-                                                    varName(e.getKey()),
+                                    nf.LLVMVariable(varName(e.getKey()),
                                                     e.getValue(),
                                                     VarType.LOCAL)));
         }

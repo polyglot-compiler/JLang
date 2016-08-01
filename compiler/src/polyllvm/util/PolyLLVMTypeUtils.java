@@ -11,7 +11,6 @@ import polyglot.types.ReferenceType;
 import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
-import polyglot.util.Position;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType;
@@ -47,7 +46,8 @@ public class PolyLLVMTypeUtils {
             return nf.LLVMDoubleType();
         }
         else if (t.isClass()) {
-            return nf.LLVMVariableType("class." + t.toString());
+            return nf.LLVMPointerType(nf.LLVMVariableType("class."
+                    + t.toString()));
         }
         else if (t.isNull()) {
             //TODO: Figure out something better
@@ -76,12 +76,21 @@ public class PolyLLVMTypeUtils {
         for (Type type : formalTypes) {
             formals.add(polyLLVMTypeNode(nf, type));
         }
-        return nf.LLVMFunctionType(Position.compilerGenerated(),
-                                   formals,
-                                   polyLLVMTypeNode(nf, returnType));
+        return nf.LLVMFunctionType(formals, polyLLVMTypeNode(nf, returnType));
     }
 
-    private static LLVMTypeNode polyLLVMObjectType(PseudoLLVMTranslator v,
+    public static LLVMTypeNode polyLLVMMethodTypeNode(PolyLLVMNodeFactory nf,
+            ReferenceType type, List<? extends Type> formalTypes,
+            Type returnType) {
+        LLVMTypeNode classTypePointer =
+                nf.LLVMPointerType(nf.LLVMVariableType(PolyLLVMMangler.classTypeName(type)));
+        return PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf,
+                                                          formalTypes,
+                                                          returnType)
+                                .prependFormalTypeNode(classTypePointer);
+    }
+
+    public static LLVMTypeNode polyLLVMObjectType(PseudoLLVMTranslator v,
             ReferenceType rt) {
         Pair<List<MethodInstance>, List<FieldInstance>> layouts = v.layouts(rt);
         List<LLVMTypeNode> typeList = new ArrayList<>();
@@ -94,9 +103,6 @@ public class PolyLLVMTypeUtils {
         LLVMStructureType structureType =
                 v.nodeFactory().LLVMStructureType(typeList);
 
-        System.out.println("\n\nHere is a structure Type!");
-        structureType.prettyPrint(v.nodeFactory().lang(), System.out);
-        System.out.println("\n\n");
         return structureType;
     }
 
@@ -124,12 +130,13 @@ public class PolyLLVMTypeUtils {
     /**
      *
      */
-    private static LLVMTypeNode polyLLVMDispatchVectorType(
+    public static LLVMTypeNode polyLLVMDispatchVectorType(
             PseudoLLVMTranslator v, ReferenceType type) {
         List<MethodInstance> layout = v.layouts(type).part1();
         List<LLVMTypeNode> typeList = new ArrayList<>();
         typeList.add(v.nodeFactory()
                       .LLVMPointerType(v.nodeFactory().LLVMIntType(8)));
+//        typeList.add(polyLLVMDispatchVectorVariableType(v,));
         for (int i = 0; i < layout.size(); i++) {
             PolyLLVMNodeFactory nf = v.nodeFactory();
             LLVMTypeNode classTypePointer =
@@ -159,6 +166,18 @@ public class PolyLLVMTypeUtils {
             PseudoLLVMTranslator v, ReferenceType rt) {
         return v.nodeFactory()
                 .LLVMVariableType(PolyLLVMMangler.classTypeName(rt));
+    }
+
+    public static int numBitsOfIntegralType(Type t) {
+        if (t.isByte())
+            return 8;
+        else if (t.isShort() || t.isChar())
+            return 16;
+        else if (t.isInt())
+            return 32;
+        else if (t.isLong()) return 64;
+        throw new InternalCompilerError("Type " + t
+                + " is not an integral type");
     }
 
 }

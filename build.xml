@@ -12,11 +12,7 @@
     <property name="package.dir" value="polyllvm"/>
 
     <!-- extension language name -->
-<<<<<<< HEAD
     <property name="name" value="polyllvm"/>
-=======
-    <property name="name" value="PolyLLVM"/>
->>>>>>> 92481ea628bc4270d08ad51a6decb42ec21671b3
 
     <!-- extension compiler script name -->
     <property name="compiler.name" value="${name}c"/>

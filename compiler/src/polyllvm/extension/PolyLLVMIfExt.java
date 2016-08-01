@@ -5,7 +5,6 @@ import java.util.List;
 
 import polyglot.ast.If;
 import polyglot.ast.Node;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -36,16 +35,15 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
         instructions.add(cond);
         instructions.add(nf.LLVMSeqLabel(trueLabel));
         instructions.add(((LLVMBlock) v.getTranslation(n.consequent())).instructions(nf));
-        instructions.add(nf.LLVMBr(Position.compilerGenerated(), endLabel));
+        instructions.add(nf.LLVMBr(endLabel));
         instructions.add(nf.LLVMSeqLabel(falseLabel));
         if (n.alternative() != null) {
             instructions.add(((LLVMBlock) v.getTranslation(n.alternative())).instructions(nf));
         }
-        instructions.add(nf.LLVMBr(Position.compilerGenerated(), endLabel));
+        instructions.add(nf.LLVMBr(endLabel));
         instructions.add(nf.LLVMSeqLabel(endLabel));
 
-        LLVMSeq translation =
-                nf.LLVMSeq(Position.compilerGenerated(), instructions);
+        LLVMSeq translation = nf.LLVMSeq(instructions);
 
         v.addTranslation(n, translation);
         return super.translatePseudoLLVM(v);

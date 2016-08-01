@@ -26,6 +26,7 @@
 #      CmdLineArgs  :   additional command line args for the Polyglot 
 #                       compiler; is always enclosed in quotes.
 
-polyllvm.ExtensionInfo "-d out" {
-    Hello.java;
+polyllvm.ExtensionInfo "-d out -c" {
+#    Hello.java;
+    IntAdd.java;
 }

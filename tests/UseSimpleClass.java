@@ -1,12 +1,22 @@
 public class UseSimpleClass extends SimpleClass {
 
-    
+//    public static void main(String[] args) {
+//        main();
+//    }
+
+//    public static void main() {
+//        SimpleClass s = new UseSimpleClass();
+//        s.field = 'A';//12;
+//        print(s.method());
+//    }
+
+
     public int method() {
         return super.method() + 1;
     }
 
     public int method2() {
-        return super.method() + 1;
+        return method() + 1;
     }
 //
 //    int method3() {

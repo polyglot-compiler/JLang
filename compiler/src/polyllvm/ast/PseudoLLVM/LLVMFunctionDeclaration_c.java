@@ -74,4 +74,9 @@ public class LLVMFunctionDeclaration_c extends LLVMNode_c
         return n;
     }
 
+    @Override
+    public String name() {
+        return function;
+    }
+
 }

@@ -14,6 +14,7 @@ import polyglot.visit.CodeCleaner;
 import polyglot.visit.ExpressionFlattener;
 import polyglot.visit.LoopNormalizer;
 import polyglot.visit.MakeNarrowingAssignmentsExplicit;
+import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.AddVoidReturnVisitor;
@@ -27,6 +28,36 @@ public class PolyLLVMScheduler extends JLScheduler {
         super(extInfo);
     }
 
+    public Goal StringLiteralRemover(Job job) {
+        ExtensionInfo extInfo = job.extensionInfo();
+        TypeSystem ts = extInfo.typeSystem();
+        NodeFactory nf = extInfo.nodeFactory();
+        Goal g = new VisitorGoal(job, new StringLiteralRemover(ts, nf));
+        try {
+            // Make sure we have type information before we translate things.
+            g.addPrerequisiteGoal(Disambiguated(job), this);//Validated(job), this);
+        }
+        catch (CyclicDependencyException e) {
+            throw new InternalCompilerError(e);
+        }
+        return internGoal(g);
+    }
+
+    @Override
+    public Goal TypeChecked(Job job) {
+        ExtensionInfo extInfo = job.extensionInfo();
+        TypeSystem ts = extInfo.typeSystem();
+        NodeFactory nf = extInfo.nodeFactory();
+        Goal g = new VisitorGoal(job, new TypeChecker(job, ts, nf));
+        try {
+            g.addPrerequisiteGoal(StringLiteralRemover(job), this);
+        }
+        catch (CyclicDependencyException e) {
+            throw new InternalCompilerError(e);
+        }
+        return internGoal(g);
+    }
+
     @Override
     public Goal Serialized(Job job) {
         Goal g = new EmptyGoal(job, "Serialized");
@@ -37,21 +68,6 @@ public class PolyLLVMScheduler extends JLScheduler {
             g.addPrerequisiteGoal(InitializationsChecked(job), this);
             g.addPrerequisiteGoal(ForwardReferencesChecked(job), this);
             g.addPrerequisiteGoal(ExceptionsChecked(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
-    public Goal StringLiteralRemover(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        TypeSystem ts = extInfo.typeSystem();
-        NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new StringLiteralRemover(ts, nf));
-        try {
-            // Make sure we have type information before we translate things.
-            g.addPrerequisiteGoal(Serialized(job), this);//Validated(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);

@@ -3,7 +3,6 @@ package polyllvm.extension;
 import polyglot.ast.LocalDecl;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -38,33 +37,10 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
                     + " LLVMOperand, it was translated: " + decl);
         }
         LLVMVariable ptr =
-                nf.LLVMVariable(Position.compilerGenerated(),
-                                v.varName(n.name()),
-                                typeNode,
-                                VarType.LOCAL);
-        LLVMStore store = nf.LLVMStore(typeNode,
-                                       (LLVMOperand) decl,
-                                       ptr);
+                nf.LLVMVariable(v.varName(n.name()), typeNode, VarType.LOCAL);
+        LLVMStore store = nf.LLVMStore(typeNode, (LLVMOperand) decl, ptr);
         v.addTranslation(n, store);
 
-//        if (decl instanceof LLVMInstruction) {
-//            LLVMInstruction translation =
-//                    ((LLVMInstruction) decl).result(nf.LLVMVariable(Position.compilerGenerated(),
-//                                                                    n.name(),
-//                                                                    VarType.LOCAL));
-//            v.addTranslation(node(), translation);
-//        } /*else  if (decl instanceof LLVMIntLiteral){
-//          } */
-//        else {
-//            throw new InternalCompilerError("Cannot translate java expression -- "
-//                    + n.init() + " -- as a part of a local decl.");
-//        }
-//        LLVMInstruction expr = (LLVMInstruction) v.getTranslation(n.init());
-//        LLVMInstruction translation =
-//                expr.result(nf.LLVMVariable(Position.compilerGenerated(),
-//                                            n.name(),
-//                                            VarType.LOCAL));
-//        v.addTranslation(node(), translation);
         return super.translatePseudoLLVM(v);
     }
 }

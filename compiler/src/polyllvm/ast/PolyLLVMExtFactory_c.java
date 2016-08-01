@@ -14,11 +14,14 @@ import polyllvm.extension.PolyLLVMCharLitExt;
 import polyllvm.extension.PolyLLVMClassBodyExt;
 import polyllvm.extension.PolyLLVMClassDeclExt;
 import polyllvm.extension.PolyLLVMEvalExt;
+import polyllvm.extension.PolyLLVMFieldAssignExt;
+import polyllvm.extension.PolyLLVMFieldExt;
 import polyllvm.extension.PolyLLVMFloatLitExt;
 import polyllvm.extension.PolyLLVMFormalExt;
 import polyllvm.extension.PolyLLVMIfExt;
 import polyllvm.extension.PolyLLVMIntLitExt;
 import polyllvm.extension.PolyLLVMLabeledExt;
+import polyllvm.extension.PolyLLVMLocalAssignExt;
 import polyllvm.extension.PolyLLVMLocalDeclExt;
 import polyllvm.extension.PolyLLVMLocalExt;
 import polyllvm.extension.PolyLLVMMethodDeclExt;
@@ -26,6 +29,7 @@ import polyllvm.extension.PolyLLVMNewExt;
 import polyllvm.extension.PolyLLVMNullLitExt;
 import polyllvm.extension.PolyLLVMReturnExt;
 import polyllvm.extension.PolyLLVMSourceFileExt;
+import polyllvm.extension.PolyLLVMSpecialExt;
 import polyllvm.extension.PolyLLVMStringLitExt;
 import polyllvm.extension.PolyLLVMTypeNodeExt;
 import polyllvm.extension.PolyLLVMUnaryExt;
@@ -188,4 +192,26 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     protected Ext extNewImpl() {
         return new PolyLLVMNewExt();
     }
+
+    @Override
+    protected Ext extFieldImpl() {
+        return new PolyLLVMFieldExt();
+    }
+
+    @Override
+    protected Ext extSpecialImpl() {
+        return new PolyLLVMSpecialExt();
+    }
+
+    @Override
+    protected Ext extFieldAssignImpl() {
+        return new PolyLLVMFieldAssignExt();
+    }
+
+    @Override
+    protected Ext extLocalAssignImpl() {
+        // TODO Auto-generated method stub
+        return new PolyLLVMLocalAssignExt();
+    }
+
 }

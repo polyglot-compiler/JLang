@@ -5,7 +5,6 @@ import java.util.List;
 import polyglot.ast.NodeFactory;
 import polyglot.frontend.Source;
 import polyglot.util.Pair;
-import polyglot.util.Position;
 import polyllvm.ast.PseudoLLVM.LLVMArgDecl;
 import polyllvm.ast.PseudoLLVM.LLVMBlock;
 import polyllvm.ast.PseudoLLVM.LLVMFunction;
@@ -63,22 +62,22 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     // TODO: Declare any factory methods for new AST nodes.
 
-    LLVMSourceFile LLVMSourceFile(Position pos, String name, Source s,
+    LLVMSourceFile LLVMSourceFile(String name, Source s,
             List<LLVMFunction> funcs, List<LLVMFunctionDeclaration> funcdecls,
             List<LLVMGlobalDeclaration> globals);
 
     LLVMBlock LLVMBlock(List<LLVMInstruction> instructions);
 
-    LLVMFunction LLVMFunction(Position pos, String name, List<LLVMArgDecl> args,
+    LLVMFunction LLVMFunction(String name, List<LLVMArgDecl> args,
             LLVMTypeNode retType, List<LLVMBlock> blocks);
 
-    LLVMFunction LLVMFunction(Position compilerGenerated, String name,
-            List<LLVMArgDecl> args, LLVMTypeNode retType, LLVMBlock code);
+    LLVMFunction LLVMFunction(String name, List<LLVMArgDecl> args,
+            LLVMTypeNode retType, LLVMBlock code);
 
-    LLVMFunctionDeclaration LLVMFunctionDeclaration(Position pos, String name,
+    LLVMFunctionDeclaration LLVMFunctionDeclaration(String name,
             List<LLVMArgDecl> args, LLVMTypeNode retType);
 
-    LLVMArgDecl LLVMArgDecl(Position pos, LLVMTypeNode typeNode, String name);
+    LLVMArgDecl LLVMArgDecl(LLVMTypeNode typeNode, String name);
 
     LLVMTypeDeclaration LLVMTypeDeclaration(String typeName, LLVMTypeNode tn);
 
@@ -98,12 +97,11 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     LLVMNullLiteral LLVMNullLiteral(LLVMTypeNode typeNode);
 
-    LLVMVariable LLVMVariable(Position pos, String name, LLVMTypeNode tn,
-            VarType t);
+    LLVMVariable LLVMVariable(String name, LLVMTypeNode tn, VarType t);
 
     LLVMTypedOperand LLVMTypedOperand(LLVMOperand op, LLVMTypeNode tn);
 
-    LLVMLabel LLVMLabel(Position pos, String name);
+    LLVMLabel LLVMLabel(String name);
 
     /*
      * LLVM Type Nodes
@@ -123,62 +121,58 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     LLVMPointerType LLVMPointerType(LLVMTypeNode tn);
 
-    LLVMFunctionType LLVMFunctionType(Position compilerGenerated,
-            List<LLVMTypeNode> formalTypes, LLVMTypeNode returnType);
+    LLVMFunctionType LLVMFunctionType(List<LLVMTypeNode> formalTypes,
+            LLVMTypeNode returnType);
 
     /*
      * LLVM Statements (complete instructions)
      */
 
-    LLVMAdd LLVMAdd(Position pos, LLVMVariable r, LLVMIntType t,
-            LLVMOperand left, LLVMOperand right);
-
-    LLVMAdd LLVMAdd(Position pos, LLVMIntType t, LLVMOperand left,
+    LLVMAdd LLVMAdd(LLVMVariable r, LLVMIntType t, LLVMOperand left,
             LLVMOperand right);
 
-    LLVMSub LLVMSub(Position pos, LLVMVariable r, LLVMIntType t,
-            LLVMOperand left, LLVMOperand right);
+    LLVMAdd LLVMAdd(LLVMIntType t, LLVMOperand left, LLVMOperand right);
 
-    LLVMSub LLVMSub(Position pos, LLVMIntType t, LLVMOperand left,
+    LLVMSub LLVMSub(LLVMVariable r, LLVMIntType t, LLVMOperand left,
             LLVMOperand right);
 
-    LLVMMul LLVMMul(Position pos, LLVMVariable r, LLVMIntType t,
-            LLVMOperand left, LLVMOperand right);
+    LLVMSub LLVMSub(LLVMIntType t, LLVMOperand left, LLVMOperand right);
 
-    LLVMMul LLVMMul(Position pos, LLVMIntType t, LLVMOperand left,
+    LLVMMul LLVMMul(LLVMVariable r, LLVMIntType t, LLVMOperand left,
             LLVMOperand right);
 
-    LLVMFAdd LLVMFAdd(Position pos, LLVMVariable r, LLVMTypeNode tn,
-            LLVMOperand left, LLVMOperand right);
+    LLVMMul LLVMMul(LLVMIntType t, LLVMOperand left, LLVMOperand right);
 
-    LLVMFAdd LLVMFAdd(Position pos, LLVMTypeNode tn, LLVMOperand left,
+    LLVMFAdd LLVMFAdd(LLVMVariable r, LLVMTypeNode tn, LLVMOperand left,
             LLVMOperand right);
 
-    LLVMICmp LLVMICmp(Position pos, LLVMVariable result, LLVMIntType returnType,
+    LLVMFAdd LLVMFAdd(LLVMTypeNode tn, LLVMOperand left, LLVMOperand right);
+
+    LLVMICmp LLVMICmp(LLVMVariable result, LLVMIntType returnType,
             IConditionCode cc, LLVMIntType tn, LLVMOperand left,
             LLVMOperand right);
 
-    LLVMICmp LLVMICmp(Position pos, LLVMIntType returnType, IConditionCode cc,
-            LLVMIntType tn, LLVMOperand left, LLVMOperand right);
+    LLVMICmp LLVMICmp(LLVMIntType returnType, IConditionCode cc, LLVMIntType tn,
+            LLVMOperand left, LLVMOperand right);
 
-    LLVMBr LLVMBr(Position pos, LLVMTypedOperand cond, LLVMLabel trueLabel,
+    LLVMBr LLVMBr(LLVMTypedOperand cond, LLVMLabel trueLabel,
             LLVMLabel falseLabel);
 
-    LLVMBr LLVMBr(Position pos, LLVMLabel l);
+    LLVMBr LLVMBr(LLVMLabel l);
 
-    LLVMCall LLVMCall(Position pos, LLVMVariable function,
+    LLVMCall LLVMCall(LLVMVariable function,
             List<Pair<LLVMTypeNode, LLVMOperand>> arguments,
             LLVMTypeNode retType);
 
-    LLVMRet LLVMRet(Position pos);
+    LLVMRet LLVMRet();
 
-    LLVMRet LLVMRet(Position pos, LLVMTypeNode t, LLVMOperand o);
+    LLVMRet LLVMRet(LLVMTypeNode t, LLVMOperand o);
 
-    LLVMAlloca LLVMAlloca(Position pos, LLVMTypeNode typeNode);
+    LLVMAlloca LLVMAlloca(LLVMTypeNode typeNode);
 
-    LLVMAlloca LLVMAlloca(Position pos, LLVMTypeNode typeNode, int numElements);
+    LLVMAlloca LLVMAlloca(LLVMTypeNode typeNode, int numElements);
 
-    LLVMAlloca LLVMAlloca(Position pos, LLVMTypeNode typeNode, int numElements,
+    LLVMAlloca LLVMAlloca(LLVMTypeNode typeNode, int numElements,
             int alignment);
 
     LLVMLoad LLVMLoad(LLVMVariable result, LLVMTypeNode typeNode,
@@ -187,23 +181,22 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
     LLVMStore LLVMStore(LLVMTypeNode typeNode, LLVMOperand value,
             LLVMOperand ptr);
 
-    LLVMConversion LLVMConversion(Position pos, Instruction instruction,
-            LLVMVariable result, LLVMTypeNode valueType, LLVMOperand value,
-            LLVMTypeNode toType);
-
-    LLVMConversion LLVMConversion(Position pos, Instruction instruction,
+    LLVMConversion LLVMConversion(Instruction instruction, LLVMVariable result,
             LLVMTypeNode valueType, LLVMOperand value, LLVMTypeNode toType);
 
-    LLVMGetElementPtr LLVMGetElementPtr(LLVMVariable ptrVar,
+    LLVMConversion LLVMConversion(Instruction instruction,
+            LLVMTypeNode valueType, LLVMOperand value, LLVMTypeNode toType);
+
+    LLVMGetElementPtr LLVMGetElementPtr(LLVMOperand thisTranslation,
             List<LLVMTypedOperand> l);
 
     /*
      * PseudoLLVM constructs
      */
 
-    LLVMSeq LLVMSeq(Position pos, List<LLVMInstruction> instructions);
+    LLVMSeq LLVMSeq(List<LLVMInstruction> instructions);
 
-    LLVMSeqLabel LLVMSeqLabel(Position pos, String name);
+    LLVMSeqLabel LLVMSeqLabel(String name);
 
     LLVMSeqLabel LLVMSeqLabel(LLVMLabel l);
 

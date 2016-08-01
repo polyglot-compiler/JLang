@@ -27,7 +27,12 @@ public class LLVMTypeDeclaration_c extends LLVMGlobalDeclaration_c
         w.write("%");
         w.write(typeName);
         w.write(" = type ");
-        print(typeNode, w, pp);
+        if (typeNode == null) {
+            w.write("opaque");
+        }
+        else {
+            print(typeNode, w, pp);
+        }
 
     }
 

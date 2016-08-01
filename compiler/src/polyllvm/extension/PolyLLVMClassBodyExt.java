@@ -4,7 +4,6 @@ import polyglot.ast.ClassBody;
 import polyglot.ast.ClassMember;
 import polyglot.ast.MethodDecl;
 import polyglot.ast.Node;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -20,12 +19,7 @@ public class PolyLLVMClassBodyExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         ClassBody n = (ClassBody) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
-        LLVMSourceFile llf = nf.LLVMSourceFile(Position.compilerGenerated(),
-                                               null,
-                                               null,
-                                               null,
-                                               null,
-                                               null);
+        LLVMSourceFile llf = nf.LLVMSourceFile(null, null, null, null, null);
         for (ClassMember cm : n.members()) {
             if (cm instanceof MethodDecl
                     && !((MethodDecl) cm).flags().isNative()) {

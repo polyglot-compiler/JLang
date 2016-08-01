@@ -2,7 +2,6 @@ package polyllvm.extension;
 
 import polyglot.ast.Local;
 import polyglot.ast.Node;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -35,14 +34,9 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
         LLVMVariable expr = PolyLLVMFreshGen.freshLocalVar(nf, typeNode);
 
         LLVMVariable ptr =
-                nf.LLVMVariable(Position.compilerGenerated(),
-                                v.varName(n.name()),
-                                typeNode,
-                                VarType.LOCAL);
-        LLVMInstruction instruction =
-                nf.LLVMLoad(expr, typeNode, ptr);
-        LLVMNode translation =
-                nf.LLVMESeq(instruction, expr);
+                nf.LLVMVariable(v.varName(n.name()), typeNode, VarType.LOCAL);
+        LLVMInstruction instruction = nf.LLVMLoad(expr, typeNode, ptr);
+        LLVMNode translation = nf.LLVMESeq(instruction, expr);
         v.addTranslation(n, translation);
         return super.translatePseudoLLVM(v);
     }
@@ -55,10 +49,7 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
                 nf.LLVMTypedOperand((LLVMOperand) v.getTranslation(node()),
                                     nf.LLVMIntType(1));
         LLVMInstruction translation =
-                nf.LLVMBr(Position.compilerGenerated(),
-                          typedTranslation,
-                          trueLabel,
-                          falseLabel);
+                nf.LLVMBr(typedTranslation, trueLabel, falseLabel);
 
         return translation;
     }

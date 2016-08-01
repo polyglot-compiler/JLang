@@ -18,5 +18,6 @@ public interface LLVMConversion extends LLVMInstruction {
     public static final Instruction FPEXT = new Instruction("fpext");
     public static final Instruction ZEXT = new Instruction("zext");
     public static final Instruction SEXT = new Instruction("sext");
+    public static final Instruction BITCAST = new Instruction("bitcast");
 
 }
