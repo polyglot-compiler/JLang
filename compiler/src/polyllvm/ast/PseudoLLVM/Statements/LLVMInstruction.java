@@ -24,5 +24,10 @@ public interface LLVMInstruction extends LLVMNode {
      * The type that this instruction returns
      */
     LLVMTypeNode retType();
+//
+//    /**
+//     * Add the comment {@code s} to the instruction
+//     */
+//    LLVMInstruction comment(String s);
 
 }

@@ -19,5 +19,8 @@ public interface LLVMConversion extends LLVMInstruction {
     public static final Instruction ZEXT = new Instruction("zext");
     public static final Instruction SEXT = new Instruction("sext");
     public static final Instruction BITCAST = new Instruction("bitcast");
+    public static final Instruction TRUNC = new Instruction("trunc");
+    public static final Instruction PTRTOINT = new Instruction("ptrtoint");
+    public static final Instruction INTTOPTR = new Instruction("inttoptr");
 
 }

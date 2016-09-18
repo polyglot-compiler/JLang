@@ -37,7 +37,7 @@ public class LLVMMul_c extends LLVMBinaryOperandInstruction_c
         }
         else {
             print(result, w, pp);
-            w.write(" = add ");
+            w.write(" = mul ");
             print(intType(), w, pp);
             w.write(" ");
             print(left, w, pp);

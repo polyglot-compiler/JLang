@@ -1,8 +1,8 @@
 package polyllvm.extension;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import polyglot.ast.Expr;
 import polyglot.ast.New;
 import polyglot.ast.Node;
 import polyglot.types.ConstructorInstance;
@@ -10,7 +10,6 @@ import polyglot.types.ReferenceType;
 import polyglot.util.CollectionUtil;
 import polyglot.util.Pair;
 import polyglot.util.SerialVersionUID;
-import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
@@ -27,21 +26,30 @@ import polyllvm.util.PolyLLVMMangler;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-public class PolyLLVMNewExt extends PolyLLVMExt {
+public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         New n = (New) node();
+        PolyLLVMNodeFactory nf = v.nodeFactory();
+
         ConstructorInstance ci = n.constructorInstance();
-        List<Expr> args = n.arguments();
+        ReferenceType classtype = ci.container();
+        int mallocSize = v.layouts(classtype).part2().size() * 8;
+        translateWithSize(v, nf.LLVMIntLiteral(nf.LLVMIntType(64), mallocSize));
+        return super.translatePseudoLLVM(v);
+    }
+
+    public void translateWithSize(PseudoLLVMTranslator v, LLVMOperand size) {
+        New n = (New) node();
+        ConstructorInstance ci = n.constructorInstance();
 
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
         ReferenceType classtype = ci.container();
         LLVMTypeNode typeNode =
                 PolyLLVMTypeUtils.polyLLVMTypeNode(nf, classtype);
-        System.out.println("Type node for the class is: " + typeNode);
 
         //Allocate space for the new object - need to get the size of the object
         LLVMVariable mallocRet =
@@ -51,12 +59,10 @@ public class PolyLLVMNewExt extends PolyLLVMExt {
         LLVMVariable mallocFunction = nf.LLVMVariable(PolyLLVMConstants.MALLOC,
                                                       nf.LLVMPointerType(nf.LLVMIntType(8)),
                                                       VarType.GLOBAL);
+
         List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
                 CollectionUtil.list(new Pair<LLVMTypeNode, LLVMOperand>(nf.LLVMIntType(64),
-                                                                        nf.LLVMIntLiteral(nf.LLVMIntType(64),
-                                                                                          v.layouts(classtype)
-                                                                                           .part2()
-                                                                                           .size() * 8)));
+                                                                        size));
         LLVMTypeNode retType = nf.LLVMPointerType(nf.LLVMIntType(8));
         LLVMCall mallocCall = nf.LLVMCall(mallocFunction, arguments, retType)
                                 .result(mallocRet);
@@ -93,17 +99,41 @@ public class PolyLLVMNewExt extends PolyLLVMExt {
                                              VarType.GLOBAL),
                              gepResult);
         //Call the constructor function
-        //TODO : Actually do this part
+        String mangledFuncName =
+                PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
+        LLVMTypeNode tn =
+                PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                                                         n.constructorInstance()
+                                                          .container(),
+                                                         n.constructorInstance()
+                                                          .formalTypes());
+        LLVMVariable func =
+                nf.LLVMVariable(mangledFuncName, tn, VarType.GLOBAL);
+
+        List<Pair<LLVMTypeNode, LLVMOperand>> constructorArgs =
+                setupArguments(v, n, nf, newObject, typeNode);
+        Pair<LLVMCall, LLVMVariable> pair =
+                setupCall(v, n, nf, func, constructorArgs, false);
 
         List<LLVMInstruction> instrs =
-                CollectionUtil.list(mallocCall,
-                                    conversion,
-                                    gep,
-                                    storeDVIntoObject);
+                list(mallocCall,
+                     conversion,
+                     gep,
+                     storeDVIntoObject,
+                     pair.part1());
+
+        v.addStaticCall(pair.part1());
 
         v.addTranslation(n, nf.LLVMESeq(nf.LLVMSeq(instrs), newObject));
+    }
 
-        return super.translatePseudoLLVM(v);
+    @SafeVarargs
+    private final <T> List<T> list(T... ts) {
+        ArrayList<T> list = new ArrayList<>();
+        for (T element : ts) {
+            list.add(element);
+        }
+        return list;
     }
 
 }

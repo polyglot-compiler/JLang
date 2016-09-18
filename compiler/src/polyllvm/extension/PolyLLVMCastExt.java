@@ -99,6 +99,22 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             v.addTranslation(n, nf.LLVMESeq(conv, result));
 
         }
+
+        else if (castType.isPrimitive() && exprType.isPrimitive()) {
+            if (exprType.isLongOrLess() && castType.isLongOrLess()) {
+                LLVMInstruction conv =
+                        nf.LLVMConversion(LLVMConversion.TRUNC,
+                                          exprTypeNode,
+                                          exprTranslation,
+                                          castTypeNode);
+                LLVMVariable result =
+                        PolyLLVMFreshGen.freshLocalVar(nf, castTypeNode);
+                conv = conv.result(result);
+                v.addTranslation(n, nf.LLVMESeq(conv, result));
+
+            }
+
+        }
         return super.translatePseudoLLVM(v);
     }
 }

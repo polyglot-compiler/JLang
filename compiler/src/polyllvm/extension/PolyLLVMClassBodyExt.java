@@ -2,8 +2,8 @@ package polyllvm.extension;
 
 import polyglot.ast.ClassBody;
 import polyglot.ast.ClassMember;
-import polyglot.ast.MethodDecl;
 import polyglot.ast.Node;
+import polyglot.ast.ProcedureDecl;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -21,12 +21,17 @@ public class PolyLLVMClassBodyExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
         LLVMSourceFile llf = nf.LLVMSourceFile(null, null, null, null, null);
         for (ClassMember cm : n.members()) {
-            if (cm instanceof MethodDecl
-                    && !((MethodDecl) cm).flags().isNative()) {
+//            if (cm instanceof ConstructorDecl) {
+//                System.out.println("Working on constructors: " + cm);
+//                continue;
+//            }
+
+            if (cm instanceof ProcedureDecl
+                    && !((ProcedureDecl) cm).flags().isNative()) {
                 llf = llf.appendFunction((LLVMFunction) v.getTranslation(cm));
             }
-            else if (cm instanceof MethodDecl
-                    && ((MethodDecl) cm).flags().isNative()) {
+            else if (cm instanceof ProcedureDecl
+                    && ((ProcedureDecl) cm).flags().isNative()) {
                 llf = llf.appendFunctionDeclaration((LLVMFunctionDeclaration) v.getTranslation(cm));
             }
             else {

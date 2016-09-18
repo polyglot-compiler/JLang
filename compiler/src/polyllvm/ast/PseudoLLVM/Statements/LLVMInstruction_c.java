@@ -53,5 +53,4 @@ public abstract class LLVMInstruction_c extends LLVMNode_c
         LLVMVariable r = visitChild(result, v);
         return result(r);
     }
-
 }

@@ -10,6 +10,7 @@ import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.LLVMBlock;
+import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.visit.PseudoLLVMTranslator;
 
@@ -21,9 +22,12 @@ public class PolyLLVMBlockExt extends PolyLLVMExt {
         Block n = (Block) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
         List<LLVMInstruction> x = new ArrayList<>(n.statements().size());
+
         for (Stmt s : n.statements()) {
-            x.add((LLVMInstruction) v.getTranslation(s));
+            LLVMNode translation = v.getTranslation(s);
+            x.add((LLVMInstruction) translation);
         }
+
         LLVMBlock translation = nf.LLVMBlock(x);
         v.addTranslation(node(), translation);
         return super.translatePseudoLLVM(v);

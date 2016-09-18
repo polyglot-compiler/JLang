@@ -10,7 +10,7 @@ import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
  * @author Daniel
  *
  */
-public interface LLVMBlock extends LLVMNode {
+public interface LLVMBlock extends LLVMInstruction {
 
     /**
      * Return a new LLVMBlock with the code replaced with {@code instructions}

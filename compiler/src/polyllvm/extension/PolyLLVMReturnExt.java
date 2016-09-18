@@ -1,6 +1,7 @@
 package polyllvm.extension;
 
 import polyglot.ast.Expr;
+import polyglot.ast.MethodDecl;
 import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
 import polyglot.ast.Return;
@@ -22,12 +23,24 @@ public class PolyLLVMReturnExt extends PolyLLVMExt {
     public Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v) {
         Return n = (Return) node();
         NodeFactory nf = v.nodeFactory();
-        TypeNode returnType = v.getCurrentMethod().returnType();
-        if (!returnType.type().equals(n.expr().type())) {
-            Expr cast =
-                    nf.Cast(Position.compilerGenerated(), returnType, n.expr())
-                      .type(returnType.type());
-            return n.expr(cast);
+        System.out.println("Is it breaking?    " + n);
+        System.out.println("Current method?     " + v.getCurrentMethod());
+        if (v.getCurrentMethod() instanceof MethodDecl) {
+            TypeNode returnType =
+                    ((MethodDecl) v.getCurrentMethod()).returnType();
+            if (!returnType.type().equals(n.expr().type())) {
+                Expr cast = nf
+                              .Cast(Position.compilerGenerated(),
+                                    returnType,
+                                    n.expr())
+                              .type(returnType.type());
+                return n.expr(cast);
+            }
+
+        }
+        else {
+            System.out.println("addPrimitiveWideningCasts for return, current method is : "
+                    + v.getCurrentMethod());
         }
         return super.addPrimitiveWideningCasts(v);
     }

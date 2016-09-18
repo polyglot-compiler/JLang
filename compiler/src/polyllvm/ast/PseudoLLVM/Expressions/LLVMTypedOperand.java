@@ -14,4 +14,5 @@ public interface LLVMTypedOperand extends LLVMOperand {
      */
     @Override
     LLVMTypeNode typeNode();
+
 }

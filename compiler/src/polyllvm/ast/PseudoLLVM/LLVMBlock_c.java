@@ -6,16 +6,19 @@ import java.util.List;
 import polyglot.ast.Ext;
 import polyglot.ast.Node;
 import polyglot.util.CodeWriter;
+import polyglot.util.InternalCompilerError;
 import polyglot.util.ListUtil;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction_c;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
 
-public class LLVMBlock_c extends LLVMNode_c implements LLVMBlock {
+public class LLVMBlock_c extends LLVMInstruction_c implements LLVMBlock {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     protected List<LLVMInstruction> instructions;
@@ -28,7 +31,7 @@ public class LLVMBlock_c extends LLVMNode_c implements LLVMBlock {
 
     @Override
     public LLVMBlock instructions(List<LLVMInstruction> instructions) {
-        return instructions(this, instructions);
+        return instructions(this, new ArrayList<>(instructions));
     }
 
     @Override
@@ -98,4 +101,8 @@ public class LLVMBlock_c extends LLVMNode_c implements LLVMBlock {
         return n;
     }
 
+    @Override
+    public LLVMTypeNode retType() {
+        throw new InternalCompilerError("");
+    }
 }

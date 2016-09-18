@@ -2,6 +2,7 @@ package polyllvm.extension;
 
 import polyglot.ast.CanonicalTypeNode;
 import polyglot.ast.Node;
+import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -18,6 +19,9 @@ public class PolyLLVMCanonicalTypeNodeExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
         LLVMTypeNode t = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
         v.addTranslation(n, t);
+        if (n.type().isReference()) {
+            v.addClassType((ReferenceType) n.type());
+        }
         return super.translatePseudoLLVM(v);
     }
 }

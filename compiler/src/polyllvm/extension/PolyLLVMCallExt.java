@@ -12,13 +12,10 @@ import polyglot.ast.Special;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
 import polyglot.types.Type;
-import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
-import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
@@ -34,7 +31,7 @@ import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-public class PolyLLVMCallExt extends PolyLLVMExt {
+public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
@@ -42,11 +39,7 @@ public class PolyLLVMCallExt extends PolyLLVMExt {
         Call n = (Call) node();
         NodeFactory nf = v.nodeFactory();
         List<Expr> args = new ArrayList<>();
-//      List<? extends Type> types = n.methodInstance().formalTypes();
-        List<Type> types = new ArrayList<>();
-        for (Expr arg : n.arguments()) {
-            types.add(arg.type());
-        }
+        List<? extends Type> types = n.methodInstance().formalTypes();
         for (int i = 0; i < n.arguments().size(); i++) {
             Expr expr = n.arguments().get(i);
             Type t = types.get(i);
@@ -249,60 +242,4 @@ public class PolyLLVMCallExt extends PolyLLVMExt {
 
     }
 
-    private List<Pair<LLVMTypeNode, LLVMOperand>> setupArguments(
-            PseudoLLVMTranslator v, Call n, PolyLLVMNodeFactory nf,
-            LLVMOperand thisTranslation, LLVMTypeNode thisType) {
-        List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
-                setupArguments(v, n, nf);
-
-        //Add this as the first argument
-        if (thisTranslation instanceof LLVMESeq) {
-            arguments.add(0, new Pair<>(thisType,
-                                        ((LLVMESeq) thisTranslation).expr()));
-        }
-        else {
-            arguments.add(0, new Pair<>(thisType, thisTranslation));
-        }
-
-        return arguments;
-    }
-
-    private List<Pair<LLVMTypeNode, LLVMOperand>> setupArguments(
-            PseudoLLVMTranslator v, Call n, PolyLLVMNodeFactory nf) {
-        List<Pair<LLVMTypeNode, LLVMOperand>> arguments = new ArrayList<>();
-
-        for (Expr arg : n.arguments()) {
-            if (arg == null) throw new InternalCompilerError("The argument "
-                    + arg + " to function " + n.methodInstance()
-                    + "is not translated");
-            LLVMTypeNode typeNode =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf, arg.type());
-            LLVMOperand operand = (LLVMOperand) v.getTranslation(arg);
-            arguments.add(new Pair<>(typeNode, operand));
-        }
-
-        return arguments;
-    }
-
-    private Pair<LLVMCall, LLVMVariable> setupCall(PseudoLLVMTranslator v,
-            Call n, PolyLLVMNodeFactory nf, LLVMVariable functionPtr,
-            List<Pair<LLVMTypeNode, LLVMOperand>> arguments, boolean isMethod) {
-
-        LLVMTypeNode callTypeNode =
-                PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
-        LLVMCall llvmCall = nf.LLVMCall(functionPtr, arguments, callTypeNode);
-        LLVMTypeNode retTn = PolyLLVMTypeUtils.polyLLVMTypeNode(nf,
-                                                                n.methodInstance()
-                                                                 .returnType());
-        LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, retTn);
-        if (!n.type().isVoid()) {
-            llvmCall = llvmCall.result(result);
-        }
-
-        if (!(n.target() instanceof Expr)) {
-            v.addStaticCall(llvmCall);
-        }
-
-        return new Pair<>(llvmCall, result);
-    }
 }

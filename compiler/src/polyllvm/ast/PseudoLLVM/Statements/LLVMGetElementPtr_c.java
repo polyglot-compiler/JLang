@@ -110,21 +110,42 @@ public class LLVMGetElementPtr_c extends LLVMInstruction_c
 
     @Override
     public LLVMNode removeESeq(RemoveESeqVisitor v) {
+        List<LLVMInstruction> instructions = new ArrayList<>();
+        LLVMOperand newVariable = variable;
+        List<LLVMTypedOperand> newDereferenceList = new ArrayList<>();
+
         if (variable instanceof LLVMESeq) {
             LLVMESeq var = (LLVMESeq) variable;
 
-            List<LLVMInstruction> instructions = new ArrayList<>();
+//            List<LLVMInstruction> instructions = new ArrayList<>();
             instructions.add(var.instruction());
-            instructions.add(reconstruct(this,
-                                         typeNode,
-                                         ptrType,
-                                         var.expr(),
-                                         dereferenceList));
-            return v.nodeFactory().LLVMSeq(instructions);
+            newVariable = var.expr();
+
+//            instructions.add(reconstruct(this,
+//                                         typeNode,
+//                                         ptrType,
+//                                         var.expr(),
+//                                         dereferenceList));
+//            return v.nodeFactory().LLVMSeq(instructions);
         }
-        else {
-            return this;
+        for (LLVMTypedOperand typedOperand : dereferenceList) {
+            if (typedOperand.operand() instanceof LLVMESeq) {
+                LLVMESeq operand = (LLVMESeq) typedOperand.operand();
+                newDereferenceList.add(v.nodeFactory()
+                                        .LLVMTypedOperand(operand.expr(),
+                                                          typedOperand.typeNode()));
+                instructions.add(operand.instruction());
+            }
+            else {
+                newDereferenceList.add(typedOperand);
+            }
         }
+        instructions.add(reconstruct(this,
+                                     typeNode,
+                                     ptrType,
+                                     newVariable,
+                                     newDereferenceList));
+        return v.nodeFactory().LLVMSeq(instructions);
     }
 
     @Override
