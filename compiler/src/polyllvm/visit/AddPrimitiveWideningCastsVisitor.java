@@ -3,8 +3,8 @@ package polyllvm.visit;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import polyglot.ast.MethodDecl;
 import polyglot.ast.Node;
+import polyglot.ast.ProcedureDecl;
 import polyglot.types.TypeSystem;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
@@ -21,7 +21,7 @@ public class AddPrimitiveWideningCastsVisitor extends NodeVisitor {
 
     private PolyLLVMNodeFactory nf;
     private TypeSystem ts;
-    private Deque<MethodDecl> methods;
+    private Deque<ProcedureDecl> methods;
 
     public AddPrimitiveWideningCastsVisitor(PolyLLVMNodeFactory nf,
             TypeSystem ts) {
@@ -69,14 +69,14 @@ public class AddPrimitiveWideningCastsVisitor extends NodeVisitor {
     /**
      * Set {@code m} as the new current method
      */
-    public void setCurrentMethod(MethodDecl m) {
-        methods.push(m);
+    public void setCurrentMethod(ProcedureDecl procedureDecl) {
+        methods.push(procedureDecl);
     }
 
     /**
      * Return the current method
      */
-    public MethodDecl getCurrentMethod() {
+    public ProcedureDecl getCurrentMethod() {
         return methods.peek();
     }
 

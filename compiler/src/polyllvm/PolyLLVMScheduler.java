@@ -10,7 +10,6 @@ import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
 import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
-import polyglot.visit.CodeCleaner;
 import polyglot.visit.ExpressionFlattener;
 import polyglot.visit.LoopNormalizer;
 import polyglot.visit.MakeNarrowingAssignmentsExplicit;
@@ -34,8 +33,22 @@ public class PolyLLVMScheduler extends JLScheduler {
         NodeFactory nf = extInfo.nodeFactory();
         Goal g = new VisitorGoal(job, new StringLiteralRemover(ts, nf));
         try {
-            // Make sure we have type information before we translate things.
             g.addPrerequisiteGoal(Disambiguated(job), this);//Validated(job), this);
+        }
+        catch (CyclicDependencyException e) {
+            throw new InternalCompilerError(e);
+        }
+        return internGoal(g);
+    }
+
+    public Goal LoopNormalizer(Job job) {
+        ExtensionInfo extInfo = job.extensionInfo();
+        TypeSystem ts = extInfo.typeSystem();
+        NodeFactory nf = extInfo.nodeFactory();
+        Goal g = new VisitorGoal(job, new LoopNormalizer(job, ts, nf));
+        try {
+            // Make sure we have type information before we translate things.
+            g.addPrerequisiteGoal(StringLiteralRemover(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
@@ -50,7 +63,7 @@ public class PolyLLVMScheduler extends JLScheduler {
         NodeFactory nf = extInfo.nodeFactory();
         Goal g = new VisitorGoal(job, new TypeChecker(job, ts, nf));
         try {
-            g.addPrerequisiteGoal(StringLiteralRemover(job), this);
+            g.addPrerequisiteGoal(LoopNormalizer(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
@@ -75,21 +88,6 @@ public class PolyLLVMScheduler extends JLScheduler {
         return internGoal(g);
     }
 
-    public Goal LoopNormalizer(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        TypeSystem ts = extInfo.typeSystem();
-        NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new LoopNormalizer(job, ts, nf));
-        try {
-            // Make sure we have type information before we translate things.
-            g.addPrerequisiteGoal(StringLiteralRemover(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
     public Goal ExpressionFlattener(Job job) {
         ExtensionInfo extInfo = job.extensionInfo();
         TypeSystem ts = extInfo.typeSystem();
@@ -97,7 +95,7 @@ public class PolyLLVMScheduler extends JLScheduler {
         Goal g = new VisitorGoal(job, new ExpressionFlattener(job, ts, nf));
         try {
             // Make sure we have type information before we translate things.
-            g.addPrerequisiteGoal(LoopNormalizer(job), this);
+            g.addPrerequisiteGoal(Serialized(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
@@ -166,7 +164,7 @@ public class PolyLLVMScheduler extends JLScheduler {
     public Goal CodeCleaner(Job job) {
         ExtensionInfo extInfo = job.extensionInfo();
         NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new CodeCleaner(nf)); //new EmptyGoal(job, "CodeCleaner");//
+        Goal g = new EmptyGoal(job, "CodeCleaner");//new VisitorGoal(job, new CodeCleaner(nf)); //
         try {
             // Make sure we have type information before we translate things.
             g.addPrerequisiteGoal(AddVoidReturn(job), this);
@@ -183,7 +181,8 @@ public class PolyLLVMScheduler extends JLScheduler {
         NodeFactory nf = extInfo.nodeFactory();
 
         Goal g = new VisitorGoal(job,
-                                 new PseudoLLVMTranslator((PolyLLVMNodeFactory) nf));
+                                 new PseudoLLVMTranslator((PolyLLVMNodeFactory) nf,
+                                                          ts));
         try {
             // Make sure we have type information before we translate things.
             g.addPrerequisiteGoal(CodeCleaner(job), this);

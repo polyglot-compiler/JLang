@@ -5,6 +5,7 @@ import java.util.List;
 
 import polyglot.ast.ClassDecl;
 import polyglot.ast.TypeNode;
+import polyglot.types.ArrayType;
 import polyglot.types.FieldInstance;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
@@ -45,9 +46,28 @@ public class PolyLLVMTypeUtils {
         else if (t.isDouble()) {
             return nf.LLVMDoubleType();
         }
+        else if (t.isArray()) {
+            ArrayType arrayType = t.toArray();
+            if (arrayType.base().isReference()) {
+                String classTypeName = "class.classes.Array";
+                return nf.LLVMPointerType(nf.LLVMVariableType(classTypeName));
+            }
+            else if (arrayType.base().isPrimitive()) {
+                //TODO : Change to depend on primitive type
+                String classTypeName = "class.classes.Array";
+                return nf.LLVMPointerType(nf.LLVMVariableType(classTypeName));
+
+            }
+            else {
+                throw new InternalCompilerError("Array Type not handled : "
+                        + arrayType);
+            }
+        }
         else if (t.isClass()) {
-            return nf.LLVMPointerType(nf.LLVMVariableType("class."
-                    + t.toString()));
+            String classTypeName =
+                    PolyLLVMMangler.classTypeName((ReferenceType) t);
+            return nf.LLVMPointerType(nf.LLVMVariableType(classTypeName));
+            // return nf.LLVMPointerType(nf.LLVMVariableType("class." + t.toString()));
         }
         else if (t.isNull()) {
             //TODO: Figure out something better
@@ -62,7 +82,7 @@ public class PolyLLVMTypeUtils {
             }
             catch (InternalCompilerError e) {
                 System.out.println(e
-                        + "\n    (For more info go to PolyLLVMTypeUtil"
+                        + "\n    (For more info go to PolyLLVMTypeUtils"
                         + " and print the stack trace)");
             }
             return null;
@@ -178,6 +198,19 @@ public class PolyLLVMTypeUtils {
         else if (t.isLong()) return 64;
         throw new InternalCompilerError("Type " + t
                 + " is not an integral type");
+    }
+
+    public static LLVMTypeNode polyLLVMMethodTypeNode(PolyLLVMNodeFactory nf,
+            ReferenceType container, List<? extends Type> formalTypes) {
+        List<LLVMTypeNode> formals = new ArrayList<>();
+        for (Type type : formalTypes) {
+            formals.add(polyLLVMTypeNode(nf, type));
+        }
+        LLVMTypeNode classTypePointer =
+                nf.LLVMPointerType(nf.LLVMVariableType(PolyLLVMMangler.classTypeName(container)));
+        return nf.LLVMFunctionType(formals, nf.LLVMVoidType())
+                 .prependFormalTypeNode(classTypePointer);
+
     }
 
 }

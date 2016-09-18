@@ -2,6 +2,9 @@ package polyllvm.ast;
 
 import polyglot.ast.Ext;
 import polyglot.ast.ExtFactory;
+import polyllvm.extension.PolyLLVMArrayAccessAssignExt;
+import polyllvm.extension.PolyLLVMArrayAccessExt;
+import polyllvm.extension.PolyLLVMArrayInitExt;
 import polyllvm.extension.PolyLLVMAssignExt;
 import polyllvm.extension.PolyLLVMBinaryExt;
 import polyllvm.extension.PolyLLVMBlockExt;
@@ -13,6 +16,9 @@ import polyllvm.extension.PolyLLVMCastExt;
 import polyllvm.extension.PolyLLVMCharLitExt;
 import polyllvm.extension.PolyLLVMClassBodyExt;
 import polyllvm.extension.PolyLLVMClassDeclExt;
+import polyllvm.extension.PolyLLVMConstructorCallExt;
+import polyllvm.extension.PolyLLVMConstructorDeclExt;
+import polyllvm.extension.PolyLLVMEmptyExt;
 import polyllvm.extension.PolyLLVMEvalExt;
 import polyllvm.extension.PolyLLVMFieldAssignExt;
 import polyllvm.extension.PolyLLVMFieldExt;
@@ -25,8 +31,10 @@ import polyllvm.extension.PolyLLVMLocalAssignExt;
 import polyllvm.extension.PolyLLVMLocalDeclExt;
 import polyllvm.extension.PolyLLVMLocalExt;
 import polyllvm.extension.PolyLLVMMethodDeclExt;
+import polyllvm.extension.PolyLLVMNewArrayExt;
 import polyllvm.extension.PolyLLVMNewExt;
 import polyllvm.extension.PolyLLVMNullLitExt;
+import polyllvm.extension.PolyLLVMProcedureDeclExt;
 import polyllvm.extension.PolyLLVMReturnExt;
 import polyllvm.extension.PolyLLVMSourceFileExt;
 import polyllvm.extension.PolyLLVMSpecialExt;
@@ -210,8 +218,46 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
 
     @Override
     protected Ext extLocalAssignImpl() {
-        // TODO Auto-generated method stub
         return new PolyLLVMLocalAssignExt();
     }
 
+    @Override
+    protected Ext extNewArrayImpl() {
+        return new PolyLLVMNewArrayExt();
+    }
+
+    @Override
+    protected Ext extProcedureDeclImpl() {
+        return new PolyLLVMProcedureDeclExt();
+    }
+
+    @Override
+    protected Ext extConstructorDeclImpl() {
+        return new PolyLLVMConstructorDeclExt();
+    }
+
+    @Override
+    protected Ext extConstructorCallImpl() {
+        return new PolyLLVMConstructorCallExt();
+    }
+
+    @Override
+    protected Ext extArrayAccessImpl() {
+        return new PolyLLVMArrayAccessExt();
+    }
+
+    @Override
+    protected Ext extArrayAccessAssignImpl() {
+        return new PolyLLVMArrayAccessAssignExt();
+    }
+
+    @Override
+    protected Ext extEmptyImpl() {
+        return new PolyLLVMEmptyExt();
+    }
+
+    @Override
+    protected Ext extArrayInitImpl() {
+        return new PolyLLVMArrayInitExt();
+    }
 }

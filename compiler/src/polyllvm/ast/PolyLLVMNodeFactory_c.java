@@ -42,6 +42,8 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand_c;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType_c;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMDoubleType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMDoubleType_c;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFloatType;
@@ -606,6 +608,15 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
                                         l,
                                         null);
         return ext(n, extFactory().extLLVMGetElementPtr());
+    }
+
+    @Override
+    public LLVMArrayType LLVMArrayType(LLVMTypeNode arrayType, int length) {
+        LLVMArrayType n = new LLVMArrayType_c(Position.compilerGenerated(),
+                                              arrayType,
+                                              length,
+                                              null);
+        return ext(n, extFactory().extLLVMArrayType());
     }
 
     // TODO:  Override factory methods for overridden AST nodes.

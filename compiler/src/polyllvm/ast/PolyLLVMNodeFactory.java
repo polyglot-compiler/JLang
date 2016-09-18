@@ -24,6 +24,7 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMDoubleType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFloatType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
@@ -116,6 +117,8 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
     LLVMVariableType LLVMVariableType(String name);
 
     LLVMStructureType LLVMStructureType(List<LLVMTypeNode> typeList);
+
+    LLVMArrayType LLVMArrayType(LLVMTypeNode arrayType, int length);
 
     LLVMVoidType LLVMVoidType();
 

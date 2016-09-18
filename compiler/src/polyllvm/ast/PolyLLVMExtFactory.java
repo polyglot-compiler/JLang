@@ -99,4 +99,6 @@ public interface PolyLLVMExtFactory extends ExtFactory {
 
     Ext extLLVMGetElementPtr();
 
+    Ext extLLVMArrayType();
+
 }
