@@ -176,7 +176,13 @@
        Javadoc and distribution targets
        ****************************************  -->
 
-    <target name="jar" depends="compile-all">
+	<target name="move-runtime-files">
+        <javac source="1.7" target="1.7" srcdir="${runtime.classes}" destdir="${compiler.classes}" debug="on" includes="Array.java" includeantruntime="false">
+            <classpath refid="standard.classpath" />
+        </javac>
+	</target>
+	
+    <target name="jar" depends="compile-all, move-runtime-files">
         <jar jarfile="${compiler.jar}" basedir="${compiler.classes}" includes="${package.dir}/**" />
         <jar jarfile="${runtime.jar}" basedir="${runtime.classes}" includes="${package.dir}/**" />
     </target>
