@@ -254,7 +254,7 @@
        @param ${ext.pkg}     the package directory of the extension
     -->
     <target name="compile-ext">
-        <javac source="1.7" target="1.7" srcdir="${compiler.src}" destdir="${compiler.classes}" debug="on" includes="${ext.pkg}/**" includeantruntime="false">
+        <javac source="1.8" target="1.8" srcdir="${compiler.src}" destdir="${compiler.classes}" debug="on" includes="${ext.pkg}/**" includeantruntime="false">
             <classpath refid="standard.classpath" />
         </javac>
     </target>
