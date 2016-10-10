@@ -1,8 +1,8 @@
 # `make sol` to generate solution (.sol) files.
 # `make llvmir` to compile all programs down to LLVM IR (.ll) files.
-# `make run` to interpret LLVM IR and produce program output (.output) files.
+# `make output` to interpret LLVM IR and produce program output (.output) files.
 # `make <file>` to produce any individual generated file.
-# `make all` creates solution files and LLVM IR files.
+# `make all` creates solution files, llvm ir, and output files.
 
 SRCS = $(shell find . -name "*.java")
 CLASSES = $(SRCS:.java=.class)
@@ -10,13 +10,13 @@ SOL = $(SRCS:.java=.sol)
 LLVMIR = $(SRCS:.java=.ll)
 OUTPUT = $(SRCS:.java=.output)
 
-all: sol llvmir
+all: sol llvmir output
 
-sol: $(CLASSES) $(SOL)
+sol: $(SOL)
 
 llvmir: $(LLVMIR)
 
-run: llvmir $(OUTPUT)
+output: $(OUTPUT)
 
 %.class: %.java
 	javac $<
@@ -27,7 +27,7 @@ run: llvmir $(OUTPUT)
 # Assume polyllvmc has changed.
 .PHONY: polyllvmc
 %.ll: %.java polyllvmc
-	polyllvmc -c -d $(dir $@) $<
+	../../bin/polyllvmc -c -d $(dir $@) $<
 
 %.output: %.ll
 	lli $< > $@
