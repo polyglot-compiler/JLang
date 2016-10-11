@@ -162,9 +162,9 @@
         </antcall>
     </target>
 
-    <target name="runtime" depends="init,configure" description="compile the runtime" if="has-runtime">
+    <target name="runtime" depends="init,configure" description="Compile the runtime" if="has-runtime">
         <mkdir dir="${runtime.classes}" />
-        <javac source="1.7" target="1.7" srcdir="${runtime.src}" destdir="${compiler.classes}" debug="on" includes="**" includeantruntime="false">
+        <javac source="1.7" target="1.7" srcdir="${runtime.src}" destdir="${runtime.classes}" debug="on" includes="**" includeantruntime="false">
             <classpath>
                 <path refid="standard.classpath" />
             </classpath>
