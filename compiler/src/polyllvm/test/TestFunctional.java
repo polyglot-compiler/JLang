@@ -17,7 +17,7 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class TestFunctional {
     private static final File DIR =
-            Paths.get("polyllvm", "tests", "functional-isolated").toFile();
+            Paths.get("polyllvm", "tests", "isolated").toFile();
     private static final int TIMEOUT = 10;
 
     @Parameter
