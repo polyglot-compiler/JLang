@@ -29,8 +29,10 @@ output: $(OUTPUT)
 %.ll: %.java polyllvmc
 	../../bin/polyllvmc -c -d $(dir $@) $<
 
+# Use an absolute path to lli, because Java's ProcessBuilder will
+# otherwise not be able to find it.
 %.output: %.ll
-	lli $< > $@
+	/usr/local/bin/lli $< > $@
 
 clean:
 	find . -name "*.class" -delete
