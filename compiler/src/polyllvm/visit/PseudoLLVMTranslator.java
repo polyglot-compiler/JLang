@@ -951,7 +951,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         ReferenceType arrayType;
         try {
             arrayType =
-                    (ReferenceType) typeSystem().typeForName("classes.Array");
+                    (ReferenceType) typeSystem().typeForName("java.lang.Array");
 
         }
         catch (SemanticException e) {
