@@ -1,30 +1,7 @@
 package polyllvm.visit;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import polyglot.ast.ClassDecl;
-import polyglot.ast.Labeled;
-import polyglot.ast.Loop;
-import polyglot.ast.MethodDecl;
-import polyglot.ast.Node;
-import polyglot.types.FieldInstance;
-import polyglot.types.MemberInstance;
-import polyglot.types.MethodInstance;
-import polyglot.types.ReferenceType;
-import polyglot.types.SemanticException;
-import polyglot.types.TypeSystem;
+import polyglot.ast.*;
+import polyglot.types.*;
 import polyglot.util.CollectionUtil;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.ListUtil;
@@ -32,31 +9,20 @@ import polyglot.util.Pair;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.LLVMArgDecl;
-import polyllvm.ast.PseudoLLVM.LLVMFunction;
-import polyllvm.ast.PseudoLLVM.LLVMGlobalDeclaration;
-import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMIntLiteral;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
+import polyllvm.ast.PseudoLLVM.Expressions.*;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
+import polyllvm.ast.PseudoLLVM.*;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMAlloca;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMGetElementPtr;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMLoad;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMStore;
+import polyllvm.ast.PseudoLLVM.Statements.*;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMMangler;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.util.Triple;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 public class PseudoLLVMTranslator extends NodeVisitor {
 
@@ -950,9 +916,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     public ReferenceType getArrayType() {
         ReferenceType arrayType;
         try {
-            arrayType =
-                    (ReferenceType) typeSystem().typeForName("java.lang.Array");
-
+            arrayType = (ReferenceType) typeSystem().typeForName("support.Array");
         }
         catch (SemanticException e) {
             throw new InternalCompilerError("Could not load array type");

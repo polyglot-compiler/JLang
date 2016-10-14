@@ -1,3 +1,7 @@
 *.sol
 *.ll
 *.output
+*.lll
+*.s
+*.binary
+/tmp/

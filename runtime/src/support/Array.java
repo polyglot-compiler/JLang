@@ -1,4 +1,4 @@
-package java.lang;
+package support;
 
 public class Array {
 

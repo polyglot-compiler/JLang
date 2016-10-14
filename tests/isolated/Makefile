@@ -1,14 +1,28 @@
+# `make all` creates solution files, llvm ir, and output files. Add the -k flag
+#            to make all targets regardless of errors.
+# `make <file>` to produce any individual generated file, such as .ll (LLVM IR),
+#               .lll (linked LLVM IR), .s (ASM), .binary (executable), etc.
 # `make sol` to generate solution (.sol) files.
 # `make llvmir` to compile all programs down to LLVM IR (.ll) files.
 # `make output` to interpret LLVM IR and produce program output (.output) files.
-# `make <file>` to produce any individual generated file.
-# `make all` creates solution files, llvm ir, and output files.
+
+# Uses absolute paths to llvm commands, because Java's ProcessBuilder will
+# otherwise not be able to find them.
+
+BASE_DIR = ../..
+RUNTIME = $(BASE_DIR)/runtime
 
 SRCS = $(shell find . -name "*.java")
+LL = $(shell find $(RUNTIME)/ll -name "*.ll")
+
 CLASSES = $(SRCS:.java=.class)
 SOL = $(SRCS:.java=.sol)
 LLVMIR = $(SRCS:.java=.ll)
+LINKED_LLVMIR = $(SRCS:.java=.lll)
+ASM = $(SRCS:.java=.s)
+BINARY = $(SRCS:.java=.binary)
 OUTPUT = $(SRCS:.java=.output)
+
 
 all: sol llvmir output
 
@@ -16,26 +30,40 @@ sol: $(SOL)
 
 llvmir: $(LLVMIR)
 
+linked-llvmir: $(LINKED_LLVMIR)
+
+asm: $(ASM)
+
+binary: $(BINARY)
+
 output: $(OUTPUT)
 
+
 %.class: %.java
-	javac $<
+	javac -classpath $(RUNTIME)/classes $<
 
 %.sol: %.class
-	java -cp $(dir $@) $(notdir $*) > $@
+	java -cp $(dir $@):$(RUNTIME)/classes $(notdir $*) | tee $@
 
 # Assume polyllvmc has changed.
 .PHONY: polyllvmc
 %.ll: %.java polyllvmc
-	../../bin/polyllvmc -c -d $(dir $@) $<
+	$(BASE_DIR)/bin/polyllvmc -c -d $(dir $@) $<
 
-# Use an absolute path to lli, because Java's ProcessBuilder will
-# otherwise not be able to find it.
-%.output: %.ll
-	/usr/local/bin/lli $< > $@
+%.lll: %.ll
+	/usr/local/bin/llvm-link -o $@ -S $(LL) $<
 
-clean:
-	find . -name "*.class" -delete
-	find . -name "*.sol" -delete
-	find . -name "*.ll" -delete
-	find . -name "*.output" -delete
+%.s: %.lll
+	/usr/local/bin/llc -o $@ $<
+
+%.binary: %.s
+	gcc -o $@ $<
+
+%.output: %.lll
+	/usr/local/bin/lli $< | tee $@
+
+
+EXT = class sol ll lll s binary output
+clean: $(addprefix clean-, $(EXT))
+clean-%:
+	find . -name "*.$*" -delete
