@@ -174,7 +174,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
         ReferenceType superClass = rt;
         while (superClass != null) {
-            System.out.println(superClass.toString());
 //            if (superClass.toString().equals("java.lang.Object")) {
 //                break;
 //            }
@@ -658,7 +657,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 //                    break;
 //                }
 
-                System.out.println("GOING UP THE SUPER CHAIN: " + superClass);
                 if (!classesAdded.contains(superClass.toString())) {
                     classTypes.put(PolyLLVMMangler.classTypeName(superClass),
                                    PolyLLVMTypeUtils.polyLLVMObjectType(this,

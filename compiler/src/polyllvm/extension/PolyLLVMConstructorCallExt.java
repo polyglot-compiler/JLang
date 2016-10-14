@@ -1,8 +1,5 @@
 package polyllvm.extension;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import polyglot.ast.ConstructorCall;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
@@ -23,6 +20,9 @@ import polyllvm.util.PolyLLVMMangler;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
@@ -30,8 +30,6 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         ConstructorCall n = (ConstructorCall) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
-        System.out.println("Constructor Instance for " + n + " : "
-                + n.constructorInstance());
 
         if (n.qualifier() != null) {
             throw new InternalCompilerError("Qualifier on this not supported yet (Java spec 15.8.4)");
