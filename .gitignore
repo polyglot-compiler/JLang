@@ -1,3 +1,5 @@
 *.class
 /.idea/
 *.iml
+/lib/polyllvm.jar
+/lib/polyllvm-rt.jar
