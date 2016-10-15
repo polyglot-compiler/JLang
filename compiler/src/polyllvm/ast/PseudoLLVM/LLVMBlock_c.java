@@ -1,15 +1,8 @@
 package polyllvm.ast.PseudoLLVM;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import polyglot.ast.Ext;
 import polyglot.ast.Node;
-import polyglot.util.CodeWriter;
-import polyglot.util.InternalCompilerError;
-import polyglot.util.ListUtil;
-import polyglot.util.Position;
-import polyglot.util.SerialVersionUID;
+import polyglot.util.*;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -17,6 +10,9 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction_c;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class LLVMBlock_c extends LLVMInstruction_c implements LLVMBlock {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -62,14 +58,10 @@ public class LLVMBlock_c extends LLVMInstruction_c implements LLVMBlock {
 
     @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
-        for (int i = 0; i < instructions.size() - 1; i++) {
+        for (int i = 0; i < instructions.size(); i++) {
             print(instructions.get(i), w, pp);
             w.newline();
         }
-        if (instructions.size() != 0) {
-            print(instructions.get(instructions.size() - 1), w, pp);
-        }
-        w.newline();
     }
 
     @Override
