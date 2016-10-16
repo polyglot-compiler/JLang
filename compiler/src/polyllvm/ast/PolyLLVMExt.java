@@ -5,15 +5,9 @@ import polyglot.ast.Ext_c;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
-import polyllvm.visit.AddVoidReturnVisitor;
-import polyllvm.visit.LLVMVarToStack;
-import polyllvm.visit.PrintVisitor;
-import polyllvm.visit.PseudoLLVMTranslator;
-import polyllvm.visit.RemoveESeqVisitor;
-import polyllvm.visit.StringLiteralRemover;
+import polyllvm.ast.PseudoLLVM.LLVMNode;
+import polyllvm.visit.*;
 
 public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     private static final long serialVersionUID = SerialVersionUID.generate();

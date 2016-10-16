@@ -3,11 +3,7 @@ package polyllvm.ast;
 import polyglot.ast.AbstractExtFactory_c;
 import polyglot.ast.Ext;
 import polyglot.ast.ExtFactory;
-import polyllvm.extension.PseudoLLVM.PolyLLVMArgDeclExt;
-import polyllvm.extension.PseudoLLVM.PolyLLVMBinaryOperandInstructionExt;
-import polyllvm.extension.PseudoLLVM.PolyLLVMBrExt;
-import polyllvm.extension.PseudoLLVM.PolyLLVMCallExt;
-import polyllvm.extension.PseudoLLVM.PolyLLVMFunctionExt;
+import polyllvm.extension.PseudoLLVM.*;
 
 public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
         implements PolyLLVMExtFactory {

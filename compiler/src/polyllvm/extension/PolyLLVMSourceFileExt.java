@@ -1,24 +1,20 @@
 package polyllvm.extension;
 
-import java.util.Arrays;
-import java.util.List;
-
 import polyglot.ast.Node;
 import polyglot.ast.SourceFile;
 import polyglot.ast.TopLevelDecl;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.LLVMArgDecl;
-import polyllvm.ast.PseudoLLVM.LLVMFunction;
-import polyllvm.ast.PseudoLLVM.LLVMFunctionDeclaration;
-import polyllvm.ast.PseudoLLVM.LLVMGlobalDeclaration;
-import polyllvm.ast.PseudoLLVM.LLVMSourceFile;
+import polyllvm.ast.PseudoLLVM.*;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.util.PolyLLVMConstants;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

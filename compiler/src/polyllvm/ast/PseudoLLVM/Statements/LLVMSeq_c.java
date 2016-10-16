@@ -1,7 +1,5 @@
 package polyllvm.ast.PseudoLLVM.Statements;
 
-import java.util.List;
-
 import polyglot.ast.Ext;
 import polyglot.ast.Node;
 import polyglot.util.CodeWriter;
@@ -11,6 +9,8 @@ import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+
+import java.util.List;
 
 public class LLVMSeq_c extends LLVMInstruction_c implements LLVMSeq {
     private static final long serialVersionUID = SerialVersionUID.generate();

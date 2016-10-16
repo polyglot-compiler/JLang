@@ -1,8 +1,5 @@
 package polyllvm.extension;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import polyglot.ast.Call;
 import polyglot.ast.Expr;
 import polyglot.ast.ProcedureCall;
@@ -19,6 +16,9 @@ import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PolyLLVMProcedureCallExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

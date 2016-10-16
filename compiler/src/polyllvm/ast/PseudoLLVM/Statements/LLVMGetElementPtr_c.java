@@ -1,25 +1,21 @@
 package polyllvm.ast.PseudoLLVM.Statements;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import polyglot.ast.Ext;
 import polyglot.ast.Node;
-import polyglot.util.CodeWriter;
-import polyglot.util.InternalCompilerError;
-import polyglot.util.ListUtil;
-import polyglot.util.Position;
-import polyglot.util.SerialVersionUID;
+import polyglot.util.*;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
+import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.visit.RemoveESeqVisitor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class LLVMGetElementPtr_c extends LLVMInstruction_c
         implements LLVMGetElementPtr {

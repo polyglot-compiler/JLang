@@ -1,13 +1,13 @@
 package polyllvm.visit;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import polyglot.ast.Node;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class RemoveESeqVisitor extends NodeVisitor {
 

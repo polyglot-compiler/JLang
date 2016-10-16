@@ -1,19 +1,9 @@
 package polyllvm.ast;
 
-import polyglot.ast.Ext;
-import polyglot.ast.JLang_c;
-import polyglot.ast.Lang;
-import polyglot.ast.Node;
-import polyglot.ast.NodeOps;
+import polyglot.ast.*;
 import polyglot.util.InternalCompilerError;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
-import polyllvm.visit.AddVoidReturnVisitor;
-import polyllvm.visit.LLVMVarToStack;
-import polyllvm.visit.PrintVisitor;
-import polyllvm.visit.PseudoLLVMTranslator;
-import polyllvm.visit.RemoveESeqVisitor;
-import polyllvm.visit.StringLiteralRemover;
+import polyllvm.visit.*;
 
 public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     public static final PolyLLVMLang_c instance = new PolyLLVMLang_c();

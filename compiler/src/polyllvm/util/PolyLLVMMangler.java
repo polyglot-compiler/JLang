@@ -2,11 +2,7 @@ package polyllvm.util;
 
 import polyglot.ast.ClassDecl;
 import polyglot.ast.TypeNode;
-import polyglot.types.ConstructorInstance;
-import polyglot.types.MethodInstance;
-import polyglot.types.ProcedureInstance;
-import polyglot.types.ReferenceType;
-import polyglot.types.Type;
+import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 
 public class PolyLLVMMangler {

@@ -1,6 +1,6 @@
 package polyllvm.types;
 
-import polyglot.types.*;
+import polyglot.types.TypeSystem_c;
 
 public class PolyLLVMTypeSystem_c extends TypeSystem_c implements PolyLLVMTypeSystem {
     // TODO: implement new methods in PolyLLVMTypeSystem.

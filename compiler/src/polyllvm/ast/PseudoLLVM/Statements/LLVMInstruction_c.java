@@ -7,8 +7,8 @@ import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
-import polyllvm.ast.PseudoLLVM.LLVMNode_c;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
+import polyllvm.ast.PseudoLLVM.LLVMNode_c;
 
 public abstract class LLVMInstruction_c extends LLVMNode_c
         implements LLVMInstruction {

@@ -1,7 +1,5 @@
 package polyllvm.ast.PseudoLLVM.LLVMTypes;
 
-import java.util.List;
-
 import polyglot.ast.Ext;
 import polyglot.ast.Node;
 import polyglot.util.CodeWriter;
@@ -10,6 +8,8 @@ import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
+
+import java.util.List;
 
 public class LLVMFunctionType_c extends LLVMTypeNode_c
         implements LLVMFunctionType {

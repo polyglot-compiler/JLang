@@ -1,8 +1,5 @@
 package polyllvm.extension;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import polyglot.ast.Block;
 import polyglot.ast.Node;
 import polyglot.ast.Stmt;
@@ -13,6 +10,9 @@ import polyllvm.ast.PseudoLLVM.LLVMBlock;
 import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PolyLLVMBlockExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

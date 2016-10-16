@@ -3,13 +3,7 @@ package polyllvm.ast;
 import polyglot.ast.JLang;
 import polyglot.ast.Node;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
-import polyllvm.visit.AddVoidReturnVisitor;
-import polyllvm.visit.LLVMVarToStack;
-import polyllvm.visit.PrintVisitor;
-import polyllvm.visit.PseudoLLVMTranslator;
-import polyllvm.visit.RemoveESeqVisitor;
-import polyllvm.visit.StringLiteralRemover;
+import polyllvm.visit.*;
 
 public interface PolyLLVMLang extends JLang {
     // TODO: Declare any dispatch methods for new AST operations

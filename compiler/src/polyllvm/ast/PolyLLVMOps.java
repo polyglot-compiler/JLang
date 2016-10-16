@@ -3,13 +3,7 @@ package polyllvm.ast;
 import polyglot.ast.Node;
 import polyglot.ast.NodeOps;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
-import polyllvm.visit.AddVoidReturnVisitor;
-import polyllvm.visit.LLVMVarToStack;
-import polyllvm.visit.PrintVisitor;
-import polyllvm.visit.PseudoLLVMTranslator;
-import polyllvm.visit.RemoveESeqVisitor;
-import polyllvm.visit.StringLiteralRemover;
+import polyllvm.visit.*;
 
 /**
  * Operations any PolyLLVM compatible node must implement.

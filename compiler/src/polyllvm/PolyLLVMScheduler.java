@@ -15,11 +15,7 @@ import polyglot.visit.LoopNormalizer;
 import polyglot.visit.MakeNarrowingAssignmentsExplicit;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
-import polyllvm.visit.AddVoidReturnVisitor;
-import polyllvm.visit.PseudoLLVMTranslator;
-import polyllvm.visit.RemoveESeqVisitor;
-import polyllvm.visit.StringLiteralRemover;
+import polyllvm.visit.*;
 
 public class PolyLLVMScheduler extends JLScheduler {
 

@@ -1,19 +1,6 @@
 package polyllvm.extension;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import polyglot.ast.ArrayAccess;
-import polyglot.ast.ArrayAccessAssign;
-import polyglot.ast.ArrayInit;
-import polyglot.ast.Assign;
-import polyglot.ast.Expr;
-import polyglot.ast.Id;
-import polyglot.ast.IntLit;
-import polyglot.ast.Local;
-import polyglot.ast.New;
-import polyglot.ast.Node;
-import polyglot.ast.Stmt;
+import polyglot.ast.*;
 import polyglot.util.CollectionUtil;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
@@ -24,6 +11,9 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PolyLLVMArrayInitExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

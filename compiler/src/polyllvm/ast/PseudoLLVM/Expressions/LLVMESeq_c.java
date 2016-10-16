@@ -1,8 +1,5 @@
 package polyllvm.ast.PseudoLLVM.Expressions;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import polyglot.ast.Ext;
 import polyglot.ast.Node;
 import polyglot.util.CodeWriter;
@@ -16,6 +13,9 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
 import polyllvm.visit.RemoveESeqVisitor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class LLVMESeq_c extends LLVMOperand_c implements LLVMESeq {
     private static final long serialVersionUID = SerialVersionUID.generate();

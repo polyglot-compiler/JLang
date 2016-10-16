@@ -1,7 +1,5 @@
 package polyllvm.extension;
 
-import java.util.List;
-
 import polyglot.ast.Field;
 import polyglot.ast.Node;
 import polyglot.ast.Receiver;
@@ -19,6 +17,8 @@ import polyllvm.ast.PseudoLLVM.Statements.LLVMLoad;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import java.util.List;
 
 public class PolyLLVMFieldExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

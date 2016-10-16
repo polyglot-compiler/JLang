@@ -1,14 +1,14 @@
 package polyllvm.visit;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 import polyglot.ast.Node;
 import polyglot.ast.ProcedureDecl;
 import polyglot.types.TypeSystem;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  * Adds explicit casts for primitive type conversions. This happens on

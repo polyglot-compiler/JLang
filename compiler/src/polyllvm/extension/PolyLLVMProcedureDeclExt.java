@@ -1,13 +1,6 @@
 package polyllvm.extension;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import polyglot.ast.ConstructorDecl;
-import polyglot.ast.Formal;
-import polyglot.ast.MethodDecl;
-import polyglot.ast.Node;
-import polyglot.ast.ProcedureDecl;
+import polyglot.ast.*;
 import polyglot.types.Flags;
 import polyglot.types.ProcedureInstance;
 import polyglot.util.SerialVersionUID;
@@ -24,6 +17,9 @@ import polyllvm.util.PolyLLVMMangler;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

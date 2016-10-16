@@ -1,7 +1,5 @@
 package polyllvm.ast.PseudoLLVM;
 
-import java.io.ByteArrayOutputStream;
-
 import polyglot.ast.Ext;
 import polyglot.ast.Node;
 import polyglot.ast.Node_c;
@@ -9,6 +7,8 @@ import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
 import polyllvm.visit.RemoveESeqVisitor;
+
+import java.io.ByteArrayOutputStream;
 
 /**
  * @author Daniel

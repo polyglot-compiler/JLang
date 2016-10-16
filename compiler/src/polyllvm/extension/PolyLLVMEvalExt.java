@@ -4,8 +4,8 @@ import polyglot.ast.Eval;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
+import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMEvalExt extends PolyLLVMExt {

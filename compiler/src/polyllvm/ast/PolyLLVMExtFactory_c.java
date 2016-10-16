@@ -2,46 +2,7 @@ package polyllvm.ast;
 
 import polyglot.ast.Ext;
 import polyglot.ast.ExtFactory;
-import polyllvm.extension.PolyLLVMArrayAccessAssignExt;
-import polyllvm.extension.PolyLLVMArrayAccessExt;
-import polyllvm.extension.PolyLLVMArrayInitExt;
-import polyllvm.extension.PolyLLVMAssignExt;
-import polyllvm.extension.PolyLLVMBinaryExt;
-import polyllvm.extension.PolyLLVMBlockExt;
-import polyllvm.extension.PolyLLVMBooleanLitExt;
-import polyllvm.extension.PolyLLVMBranchExt;
-import polyllvm.extension.PolyLLVMCallExt;
-import polyllvm.extension.PolyLLVMCanonicalTypeNodeExt;
-import polyllvm.extension.PolyLLVMCastExt;
-import polyllvm.extension.PolyLLVMCharLitExt;
-import polyllvm.extension.PolyLLVMClassBodyExt;
-import polyllvm.extension.PolyLLVMClassDeclExt;
-import polyllvm.extension.PolyLLVMConstructorCallExt;
-import polyllvm.extension.PolyLLVMConstructorDeclExt;
-import polyllvm.extension.PolyLLVMEmptyExt;
-import polyllvm.extension.PolyLLVMEvalExt;
-import polyllvm.extension.PolyLLVMFieldAssignExt;
-import polyllvm.extension.PolyLLVMFieldExt;
-import polyllvm.extension.PolyLLVMFloatLitExt;
-import polyllvm.extension.PolyLLVMFormalExt;
-import polyllvm.extension.PolyLLVMIfExt;
-import polyllvm.extension.PolyLLVMIntLitExt;
-import polyllvm.extension.PolyLLVMLabeledExt;
-import polyllvm.extension.PolyLLVMLocalAssignExt;
-import polyllvm.extension.PolyLLVMLocalDeclExt;
-import polyllvm.extension.PolyLLVMLocalExt;
-import polyllvm.extension.PolyLLVMMethodDeclExt;
-import polyllvm.extension.PolyLLVMNewArrayExt;
-import polyllvm.extension.PolyLLVMNewExt;
-import polyllvm.extension.PolyLLVMNullLitExt;
-import polyllvm.extension.PolyLLVMProcedureDeclExt;
-import polyllvm.extension.PolyLLVMReturnExt;
-import polyllvm.extension.PolyLLVMSourceFileExt;
-import polyllvm.extension.PolyLLVMSpecialExt;
-import polyllvm.extension.PolyLLVMStringLitExt;
-import polyllvm.extension.PolyLLVMTypeNodeExt;
-import polyllvm.extension.PolyLLVMUnaryExt;
-import polyllvm.extension.PolyLLVMWhileExt;
+import polyllvm.extension.*;
 
 public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
 

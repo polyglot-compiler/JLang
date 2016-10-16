@@ -1,10 +1,10 @@
 package polyllvm.ast.PseudoLLVM;
 
-import java.util.List;
-
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
+
+import java.util.List;
 
 /**
  * @author Daniel

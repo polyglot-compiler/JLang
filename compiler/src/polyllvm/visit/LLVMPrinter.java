@@ -1,10 +1,5 @@
 package polyllvm.visit;
 
-import java.io.IOException;
-import java.util.Collection;
-
-import javax.tools.JavaFileObject;
-
 import polyglot.ast.Lang;
 import polyglot.ast.Node;
 import polyglot.frontend.Job;
@@ -15,6 +10,10 @@ import polyglot.util.InternalCompilerError;
 import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PseudoLLVM.LLVMSourceFile;
+
+import javax.tools.JavaFileObject;
+import java.io.IOException;
+import java.util.Collection;
 
 public class LLVMPrinter extends PrettyPrinter {
 

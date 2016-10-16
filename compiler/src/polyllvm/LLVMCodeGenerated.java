@@ -1,9 +1,5 @@
 package polyllvm;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import polyglot.frontend.ExtensionInfo;
 import polyglot.frontend.Job;
 import polyglot.frontend.Pass;
@@ -13,6 +9,10 @@ import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.SourceFileGoal;
 import polyllvm.ast.PolyLLVMLang_c;
 import polyllvm.visit.LLVMPrinter;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 public class LLVMCodeGenerated extends SourceFileGoal implements EndGoal {
     public static Goal create(Scheduler scheduler, Job job) {

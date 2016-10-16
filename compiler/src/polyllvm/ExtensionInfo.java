@@ -1,8 +1,5 @@
 package polyllvm;
 
-import java.io.Reader;
-import java.util.Set;
-
 import polyglot.ast.NodeFactory;
 import polyglot.frontend.CupParser;
 import polyglot.frontend.Parser;
@@ -18,6 +15,9 @@ import polyllvm.ast.PolyLLVMNodeFactory_c;
 import polyllvm.parse.Grm;
 import polyllvm.parse.Lexer_c;
 import polyllvm.types.PolyLLVMTypeSystem_c;
+
+import java.io.Reader;
+import java.util.Set;
 
 /**
  * Extension information for polyllvm extension.

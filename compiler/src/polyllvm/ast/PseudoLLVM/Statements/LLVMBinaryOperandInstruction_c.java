@@ -1,21 +1,21 @@
 package polyllvm.ast.PseudoLLVM.Statements;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import polyglot.ast.Ext;
 import polyglot.ast.Node;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
+import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.RemoveESeqVisitor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public abstract class LLVMBinaryOperandInstruction_c extends LLVMInstruction_c
         implements LLVMBinaryOperandInstruction {

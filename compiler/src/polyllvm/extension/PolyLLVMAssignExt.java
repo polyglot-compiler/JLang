@@ -1,10 +1,6 @@
 package polyllvm.extension;
 
-import polyglot.ast.Assign;
-import polyglot.ast.CanonicalTypeNode;
-import polyglot.ast.Expr;
-import polyglot.ast.Node;
-import polyglot.ast.Variable;
+import polyglot.ast.*;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
