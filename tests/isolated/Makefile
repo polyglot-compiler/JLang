@@ -22,6 +22,7 @@ LINKED_LLVMIR = $(SRCS:.java=.lll)
 ASM = $(SRCS:.java=.s)
 BINARY = $(SRCS:.java=.binary)
 OUTPUT = $(SRCS:.java=.output)
+CHECK = $(SRCS:.java=.check)
 
 
 all: sol llvmir output
@@ -37,6 +38,8 @@ asm: $(ASM)
 binary: $(BINARY)
 
 output: $(OUTPUT)
+
+check: $(CHECK)
 
 
 %.class: %.java
@@ -61,6 +64,9 @@ output: $(OUTPUT)
 
 %.output: %.lll
 	/usr/local/bin/lli $< | tee $@
+
+%.check: %.output %.sol
+	diff $^
 
 
 EXT = class sol ll lll s binary output
