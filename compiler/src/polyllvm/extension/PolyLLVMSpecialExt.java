@@ -7,7 +7,7 @@ import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;

@@ -1,57 +1,18 @@
 package polyllvm.ast;
 
-import java.util.List;
-
 import polyglot.ast.NodeFactory;
 import polyglot.frontend.Source;
 import polyglot.util.Pair;
-import polyllvm.ast.PseudoLLVM.LLVMArgDecl;
-import polyllvm.ast.PseudoLLVM.LLVMBlock;
-import polyllvm.ast.PseudoLLVM.LLVMFunction;
-import polyllvm.ast.PseudoLLVM.LLVMFunctionDeclaration;
-import polyllvm.ast.PseudoLLVM.LLVMGlobalDeclaration;
-import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
+import polyllvm.ast.PseudoLLVM.Expressions.*;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
+import polyllvm.ast.PseudoLLVM.*;
 import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration.GlobalVariableKind;
-import polyllvm.ast.PseudoLLVM.LLVMSourceFile;
-import polyllvm.ast.PseudoLLVM.LLVMTypeDeclaration;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMDoubleLiteral;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMFloatLiteral;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMIntLiteral;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMNullLiteral;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMDoubleType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFloatType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMVariableType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMVoidType;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMAdd;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMAlloca;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMBr;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.*;
+import polyllvm.ast.PseudoLLVM.Statements.*;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion.Instruction;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMFAdd;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMGetElementPtr;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMICmp;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMICmp.IConditionCode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMLoad;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMMul;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMRet;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMSeqLabel;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMStore;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMSub;
+
+import java.util.List;
 
 /**
  * NodeFactory for polyllvm extension.

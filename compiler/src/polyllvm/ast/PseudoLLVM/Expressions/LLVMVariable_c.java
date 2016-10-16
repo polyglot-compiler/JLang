@@ -11,10 +11,6 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 public class LLVMVariable_c extends LLVMOperand_c implements LLVMVariable {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
-    public static enum VarType {
-        LOCAL, GLOBAL
-    }
-
     protected String name;
     protected LLVMTypeNode typeNode;
     private VarType varType;

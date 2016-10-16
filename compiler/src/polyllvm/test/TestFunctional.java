@@ -1,23 +1,23 @@
 package polyllvm.test;
 
-import static org.junit.Assert.assertEquals;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.Collection;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.Collection;
+
+import static org.junit.Assert.assertEquals;
+
 /** Run functional tests, using the JVM for reference. */
 @RunWith(Parameterized.class)
 public class TestFunctional {
     private static final File DIR =
-            Paths.get("polyllvm", "tests", "isolated").toFile();
+            Paths.get("tests", "isolated").toFile();
     private static final int TIMEOUT = 10;
 
     @Parameter

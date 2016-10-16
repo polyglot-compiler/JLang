@@ -10,7 +10,7 @@ import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.*;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
 import polyllvm.ast.PseudoLLVM.*;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;

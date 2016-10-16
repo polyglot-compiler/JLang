@@ -1,15 +1,8 @@
 package polyllvm.util;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import polyglot.ast.ClassDecl;
 import polyglot.ast.TypeNode;
-import polyglot.types.ArrayType;
-import polyglot.types.FieldInstance;
-import polyglot.types.MethodInstance;
-import polyglot.types.ReferenceType;
-import polyglot.types.Type;
+import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -17,6 +10,9 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PolyLLVMTypeUtils {
 
@@ -49,12 +45,12 @@ public class PolyLLVMTypeUtils {
         else if (t.isArray()) {
             ArrayType arrayType = t.toArray();
             if (arrayType.base().isReference()) {
-                String classTypeName = "class.classes.Array";
+                String classTypeName = "class.support.Array";
                 return nf.LLVMPointerType(nf.LLVMVariableType(classTypeName));
             }
             else if (arrayType.base().isPrimitive()) {
                 //TODO : Change to depend on primitive type
-                String classTypeName = "class.classes.Array";
+                String classTypeName = "class.support.Array";
                 return nf.LLVMPointerType(nf.LLVMVariableType(classTypeName));
 
             }

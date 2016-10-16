@@ -10,7 +10,7 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.util.PolyLLVMFreshGen;

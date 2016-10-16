@@ -24,10 +24,6 @@ public class PolyLLVMMangler {
     }
 
     public static String mangleMethodName(MethodInstance mi) {
-        if (mi.name().equals("main")) {
-            return "main";
-        }
-
         ReferenceType container = mi.container();
 
         StringBuilder sb = new StringBuilder("_J_");
@@ -135,7 +131,7 @@ public class PolyLLVMMangler {
 
     public static String classTypeName(ReferenceType rt) {
         if (rt.isArray()) {
-            return "class.classes.Array";
+            return "class.support.Array";
         }
 
         return "class." + rt.toString();

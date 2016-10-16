@@ -1,8 +1,5 @@
 package polyllvm.extension;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import polyglot.ast.New;
 import polyglot.ast.Node;
 import polyglot.types.ConstructorInstance;
@@ -14,7 +11,7 @@ import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
@@ -25,6 +22,9 @@ import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMMangler;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

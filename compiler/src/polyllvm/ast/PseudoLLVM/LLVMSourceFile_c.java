@@ -1,8 +1,5 @@
 package polyllvm.ast.PseudoLLVM;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import polyglot.ast.Node;
 import polyglot.frontend.Source;
 import polyglot.util.CodeWriter;
@@ -10,6 +7,9 @@ import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class LLVMSourceFile_c extends LLVMNode_c implements LLVMSourceFile {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -171,6 +171,7 @@ public class LLVMSourceFile_c extends LLVMNode_c implements LLVMSourceFile {
             print(fd, w, pp);
             w.write("\n");
         }
+
         for (LLVMFunction f : funcs) {
             print(f, w, pp);
             w.write("\n\n");

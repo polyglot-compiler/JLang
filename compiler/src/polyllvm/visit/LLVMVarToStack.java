@@ -1,19 +1,19 @@
 package polyllvm.visit;
 
+import polyglot.ast.Node;
+import polyglot.visit.NodeVisitor;
+import polyllvm.ast.PolyLLVMLang;
+import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMAlloca;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import polyglot.ast.Node;
-import polyglot.visit.NodeVisitor;
-import polyllvm.ast.PolyLLVMLang;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable_c.VarType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMAlloca;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 
 public class LLVMVarToStack extends NodeVisitor {
     private PolyLLVMNodeFactory nf;

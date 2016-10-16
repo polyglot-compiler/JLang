@@ -5,6 +5,11 @@ package polyllvm.ast.PseudoLLVM.Expressions;
  *
  */
 public interface LLVMVariable extends LLVMOperand {
+
+    public enum VarType {
+        LOCAL, GLOBAL
+    }
+
     public LLVMVariable name(String s);
 
     public String name();
