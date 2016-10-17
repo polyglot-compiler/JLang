@@ -100,8 +100,8 @@ public class PolyLLVMMangler {
     }
 
     public static String sizeVariable(ReferenceType superClass) {
-        return "_J_size_" + superClass.toString().length()
-                + superClass.toString();
+        String className = superClass.isArray() ? "class.support.Array" : superClass.toString();
+        return "_J_size_" + className.length() + className;
     }
 
     public static String dispatchVectorVariable(ClassDecl n) {
@@ -113,7 +113,8 @@ public class PolyLLVMMangler {
     }
 
     public static String dispatchVectorVariable(ReferenceType rt) {
-        return "_J_dv_" + rt.toString().length() + rt.toString();
+        String className = rt.isArray() ? "class.support.Array" : rt.toString();
+        return "_J_dv_" + className.length() + className;
     }
 
     public static String classTypeName(ClassDecl cd) {
@@ -126,11 +127,8 @@ public class PolyLLVMMangler {
     }
 
     public static String classTypeName(ReferenceType rt) {
-        if (rt.isArray()) {
-            return "class.support.Array";
-        }
-
-        return "class." + rt.toString();
+        String className = rt.isArray() ? "class.support.Array" : rt.toString();
+        return "class." + className;
     }
 
     public static String dispatchVectorTypeName(ClassDecl cd) {
@@ -142,7 +140,8 @@ public class PolyLLVMMangler {
     }
 
     public static String dispatchVectorTypeName(ReferenceType rt) {
-        return "dv." + rt.toString();
+        String className = rt.isArray() ? "class.support.Array" : rt.toString();
+        return "dv." + className;
     }
 
     public static String classInitFunction(ClassDecl n) {

@@ -9,10 +9,12 @@ import polyglot.util.Pair;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.*;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
 import polyllvm.ast.PseudoLLVM.*;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.*;
@@ -23,6 +25,8 @@ import polyllvm.util.Triple;
 
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class PseudoLLVMTranslator extends NodeVisitor {
 
@@ -552,130 +556,104 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     private void setupClassSizes() {
         Set<String> classesAdded = new HashSet<>();
 
-        //%class.classes.Array = type {%dv.classes.Array*, i32, i8*}
-        //%dv.classes.Array = type {i8*, i1 (%class.classes.Array*, %class.java.lang.Object*)*, %class.java.lang.Class* (%class.classes.Array*)*, i32 (%class.classes.Array*)*, void (%class.classes.Array*)*, void (%class.classes.Array*)*, %class.java.lang.String* (%class.classes.Array*)*, void (%class.classes.Array*, i64)*, void (%class.classes.Array*, i64, i32)*, void (%class.classes.Array*)*, %class.java.lang.Object* (%class.classes.Array*)*, void (%class.classes.Array*)*}
-
+        // Arrays.
         ReferenceType arrayType = getArrayType();
-        globalSizes.add(nf.LLVMGlobalVarDeclaration(PolyLLVMMangler.dispatchVectorVariable(arrayType),
-                                                    true, //isExtern
-                                                    LLVMGlobalVarDeclaration.GLOBAL,
-                                                    nf.LLVMVariableType(PolyLLVMMangler.dispatchVectorTypeName(arrayType)),
-                                                    null));
+        LLVMGlobalVarDeclaration arrayDvSize = nf.LLVMGlobalVarDeclaration(
+                PolyLLVMMangler.dispatchVectorVariable(arrayType),
+                /* isExtern */ true,
+                LLVMGlobalVarDeclaration.GLOBAL,
+                nf.LLVMVariableType(PolyLLVMMangler.dispatchVectorTypeName(arrayType)),
+                null);
+        globalSizes.add(arrayDvSize);
         classesAdded.add(arrayType.toString());
 
-        for (ClassDecl cd : classesVisited) {
-            String name = PolyLLVMMangler.sizeVariable(cd);
-            LLVMIntType i64Type = nf.LLVMIntType(64);
-            LLVMIntLiteral sizeInit = nf.LLVMIntLiteral(i64Type, 0);
-            boolean isExtern = false;
-            globalSizes.add(nf.LLVMGlobalVarDeclaration(name,
-                                                        isExtern,
-                                                        LLVMGlobalVarDeclaration.GLOBAL,
-                                                        i64Type,
-                                                        sizeInit));
+        // Helper for setting up size globals.
+        BiConsumer<ReferenceType, Boolean> addSizeGlobals = (rt, isExtern) -> {
 
-            name = PolyLLVMMangler.dispatchVectorVariable(cd);
+            // Avoid adding globals more than once.
+            String name = rt.toString();
+            if (classesAdded.contains(name)) {
+                return;
+            }
+            classesAdded.add(name);
+
+            // Class size.
+            LLVMGlobalVarDeclaration classSizeDecl = nf.LLVMGlobalVarDeclaration(
+                    PolyLLVMMangler.sizeVariable(rt),
+                    isExtern,
+                    LLVMGlobalVarDeclaration.GLOBAL,
+                    nf.LLVMIntType(64),
+                    /* initValue */ null);
+            globalSizes.add(classSizeDecl);
+
+            // DV size.
             LLVMTypeNode dvTypeVariable =
-                    PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this,
-                                                                         cd.type());
-            LLVMOperand init = null;
-            isExtern = false;
-            globalSizes.add(nf.LLVMGlobalVarDeclaration(name,
-                                                        isExtern,
-                                                        LLVMGlobalVarDeclaration.GLOBAL,
-                                                        dvTypeVariable,
-                                                        init));
-            classesAdded.add(cd.name());
-        }
+                    PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, rt);
+            LLVMGlobalVarDeclaration dvSizeDecl = nf.LLVMGlobalVarDeclaration(
+                    PolyLLVMMangler.dispatchVectorVariable(rt),
+                    isExtern,
+                    LLVMGlobalVarDeclaration.GLOBAL,
+                    dvTypeVariable,
+                    /* initValue */ null);
+            globalSizes.add(dvSizeDecl);
+        };
+
+        // Parsed classes and their superclasses.
         for (ClassDecl cd : classesVisited) {
+            addSizeGlobals.accept(cd.type().toReference(), false);
+
             ReferenceType superClass = (ReferenceType) cd.type().superType();
             while (superClass != null) {
-//                if (superClass.toString().equals("java.lang.Object")) {
-//                    break;
-//                }
-
-                if (!classesAdded.contains(superClass.toString())) {
-                    String name = PolyLLVMMangler.sizeVariable(superClass);
-                    LLVMIntType i64Type = nf.LLVMIntType(64);
-                    LLVMIntLiteral sizeInit = null;
-                    boolean isExtern = true;
-                    globalSizes.add(nf.LLVMGlobalVarDeclaration(name,
-                                                                isExtern,
-                                                                LLVMGlobalVarDeclaration.GLOBAL,
-                                                                i64Type,
-                                                                sizeInit));
-                    name = PolyLLVMMangler.dispatchVectorVariable(superClass);
-                    LLVMTypeNode dvTypeVariable =
-                            PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this,
-                                                                                 superClass);
-                    LLVMOperand init = null;
-                    isExtern = true;
-                    globalSizes.add(nf.LLVMGlobalVarDeclaration(name,
-                                                                isExtern,
-                                                                LLVMGlobalVarDeclaration.GLOBAL,
-                                                                dvTypeVariable,
-                                                                init));
-                }
+                addSizeGlobals.accept(superClass, /* isExtern */ true);
                 superClass = (ReferenceType) superClass.superType();
-
             }
+        }
 
+        // Referenced classes.
+        for (ReferenceType rt : classesUsed) {
+            addSizeGlobals.accept(rt, /* isExtern */ true);
         }
     }
 
     private void setupClassTypes() {
-        Set<String> classesAdded = new HashSet<>();
-
+        // Arrays.
         ReferenceType arrayType = getArrayType();
-        List<LLVMTypeNode> list =
-                CollectionUtil.list(nf.LLVMPointerType(nf.LLVMVariableType(PolyLLVMMangler.dispatchVectorTypeName(arrayType))),
-                                    nf.LLVMIntType(32),
-                                    nf.LLVMPointerType(nf.LLVMIntType(8)));
-        classTypes.put(PolyLLVMMangler.classTypeName(arrayType),
-                       nf.LLVMStructureType(list));
-        classTypes.put(PolyLLVMMangler.dispatchVectorTypeName(arrayType),
-                       PolyLLVMTypeUtils.polyLLVMDispatchVectorType(this,
-                                                                    arrayType));
-        classesAdded.add(arrayType.toString());
+        String arrayDvName = PolyLLVMMangler.dispatchVectorTypeName(arrayType);
+        List<LLVMTypeNode> arrayStruct = Arrays.asList(
+                nf.LLVMPointerType(nf.LLVMVariableType(arrayDvName)),
+                nf.LLVMIntType(32),
+                nf.LLVMPointerType(nf.LLVMIntType(8)));
+        classTypes.putIfAbsent(
+                PolyLLVMMangler.classTypeName(arrayType),
+                nf.LLVMStructureType(arrayStruct));
+        classTypes.putIfAbsent(
+                PolyLLVMMangler.dispatchVectorTypeName(arrayType),
+                PolyLLVMTypeUtils.polyLLVMDispatchVectorType(this, arrayType));
 
-        //%class.classes.Array = type {%dv.classes.Array*, i32, i8*}
-        //%dv.classes.Array = type {i8*, i1 (%class.classes.Array*, %class.java.lang.Object*)*, %class.java.lang.Class* (%class.classes.Array*)*, i32 (%class.classes.Array*)*, void (%class.classes.Array*)*, void (%class.classes.Array*)*, %class.java.lang.String* (%class.classes.Array*)*, void (%class.classes.Array*, i64)*, void (%class.classes.Array*, i64, i32)*, void (%class.classes.Array*)*, %class.java.lang.Object* (%class.classes.Array*)*, void (%class.classes.Array*)*}
+        // Helper for adding structure type and dv type.
+        Consumer<ReferenceType> addClassTypes = rt -> {
+            classTypes.putIfAbsent(
+                    PolyLLVMMangler.classTypeName(rt),
+                    PolyLLVMTypeUtils.polyLLVMObjectType(this, rt));
+            classTypes.putIfAbsent(
+                    PolyLLVMMangler.dispatchVectorTypeName(rt),
+                    PolyLLVMTypeUtils.polyLLVMDispatchVectorType(this, rt));
+        };
 
+        // Parsed classes and their superclasses.
         for (ClassDecl cd : classesVisited) {
-            if (!classesAdded.contains(cd.name())) {
-                classTypes.put(PolyLLVMMangler.classTypeName(cd),
-                               PolyLLVMTypeUtils.polyLLVMObjectType(this, cd));
-                classTypes.put(PolyLLVMMangler.dispatchVectorTypeName(cd),
-                               PolyLLVMTypeUtils.polyLLVMDispatchVectorType(this,
-                                                                            cd));
-                classesAdded.add(cd.name());
-            }
+            addClassTypes.accept(cd.type().toReference());
 
             ReferenceType superClass = (ReferenceType) cd.type().superType();
             while (superClass != null) {
-//                if (superClass.toString().equals("java.lang.Object")) {
-//                    break;
-//                }
-
-                if (!classesAdded.contains(superClass.toString())) {
-                    classTypes.put(PolyLLVMMangler.classTypeName(superClass),
-                                   PolyLLVMTypeUtils.polyLLVMObjectType(this,
-                                                                        superClass));
-                    classTypes.put(PolyLLVMMangler.dispatchVectorTypeName(superClass),
-                                   PolyLLVMTypeUtils.polyLLVMDispatchVectorType(this,
-                                                                                superClass));
-
-                    classesAdded.add(superClass.toString());
-
-                }
+                addClassTypes.accept(superClass);
                 superClass = (ReferenceType) superClass.superType();
             }
         }
 
-        for (String string : classesUsed) {
-            if (!classTypes.containsKey(string)) {
-                classTypes.put(string, null);
-            }
+        // Referenced classes.
+        for (ReferenceType rt : classesUsed) {
+            addClassTypes.accept(rt);
         }
 
         classTypes.put("class.java.lang.Class", null);
@@ -685,11 +663,10 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
     }
 
-    private HashSet<String> classesUsed = new HashSet<>();
+    private HashSet<ReferenceType> classesUsed = new HashSet<>();
 
     public void addClassType(ReferenceType rt) {
-
-        classesUsed.add(PolyLLVMMangler.classTypeName(rt));
+        classesUsed.add(rt);
     }
 
     /**
