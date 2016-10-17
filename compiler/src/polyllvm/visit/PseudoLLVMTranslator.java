@@ -656,11 +656,9 @@ public class PseudoLLVMTranslator extends NodeVisitor {
             addClassTypes.accept(rt);
         }
 
+        // TODO: Eventually these will not be needed.
         classTypes.put("class.java.lang.Class", null);
-//                       nf.LLVMStructureType(new ArrayList<LLVMTypeNode>()));
         classTypes.put("class.java.lang.String", null);
-//                       nf.LLVMStructureType(new ArrayList<LLVMTypeNode>()));
-
     }
 
     private HashSet<ReferenceType> classesUsed = new HashSet<>();
