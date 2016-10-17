@@ -1,5 +1,6 @@
 package polyllvm.ast;
 
+import polyglot.ast.Ext;
 import polyglot.ast.NodeFactory_c;
 import polyglot.frontend.Source;
 import polyglot.util.Pair;
@@ -530,6 +531,12 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
                                         l,
                                         null);
         return ext(n, extFactory().extLLVMGetElementPtr());
+    }
+
+    @Override
+    public LLVMBitwiseBinaryInstruction LLVMBitwiseBinaryInstruction(LLVMBitwiseBinaryInstruction.Op op, LLVMVariable result, LLVMIntType tn, LLVMOperand left, LLVMOperand right) {
+        LLVMBitwiseBinaryInstruction n = new LLVMBitwiseBinaryInstruction_c(Position.compilerGenerated(), op, result, tn, left,right, null);
+        return ext(n, extFactory().extLLVMBitwiseBinaryInstruction());
     }
 
     @Override

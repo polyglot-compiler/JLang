@@ -93,6 +93,31 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     }
 
     @Override
+    public final Ext extLLVMBitwiseBinaryInstruction() {
+        Ext e = extLLVMBitwiseBinaryInstructionImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMBitwiseBinaryInstruction();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMBitwiseBinaryInstruction(e);
+    }
+
+    protected Ext extLLVMBitwiseBinaryInstructionImpl() {
+        return new PolyLLVMBinaryOperandInstructionExt();
+    }
+
+    protected Ext postExtLLVMBitwiseBinaryInstruction(Ext e) {
+        return postExtLLVMInstruction(e);
+    }
+
+
+    @Override
     public final Ext extLLVMAdd() {
         Ext e = extLLVMAddImpl();
 
