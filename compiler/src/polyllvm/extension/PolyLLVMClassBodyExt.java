@@ -49,7 +49,7 @@ public class PolyLLVMClassBodyExt extends PolyLLVMExt {
                 funcDecls.add((LLVMFunctionDeclaration) v.getTranslation(cm));
             }
             else {
-                throw new InternalCompilerError("Could not translate member: " + cm);
+//                throw new InternalCompilerError("Could not translate member: " + cm);
             }
         }
 

@@ -1,5 +1,6 @@
 package polyllvm.ast;
 
+import polyglot.ast.Ext;
 import polyglot.ast.NodeFactory;
 import polyglot.frontend.Source;
 import polyglot.util.Pair;
@@ -153,6 +154,11 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     LLVMGetElementPtr LLVMGetElementPtr(LLVMOperand thisTranslation,
             List<LLVMTypedOperand> l);
+
+    LLVMBitwiseBinaryInstruction LLVMBitwiseBinaryInstruction(LLVMBitwiseBinaryInstruction.Op op,
+                                                              LLVMVariable result, LLVMIntType tn,
+                                                              LLVMOperand left, LLVMOperand right);
+
 
     /*
      * PseudoLLVM constructs

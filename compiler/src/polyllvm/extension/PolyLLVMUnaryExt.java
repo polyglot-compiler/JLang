@@ -4,11 +4,19 @@ import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyglot.ast.Unary;
 import polyglot.ast.Unary.Operator;
+import polyglot.types.Type;
+import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMExpr;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMBitwiseBinaryInstruction;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
+import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 
@@ -52,8 +60,21 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         Expr expr = n.expr();
         LLVMOperand exprTranslation = (LLVMOperand) v.getTranslation(expr);
         if (Unary.BIT_NOT == op) {
+            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, exprTranslation.typeNode());
+            LLVMInstruction xor =
+                    nf.LLVMBitwiseBinaryInstruction(LLVMBitwiseBinaryInstruction.XOR,
+                            result, (LLVMIntType) exprTranslation.typeNode(),
+                            exprTranslation, nf.LLVMIntLiteral(exprTranslation.typeNode(), -1));
+            LLVMExpr eseq = nf.LLVMESeq(xor, result);
+            v.addTranslation(n, eseq);
         }
         else if (Unary.NEG == op) {
+            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, exprTranslation.typeNode());
+            LLVMInstruction sub =
+                    nf.LLVMSub(result, (LLVMIntType) exprTranslation.typeNode(),
+                            nf.LLVMIntLiteral(exprTranslation.typeNode(), 0), exprTranslation);
+            LLVMExpr eseq = nf.LLVMESeq(sub, result);
+            v.addTranslation(n, eseq);
         }
         else if (Unary.POST_INC == op) {
         }
@@ -64,10 +85,23 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         else if (Unary.PRE_DEC == op) {
         }
         else if (Unary.POS == op) {
+            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, exprTranslation.typeNode());
+            LLVMInstruction add =
+                    nf.LLVMAdd(result, (LLVMIntType) exprTranslation.typeNode(),
+                            nf.LLVMIntLiteral(exprTranslation.typeNode(), 0), exprTranslation);
+            LLVMExpr eseq = nf.LLVMESeq(add, result);
+            v.addTranslation(n, eseq);
         }
         else if (Unary.NOT == op) {
             //Easy case: expr will be boolean
             // Use expr XOR 1
+            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, exprTranslation.typeNode());
+            LLVMInstruction xor =
+                    nf.LLVMBitwiseBinaryInstruction(LLVMBitwiseBinaryInstruction.XOR,
+                            result, (LLVMIntType) exprTranslation.typeNode(),
+                            exprTranslation, nf.LLVMIntLiteral(exprTranslation.typeNode(), 1));
+            LLVMExpr eseq = nf.LLVMESeq(xor, result);
+            v.addTranslation(n, eseq);
         }
         else {
 
