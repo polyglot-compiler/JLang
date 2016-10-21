@@ -168,6 +168,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
+    protected Ext extFieldDeclImpl() {
+        return new PolyLLVMFieldDeclExt();
+    }
+
+    @Override
     protected Ext extSpecialImpl() {
         return new PolyLLVMSpecialExt();
     }

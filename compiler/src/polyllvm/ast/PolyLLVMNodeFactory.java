@@ -1,11 +1,10 @@
 package polyllvm.ast;
 
-import polyglot.ast.Ext;
 import polyglot.ast.NodeFactory;
 import polyglot.frontend.Source;
 import polyglot.util.Pair;
 import polyllvm.ast.PseudoLLVM.Expressions.*;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
 import polyllvm.ast.PseudoLLVM.*;
 import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration.GlobalVariableKind;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.*;
@@ -60,7 +59,7 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     LLVMNullLiteral LLVMNullLiteral(LLVMTypeNode typeNode);
 
-    LLVMVariable LLVMVariable(String name, LLVMTypeNode tn, VarType t);
+    LLVMVariable LLVMVariable(String name, LLVMTypeNode tn, VarKind t);
 
     LLVMTypedOperand LLVMTypedOperand(LLVMOperand op, LLVMTypeNode tn);
 

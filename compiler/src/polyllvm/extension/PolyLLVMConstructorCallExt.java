@@ -9,7 +9,6 @@ import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
@@ -44,7 +43,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
                                                               .container());
             thisArg = nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
                                       thisArgType,
-                                      VarType.LOCAL);
+                                      LLVMVariable.VarKind.LOCAL);
         }
         else if (n.kind() == ConstructorCall.SUPER) {
             LLVMTypeNode thisType =
@@ -58,7 +57,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
             LLVMVariable thisVariable =
                     nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
                                     thisType,
-                                    VarType.LOCAL);
+                                    LLVMVariable.VarKind.LOCAL);
             LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, superType);
             LLVMInstruction cast =
                     nf.LLVMConversion(LLVMConversion.BITCAST,
@@ -93,7 +92,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
                                                          n.constructorInstance()
                                                           .formalTypes());
         LLVMVariable func =
-                nf.LLVMVariable(mangledFuncName, tn, VarType.GLOBAL);
+                nf.LLVMVariable(mangledFuncName, tn, LLVMVariable.VarKind.GLOBAL);
 
         List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
                 setupArguments(v, n, nf, thisArg, thisArgType);

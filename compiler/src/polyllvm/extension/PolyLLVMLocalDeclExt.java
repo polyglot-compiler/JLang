@@ -8,7 +8,6 @@ import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
 import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMStore;
@@ -37,7 +36,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
                     + " LLVMOperand, it was translated: " + decl);
         }
         LLVMVariable ptr =
-                nf.LLVMVariable(v.varName(n.name()), typeNode, VarType.LOCAL);
+                nf.LLVMVariable(v.varName(n.name()), typeNode, LLVMVariable.VarKind.LOCAL);
         LLVMStore store = nf.LLVMStore(typeNode, (LLVMOperand) decl, ptr);
         v.addTranslation(n, store);
 

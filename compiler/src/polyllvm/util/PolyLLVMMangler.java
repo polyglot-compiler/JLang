@@ -1,11 +1,15 @@
 package polyllvm.util;
 
 import polyglot.ast.ClassDecl;
+import polyglot.ast.Field;
+import polyglot.ast.FieldDecl;
 import polyglot.ast.TypeNode;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 
 public class PolyLLVMMangler {
+    private static final String JAVA_PREFIX = "_J_";
+    private static final String STATIC_STR = "_static_";
 
     public static String mangleProcedureName(ProcedureInstance pi) {
         if (pi instanceof MethodInstance) {
@@ -22,7 +26,7 @@ public class PolyLLVMMangler {
     public static String mangleMethodName(MethodInstance mi) {
         ReferenceType container = mi.container();
 
-        StringBuilder sb = new StringBuilder("_J_");
+        StringBuilder sb = new StringBuilder(JAVA_PREFIX);
         sb.append(container.toString().length());
         sb.append(container.toString());
         sb.append("_");
@@ -36,12 +40,24 @@ public class PolyLLVMMangler {
         }
 
         return sb.toString();//"_" + container.toString() + "_" + mi.name();
+    }
 
+    public static String mangleStaticFieldName(Field f) {
+        return mangleStaticFieldName(f.target().type().toReference(), f.name());
+    }
+
+    public static String mangleStaticFieldName(ReferenceType classType, FieldDecl f) {
+        return mangleStaticFieldName(classType, f.name());
+    }
+
+    private static String mangleStaticFieldName(ReferenceType classType, String fieldName) {
+        String className = classTypeName(classType);
+        return JAVA_PREFIX + STATIC_STR + className + "_" + fieldName;
     }
 
     private static String mangleConstructorName(ConstructorInstance ci) {
         ReferenceType container = ci.container();
-        StringBuilder sb = new StringBuilder("_J_");
+        StringBuilder sb = new StringBuilder(JAVA_PREFIX);
         sb.append(container.toString().length());
         sb.append(container.toString());
         sb.append("__constructor_");
@@ -60,9 +76,6 @@ public class PolyLLVMMangler {
         if (t.isArray()) {
             sb.append("_a");
             sb.append(mangleFormalType(t.toArray().base()));
-//
-//            sb.append(t.toArray().base().toString().length());
-//            sb.append(t.toArray().base().toString());
         }
         else if (t.isReference()) {
             sb.append("_");
@@ -96,12 +109,12 @@ public class PolyLLVMMangler {
     }
 
     public static String sizeVariable(TypeNode superClass) {
-        return sizeVariable((ReferenceType) superClass.type());
+        return sizeVariable(superClass.type().toReference());
     }
 
     public static String sizeVariable(ReferenceType superClass) {
         String className = superClass.isArray() ? "class.support.Array" : superClass.toString();
-        return "_J_size_" + className.length() + className;
+        return JAVA_PREFIX + "size_" + className.length() + className;
     }
 
     public static String dispatchVectorVariable(ClassDecl n) {
@@ -114,7 +127,7 @@ public class PolyLLVMMangler {
 
     public static String dispatchVectorVariable(ReferenceType rt) {
         String className = rt.isArray() ? "class.support.Array" : rt.toString();
-        return "_J_dv_" + className.length() + className;
+        return JAVA_PREFIX + "dv_" + className.length() + className;
     }
 
     public static String classTypeName(ClassDecl cd) {
@@ -145,15 +158,15 @@ public class PolyLLVMMangler {
     }
 
     public static String classInitFunction(ClassDecl n) {
-        return classInitFunction(n.type());//"_J_init_" + n.name().length() + n.name();
+        return classInitFunction(n.type());
     }
 
     public static String classInitFunction(TypeNode n) {
-        return classInitFunction((ReferenceType) n.type());//"_J_init_" + n.name().length() + n.name();
+        return classInitFunction(n.type().toReference());
     }
 
     public static String classInitFunction(ReferenceType n) {
-        return "_J_init_" + n.toString().length() + n.toString();
+        return JAVA_PREFIX + "init_" + n.toString().length() + n.toString();
     }
 
 }

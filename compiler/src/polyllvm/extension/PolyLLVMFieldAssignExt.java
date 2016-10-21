@@ -17,6 +17,7 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMStore;
 import polyllvm.util.PolyLLVMFreshGen;
+import polyllvm.util.PolyLLVMMangler;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
@@ -28,10 +29,11 @@ public class PolyLLVMFieldAssignExt extends PolyLLVMAssignExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         FieldAssign n = (FieldAssign) node();
-        Field target = n.left();
-        Receiver objectTarget = target.target();
+        Field field = n.left();
+        Receiver objectTarget = field.target();
         PolyLLVMNodeFactory nf = v.nodeFactory();
         LLVMNode expr = v.getTranslation(n.right());
+        LLVMTypeNode fieldTypeNode = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, field.type());
 
         if (!(expr instanceof LLVMOperand)) {
             throw new InternalCompilerError("Expression `" + n.right() + "` ("
@@ -40,32 +42,41 @@ public class PolyLLVMFieldAssignExt extends PolyLLVMAssignExt {
                     + v.getTranslation(n.right()) + ")");
         }
 
-        LLVMOperand objectTranslation =
-                (LLVMOperand) v.getTranslation(objectTarget);
-        int fieldIndex = v.getFieldIndex((ReferenceType) objectTarget.type(),
-                                         target.fieldInstance());
-        LLVMTypedOperand index0 =
-                nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32), 0),
-                                    nf.LLVMIntType(32));
-        LLVMTypedOperand fieldIndexOperand =
-                nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32),
-                                                      fieldIndex),
-                                    nf.LLVMIntType(32));
-        List<LLVMTypedOperand> gepIndexList =
-                CollectionUtil.list(index0, fieldIndexOperand);
-        LLVMTypeNode fieldTypeNode =
-                PolyLLVMTypeUtils.polyLLVMTypeNode(nf, target.type());
-        LLVMVariable fieldPtr =
-                PolyLLVMFreshGen.freshLocalVar(nf,
-                                               nf.LLVMPointerType(fieldTypeNode));
-        LLVMInstruction gep =
-                nf.LLVMGetElementPtr(objectTranslation, gepIndexList)
-                  .result(fieldPtr);
+        if (field.flags().isStatic()) {
+            // Static fields.
+            String mangledGlobalName = PolyLLVMMangler.mangleStaticFieldName(field);
+            LLVMTypeNode ptrTypeNode = nf.LLVMPointerType(fieldTypeNode);
+            LLVMVariable.VarKind ptrKind = LLVMVariable.VarKind.GLOBAL;
+            LLVMVariable ptr = nf.LLVMVariable(mangledGlobalName, ptrTypeNode, ptrKind);
+            LLVMInstruction store = nf.LLVMStore(fieldTypeNode, (LLVMOperand) expr, ptr);
+            v.addTranslation(n, store);
+        }
+        else {
+            // Instance fields.
+            LLVMOperand objectTranslation =
+                    (LLVMOperand) v.getTranslation(objectTarget);
+            int fieldIndex = v.getFieldIndex((ReferenceType) objectTarget.type(),
+                    field.fieldInstance());
+            LLVMTypedOperand index0 =
+                    nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32), 0),
+                            nf.LLVMIntType(32));
+            LLVMTypedOperand fieldIndexOperand =
+                    nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32),
+                            fieldIndex),
+                            nf.LLVMIntType(32));
+            List<LLVMTypedOperand> gepIndexList =
+                    CollectionUtil.list(index0, fieldIndexOperand);
+            LLVMVariable fieldPtr =
+                    PolyLLVMFreshGen.freshLocalVar(nf,
+                            nf.LLVMPointerType(fieldTypeNode));
+            LLVMInstruction gep =
+                    nf.LLVMGetElementPtr(objectTranslation, gepIndexList)
+                            .result(fieldPtr);
 
-        LLVMStore store =
-                nf.LLVMStore(fieldTypeNode, (LLVMOperand) expr, fieldPtr);
+            LLVMStore store = nf.LLVMStore(fieldTypeNode, (LLVMOperand) expr, fieldPtr);
 
-        v.addTranslation(n, nf.LLVMSeq(CollectionUtil.list(gep, store)));
+            v.addTranslation(n, nf.LLVMSeq(CollectionUtil.list(gep, store)));
+        }
 
         return super.translatePseudoLLVM(v);
     }

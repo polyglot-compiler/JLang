@@ -21,7 +21,7 @@ public class PolyLLVMBinaryOperandInstructionExt extends PolyLLVMExt {
 //            LLVMVariable leftVar =
 //                    nf.LLVMVariable(Position.compilerGenerated(),
 //                                    v.varName(leftName),
-//                                    VarType.LOCAL);
+//                                    VarKind.LOCAL);
 //            LLVMLoad loadLeft = nf.LLVMLoad(Position.compilerGenerated(),
 //                                            leftTemp,
 //                                            n.typeNode(),
@@ -38,7 +38,7 @@ public class PolyLLVMBinaryOperandInstructionExt extends PolyLLVMExt {
 //            LLVMVariable rightVar =
 //                    nf.LLVMVariable(Position.compilerGenerated(),
 //                                    v.varName(rightName),
-//                                    VarType.LOCAL);
+//                                    VarKind.LOCAL);
 //            LLVMLoad loadRight = nf.LLVMLoad(Position.compilerGenerated(),
 //                                             rightTemp,
 //                                             n.typeNode(),
@@ -50,7 +50,7 @@ public class PolyLLVMBinaryOperandInstructionExt extends PolyLLVMExt {
 //        LLVMVariable currResult =
 //                nf.LLVMVariable(Position.compilerGenerated(),
 //                                v.varName(n.result().name()),
-//                                VarType.LOCAL);//n.result();
+//                                VarKind.LOCAL);//n.result();
 //        LLVMVariable resultTemp = PolyLLVMFreshGen.freshLocalVar(nf);
 //
 //        n = n.result(resultTemp);

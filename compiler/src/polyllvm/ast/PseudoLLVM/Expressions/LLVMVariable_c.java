@@ -13,13 +13,13 @@ public class LLVMVariable_c extends LLVMOperand_c implements LLVMVariable {
 
     protected String name;
     protected LLVMTypeNode typeNode;
-    private VarType varType;
+    private VarKind varKind;
 
-    public LLVMVariable_c(Position pos, String name, LLVMTypeNode tn, VarType t,
+    public LLVMVariable_c(Position pos, String name, LLVMTypeNode tn, VarKind t,
             Ext e) {
         super(pos, e);
         this.name = name;
-        varType = t;
+        varKind = t;
         typeNode = tn;
     }
 
@@ -37,7 +37,7 @@ public class LLVMVariable_c extends LLVMOperand_c implements LLVMVariable {
 
     @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
-        switch (varType) {
+        switch (varKind) {
         case LOCAL:
             w.write("%" + name);
             return;
@@ -46,19 +46,19 @@ public class LLVMVariable_c extends LLVMOperand_c implements LLVMVariable {
             return;
         }
         throw new InternalCompilerError("Switch statement not exaustive: "
-                + varType);
+                + varKind);
     }
 
     @Override
     public String toString() {
-        switch (varType) {
+        switch (varKind) {
         case LOCAL:
             return "%" + name;
         case GLOBAL:
             return "@" + name;
         }
         throw new InternalCompilerError("Switch statement not exaustive: "
-                + varType);
+                + varKind);
     }
 
     @Override

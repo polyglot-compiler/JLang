@@ -15,6 +15,7 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMLoad;
 import polyllvm.util.PolyLLVMFreshGen;
+import polyllvm.util.PolyLLVMMangler;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
@@ -28,42 +29,40 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
         Field n = (Field) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
         Receiver target = n.target();
+        LLVMTypeNode fieldTypeNode = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+
         if (n.flags().isStatic()) {
-            System.out.println("I HAVENT DONE STATIC FIELD ACCESSES YET!!!");
+            // Static fields.
+            String mangledGlobalName = PolyLLVMMangler.mangleStaticFieldName(n);
+            LLVMTypeNode ptrTypeNode = nf.LLVMPointerType(fieldTypeNode);
+            LLVMVariable.VarKind ptrKind = LLVMVariable.VarKind.GLOBAL;
+            LLVMVariable ptr = nf.LLVMVariable(mangledGlobalName, ptrTypeNode, ptrKind);
+            LLVMVariable var = PolyLLVMFreshGen.freshLocalVar(nf, fieldTypeNode);
+            LLVMInstruction load = nf.LLVMLoad(var, fieldTypeNode, ptr);
+            v.addTranslation(n, nf.LLVMESeq(load, var));
         }
         else {
-            LLVMOperand thisTranslation =
-                    (LLVMOperand) v.getTranslation(target);
-            int fieldIndex = v.getFieldIndex((ReferenceType) n.target().type(),
-                                             n.fieldInstance());
-            LLVMTypedOperand index0 = nf.LLVMTypedOperand(
-                                                          nf.LLVMIntLiteral(nf.LLVMIntType(32),
-                                                                            0),
+            // Instance fields.
+            LLVMOperand thisTranslation = (LLVMOperand) v.getTranslation(target);
+            int fieldIndex = v.getFieldIndex((ReferenceType) n.target().type(), n.fieldInstance());
+            LLVMTypedOperand index0 = nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32), 0),
                                                           nf.LLVMIntType(32));
             LLVMTypedOperand fieldIndexOperand =
-                    nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32),
-                                                          fieldIndex),
+                    nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32), fieldIndex),
                                         nf.LLVMIntType(32));
 
-            List<LLVMTypedOperand> gepIndexList =
-                    CollectionUtil.list(index0, fieldIndexOperand);
-            LLVMTypeNode fieldTypeNode =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+            List<LLVMTypedOperand> gepIndexList = CollectionUtil.list(index0, fieldIndexOperand);
             LLVMVariable fieldPtr =
-                    PolyLLVMFreshGen.freshLocalVar(nf,
-                                                   nf.LLVMPointerType(fieldTypeNode));
-            LLVMInstruction gep =
-                    nf.LLVMGetElementPtr(thisTranslation, gepIndexList)
-                      .result(fieldPtr);
+                    PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMPointerType(fieldTypeNode));
+            LLVMInstruction gep = nf.LLVMGetElementPtr(thisTranslation, gepIndexList)
+                                    .result(fieldPtr);
 
-            LLVMVariable field =
-                    PolyLLVMFreshGen.freshLocalVar(nf, fieldTypeNode);
+            LLVMVariable field = PolyLLVMFreshGen.freshLocalVar(nf, fieldTypeNode);
             LLVMLoad loadField = nf.LLVMLoad(field, fieldTypeNode, fieldPtr);
-            v.addTranslation(n,
-                             nf.LLVMESeq(nf.LLVMSeq(CollectionUtil.list(gep,
-                                                                        loadField)),
-                                         field));
+            v.addTranslation(n, nf.LLVMESeq(nf.LLVMSeq(CollectionUtil.list(gep, loadField)),
+                                            field));
         }
+
         return super.translatePseudoLLVM(v);
     }
 }

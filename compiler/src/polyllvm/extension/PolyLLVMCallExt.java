@@ -10,7 +10,7 @@ import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
@@ -86,7 +86,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                                                            n.methodInstance()
                                                             .returnType());
         LLVMVariable func =
-                nf.LLVMVariable(mangledFuncName, tn, VarType.GLOBAL);
+                nf.LLVMVariable(mangledFuncName, tn, LLVMVariable.VarKind.GLOBAL);
 
         List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
                 setupArguments(v, n, nf);
@@ -121,7 +121,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMVariable superMethodPtr =
                 nf.LLVMVariable(PolyLLVMMangler.mangleMethodName(superMethod),
                                 superMethodType,
-                                VarType.GLOBAL);
+                                LLVMVariable.VarKind.GLOBAL);
 
         LLVMVariable superMethodCastPtr =
                 PolyLLVMFreshGen.freshLocalVar(nf, toType);
@@ -140,7 +140,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMOperand thisTranslation =
                 nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
                                 thisType,
-                                VarType.LOCAL);
+                                VarKind.LOCAL);
 
         List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
                 setupArguments(v, n, nf, thisTranslation, thisType);
@@ -156,7 +156,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                 nf.LLVMVariable(PolyLLVMFreshGen.freshNamedLabel(nf, "argument")
                                                 .name(),
                                 superTypeNode,
-                                VarType.LOCAL);
+                                LLVMVariable.VarKind.LOCAL);
 
         arguments = setupArguments(v, n, nf, superTranslation, superTypeNode);
         LLVMTypeNode retType = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());

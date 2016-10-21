@@ -7,7 +7,7 @@ import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
@@ -34,7 +34,7 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
             v.addTranslation(n,
                              nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
                                              thisType,
-                                             VarType.LOCAL));
+                                             VarKind.LOCAL));
         }
         else if (n.kind() == Special.SUPER) {
             LLVMTypeNode thisType =
@@ -46,7 +46,7 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
             LLVMVariable thisVariable =
                     nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
                                     thisType,
-                                    VarType.LOCAL);
+                                    LLVMVariable.VarKind.LOCAL);
             LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, superType);
             LLVMInstruction cast =
                     nf.LLVMConversion(LLVMConversion.BITCAST,

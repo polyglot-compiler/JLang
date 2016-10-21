@@ -13,7 +13,7 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
 import polyllvm.ast.PseudoLLVM.*;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
@@ -298,7 +298,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
             LLVMVariable llvmDvVar =
                     nf.LLVMVariable(dvVar,
                                     nf.LLVMPointerType(dvType),
-                                    VarType.GLOBAL);
+                                    LLVMVariable.VarKind.GLOBAL);
 
             LLVMTypedOperand index0 = nf.LLVMTypedOperand(
                                                           nf.LLVMIntLiteral(nf.LLVMIntType(64),
@@ -316,7 +316,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                                                         PolyLLVMMangler.classInitFunction((ReferenceType) cd.type()
                                                                                                             .superType()),
                                                         tn,
-                                                        VarType.GLOBAL);
+                                                        VarKind.GLOBAL);
                 List<Pair<LLVMTypeNode, LLVMOperand>> args =
                         CollectionUtil.list();
                 LLVMCall callSuperInit =
@@ -336,7 +336,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 //                LLVMVariable function =
 //                        nf.LLVMVariable(PolyLLVMMangler.classInitFunction(cd.superClass()),
 //                                        tn,
-//                                        VarType.GLOBAL);
+//                                        VarKind.GLOBAL);
 //                List<Pair<LLVMTypeNode, LLVMOperand>> args =
 //                        CollectionUtil.list();
 //                LLVMCall callSuperInit =
@@ -356,7 +356,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
                 LLVMVariable llvmSuperDvVar = nf.LLVMVariable(superDvVar,
                                                               nf.LLVMPointerType(superDvType),
-                                                              VarType.GLOBAL);
+                                                              VarKind.GLOBAL);
 
                 System.out.println("We got a super classsssss: "
                         + cd.superClass());
@@ -425,7 +425,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                             nf.LLVMStore(funcType,
                                          nf.LLVMVariable(PolyLLVMMangler.mangleMethodName(overridenMethod),
                                                          funcType,
-                                                         VarType.GLOBAL),
+                                                         VarKind.GLOBAL),
                                          eseq);
                     instrs.add(store);
 
@@ -452,7 +452,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                             nf.LLVMStore(funcType,
                                          nf.LLVMVariable(PolyLLVMMangler.mangleMethodName(newMethod),
                                                          funcType,
-                                                         VarType.GLOBAL),
+                                                         LLVMVariable.VarKind.GLOBAL),
                                          eseq);
                     instrs.add(store);
                 }
@@ -468,7 +468,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     LLVMVariable llvmSuperDvVar =
                             nf.LLVMVariable(superDvVar,
                                             nf.LLVMPointerType(superDvType),
-                                            VarType.GLOBAL);
+                                            LLVMVariable.VarKind.GLOBAL);
 
                     List<LLVMTypedOperand> l =
                             CollectionUtil.list(index0,
@@ -727,7 +727,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         LLVMVariable temp = PolyLLVMFreshGen.freshLocalVar(nf, tn);
         LLVMPointerType varPtrType = nf.LLVMPointerType(tn);
         LLVMVariable var =
-                nf.LLVMVariable(varName(name), varPtrType, VarType.LOCAL);
+                nf.LLVMVariable(varName(name), varPtrType, LLVMVariable.VarKind.LOCAL);
         LLVMLoad load = nf.LLVMLoad(temp, tn, var);
         return new Pair<>(load, temp);
     }
@@ -739,23 +739,23 @@ public class PseudoLLVMTranslator extends NodeVisitor {
             LLVMPointerType allocResultType = nf.LLVMPointerType(e.getValue());
             allocs.add(a.result(nf.LLVMVariable(varName(e.getKey()),
                                                 allocResultType,
-                                                VarType.LOCAL)));
+                                                LLVMVariable.VarKind.LOCAL)));
         }
         for (Entry<String, LLVMTypeNode> e : arguments.entrySet()) {
             LLVMAlloca a = nf.LLVMAlloca(e.getValue());
             LLVMPointerType allocResultType = nf.LLVMPointerType(e.getValue());
             allocs.add(a.result(nf.LLVMVariable(varName(e.getKey()),
                                                 allocResultType,
-                                                VarType.LOCAL)));
+                                                LLVMVariable.VarKind.LOCAL)));
             LLVMTypeNode valueType = null;
             LLVMTypeNode ptrType = nf.LLVMPointerType(allocResultType);
             allocs.add(nf.LLVMStore(e.getValue(),
                                     nf.LLVMVariable(e.getKey(),
                                                     valueType,
-                                                    VarType.LOCAL),
+                                                    VarKind.LOCAL),
                                     nf.LLVMVariable(varName(e.getKey()),
                                                     ptrType,
-                                                    VarType.LOCAL)));
+                                                    LLVMVariable.VarKind.LOCAL)));
         }
         return allocs;
     }

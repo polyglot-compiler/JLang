@@ -11,7 +11,7 @@ import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
@@ -58,7 +58,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         LLVMVariable mallocFunction = nf.LLVMVariable(PolyLLVMConstants.MALLOC,
                                                       nf.LLVMPointerType(nf.LLVMIntType(8)),
-                                                      VarType.GLOBAL);
+                                                      VarKind.GLOBAL);
 
         List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
                 CollectionUtil.list(new Pair<LLVMTypeNode, LLVMOperand>(nf.LLVMIntType(64),
@@ -96,7 +96,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
                              nf.LLVMVariable(PolyLLVMMangler.dispatchVectorVariable(classtype),
                                              PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(v,
                                                                                                   classtype),
-                                             VarType.GLOBAL),
+                                             LLVMVariable.VarKind.GLOBAL),
                              gepResult);
         //Call the constructor function
         String mangledFuncName =
@@ -108,7 +108,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
                                                          n.constructorInstance()
                                                           .formalTypes());
         LLVMVariable func =
-                nf.LLVMVariable(mangledFuncName, tn, VarType.GLOBAL);
+                nf.LLVMVariable(mangledFuncName, tn, LLVMVariable.VarKind.GLOBAL);
 
         List<Pair<LLVMTypeNode, LLVMOperand>> constructorArgs =
                 setupArguments(v, n, nf, newObject, typeNode);

@@ -1,33 +1,25 @@
-public class SimpleClass {
+import placeholder.Print;
 
+public class SimpleClass {
     int field;
     private char field2;
 
-    public SimpleClass() {
-//        field = 4;
+    public SimpleClass() {}
+
+    public static void main(String[] args) {
+        SimpleClass s = new SimpleClass();
+        s.field = 12;
+        s.field2 = 'A';
+        Print.println(s.method() + s.privateMethod());
     }
-//
-//    public static void main() {
-//        SimpleClass s = new SimpleClass();
-//        s.field = 12;
-//        s.field2 = 'A';
-//        print(s.method() + s.privateMethod());
-//    }
 
     public int method() {
         privateMethod();
-        return field + field2; // 3;
+        return field + field2;
     }
 
     private int privateMethod() {
         field2 = 'A';
-        return 23;//(int) new IntLit_c(null, null, 23).value();
+        return 23;
     }
-
-    public static native void print(int i);
-
-//    public static void print(int i) {
-//        System.out.println(i);
-//    }
-
 }

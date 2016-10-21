@@ -5,7 +5,7 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMGetElementPtr;
 
@@ -57,14 +57,14 @@ public class PolyLLVMFreshGen {
             LLVMTypeNode tn) {
         return nf.LLVMVariable(instance().freshString("_temp."),
                                tn,
-                               VarType.LOCAL);
+                               VarKind.LOCAL);
     }
 
     public static LLVMVariable freshNamedLocalVar(PolyLLVMNodeFactory nf,
             String name, LLVMTypeNode tn) {
         return nf.LLVMVariable(instance().freshString("_" + name + "."),
                                tn,
-                               VarType.LOCAL);
+                               VarKind.LOCAL);
     }
 
     public static LLVMGetElementPtr freshGetElementPtr(PolyLLVMNodeFactory nf,

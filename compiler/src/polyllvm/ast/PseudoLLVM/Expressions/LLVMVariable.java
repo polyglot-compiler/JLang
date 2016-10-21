@@ -6,7 +6,7 @@ package polyllvm.ast.PseudoLLVM.Expressions;
  */
 public interface LLVMVariable extends LLVMOperand {
 
-    public enum VarType {
+    public enum VarKind {
         LOCAL, GLOBAL
     }
 

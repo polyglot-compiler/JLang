@@ -25,7 +25,7 @@ public class PolyLLVMCallExt extends PolyLLVMExt {
 //                LLVMVariable var =
 //                        nf.LLVMVariable(Position.compilerGenerated(),
 //                                        v.varName(name),
-//                                        VarType.LOCAL);
+//                                        VarKind.LOCAL);
 //                LLVMLoad load = nf.LLVMLoad(Position.compilerGenerated(),
 //                                            temp,
 //                                            p.part1(),
@@ -43,7 +43,7 @@ public class PolyLLVMCallExt extends PolyLLVMExt {
 //            LLVMVariable currResult =
 //                    nf.LLVMVariable(Position.compilerGenerated(),
 //                                    v.varName(n.result().name()),
-//                                    VarType.LOCAL);//n.result();
+//                                    VarKind.LOCAL);//n.result();
 //            LLVMVariable resultTemp = PolyLLVMFreshGen.freshLocalVar(nf);
 //
 //            n = n.result(resultTemp);

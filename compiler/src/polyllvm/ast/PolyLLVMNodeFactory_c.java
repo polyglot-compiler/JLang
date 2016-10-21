@@ -1,12 +1,10 @@
 package polyllvm.ast;
 
-import polyglot.ast.Ext;
 import polyglot.ast.NodeFactory_c;
 import polyglot.frontend.Source;
 import polyglot.util.Pair;
 import polyglot.util.Position;
 import polyllvm.ast.PseudoLLVM.Expressions.*;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
 import polyllvm.ast.PseudoLLVM.*;
 import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration.GlobalVariableKind;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.*;
@@ -123,7 +121,7 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     }
 
     @Override
-    public LLVMVariable LLVMVariable(String name, LLVMTypeNode tn, VarType t) {
+    public LLVMVariable LLVMVariable(String name, LLVMTypeNode tn, LLVMVariable.VarKind t) {
         LLVMVariable n = new LLVMVariable_c(Position.compilerGenerated(),
                                             name,
                                             tn,

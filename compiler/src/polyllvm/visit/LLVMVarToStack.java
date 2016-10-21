@@ -4,7 +4,8 @@ import polyglot.ast.Node;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMAlloca;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
@@ -76,20 +77,20 @@ public class LLVMVarToStack extends NodeVisitor {
             LLVMAlloca a = nf.LLVMAlloca(e.getValue());
             allocs.add(a.result(nf.LLVMVariable(varName(e.getKey()),
                                                 e.getValue(),
-                                                VarType.LOCAL)));
+                                                VarKind.LOCAL)));
         }
         for (Entry<String, LLVMTypeNode> e : arguments.entrySet()) {
             LLVMAlloca a = nf.LLVMAlloca(e.getValue());
             allocs.add(a.result(nf.LLVMVariable(varName(e.getKey()),
                                                 e.getValue(),
-                                                VarType.LOCAL)));
+                                                VarKind.LOCAL)));
             allocs.add(nf.LLVMStore(e.getValue(),
                                     nf.LLVMVariable(e.getKey(),
                                                     e.getValue(),
-                                                    VarType.LOCAL),
+                                                    VarKind.LOCAL),
                                     nf.LLVMVariable(varName(e.getKey()),
                                                     e.getValue(),
-                                                    VarType.LOCAL)));
+                                                    LLVMVariable.VarKind.LOCAL)));
         }
         return allocs;
     }

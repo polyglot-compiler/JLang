@@ -48,7 +48,7 @@ public final class TranslationUtils {
         List<Pair<LLVMTypeNode, LLVMOperand>> entryArgs = Collections.singletonList(
                 new Pair<>(llvmStrArrType, nf.LLVMNullLiteral(llvmStrArrType)));
         LLVMInstruction callEntry = nf.LLVMCall(
-                nf.LLVMVariable(entryFunc, entryFuncType, LLVMVariable.VarType.GLOBAL),
+                nf.LLVMVariable(entryFunc, entryFuncType, LLVMVariable.VarKind.GLOBAL),
                 entryArgs,
                 nf.LLVMVoidType());
 

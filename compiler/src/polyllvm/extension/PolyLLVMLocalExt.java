@@ -9,7 +9,6 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarType;
 import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
@@ -27,14 +26,14 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
 //        LLVMVariable translation =
 //                nf.LLVMVariable(Position.compilerGenerated(),
 //                                n.name(),
-//                                VarType.LOCAL);
+//                                VarKind.LOCAL);
         LLVMTypeNode typeNode =
                 PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
 
         LLVMVariable expr = PolyLLVMFreshGen.freshLocalVar(nf, typeNode);
 
         LLVMVariable ptr =
-                nf.LLVMVariable(v.varName(n.name()), typeNode, VarType.LOCAL);
+                nf.LLVMVariable(v.varName(n.name()), typeNode, LLVMVariable.VarKind.LOCAL);
         LLVMInstruction instruction = nf.LLVMLoad(expr, typeNode, ptr);
         LLVMNode translation = nf.LLVMESeq(instruction, expr);
         v.addTranslation(n, translation);

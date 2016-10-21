@@ -20,7 +20,7 @@ public class PolyLLVMBrExt extends PolyLLVMExt {
 //            LLVMVariable temp = PolyLLVMFreshGen.freshLocalVar(nf);
 //            LLVMVariable var = nf.LLVMVariable(Position.compilerGenerated(),
 //                                               v.varName(name),
-//                                               VarType.LOCAL);
+//                                               VarKind.LOCAL);
 //            LLVMLoad load = nf.LLVMLoad(Position.compilerGenerated(),
 //                                        temp,
 //                                        n.cond().typeNode(),
