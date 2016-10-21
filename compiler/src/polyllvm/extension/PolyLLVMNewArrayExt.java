@@ -40,12 +40,6 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         return super.translatePseudoLLVM(v);
     }
 
-    /**
-     * @param v
-     * @param nf
-     * @param dims
-     * @return
-     */
     public static New translateArrayWithDims(PseudoLLVMTranslator v,
             PolyLLVMNodeFactory nf, List<Expr> dims) {
         New newArray;
@@ -150,10 +144,6 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         ONEDIMENSIONAL, MULTIDIMENSIONAL
     }
 
-    /**
-     * @param arrayType
-     * @return
-     */
     private static ConstructorInstance getArrayConstructor(
             ReferenceType arrayType, ArrayConstructorType arrType) {
         ConstructorInstance arrayConstructor = null;
@@ -169,7 +159,6 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
                 else if (formalType instanceof PrimitiveType
                         && arrType == ArrayConstructorType.ONEDIMENSIONAL) {
                     arrayConstructor = constructor;
-
                 }
 
             }

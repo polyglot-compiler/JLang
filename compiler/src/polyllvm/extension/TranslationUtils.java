@@ -29,7 +29,6 @@ public final class TranslationUtils {
     public static LLVMFunction createEntryPoint(PolyLLVMNodeFactory nf,
                                                 TypeSystem ts,
                                                 String entryFunc) {
-
         // Build the function type for `void main(String[] args)`.
         Type strType;
         try {

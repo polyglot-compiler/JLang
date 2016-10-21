@@ -1,21 +1,29 @@
-%dv.Array = type {i8*, i1 (%class.Array*, %class.java.lang.Object*)*, %class.java.lang.Class* (%class.Array*)*, i32 (%class.Array*)*, void (%class.Array*)*, void (%class.Array*)*, %class.java.lang.String* (%class.Array*)*, void (%class.Array*, i64)*, void (%class.Array*, i64, i32)*, void (%class.Array*)*, %class.java.lang.Object* (%class.Array*)*, void (%class.Array*)*}
-%class.placeholder.Print = type {%dv.placeholder.Print*}
-%class.Array = type {%dv.Array*, i32, i8*}
+%dv.java.lang.String = type {i8*, i1 (%class.java.lang.String*, %class.java.lang.Object*)*, %class.java.lang.Class* (%class.java.lang.String*)*, i32 (%class.java.lang.String*)*, void (%class.java.lang.String*)*, void (%class.java.lang.String*)*, %class.java.lang.String* (%class.java.lang.String*)*, void (%class.java.lang.String*, i64)*, void (%class.java.lang.String*, i64, i32)*, void (%class.java.lang.String*)*, %class.java.lang.Object* (%class.java.lang.String*)*, void (%class.java.lang.String*)*}
+%class.support.Array = type {%dv.support.Array*, i32, i8*}
 %dv.java.lang.Object = type {i8*, i1 (%class.java.lang.Object*, %class.java.lang.Object*)*, %class.java.lang.Class* (%class.java.lang.Object*)*, i32 (%class.java.lang.Object*)*, void (%class.java.lang.Object*)*, void (%class.java.lang.Object*)*, %class.java.lang.String* (%class.java.lang.Object*)*, void (%class.java.lang.Object*, i64)*, void (%class.java.lang.Object*, i64, i32)*, void (%class.java.lang.Object*)*, %class.java.lang.Object* (%class.java.lang.Object*)*, void (%class.java.lang.Object*)*}
-%class.java.lang.Class = type opaque
+%class.placeholder.Print = type {%dv.placeholder.Print*}
 %dv.placeholder.Print = type {i8*, i1 (%class.placeholder.Print*, %class.java.lang.Object*)*, %class.java.lang.Class* (%class.placeholder.Print*)*, i32 (%class.placeholder.Print*)*, void (%class.placeholder.Print*)*, void (%class.placeholder.Print*)*, %class.java.lang.String* (%class.placeholder.Print*)*, void (%class.placeholder.Print*, i64)*, void (%class.placeholder.Print*, i64, i32)*, void (%class.placeholder.Print*)*, %class.java.lang.Object* (%class.placeholder.Print*)*, void (%class.placeholder.Print*)*}
+%class.java.lang.Class = type opaque
 %class.java.lang.Object = type {%dv.java.lang.Object*}
-%class.java.lang.String = type opaque
-@_J_dv_5Array = external global %dv.Array
-@_J_size_17placeholder.Print = global i64 0
+%class.java.lang.String = type {%dv.java.lang.String*, %class.support.Array*}
+%dv.support.Array = type {i8*, i1 (%class.support.Array*, %class.java.lang.Object*)*, %class.java.lang.Class* (%class.support.Array*)*, i32 (%class.support.Array*)*, void (%class.support.Array*)*, void (%class.support.Array*)*, %class.java.lang.String* (%class.support.Array*)*, void (%class.support.Array*, i64)*, void (%class.support.Array*, i64, i32)*, void (%class.support.Array*)*, %class.java.lang.Object* (%class.support.Array*)*, void (%class.support.Array*)*}
+@_J_dv_13support.Array = external global %dv.support.Array
+@_J_size_17placeholder.Print = global i64 zeroinitializer
 @_J_dv_17placeholder.Print = global %dv.placeholder.Print zeroinitializer
 @_J_size_16java.lang.Object = external global i64
 @_J_dv_16java.lang.Object = external global %dv.java.lang.Object
+@_J_size_16java.lang.String = external global i64
+@_J_dv_16java.lang.String = external global %dv.java.lang.String
 %__ctortype = type { i32, void ()*, i8* }
 @llvm.global_ctors = appending global [1 x %__ctortype] [%__ctortype { i32 65535, void ()* @_J_init_17placeholder.Print, i8* null }]
 declare i8* @malloc(i64 %size)
 
+declare void @_J_16java.lang.Object__constructor__void(%class.java.lang.Object* %arg_0)
+
+declare void @_J_init_16java.lang.Object()
+
 declare i32 @printf(i8*, ...)
+@str_ln_str    = private unnamed_addr constant [5 x i8] c"%ls\0A\00",  align 1
 @int_ln_str    = private unnamed_addr constant [4 x i8] c"%d\0A\00",   align 1
 @int_str       = private unnamed_addr constant [3 x i8] c"%d\00",      align 1
 @long_ln_str   = private unnamed_addr constant [6 x i8] c"%lld\0A\00", align 1
@@ -25,11 +33,15 @@ declare i32 @printf(i8*, ...)
 @double_ln_str = private unnamed_addr constant [4 x i8] c"%f\0A\00",   align 1
 @double_str    = private unnamed_addr constant [3 x i8] c"%f\00",      align 1
 
-declare void @_J_init_16java.lang.Object()
-
 define void @_J_17placeholder.Print_7println_16java.lang.String(%class.java.lang.String* %s) {
 %arg_s = alloca %class.java.lang.String*, i32 1
 store %class.java.lang.String* %s, %class.java.lang.String** %arg_s
+%str_arr_ptr = getelementptr %class.java.lang.String, %class.java.lang.String* %s, i32 0, i32 1
+%str_arr = load %class.support.Array*, %class.support.Array** %str_arr_ptr
+%str_ptr = getelementptr %class.support.Array, %class.support.Array* %str_arr, i32 0, i32 2
+; %str = load i8*, i8** %str_ptr
+; %int = ptrtoint i8* %str to i32
+%call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str_ln_str, i32 0, i32 0), i8** %str_ptr)
 ret void
 }
 
