@@ -44,6 +44,8 @@ public class PolyLLVMFieldAssignExt extends PolyLLVMAssignExt {
                 (LLVMOperand) v.getTranslation(objectTarget);
         int fieldIndex = v.getFieldIndex((ReferenceType) objectTarget.type(),
                                          target.fieldInstance());
+        System.out.println("HERE: " + fieldIndex);
+        System.out.println("" + node());
         LLVMTypedOperand index0 =
                 nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32), 0),
                                     nf.LLVMIntType(32));

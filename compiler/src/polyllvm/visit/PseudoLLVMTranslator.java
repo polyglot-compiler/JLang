@@ -570,6 +570,11 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         // Helper for setting up size globals.
         BiConsumer<ReferenceType, Boolean> addSizeGlobals = (rt, isExtern) -> {
 
+            // Ignore array types--they're handled separately.
+            if (rt.isArray()) {
+                return;
+            }
+
             // Avoid adding globals more than once.
             String name = rt.toString();
             if (classesAdded.contains(name)) {
@@ -656,9 +661,9 @@ public class PseudoLLVMTranslator extends NodeVisitor {
             addClassTypes.accept(rt);
         }
 
-        // TODO: Eventually these will not be needed.
-        classTypes.put("class.java.lang.Class", null);
-        classTypes.put("class.java.lang.String", null);
+        // Opaque class type.
+        classTypes.putIfAbsent("class.java.lang.String", null);
+        classTypes.putIfAbsent("class.java.lang.Class", null);
     }
 
     private HashSet<ReferenceType> classesUsed = new HashSet<>();
