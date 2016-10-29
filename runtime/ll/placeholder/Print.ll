@@ -33,16 +33,53 @@ declare i32 @printf(i8*, ...)
 @double_ln_str = private unnamed_addr constant [4 x i8] c"%f\0A\00",   align 1
 @double_str    = private unnamed_addr constant [3 x i8] c"%f\00",      align 1
 
+@.str          = private unnamed_addr constant [4 x i8] c"%ls\00",     align 1
+@.str.1        = private unnamed_addr constant [2 x i8] c"\0A\00",     align 1
+
+@widechar_str  = private unnamed_addr constant [3 x i8] c"%C\00",      align 1
+
 define void @_J_17placeholder.Print_7println_16java.lang.String(%class.java.lang.String* %s) {
-%arg_s = alloca %class.java.lang.String*, i32 1
-store %class.java.lang.String* %s, %class.java.lang.String** %arg_s
-%str_arr_ptr = getelementptr %class.java.lang.String, %class.java.lang.String* %s, i32 0, i32 1
-%str_arr = load %class.support.Array*, %class.support.Array** %str_arr_ptr
-%str_ptr = getelementptr %class.support.Array, %class.support.Array* %str_arr, i32 0, i32 2
+  %arg_s = alloca %class.java.lang.String*, i32 1
+  %i = alloca i32, align 4
+  store %class.java.lang.String* %s, %class.java.lang.String** %arg_s
+  %str_arr_ptr = getelementptr %class.java.lang.String, %class.java.lang.String* %s, i32 0, i32 1
+  %str_arr = load %class.support.Array*, %class.support.Array** %str_arr_ptr
+  %str_ptr = getelementptr %class.support.Array, %class.support.Array* %str_arr, i32 0, i32 2
+  %str_len = getelementptr %class.support.Array, %class.support.Array* %str_arr, i32 0, i32 1
+
+  store i32 0, i32* %i, align 4
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %temp.0 = load i32, i32* %i, align 4
+  %temp.1 = load i32, i32* %str_len, align 4
+  %cmp = icmp slt i32 %temp.0, %temp.1
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %for.cond
+  %1 = load i32, i32* %i, align 4
+  %idx = sext i32 %1 to i64
+  %temp.2 = getelementptr i8*, i8** %str_ptr, i64 %idx
+  %char_ptr = load i8*, i8** %temp.2
+  %char = ptrtoint i8* %char_ptr to i16
+  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @widechar_str, i32 0, i32 0), i16 %char)
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body
+  %2 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %2, 1
+  store i32 %inc, i32* %i, align 4
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond
+  %call1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
+  ret void
+
+;%str_len = getelementptr i8*, i8** %str_ptr, i64 1f
 ; %str = load i8*, i8** %str_ptr
 ; %int = ptrtoint i8* %str to i32
-%call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str_ln_str, i32 0, i32 0), i8** %str_ptr)
-ret void
+;%call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str_ln_str, i32 0, i32 0), i8** %str_ptr)
+;ret void
 }
 
 define void @_J_17placeholder.Print_5print_16java.lang.String(%class.java.lang.String* %s) {

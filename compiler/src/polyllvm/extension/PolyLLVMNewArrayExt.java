@@ -84,7 +84,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         v.lang().translatePseudoLLVM(newTypeNode, v);
 
         //Translate the newArray - need to set up a variable for the size
-        //Size = 2 + (length * 8)
+        //Size = (2 + length) * 8
         LLVMOperand arrayLength = (LLVMOperand) v.getTranslation(dims.get(0));
 
         if (arrayLength instanceof LLVMESeq) {
@@ -97,6 +97,17 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
             arrayLength =
                     eseqLength.instruction(instruction).expr(replacementVar);
         }
+
+        LLVMVariable addTwoVar =
+                PolyLLVMFreshGen.freshNamedLocalVar(nf,
+                        "addTwoVar",
+                        nf.LLVMIntType(32));
+        LLVMAdd addTwo = nf.LLVMAdd(nf.LLVMIntType(32),
+                nf.LLVMIntLiteral(nf.LLVMIntType(32), 2),
+                arrayLength)
+                .result(addTwoVar);
+
+
         LLVMVariable mulByEightVar =
                 PolyLLVMFreshGen.freshNamedLocalVar(nf,
                                                     "mulByEightVar",
@@ -105,19 +116,13 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
                                .LLVMMul(nf.LLVMIntType(32),
                                         nf.LLVMIntLiteral(nf.LLVMIntType(32),
                                                           8),
-                                        arrayLength)
+                                        addTwoVar)
                                .result(mulByEightVar);
         System.out.println("dims 0th element is: " + dims.get(0)
                 + "\nArray Length variable is: " + arrayLength);
 
-        LLVMVariable addTwoVar =
-                PolyLLVMFreshGen.freshNamedLocalVar(nf,
-                                                    "addTwoVar",
-                                                    nf.LLVMIntType(32));
-        LLVMAdd addTwo = nf.LLVMAdd(nf.LLVMIntType(32),
-                                    nf.LLVMIntLiteral(nf.LLVMIntType(32), 2),
-                                    mulByEightVar)
-                           .result(addTwoVar);
+
+
         LLVMVariable sizeCastVar =
                 PolyLLVMFreshGen.freshNamedLocalVar(nf,
                                                     "sizeCastVar",
@@ -126,13 +131,12 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
                 nf.LLVMConversion(LLVMConversion.SEXT,
                                   sizeCastVar,
                                   nf.LLVMIntType(32),
-                                  addTwoVar,
+                                  mulByEightVar,
                                   nf.LLVMIntType(64));
 
         LLVMESeq size = nf.LLVMESeq(
-                                    nf.LLVMSeq(CollectionUtil.list(mulByEight,
-                                                                   addTwo,
-                                                                   sizeCast)),
+                                    nf.LLVMSeq(CollectionUtil.list(addTwo,
+                                            mulByEight, sizeCast)),
                                     sizeCastVar);
 
         PolyLLVMNewExt extension = (PolyLLVMNewExt) PolyLLVMExt.ext(newArray);
