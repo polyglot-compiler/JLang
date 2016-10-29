@@ -4,7 +4,8 @@
 #               .lll (linked LLVM IR), .s (ASM), .binary (executable), etc.
 # `make sol` to generate solution (.sol) files.
 # `make llvmir` to compile all programs down to LLVM IR (.ll) files.
-# `make output` to interpret LLVM IR and produce program output (.output) files.
+# `make output` to compile LLVM IR to executable files and produce program 
+#               output (.output) files.
 
 # Uses absolute paths to llvm commands, because Java's ProcessBuilder will
 # otherwise not be able to find them.
@@ -60,10 +61,13 @@ check: $(CHECK)
 	/usr/local/bin/llc -o $@ $<
 
 %.binary: %.s
-	gcc -o $@ $<
+	clang -o $@ $<
 
-%.output: %.lll
+%.loutput: %.lll
 	/usr/local/bin/lli $< | tee $@
+
+%.output: %.binary
+	$< | tee $@
 
 %.check: %.output %.sol
 	diff $^
