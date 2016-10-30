@@ -9,4 +9,11 @@ public class PolyLLVMConstants {
      */
     public static int ARRAYELEMENTOFFSET = 2;
 
+    /**
+     * Offset from start of dispatch vector to the 0th method
+     *  * First slot used for interface dispatch
+     *  * Second slot used for type information
+     */
+    public static int DISPATCH_VECTOR_OFFSET = 2;
+
 }

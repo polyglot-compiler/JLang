@@ -18,10 +18,7 @@ import polyllvm.ast.PseudoLLVM.*;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.*;
-import polyllvm.util.PolyLLVMFreshGen;
-import polyllvm.util.PolyLLVMMangler;
-import polyllvm.util.PolyLLVMTypeUtils;
-import polyllvm.util.Triple;
+import polyllvm.util.*;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -403,7 +400,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     List<LLVMTypedOperand> l =
                             CollectionUtil.list(index0,
                                                 nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
-                                                                                      i + 1),
+                                                                                      i + PolyLLVMConstants.DISPATCH_VECTOR_OFFSET),
                                                                     nf.LLVMIntType(32)));
 
                     LLVMGetElementPtr gep = nf.LLVMGetElementPtr(llvmDvVar, l);
@@ -435,7 +432,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     List<LLVMTypedOperand> l =
                             CollectionUtil.list(index0,
                                                 nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
-                                                                                      i + 1),
+                                                                                      i + PolyLLVMConstants.DISPATCH_VECTOR_OFFSET),
                                                                     nf.LLVMIntType(32)));
                     LLVMGetElementPtr gep = nf.LLVMGetElementPtr(llvmDvVar, l);
                     LLVMVariable gepResult =
@@ -473,7 +470,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     List<LLVMTypedOperand> l =
                             CollectionUtil.list(index0,
                                                 nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
-                                                                                      i + 1),
+                                                                                      i + PolyLLVMConstants.DISPATCH_VECTOR_OFFSET),
                                                                     nf.LLVMIntType(32)));
 
                     LLVMGetElementPtr gepVal =
@@ -856,7 +853,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
         for (int i = 0; i < methodLayout.size(); i++) {
             if (methodLayout.get(i).isSameMethod(methodInstance)) {
-                return i + 1;
+                return i + PolyLLVMConstants.DISPATCH_VECTOR_OFFSET;
             }
         }
         throw new InternalCompilerError("The method " + methodInstance
