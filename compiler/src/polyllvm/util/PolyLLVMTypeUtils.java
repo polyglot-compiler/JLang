@@ -209,5 +209,4 @@ public class PolyLLVMTypeUtils {
                  .prependFormalTypeNode(classTypePointer);
 
     }
-
 }

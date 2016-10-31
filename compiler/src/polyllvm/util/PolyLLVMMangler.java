@@ -4,6 +4,7 @@ import polyglot.ast.ClassDecl;
 import polyglot.ast.Field;
 import polyglot.ast.FieldDecl;
 import polyglot.ast.TypeNode;
+import polyglot.frontend.goals.Parsed;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 
@@ -127,7 +128,18 @@ public class PolyLLVMMangler {
 
     public static String dispatchVectorVariable(ReferenceType rt) {
         String className = rt.isArray() ? "class.support.Array" : rt.toString();
-        return JAVA_PREFIX + "dv_" + className.length() + className;
+        String prefix = JAVA_PREFIX + "dv_";
+        return prefix + className.length() + className;
+    }
+
+    public static String InterfaceTableVariable(ReferenceType rt, ReferenceType i ) {
+        if(i.isArray() || !(i instanceof ParsedClassType)
+                || !((ParsedClassType) i).flags().isInterface()){
+            throw new InternalCompilerError("Reference type " + rt + "is not an interface");
+        }
+        String interfaceName =  i.toString();
+        String className =  rt.toString();
+        return JAVA_PREFIX + "it_" + interfaceName.length() + interfaceName + "_" + className.length() + className;
     }
 
     public static String classTypeName(ClassDecl cd) {
@@ -141,6 +153,9 @@ public class PolyLLVMMangler {
 
     public static String classTypeName(ReferenceType rt) {
         String className = rt.isArray() ? "class.support.Array" : rt.toString();
+        if(rt instanceof ParsedClassType){
+            return (((ParsedClassType) rt).flags().isInterface() ? "interface." : "class.") + className;
+        }
         return "class." + className;
     }
 
@@ -154,6 +169,9 @@ public class PolyLLVMMangler {
 
     public static String dispatchVectorTypeName(ReferenceType rt) {
         String className = rt.isArray() ? "class.support.Array" : rt.toString();
+        if(rt instanceof ParsedClassType){
+            return (((ParsedClassType) rt).flags().isInterface() ? "itable." : "dv.") + className;
+        }
         return "dv." + className;
     }
 
@@ -169,4 +187,11 @@ public class PolyLLVMMangler {
         return JAVA_PREFIX + "init_" + n.toString().length() + n.toString();
     }
 
+    public static String interfacesInitFunction(ReferenceType rt) {
+        return JAVA_PREFIX + "it_init_" + rt.toString().length() + rt.toString();
+    }
+
+    public static String interfaceStringVariable(ReferenceType it) {
+        return JAVA_PREFIX + "itype_" + it.toString().length() + it.toString();
+    }
 }

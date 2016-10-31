@@ -9,17 +9,17 @@ import polyglot.util.Pair;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
+import polyllvm.ast.PseudoLLVM.Expressions.*;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
 import polyllvm.ast.PseudoLLVM.*;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.*;
 import polyllvm.util.*;
 
+import java.lang.ref.Reference;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
@@ -153,6 +153,8 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         setupClassSizes();
         setupCtorsFunctions();
 
+        setupItables();
+
     }
 
     /**
@@ -275,6 +277,180 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         return new Triple<>(dvMethods, dvOverridenMethods, fields);
     }
 
+    private void setupItables(){
+        LLVMPointerType bytePointerType = nf.LLVMPointerType(nf.LLVMIntType(8));
+        HashSet<ReferenceType> interfacesAdded = new HashSet<>();
+        for (ClassDecl cd : classesVisited){
+            if(cd.flags().isInterface()) return;
+            ParsedClassType rt = cd.type();
+            List<LLVMInstruction> instrs = new ArrayList<>();
+            List<MethodInstance> classLayout = layouts(rt).part1();
+
+            /*
+             * Call the init function of the class first
+             */
+            LLVMTypeNode tn = nf.LLVMFunctionType(new ArrayList<LLVMTypeNode>(), nf.LLVMVoidType());
+            LLVMVariable function = nf.LLVMVariable(PolyLLVMMangler.classInitFunction(rt), tn, VarKind.GLOBAL);
+            List<Pair<LLVMTypeNode, LLVMOperand>> args = CollectionUtil.list();
+            LLVMCall callClassInit = nf.LLVMCall(function, args, nf.LLVMVoidType());
+            instrs.add(callClassInit);
+            calls.add(callClassInit);
+
+
+            for (int j = 0; j< rt.interfaces().size(); j++){
+                ReferenceType it = rt.interfaces().get(j);
+                String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(rt, it);
+                LLVMTypeNode itType =
+                        PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, it);
+                LLVMVariable llvmItVar =
+                        nf.LLVMVariable(interfaceTableVar,
+                                nf.LLVMPointerType(itType),
+                                LLVMVariable.VarKind.GLOBAL);
+
+                String dvVar = PolyLLVMMangler.dispatchVectorVariable(rt);
+                LLVMTypeNode dvType = PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, rt);
+                LLVMVariable llvmDvVar = nf.LLVMVariable(dvVar, nf.LLVMPointerType(dvType), VarKind.GLOBAL);
+
+                // Add list to Class DV
+                if(j==0) {
+                    LLVMVariable iListPtr = PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMPointerType(bytePointerType));
+                    LLVMGetElementPtr gepIList = PolyLLVMFreshGen.freshGetElementPtr(nf, iListPtr, llvmDvVar, 0, 0);
+
+                    LLVMVariable headITableCast = PolyLLVMFreshGen.freshLocalVar(nf, bytePointerType);
+                    LLVMConversion bitcast =
+                            nf.LLVMConversion(LLVMConversion.BITCAST, headITableCast,
+                                    nf.LLVMPointerType(itType), llvmItVar, bytePointerType);
+
+                    LLVMStore store = nf.LLVMStore(bytePointerType, headITableCast, iListPtr);
+
+                    instrs.add(gepIList);
+                    instrs.add(bitcast);
+                    instrs.add(store);
+                }
+
+
+                //Setup as Linked List
+                LLVMVariable iTableNextPtr = PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMPointerType(bytePointerType));
+                LLVMGetElementPtr gep = PolyLLVMFreshGen.freshGetElementPtr(nf, iTableNextPtr, llvmItVar, 0, 0);
+                if(j != rt.interfaces().size()-1){
+                    ReferenceType nextIt = rt.interfaces().get(j + 1);
+                    String nextITableVar = PolyLLVMMangler.InterfaceTableVariable(rt, nextIt);
+                    LLVMTypeNode nextItType = PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, nextIt);
+                    LLVMVariable llvmNextItVar = nf.LLVMVariable(nextITableVar,
+                                    nf.LLVMPointerType(nextItType),
+                                    LLVMVariable.VarKind.GLOBAL);
+
+                    LLVMVariable nextItCast = PolyLLVMFreshGen.freshLocalVar(nf, bytePointerType);
+                    LLVMConversion bitcast =
+                            nf.LLVMConversion(LLVMConversion.BITCAST, nextItCast,
+                                    nextItType, llvmNextItVar, bytePointerType);
+
+
+                    LLVMStore store = nf.LLVMStore(bytePointerType, nextItCast, iTableNextPtr);
+
+                    instrs.add(bitcast);
+                    instrs.add(gep);
+                    instrs.add(store);
+                } else {
+                    LLVMStore store = nf.LLVMStore(bytePointerType, nf.LLVMNullLiteral(bytePointerType), iTableNextPtr);
+                    instrs.add(gep);
+                    instrs.add(store);
+                }
+
+                //Load type into second slot
+                String s = it.toString();
+                LLVMArrayType stringType = nf.LLVMArrayType(nf.LLVMIntType(8), s.length() + 1);
+                if(!interfacesAdded.contains(it)) {
+                    LLVMCStringLiteral init = nf.LLVMCStringLiteral(stringType, s);
+                    LLVMGlobalVarDeclaration typeNameString = nf.LLVMGlobalVarDeclaration(
+                            PolyLLVMMangler.interfaceStringVariable(it),
+                            /* isExtern */ false,
+                            LLVMGlobalVarDeclaration.CONSTANT,
+                            stringType,
+                            init);
+                    globalSizes.add(typeNameString);
+                    interfacesAdded.add(it);
+                }
+
+                LLVMVariable typeStringCast = PolyLLVMFreshGen.freshLocalVar(nf, bytePointerType);
+                LLVMVariable stringTypeGlobal = nf.LLVMVariable(
+                            PolyLLVMMangler.interfaceStringVariable(it),
+                            nf.LLVMPointerType(stringType), VarKind.GLOBAL);
+                LLVMConversion castString =
+                        nf.LLVMConversion(LLVMConversion.BITCAST, typeStringCast,
+                                nf.LLVMPointerType(stringType), stringTypeGlobal, bytePointerType);
+
+
+                LLVMVariable res = PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMPointerType(bytePointerType));
+                LLVMGetElementPtr gepITable = PolyLLVMFreshGen.freshGetElementPtr(nf, res, llvmItVar, 0, 1);
+
+                LLVMStore storeTypeString = nf.LLVMStore(bytePointerType, typeStringCast, res);
+
+                instrs.add(castString);
+                instrs.add(gepITable);
+                instrs.add(storeTypeString);
+
+
+                for (int k=0; k< layouts(it).part1().size(); k++) {
+                    MethodInstance mi = layouts(it).part1().get(k);
+                    int index = getMethodIndex(rt, mi);
+                    MethodInstance miClass = methodInList(mi, classLayout);
+
+                    LLVMTypeNode classFuncType =
+                            PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                                    rt,
+                                    miClass.formalTypes(),
+                                    miClass.returnType());
+
+                    LLVMTypeNode interfaceFuncType =
+                            PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                                    it,
+                                    mi.formalTypes(),
+                                    mi.returnType());
+
+                    LLVMVariable gepResultVal =
+                            PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMPointerType(classFuncType));
+                    LLVMGetElementPtr gepClassDV =
+                            PolyLLVMFreshGen.freshGetElementPtr(nf, gepResultVal, llvmDvVar, 0, index);
+
+                    LLVMVariable gepResultStore =
+                            PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMPointerType(interfaceFuncType));
+                    LLVMGetElementPtr gepInterfaceDV =
+                            PolyLLVMFreshGen.freshGetElementPtr(nf, gepResultStore, llvmItVar,
+                                    0, k + PolyLLVMConstants.DISPATCH_VECTOR_OFFSET);
+
+
+                    LLVMESeq eseqVal = nf.LLVMESeq(gepClassDV, gepResultVal);
+                    LLVMVariable loadResult = PolyLLVMFreshGen.freshLocalVar(nf, classFuncType);
+                    LLVMLoad load = nf.LLVMLoad(loadResult, classFuncType, eseqVal);
+
+                    LLVMVariable castResult = PolyLLVMFreshGen.freshLocalVar(nf, interfaceFuncType);
+                    LLVMConversion bitcast =
+                            nf.LLVMConversion(LLVMConversion.BITCAST,
+                                    castResult,
+                                    classFuncType,
+                                    loadResult,
+                                    interfaceFuncType);
+
+                    LLVMESeq eseqStore = nf.LLVMESeq(gepInterfaceDV, gepResultStore);
+                    LLVMStore store =
+                            nf.LLVMStore(interfaceFuncType, castResult, eseqStore);
+
+                    instrs.add(load);
+                    instrs.add(bitcast);
+                    instrs.add(store);
+                }
+            }
+            instrs.add(nf.LLVMRet());
+            LLVMFunction ctor =
+                    nf.LLVMFunction(PolyLLVMMangler.interfacesInitFunction(rt),
+                            new ArrayList<LLVMArgDecl>(),
+                            nf.LLVMVoidType(),
+                            nf.LLVMBlock(instrs));
+            ctorsFunctions.add(ctor);
+        }
+    }
+
     private void setupCtorsFunctions() {
         for (ClassDecl cd : classesVisited) {
 
@@ -323,71 +499,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
             }
 
-            if (cd.superClass() != null) {
-//                /*
-//                 * Call the superclass init function
-//                 */
-//                List<LLVMTypeNode> funcTypeArgs = CollectionUtil.list();
-//                LLVMTypeNode tn =
-//                        nf.LLVMFunctionType(funcTypeArgs, nf.LLVMVoidType());
-//                LLVMVariable function =
-//                        nf.LLVMVariable(PolyLLVMMangler.classInitFunction(cd.superClass()),
-//                                        tn,
-//                                        VarKind.GLOBAL);
-//                List<Pair<LLVMTypeNode, LLVMOperand>> args =
-//                        CollectionUtil.list();
-//                LLVMCall callSuperInit =
-//                        nf.LLVMCall(function, args, nf.LLVMVoidType());
-//                instrs.add(callSuperInit);
-//                calls.add(callSuperInit);
 
-                /*
-                 * Set up DV
-                 */
-                String superDvVar =
-                        PolyLLVMMangler.dispatchVectorVariable(cd.superClass());
-                LLVMTypeNode superDvType =
-                        PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this,
-                                                                             (ReferenceType) cd.superClass()
-                                                                                               .type());
-
-                LLVMVariable llvmSuperDvVar = nf.LLVMVariable(superDvVar,
-                                                              nf.LLVMPointerType(superDvType),
-                                                              VarKind.GLOBAL);
-
-                System.out.println("We got a super classsssss: "
-                        + cd.superClass());
-                List<LLVMTypedOperand> l = CollectionUtil.list(index0, index0);
-
-                LLVMVariable gepResult =
-                        PolyLLVMFreshGen.freshLocalVar(nf,
-                                                       nf.LLVMPointerType(nf.LLVMPointerType(nf.LLVMIntType(8))));
-
-                LLVMInstruction gep =
-                        nf.LLVMGetElementPtr(llvmDvVar, l).result(gepResult);
-
-                instrs.add(gep);
-
-                LLVMVariable bitcastResult =
-                        PolyLLVMFreshGen.freshLocalVar(nf,
-                                                       nf.LLVMPointerType(nf.LLVMIntType(8)));
-
-                LLVMTypeNode valueType = nf.LLVMPointerType(superDvType);
-                LLVMConversion bitcast =
-                        nf.LLVMConversion(LLVMConversion.BITCAST,
-                                          bitcastResult,
-                                          valueType,
-                                          llvmSuperDvVar,
-                                          nf.LLVMPointerType(nf.LLVMIntType(8)));
-                instrs.add(bitcast);
-
-                LLVMStore store =
-                        nf.LLVMStore(nf.LLVMPointerType(nf.LLVMIntType(8)),
-                                     bitcastResult,
-                                     gepResult);
-                instrs.add(store);
-
-            }
 
             for (int i = 0; i < layouts.part1().size(); i++) {
                 MethodInstance mi = layouts.part1().get(i);
@@ -579,6 +691,11 @@ public class PseudoLLVMTranslator extends NodeVisitor {
             }
             classesAdded.add(name);
 
+            // Do not add globals for interfaces
+            if(rt instanceof ParsedClassType && ((ParsedClassType) rt).flags().isInterface()){
+                return;
+            }
+
             // Class size.
             LLVMGlobalVarDeclaration classSizeDecl = nf.LLVMGlobalVarDeclaration(
                     PolyLLVMMangler.sizeVariable(rt),
@@ -598,6 +715,25 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     dvTypeVariable,
                     /* initValue */ null);
             globalSizes.add(dvSizeDecl);
+
+            // ITables
+            for(ReferenceType i :rt.interfaces()){
+                if (classesAdded.contains(i.toString() + rt.toString())) {
+                    return;
+                }
+                classesAdded.add(i.toString() + "_" +  rt.toString());
+
+                LLVMTypeNode interfaceTypeVariable =
+                        PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, i);
+                LLVMGlobalVarDeclaration itableDecl = nf.LLVMGlobalVarDeclaration(
+                        PolyLLVMMangler.InterfaceTableVariable(rt, i),
+                        isExtern,
+                        LLVMGlobalVarDeclaration.GLOBAL,
+                        interfaceTypeVariable,
+                    /* initValue */ null);
+                globalSizes.add(itableDecl);
+            }
+
         };
 
         // Parsed classes and their superclasses.
