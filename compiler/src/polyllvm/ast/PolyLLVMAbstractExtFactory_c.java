@@ -334,6 +334,31 @@ public abstract class PolyLLVMAbstractExtFactory_c extends AbstractExtFactory_c
     }
 
     @Override
+    public final Ext extLLVMCStringLiteral() {
+        Ext e = extLLVMCStringLiteralImpl();
+
+        ExtFactory nextEF = nextExtFactory();
+        Ext e2;
+        if (nextEF instanceof PolyLLVMExtFactory) {
+            e2 = ((PolyLLVMExtFactory) nextEF).extLLVMCStringLiteral();
+        }
+        else {
+            e2 = nextEF.extNode();
+        }
+        e = composeExts(e, e2);
+        return postExtLLVMCStringLiteral(e);
+    }
+
+    protected Ext extLLVMCStringLiteralImpl() {
+        return extNode();
+    }
+
+    protected Ext postExtLLVMCStringLiteral(Ext e) {
+        return postExtNode(e);
+    }
+
+
+    @Override
     public final Ext extLLVMFunctionType() {
         Ext e = extLLVMFunctionTypeImpl();
 

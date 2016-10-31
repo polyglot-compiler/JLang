@@ -65,6 +65,9 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     LLVMLabel LLVMLabel(String name);
 
+    LLVMCStringLiteral LLVMCStringLiteral(LLVMArrayType tn, String s);
+
+
     /*
      * LLVM Type Nodes
      */

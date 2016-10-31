@@ -226,6 +226,12 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     }
 
     @Override
+    public LLVMCStringLiteral LLVMCStringLiteral(LLVMArrayType tn, String s) {
+        LLVMCStringLiteral n = new LLVMCStringLiteral_c(Position.compilerGenerated(), tn, s, null);
+        return ext(n, extFactory().extLLVMCStringLiteral());
+    }
+
+    @Override
     public LLVMTypedOperand LLVMTypedOperand(LLVMOperand op, LLVMTypeNode tn) {
         LLVMTypedOperand n =
                 new LLVMTypedOperand_c(Position.compilerGenerated(),

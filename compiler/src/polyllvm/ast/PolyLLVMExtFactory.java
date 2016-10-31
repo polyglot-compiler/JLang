@@ -102,4 +102,6 @@ public interface PolyLLVMExtFactory extends ExtFactory {
     Ext extLLVMArrayType();
 
     Ext extLLVMBitwiseBinaryInstruction();
+
+    Ext extLLVMCStringLiteral();
 }
