@@ -116,10 +116,10 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
     LLVMFAdd LLVMFAdd(LLVMTypeNode tn, LLVMOperand left, LLVMOperand right);
 
     LLVMICmp LLVMICmp(LLVMVariable result, LLVMIntType returnType,
-            IConditionCode cc, LLVMIntType tn, LLVMOperand left,
+            IConditionCode cc, LLVMTypeNode tn, LLVMOperand left,
             LLVMOperand right);
 
-    LLVMICmp LLVMICmp(LLVMIntType returnType, IConditionCode cc, LLVMIntType tn,
+    LLVMICmp LLVMICmp(LLVMIntType returnType, IConditionCode cc, LLVMTypeNode tn,
             LLVMOperand left, LLVMOperand right);
 
     LLVMBr LLVMBr(LLVMTypedOperand cond, LLVMLabel trueLabel,

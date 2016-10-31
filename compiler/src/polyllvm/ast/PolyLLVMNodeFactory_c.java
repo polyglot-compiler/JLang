@@ -282,7 +282,7 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
 
     @Override
     public LLVMICmp LLVMICmp(LLVMVariable result, LLVMIntType returnType,
-            IConditionCode cc, LLVMIntType tn, LLVMOperand left,
+            IConditionCode cc, LLVMTypeNode tn, LLVMOperand left,
             LLVMOperand right) {
         LLVMICmp n =
                 new LLVMICmp_c(Position.compilerGenerated(),
@@ -299,7 +299,7 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     @Override
     public polyllvm.ast.PseudoLLVM.Statements.LLVMICmp LLVMICmp(
             LLVMIntType returnType, IConditionCode cc,
-            polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType tn, LLVMOperand left,
+            LLVMTypeNode tn, LLVMOperand left,
             LLVMOperand right) {
         LLVMICmp n = new LLVMICmp_c(Position.compilerGenerated(),
                                     returnType,

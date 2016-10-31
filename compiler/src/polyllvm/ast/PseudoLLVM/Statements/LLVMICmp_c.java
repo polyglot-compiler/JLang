@@ -8,18 +8,19 @@ import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 
 public class LLVMICmp_c extends LLVMCmp_c implements LLVMICmp {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     public LLVMICmp_c(Position pos, LLVMVariable result, LLVMIntType returnType,
-            IConditionCode cc, LLVMIntType tn, LLVMOperand left,
-            LLVMOperand right, Ext e) {
+                      IConditionCode cc, LLVMTypeNode tn, LLVMOperand left,
+                      LLVMOperand right, Ext e) {
         super(pos, result, returnType, cc, tn, left, right, e);
     }
 
     public LLVMICmp_c(Position pos, LLVMIntType returnType, IConditionCode cc,
-            LLVMIntType tn, LLVMOperand left, LLVMOperand right, Ext e) {
+                      LLVMTypeNode tn, LLVMOperand left, LLVMOperand right, Ext e) {
         super(pos, returnType, cc, tn, left, right, e);
     }
 
