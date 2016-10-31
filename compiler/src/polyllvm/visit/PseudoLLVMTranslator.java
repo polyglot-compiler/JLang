@@ -24,6 +24,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class PseudoLLVMTranslator extends NodeVisitor {
 
@@ -61,6 +62,11 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     @Override
     public NodeVisitor enter(Node n) {
         return lang().enterTranslatePseudoLLVM(n, this);
+    }
+
+    @Override
+    public Node override(Node n) {
+        return lang().overrideTranslatePseudoLLVM(n, this);
     }
 
     /**
@@ -123,21 +129,15 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         return isOverridden(m.methodInstance());
     }
 
-    private boolean isOverridden(MethodInstance methodInstance) {
+    public ReferenceType declaringType(MethodInstance methodInstance){
         List<MethodInstance> overrides = methodInstance.overrides();
-        List<ReferenceType> refTypes = new ArrayList<>();
-        for (MethodInstance mi : overrides) {
-            refTypes.add(mi.container());
-        }
-        ReferenceType highestSuperType =
-                Collections.max(refTypes, new Comparator<ReferenceType>() {
+        List<ReferenceType> refTypes = overrides.stream().map(MemberInstance::container).collect(Collectors.toList());
+        ReferenceType highestSuperType =Collections.max(refTypes, (o1, o2) -> o1.descendsFrom(o2) ? -1 : 1);
+        return highestSuperType;
+    }
 
-                    @Override
-                    public int compare(ReferenceType o1, ReferenceType o2) {
-                        return o1.descendsFrom(o2) ? -1 : 1;
-                    }
-                });
-        return !methodInstance.container().typeEquals(highestSuperType);
+    private boolean isOverridden(MethodInstance methodInstance) {
+        return !methodInstance.container().typeEquals(declaringType(methodInstance));
     }
 
     private void setupClassData() {

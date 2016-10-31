@@ -2,6 +2,7 @@ package polyllvm.extension;
 
 import polyglot.ast.*;
 import polyglot.types.MethodInstance;
+import polyglot.types.ParsedClassType;
 import polyglot.types.ReferenceType;
 import polyglot.types.Type;
 import polyglot.util.Pair;
@@ -54,6 +55,15 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         return n.arguments(args);
     }
 
+    private boolean isInterfaceCall(PseudoLLVMTranslator v){
+        Call n = (Call) node();
+        ReferenceType declaringType = v.declaringType(n.methodInstance());
+        if(declaringType instanceof ParsedClassType){
+            return ((ParsedClassType) declaringType).flags().isInterface();
+        }
+        return false;
+    }
+
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Call n = (Call) node();
@@ -61,6 +71,10 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         if (n.target() instanceof Special
                 && ((Special) n.target()).kind() == Special.SUPER) {
             translateSuperCall(v);
+        }
+        else if (n.target() instanceof Expr && isInterfaceCall(v)) {
+            System.out.println("INTERFACE DISPATCH WOOOOOOOO! (On: " + n + ")");
+            translateInterfaceMethodCall(v);
         }
         else if (n.target() instanceof Expr) {
             translateMethodCall(v);
@@ -236,5 +250,11 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                          nf.LLVMESeq(nf.LLVMSeq(instructions), pair.part2()));
 
     }
+
+    private void translateInterfaceMethodCall(PseudoLLVMTranslator v) {
+
+
+    }
+
 
 }

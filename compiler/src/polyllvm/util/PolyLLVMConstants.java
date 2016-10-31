@@ -16,4 +16,8 @@ public class PolyLLVMConstants {
      */
     public static int DISPATCH_VECTOR_OFFSET = 2;
 
+    /**
+     * The default size of the table for interfaces
+     */
+    public static int INTERFACE_TABLE_SIZE = 10;
 }
