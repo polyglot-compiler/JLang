@@ -18,8 +18,6 @@ public class PolyLLVMReturnExt extends PolyLLVMExt {
     public Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v) {
         Return n = (Return) node();
         NodeFactory nf = v.nodeFactory();
-        System.out.println("Is it breaking?    " + n);
-        System.out.println("Current method?     " + v.getCurrentMethod());
         if (v.getCurrentMethod() instanceof MethodDecl) {
             TypeNode returnType =
                     ((MethodDecl) v.getCurrentMethod()).returnType();

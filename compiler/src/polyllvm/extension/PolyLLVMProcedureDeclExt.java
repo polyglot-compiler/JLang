@@ -77,7 +77,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         }
         String name = PolyLLVMMangler.mangleProcedureName(pi);
         LLVMNode f;
-        if (pi.flags().contains(Flags.NATIVE)) {
+        if (pi.flags().contains(Flags.NATIVE) || pi.flags().contains(Flags.ABSTRACT)) {
             f = nf.LLVMFunctionDeclaration(name, args, retType);
         }
         else {

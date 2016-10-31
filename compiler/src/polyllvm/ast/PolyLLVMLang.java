@@ -17,6 +17,8 @@ public interface PolyLLVMLang extends JLang {
 
     Node translatePseudoLLVM(Node n, PseudoLLVMTranslator v);
 
+    Node overrideTranslatePseudoLLVM(Node n, PseudoLLVMTranslator pseudoLLVMTranslator);
+
     Node translatePseudoLLVMConditional(Node n, PseudoLLVMTranslator v,
             LLVMLabel trueLabel, LLVMLabel falseLabel);
 

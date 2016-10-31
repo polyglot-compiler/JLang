@@ -1,7 +1,10 @@
 package polyllvm.extension;
 
 import polyglot.ast.ClassDecl;
+import polyglot.ast.ClassDecl_c;
 import polyglot.ast.Node;
+import polyglot.types.Flags;
+import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.PseudoLLVMTranslator;
@@ -24,4 +27,14 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         return super.translatePseudoLLVM(v);
     }
 
+
+    @Override
+    public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+        ClassDecl n = (ClassDecl) node();
+        if(n.flags().isInterface()){
+            return n;
+        }
+        return super.overrideTranslatePseudoLLVM(v);
+
+    }
 }

@@ -154,7 +154,6 @@ public class PolyLLVMTypeUtils {
                 .LLVMPointerType(v.nodeFactory().LLVMIntType(8)));
         typeList.add(v.nodeFactory()
                 .LLVMPointerType(v.nodeFactory().LLVMIntType(8)));
-//        typeList.add(polyLLVMDispatchVectorVariableType(v,));
         for (int i = 0; i < layout.size(); i++) {
             PolyLLVMNodeFactory nf = v.nodeFactory();
             LLVMTypeNode classTypePointer =

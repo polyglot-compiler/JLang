@@ -18,6 +18,8 @@ public interface PolyLLVMOps extends NodeOps {
 
     Node translatePseudoLLVM(PseudoLLVMTranslator v);
 
+    Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v);
+
     Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
             LLVMLabel trueLabel, LLVMLabel falseLabel);
 
