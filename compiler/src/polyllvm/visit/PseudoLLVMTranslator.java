@@ -1021,6 +1021,17 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         return ListUtil.copy(calls, false);
     }
 
+    /* Keep track of which static variables are referenced. */
+    private Map<String, LLVMGlobalVarDeclaration> referencedStaticVars = new HashMap<>();
+
+    public void addStaticVarReferenced(String name, LLVMGlobalVarDeclaration var) {
+        referencedStaticVars.put(name, var);
+    }
+
+    public Collection<LLVMGlobalVarDeclaration> getReferencedStaticVars() {
+        return referencedStaticVars.values();
+    }
+
     /**
      * Get the reference type of the runtime class {@code Array}
      */

@@ -32,6 +32,11 @@ public class LLVMGlobalVarDeclaration_c extends LLVMGlobalDeclaration_c
     }
 
     @Override
+    public String name() {
+        return name;
+    }
+
+    @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
         w.write("@");
         w.write(name);

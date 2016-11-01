@@ -276,4 +276,16 @@ public class LLVMSourceFile_c extends LLVMNode_c implements LLVMSourceFile {
         return false;
     }
 
+    @Override
+    public boolean containsGlobalVar(LLVMGlobalVarDeclaration globalVarDeclaration) {
+        for (LLVMGlobalDeclaration decl : globals) {
+            if (decl instanceof LLVMGlobalVarDeclaration) {
+                if (((LLVMGlobalVarDeclaration) decl).name().equals(globalVarDeclaration.name())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
 }

@@ -59,6 +59,12 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
             }
         }
 
+        for (LLVMGlobalVarDeclaration var : v.getReferencedStaticVars()) {
+            if (!llf.containsGlobalVar(var)) {
+                llf = llf.appendGlobal(var);
+            }
+        }
+
         return llf;
     }
 }
