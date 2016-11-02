@@ -92,7 +92,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         List<LLVMInstruction> instructions = new ArrayList<>();
 
         String mangledFuncName =
-                PolyLLVMMangler.mangleMethodName(n.methodInstance());
+                PolyLLVMMangler.mangleProcedureName(n.methodInstance());
         LLVMTypeNode tn =
                 PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf,
                                                            n.methodInstance()
@@ -133,7 +133,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                                                          superMethod.formalTypes(),
                                                          superMethod.returnType());
         LLVMVariable superMethodPtr =
-                nf.LLVMVariable(PolyLLVMMangler.mangleMethodName(superMethod),
+                nf.LLVMVariable(PolyLLVMMangler.mangleProcedureName(superMethod),
                                 superMethodType,
                                 LLVMVariable.VarKind.GLOBAL);
 

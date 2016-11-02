@@ -18,8 +18,6 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.*;
 import polyllvm.util.*;
 
-import java.lang.ref.Reference;
-import java.lang.reflect.Method;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
@@ -463,7 +461,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
             Pair<List<MethodInstance>, List<FieldInstance>> layouts =
                     layouts(cd.type());
 
-            String dvVar = PolyLLVMMangler.dispatchVectorVariable(cd);
+            String dvVar = PolyLLVMMangler.dispatchVectorVariable(cd.type().toReference());
             LLVMTypeNode dvType =
                     PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this,
                                                                          cd.type());
@@ -532,7 +530,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
                     LLVMStore store =
                             nf.LLVMStore(funcType,
-                                         nf.LLVMVariable(PolyLLVMMangler.mangleMethodName(overridenMethod),
+                                         nf.LLVMVariable(PolyLLVMMangler.mangleProcedureName(overridenMethod),
                                                          funcType,
                                                          VarKind.GLOBAL),
                                          eseq);
@@ -559,7 +557,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                                                                      newMethod.returnType());
                     LLVMStore store =
                             nf.LLVMStore(funcType,
-                                         nf.LLVMVariable(PolyLLVMMangler.mangleMethodName(newMethod),
+                                         nf.LLVMVariable(PolyLLVMMangler.mangleProcedureName(newMethod),
                                                          funcType,
                                                          LLVMVariable.VarKind.GLOBAL),
                                          eseq);
@@ -795,8 +793,8 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         }
 
         // Opaque class type.
-        classTypes.putIfAbsent("class.java.lang.String", null);
-        classTypes.putIfAbsent("class.java.lang.Class", null);
+        classTypes.putIfAbsent("class.java_lang_String", null);
+        classTypes.putIfAbsent("class.java_lang_Class", null);
     }
 
     private HashSet<ReferenceType> classesUsed = new HashSet<>();

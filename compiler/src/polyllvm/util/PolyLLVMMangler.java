@@ -3,44 +3,92 @@ package polyllvm.util;
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Field;
 import polyglot.ast.FieldDecl;
-import polyglot.ast.TypeNode;
-import polyglot.frontend.goals.Parsed;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 
 public class PolyLLVMMangler {
-    private static final String JAVA_PREFIX = "_J_";
-    private static final String STATIC_STR = "_static_";
+    private static final String JAVA_PREFIX        = "Java";
+    private static final String ENV_PREFIX         = "Env";
+    private static final String CLASS_TYPE_STR     = "class";
+    private static final String INTERFACE_TYPE_STR = "interface";
+    private static final String DV_TYPE_STR        = "dv";
+    private static final String IT_DV_TYPE_STR     = "ittable";
+    private static final String SIZE_STR           = "size";
+    private static final String DV_STR             = "dv";
+    private static final String CLASS_INIT_STR     = "init";
+    private static final String IT_INIT_STR        = "it_init";
+    private static final String IT_STR_STR         = "ittype";
+
+    // From the JNI API.
+    private static final String UNDERSCORE_ESCAPE = "_1";
+    private static final String SEMICOLON_ESCAPE  = "_2";
+    private static final String BRACKET_ESCAPE    = "_3";
+
+    /**
+     * To facilitate JNI support, we mangle types as specified in the JNI API.
+     * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/types.html#type_signatures
+     * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names
+     */
+    private static String typeSignature(Type type) {
+        if      (type.isBoolean()) return "Z";
+        else if (type.isByte())    return "B";
+        else if (type.isChar())    return "C";
+        else if (type.isShort())   return "S";
+        else if (type.isInt())     return "I";
+        else if (type.isLong())    return "J";
+        else if (type.isFloat())   return "F";
+        else if (type.isDouble())  return "D";
+        else if (type.isArray()) {
+            return BRACKET_ESCAPE + typeSignature(type.toArray().base());
+        }
+        else if (type.isReference()) {
+            return "L" + mangleQualifiedName(type.toReference()) + SEMICOLON_ESCAPE;
+        }
+        else {
+            throw new InternalCompilerError("Unsupported type for mangling: " + type);
+        }
+    }
+
+    private static String argumentSignature(ProcedureInstance pi) {
+        StringBuilder sb = new StringBuilder();
+        for (Type t : pi.formalTypes()) {
+            sb.append(typeSignature(t));
+        }
+        return sb.toString();
+    }
+
+    private static String mangleName(String name) {
+        return name.replace("_", UNDERSCORE_ESCAPE);
+    }
+
+    private static String mangleQualifiedName(ReferenceType classType) {
+        String base = classType.isArray() ? "support.Array" : classType.toString();
+        return mangleName(base).replace(".", "_");
+    }
+
+    private static String mangleProcedureName(ProcedureInstance pi,
+                                              ReferenceType receiver,
+                                              String procedureName) {
+        return JAVA_PREFIX + "_" + mangleQualifiedName(receiver) + "_"
+                + mangleName(procedureName) + "__" + argumentSignature(pi);
+    }
 
     public static String mangleProcedureName(ProcedureInstance pi) {
         if (pi instanceof MethodInstance) {
-            return mangleMethodName((MethodInstance) pi);
+            MethodInstance mi = (MethodInstance) pi;
+            return mangleProcedureName(mi, mi.container(), mi.name());
         }
         else if (pi instanceof ConstructorInstance) {
-            return mangleConstructorName((ConstructorInstance) pi);
+            ConstructorInstance ci = (ConstructorInstance) pi;
+            return mangleProcedureName(ci, ci.container(), ci.container().toClass().name());
         }
         else {
             throw new InternalCompilerError("Unknown procedure type: " + pi);
         }
     }
 
-    public static String mangleMethodName(MethodInstance mi) {
-        ReferenceType container = mi.container();
-
-        StringBuilder sb = new StringBuilder(JAVA_PREFIX);
-        sb.append(container.toString().length());
-        sb.append(container.toString());
-        sb.append("_");
-        sb.append(mi.name().length());
-        sb.append(mi.name());
-        if (mi.formalTypes().isEmpty()) {
-            sb.append("_void");
-        }
-        for (Type t : mi.formalTypes()) {
-            sb.append(mangleFormalType(t));
-        }
-
-        return sb.toString();//"_" + container.toString() + "_" + mi.name();
+    private static String mangleStaticFieldName(ReferenceType classType, String fieldName) {
+        return JAVA_PREFIX + "_" + mangleQualifiedName(classType) + "_" + mangleName(fieldName);
     }
 
     public static String mangleStaticFieldName(Field f) {
@@ -51,85 +99,12 @@ public class PolyLLVMMangler {
         return mangleStaticFieldName(classType, f.name());
     }
 
-    private static String mangleStaticFieldName(ReferenceType classType, String fieldName) {
-        String className = classTypeName(classType);
-        return JAVA_PREFIX + STATIC_STR + className + "_" + fieldName;
-    }
-
-    private static String mangleConstructorName(ConstructorInstance ci) {
-        ReferenceType container = ci.container();
-        StringBuilder sb = new StringBuilder(JAVA_PREFIX);
-        sb.append(container.toString().length());
-        sb.append(container.toString());
-        sb.append("__constructor_");
-
-        if (ci.formalTypes().isEmpty()) {
-            sb.append("_void");
-        }
-        for (Type t : ci.formalTypes()) {
-            sb.append(mangleFormalType(t));
-        }
-        return sb.toString();
-    }
-
-    private static String mangleFormalType(Type t) {
-        StringBuilder sb = new StringBuilder();
-        if (t.isArray()) {
-            sb.append("_a");
-            sb.append(mangleFormalType(t.toArray().base()));
-        }
-        else if (t.isReference()) {
-            sb.append("_");
-            sb.append(t.toString().length());
-            sb.append(t.toString());
-        }
-        else if (t.isLongOrLess()) {
-            sb.append("_i");
-            sb.append(PolyLLVMTypeUtils.numBitsOfIntegralType(t));
-        }
-        else if (t.isBoolean()) {
-            sb.append("_b");
-        }
-        else if (t.isFloat()) {
-            sb.append("_f");
-
-        }
-        else if (t.isDouble()) {
-            sb.append("_d");
-
-        }
-        else {
-            throw new InternalCompilerError("Type " + t
-                    + " is not properly supported");
-        }
-        return sb.toString();
-    }
-
-    public static String sizeVariable(ClassDecl n) {
-        return sizeVariable(n.type());
-    }
-
-    public static String sizeVariable(TypeNode superClass) {
-        return sizeVariable(superClass.type().toReference());
-    }
-
     public static String sizeVariable(ReferenceType superClass) {
-        String className = superClass.isArray() ? "class.support.Array" : superClass.toString();
-        return JAVA_PREFIX + "size_" + className.length() + className;
-    }
-
-    public static String dispatchVectorVariable(ClassDecl n) {
-        return dispatchVectorVariable(n.type());
-    }
-
-    public static String dispatchVectorVariable(TypeNode n) {
-        return dispatchVectorVariable((ReferenceType) n.type());
+        return ENV_PREFIX + "_" + mangleQualifiedName(superClass) + "_" + SIZE_STR;
     }
 
     public static String dispatchVectorVariable(ReferenceType rt) {
-        String className = rt.isArray() ? "class.support.Array" : rt.toString();
-        String prefix = JAVA_PREFIX + "dv_";
-        return prefix + className.length() + className;
+        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + DV_STR;
     }
 
     public static String InterfaceTableVariable(ReferenceType rt, ReferenceType i ) {
@@ -139,59 +114,44 @@ public class PolyLLVMMangler {
         }
         String interfaceName =  i.toString();
         String className =  rt.toString();
-        return JAVA_PREFIX + "it_" + interfaceName.length() + interfaceName + "_" + className.length() + className;
+        return ENV_PREFIX + "it_" + interfaceName.length() + interfaceName + "_" + className.length() + className;
     }
 
     public static String classTypeName(ClassDecl cd) {
-        return classTypeName(cd.type());//"class." + cd.name();
-
-    }
-
-    public static String classTypeName(TypeNode superClass) {
-        return classTypeName((ReferenceType) superClass.type());//"class." + superClass.name();
+        return classTypeName(cd.type());
     }
 
     public static String classTypeName(ReferenceType rt) {
-        String className = rt.isArray() ? "class.support.Array" : rt.toString();
-        if(rt instanceof ParsedClassType){
-            return (((ParsedClassType) rt).flags().isInterface() ? "interface." : "class.") + className;
+        String className = mangleQualifiedName(rt);
+        if (rt instanceof  ParsedClassType && ((ParsedClassType) rt).flags().isInterface()) {
+            return INTERFACE_TYPE_STR + "." + className;
+        } else {
+            return CLASS_TYPE_STR + "." + className;
         }
-        return "class." + className;
-    }
-
-    public static String dispatchVectorTypeName(ClassDecl cd) {
-        return dispatchVectorTypeName(cd.type());//"dv." + cd.type().toString();
-    }
-
-    public static String dispatchVectorTypeName(TypeNode superClass) {
-        return dispatchVectorTypeName((ReferenceType) superClass.type());//"dv." + superClass.name();
     }
 
     public static String dispatchVectorTypeName(ReferenceType rt) {
-        String className = rt.isArray() ? "class.support.Array" : rt.toString();
-        if(rt instanceof ParsedClassType){
-            return (((ParsedClassType) rt).flags().isInterface() ? "itable." : "dv.") + className;
+        String className = mangleQualifiedName(rt);
+        if (rt instanceof ParsedClassType && ((ParsedClassType) rt).flags().isInterface()){
+            return IT_DV_TYPE_STR + "." + className;
+        } else {
+            return DV_TYPE_STR + "." + className;
         }
-        return "dv." + className;
     }
 
     public static String classInitFunction(ClassDecl n) {
         return classInitFunction(n.type());
     }
 
-    public static String classInitFunction(TypeNode n) {
-        return classInitFunction(n.type().toReference());
-    }
-
-    public static String classInitFunction(ReferenceType n) {
-        return JAVA_PREFIX + "init_" + n.toString().length() + n.toString();
+    public static String classInitFunction(ReferenceType rt) {
+        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + CLASS_INIT_STR;
     }
 
     public static String interfacesInitFunction(ReferenceType rt) {
-        return JAVA_PREFIX + "it_init_" + rt.toString().length() + rt.toString();
+        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IT_INIT_STR;
     }
 
-    public static String interfaceStringVariable(ReferenceType it) {
-        return JAVA_PREFIX + "itype_" + it.toString().length() + it.toString();
+    public static String interfaceStringVariable(ReferenceType rt) {
+        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IT_STR_STR;
     }
 }

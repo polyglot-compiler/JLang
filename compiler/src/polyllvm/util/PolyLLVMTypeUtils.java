@@ -16,8 +16,7 @@ import java.util.List;
 
 public class PolyLLVMTypeUtils {
 
-    public static LLVMTypeNode polyLLVMTypeNode(PolyLLVMNodeFactory nf,
-            Type t) {
+    public static LLVMTypeNode polyLLVMTypeNode(PolyLLVMNodeFactory nf, Type t) {
         if (t.isByte()) {
             return nf.LLVMIntType(8);
         }
@@ -45,12 +44,12 @@ public class PolyLLVMTypeUtils {
         else if (t.isArray()) {
             ArrayType arrayType = t.toArray();
             if (arrayType.base().isReference()) {
-                String classTypeName = "class.support.Array";
+                String classTypeName = "class.support_Array";
                 return nf.LLVMPointerType(nf.LLVMVariableType(classTypeName));
             }
             else if (arrayType.base().isPrimitive()) {
                 //TODO : Change to depend on primitive type
-                String classTypeName = "class.support.Array";
+                String classTypeName = "class.support_Array";
                 return nf.LLVMPointerType(nf.LLVMVariableType(classTypeName));
 
             }
@@ -60,10 +59,8 @@ public class PolyLLVMTypeUtils {
             }
         }
         else if (t.isClass()) {
-            String classTypeName =
-                    PolyLLVMMangler.classTypeName((ReferenceType) t);
+            String classTypeName = PolyLLVMMangler.classTypeName(t.toReference());
             return nf.LLVMPointerType(nf.LLVMVariableType(classTypeName));
-            // return nf.LLVMPointerType(nf.LLVMVariableType("class." + t.toString()));
         }
         else if (t.isNull()) {
             //TODO: Figure out something better
@@ -143,9 +140,6 @@ public class PolyLLVMTypeUtils {
         return polyLLVMDispatchVectorType(v, cd.type());
     }
 
-    /**
-     *
-     */
     public static LLVMTypeNode polyLLVMDispatchVectorType(
             PseudoLLVMTranslator v, ReferenceType type) {
         List<MethodInstance> layout = v.layouts(type).part1();
