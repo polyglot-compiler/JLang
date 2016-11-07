@@ -23,6 +23,7 @@ import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class PseudoLLVMTranslator extends NodeVisitor {
 
@@ -166,6 +167,8 @@ public class PseudoLLVMTranslator extends NodeVisitor {
      */
     public Pair<List<MethodInstance>, List<FieldInstance>> layouts(
             ReferenceType rt) {
+        //TODO: for interfaces add super interfaces in BFS (OR Something better)
+
         if (layouts.containsKey(rt.toString())) {
             return layouts.get(rt.toString());
         }
@@ -341,7 +344,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     LLVMVariable nextItCast = PolyLLVMFreshGen.freshLocalVar(nf, bytePointerType);
                     LLVMConversion bitcast =
                             nf.LLVMConversion(LLVMConversion.BITCAST, nextItCast,
-                                    nextItType, llvmNextItVar, bytePointerType);
+                                    nf.LLVMPointerType(nextItType), llvmNextItVar, bytePointerType);
 
 
                     LLVMStore store = nf.LLVMStore(bytePointerType, nextItCast, iTableNextPtr);
@@ -981,10 +984,8 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         return pair.part2().part2();
     }
 
-    public int getMethodIndex(ReferenceType type,
-            MethodInstance methodInstance) {
+    public int getMethodIndex(ReferenceType type, MethodInstance methodInstance) {
         List<MethodInstance> methodLayout = layouts(type).part1();
-
         for (int i = 0; i < methodLayout.size(); i++) {
             if (methodLayout.get(i).isSameMethod(methodInstance)) {
                 return i + PolyLLVMConstants.DISPATCH_VECTOR_OFFSET;
