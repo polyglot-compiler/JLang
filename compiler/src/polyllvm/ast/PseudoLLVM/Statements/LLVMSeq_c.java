@@ -2,10 +2,7 @@ package polyllvm.ast.PseudoLLVM.Statements;
 
 import polyglot.ast.Ext;
 import polyglot.ast.Node;
-import polyglot.util.CodeWriter;
-import polyglot.util.InternalCompilerError;
-import polyglot.util.Position;
-import polyglot.util.SerialVersionUID;
+import polyglot.util.*;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
@@ -52,6 +49,10 @@ public class LLVMSeq_c extends LLVMInstruction_c implements LLVMSeq {
         n = copyIfNeeded(n);
         n.instructions = is;
         return n;
+    }
+
+    public List<LLVMInstruction> instructions(){
+        return ListUtil.copy(instructions, false);
     }
 
     @Override

@@ -1,5 +1,7 @@
 package polyllvm.ast.PseudoLLVM.Statements;
 
-public interface LLVMSeq extends LLVMInstruction {
+import java.util.List;
 
+public interface LLVMSeq extends LLVMInstruction {
+    public List<LLVMInstruction> instructions();
 }
