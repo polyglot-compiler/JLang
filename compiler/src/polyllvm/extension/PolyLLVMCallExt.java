@@ -5,13 +5,18 @@ import polyglot.types.MethodInstance;
 import polyglot.types.ParsedClassType;
 import polyglot.types.ReferenceType;
 import polyglot.types.Type;
+import polyglot.util.CollectionUtil;
 import polyglot.util.Pair;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMIntLiteral;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
@@ -73,7 +78,6 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
             translateSuperCall(v);
         }
         else if (n.target() instanceof Expr && isInterfaceCall(v)) {
-            System.out.println("INTERFACE DISPATCH WOOOOOOOO! (On: " + n + ")");
             translateInterfaceMethodCall(v);
         }
         else if (n.target() instanceof Expr) {
@@ -252,7 +256,65 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
     }
 
     private void translateInterfaceMethodCall(PseudoLLVMTranslator v) {
+        Call n = (Call) node();
+        PolyLLVMNodeFactory nf = v.nodeFactory();
+        List<LLVMInstruction> instructions = new ArrayList<>();
+        LLVMPointerType bytePointerType = nf.LLVMPointerType(nf.LLVMIntType(8));
 
+        ReferenceType referenceType = (ReferenceType) n.target().type();
+        LLVMOperand thisTranslation =
+                (LLVMOperand) v.getTranslation(n.target());
+        LLVMTypeNode thisType =
+                PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.target().type());
+        LLVMTypeNode functionPtrType =
+                PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                        referenceType,
+                        n.methodInstance()
+                                .formalTypes(),
+                        n.methodInstance()
+                                .returnType());
+
+        int methodIndex = v.getMethodIndex(referenceType, n.methodInstance());
+
+        LLVMArrayType arrayType = nf.LLVMArrayType(nf.LLVMIntType(8), referenceType.toString().length() + 1);
+        LLVMVariable interfaceStringPtr = nf.LLVMVariable(PolyLLVMMangler.interfaceStringVariable(referenceType),
+                nf.LLVMPointerType(arrayType), VarKind.GLOBAL);
+        LLVMVariable interfaceStringBytePointer =
+                PolyLLVMFreshGen.freshNamedLocalVar(nf, "interface_string", bytePointerType);
+        LLVMInstruction toBytePtr =
+                PolyLLVMFreshGen.freshGetElementPtr(nf,interfaceStringBytePointer,interfaceStringPtr,0,0);
+
+        LLVMVariable thisBytePointer =
+                PolyLLVMFreshGen.freshLocalVar(nf, bytePointerType);
+        LLVMConversion castThisBytePointer = nf.LLVMConversion(LLVMConversion.BITCAST, thisBytePointer,
+                thisType, thisTranslation, bytePointerType);
+
+        //void* __getInterfaceMethod(jobject* o, char* interface_string, int methodIndex)
+        List<LLVMTypeNode> argumentTypes = CollectionUtil.list(bytePointerType, bytePointerType, nf.LLVMIntType(32));
+        LLVMFunctionType getInterfaceMethodFunctionType = nf.LLVMFunctionType(argumentTypes, bytePointerType);
+        List<Pair<LLVMTypeNode, LLVMOperand>> argsGetMethod = CollectionUtil.list(
+                new Pair<>(bytePointerType, nf.LLVMESeq(castThisBytePointer, thisBytePointer)),
+                new Pair<>(bytePointerType, nf.LLVMESeq(toBytePtr,interfaceStringBytePointer)),
+                new Pair<>(nf.LLVMIntType(32), nf.LLVMIntLiteral(nf.LLVMIntType(32),methodIndex)));
+        LLVMVariable functionPtrTemp =
+                PolyLLVMFreshGen.freshLocalVar(nf, bytePointerType);
+        LLVMCall getInterfaceMethod = nf.LLVMCall(
+                nf.LLVMVariable("__getInterfaceMethod", getInterfaceMethodFunctionType, VarKind.GLOBAL),
+                argsGetMethod, bytePointerType).result(functionPtrTemp);
+        v.addStaticCall(getInterfaceMethod);
+
+        LLVMVariable functionPtr =
+                PolyLLVMFreshGen.freshLocalVar(nf, functionPtrType);
+        LLVMConversion bitcast = nf.LLVMConversion(LLVMConversion.BITCAST, functionPtr, bytePointerType,
+                nf.LLVMESeq(getInterfaceMethod, functionPtrTemp), functionPtrType);
+        instructions.add(bitcast);
+
+        List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
+                setupArguments(v, n, nf, thisTranslation, thisType);
+        Pair<LLVMCall, LLVMVariable> pair =
+                setupCall(v, n, nf, functionPtr, arguments, true);
+        instructions.add(pair.part1());
+        v.addTranslation(n, nf.LLVMESeq(nf.LLVMSeq(instructions), pair.part2()));
 
     }
 
