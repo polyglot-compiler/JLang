@@ -50,5 +50,4 @@ public class Object {
     public final void wait() throws InterruptedException {
         // TODO
     }
-
 }

@@ -4,7 +4,7 @@
 #               .lll (linked LLVM IR), .s (ASM), .binary (executable), etc.
 # `make sol` to generate solution (.sol) files.
 # `make llvmir` to compile all programs down to LLVM IR (.ll) files.
-# `make output` to compile LLVM IR to executable files and produce program 
+# `make output` to compile LLVM IR to executable files and produce program
 #               output (.output) files.
 
 # Uses absolute paths to llvm commands, because Java's ProcessBuilder will

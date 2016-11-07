@@ -14,6 +14,8 @@ public interface LLVMGlobalVarDeclaration extends LLVMGlobalDeclaration {
         }
     }
 
+    String name();
+
     public static final GlobalVariableKind GLOBAL =
             new GlobalVariableKind("global");
     public static final GlobalVariableKind CONSTANT =

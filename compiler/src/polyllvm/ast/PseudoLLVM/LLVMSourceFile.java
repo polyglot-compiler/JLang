@@ -33,4 +33,6 @@ public interface LLVMSourceFile extends LLVMNode {
 
     boolean containsFunction(LLVMFunctionDeclaration functionDeclaration);
 
+    boolean containsGlobalVar(LLVMGlobalVarDeclaration globalVarDeclaration);
+
 }

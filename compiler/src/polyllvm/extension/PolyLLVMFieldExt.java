@@ -11,6 +11,7 @@ import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
+import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMLoad;
@@ -40,6 +41,14 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
             LLVMVariable var = PolyLLVMFreshGen.freshLocalVar(nf, fieldTypeNode);
             LLVMInstruction load = nf.LLVMLoad(var, fieldTypeNode, ptr);
             v.addTranslation(n, nf.LLVMESeq(load, var));
+
+            LLVMGlobalVarDeclaration externDecl = nf.LLVMGlobalVarDeclaration(
+                    mangledGlobalName,
+                    /* isExtern */ true,
+                    LLVMGlobalVarDeclaration.GLOBAL,
+                    fieldTypeNode,
+                    /* initValue */ null);
+            v.addStaticVarReferenced(mangledGlobalName, externDecl);
         }
         else {
             // Instance fields.

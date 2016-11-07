@@ -24,7 +24,7 @@ public class PolyLLVMClassBodyExt extends PolyLLVMExt {
         List<LLVMGlobalDeclaration> globals = new ArrayList<>();
 
         for (ClassMember cm : n.members()) {
-            if (cm instanceof ProcedureDecl && !((ProcedureDecl) cm).flags().isNative()) {
+            if (cm instanceof ProcedureDecl) {
                 ProcedureDecl pd = (ProcedureDecl) cm;
                 if (pd.flags().isNative() || pd.flags().isAbstract()) {
                     // Native or Abstract procedure declarations.
