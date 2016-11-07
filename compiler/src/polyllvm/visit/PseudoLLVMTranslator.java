@@ -372,21 +372,21 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     interfacesAdded.add(it);
                 }
 
-                LLVMVariable typeStringCast = PolyLLVMFreshGen.freshLocalVar(nf, bytePointerType);
                 LLVMVariable stringTypeGlobal = nf.LLVMVariable(
                             PolyLLVMMangler.interfaceStringVariable(it),
                             nf.LLVMPointerType(stringType), VarKind.GLOBAL);
-                LLVMConversion castString =
-                        nf.LLVMConversion(LLVMConversion.BITCAST, typeStringCast,
-                                nf.LLVMPointerType(stringType), stringTypeGlobal, bytePointerType);
 
+                LLVMVariable interfaceStringBytePointer =
+                        PolyLLVMFreshGen.freshNamedLocalVar(nf, "interface_string", bytePointerType);
+                LLVMInstruction toBytePtr =
+                        PolyLLVMFreshGen.freshGetElementPtr(nf,interfaceStringBytePointer,stringTypeGlobal,0,0);
 
                 LLVMVariable res = PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMPointerType(bytePointerType));
                 LLVMGetElementPtr gepITable = PolyLLVMFreshGen.freshGetElementPtr(nf, res, llvmItVar, 0, 1);
 
-                LLVMStore storeTypeString = nf.LLVMStore(bytePointerType, typeStringCast, res);
+                LLVMStore storeTypeString = nf.LLVMStore(bytePointerType, interfaceStringBytePointer, res);
 
-                instrs.add(castString);
+                instrs.add(toBytePtr);
                 instrs.add(gepITable);
                 instrs.add(storeTypeString);
 
