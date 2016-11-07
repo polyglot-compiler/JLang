@@ -42,6 +42,8 @@ output: $(OUTPUT)
 
 check: $(CHECK)
 
+polyllvmc:
+	ant -f "../../build.xml" jar
 
 %.class: %.java
 	javac -classpath $(RUNTIME)/classes $<
