@@ -188,17 +188,21 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         List<MethodInstance> dvLayout = new ArrayList<>();
         List<FieldInstance> objLayout = new ArrayList<>();
 
-        ReferenceType superClass = rt;
-        while (superClass != null) {
+        if(isInterface(rt)){
+            dvLayout = interfaceLayout(rt);
+        } else {
+            ReferenceType superClass = rt;
+            while (superClass != null) {
 //            if (superClass.toString().equals("java.lang.Object")) {
 //                break;
 //            }
-            Pair<List<MethodInstance>, List<FieldInstance>> pair =
-                    nonOverriddenClassMembers(superClass);
-            dvLayout.addAll(0, pair.part1());
-            objLayout.addAll(0, pair.part2());
+                Pair<List<MethodInstance>, List<FieldInstance>> pair =
+                        nonOverriddenClassMembers(superClass);
+                dvLayout.addAll(0, pair.part1());
+                objLayout.addAll(0, pair.part2());
 
-            superClass = (ReferenceType) superClass.superType();
+                superClass = (ReferenceType) superClass.superType();
+            }
         }
 
         Pair<List<MethodInstance>, List<FieldInstance>> result =
@@ -210,6 +214,16 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 //        }
         return result;
     }
+
+    public List<MethodInstance> interfaceLayout(ReferenceType rt) {
+        List<MethodInstance> dvLayout = new ArrayList<>(nonOverriddenClassMembers(rt).part1());
+        List<? extends ReferenceType> superTypes = rt.interfaces();
+        for (ReferenceType superType: superTypes) {
+             dvLayout.addAll(0, interfaceLayout(superType));
+        }
+        return dvLayout;
+    }
+
 
     private Pair<List<MethodInstance>, List<FieldInstance>> nonOverriddenClassMembers(
             ReferenceType rt) {
