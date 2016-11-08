@@ -16,6 +16,13 @@ public class UnaryOperations {
         Print.println(~10);
         Print.println(~100);
 
+
+        int y = 0;
+        Print.println((y++) + (++y));
+        Print.println(y);
+        Print.println((y--) + (--y));
+        Print.println(y);
+
         println(!true);
         println(!false);
 
