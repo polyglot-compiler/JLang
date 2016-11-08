@@ -304,6 +304,15 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         return new Triple<>(dvMethods, dvOverridenMethods, fields);
     }
 
+    private List<ReferenceType> allInterfaces(ReferenceType rt){
+        List<ReferenceType> interfaces = new ArrayList<>();
+        for (ReferenceType superType : rt.interfaces()) {
+            interfaces.addAll(allInterfaces(superType));
+            interfaces.add(superType);
+        }
+        return interfaces;
+    }
+
     private void setupItables(){
         LLVMPointerType bytePointerType = nf.LLVMPointerType(nf.LLVMIntType(8));
         HashSet<ReferenceType> interfacesAdded = new HashSet<>();
@@ -324,8 +333,10 @@ public class PseudoLLVMTranslator extends NodeVisitor {
             calls.add(callClassInit);
 
 
-            for (int j = 0; j< rt.interfaces().size(); j++){
-                ReferenceType it = rt.interfaces().get(j);
+            List<? extends ReferenceType> interfaces = allInterfaces(rt);
+            System.out.println("Interfaces of "+ rt + ": " + interfaces);
+            for (int j = 0; j< interfaces.size(); j++){
+                ReferenceType it = interfaces.get(j);
                 String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(rt, it);
                 LLVMTypeNode itType =
                         PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, it);
@@ -359,8 +370,8 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                 //Setup as Linked List
                 LLVMVariable iTableNextPtr = PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMPointerType(bytePointerType));
                 LLVMGetElementPtr gep = PolyLLVMFreshGen.freshGetElementPtr(nf, iTableNextPtr, llvmItVar, 0, 0);
-                if(j != rt.interfaces().size()-1){
-                    ReferenceType nextIt = rt.interfaces().get(j + 1);
+                if(j != interfaces.size()-1){
+                    ReferenceType nextIt = interfaces.get(j + 1);
                     String nextITableVar = PolyLLVMMangler.InterfaceTableVariable(rt, nextIt);
                     LLVMTypeNode nextItType = PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, nextIt);
                     LLVMVariable llvmNextItVar = nf.LLVMVariable(nextITableVar,
@@ -744,7 +755,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
             globalSizes.add(dvSizeDecl);
 
             // ITables
-            for(ReferenceType i :rt.interfaces()){
+            for(ReferenceType i :allInterfaces(rt)){
                 if (classesAdded.contains(i.toString() + rt.toString())) {
                     return;
                 }
