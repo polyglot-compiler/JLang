@@ -139,6 +139,18 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         return !methodInstance.container().typeEquals(declaringType(methodInstance));
     }
 
+    public boolean isInterfaceCall(MethodInstance m){
+        ReferenceType declaringType = declaringType(m);
+        return isInterface(declaringType);
+    }
+
+    public boolean isInterface(ReferenceType rt){
+        if(rt instanceof ParsedClassType){
+            return ((ParsedClassType) rt).flags().isInterface();
+        }
+        return false;
+    }
+
     private void setupClassData() {
         if (classTypes != null && globalSizes != null
                 && ctorsFunctions != null) {

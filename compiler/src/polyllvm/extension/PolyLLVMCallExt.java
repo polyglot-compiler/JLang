@@ -60,15 +60,6 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         return n.arguments(args);
     }
 
-    private boolean isInterfaceCall(PseudoLLVMTranslator v){
-        Call n = (Call) node();
-        ReferenceType declaringType = v.declaringType(n.methodInstance());
-        if(declaringType instanceof ParsedClassType){
-            return ((ParsedClassType) declaringType).flags().isInterface();
-        }
-        return false;
-    }
-
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Call n = (Call) node();
@@ -77,7 +68,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                 && ((Special) n.target()).kind() == Special.SUPER) {
             translateSuperCall(v);
         }
-        else if (n.target() instanceof Expr && isInterfaceCall(v)) {
+        else if (n.target() instanceof Expr && v.isInterfaceCall(n.methodInstance())) {
             translateInterfaceMethodCall(v);
         }
         else if (n.target() instanceof Expr) {
