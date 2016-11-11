@@ -1101,7 +1101,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                 .map(this::flattenInstruction)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
-        System.out.println();
 
         LLVMBlock currBlock = nf.LLVMBlock(CollectionUtil.list());
         for (LLVMInstruction instr : instrs) {
