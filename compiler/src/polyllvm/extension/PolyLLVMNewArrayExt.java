@@ -118,10 +118,6 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
                                                           8),
                                         addTwoVar)
                                .result(mulByEightVar);
-        System.out.println("dims 0th element is: " + dims.get(0)
-                + "\nArray Length variable is: " + arrayLength);
-
-
 
         LLVMVariable sizeCastVar =
                 PolyLLVMFreshGen.freshNamedLocalVar(nf,

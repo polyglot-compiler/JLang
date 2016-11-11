@@ -73,8 +73,6 @@ public class PolyLLVMArrayAccessAssignExt extends PolyLLVMAssignExt {
                                                                     store)),
                                      element));
 
-        System.out.println("ArrayAccessAssign is " + n);
-
         return super.translatePseudoLLVM(v);
     }
 
