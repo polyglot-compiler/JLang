@@ -92,7 +92,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
             code = code.instructions(instrs);
 
-            f = nf.LLVMFunction(name, args, retType, code);
+            f = nf.LLVMFunction(name, args, retType,v.makeBlockCanonical(code));
         }
         v.addTranslation(node(), f);
 

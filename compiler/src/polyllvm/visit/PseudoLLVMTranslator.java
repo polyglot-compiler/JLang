@@ -2,10 +2,7 @@ package polyllvm.visit;
 
 import polyglot.ast.*;
 import polyglot.types.*;
-import polyglot.util.CollectionUtil;
-import polyglot.util.InternalCompilerError;
-import polyglot.util.ListUtil;
-import polyglot.util.Pair;
+import polyglot.util.*;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -38,6 +35,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     private HashMap<String, LLVMTypeNode> classTypes;
     private List<LLVMGlobalVarDeclaration> globalSizes;
     private List<LLVMFunction> ctorsFunctions;
+    private Set<String> containers;
 
     public PseudoLLVMTranslator(PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());
@@ -124,26 +122,29 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         return classes.peek();
     }
 
-    private boolean isOverridden(MethodDecl m) {
-        return isOverridden(m.methodInstance());
-    }
-
     public ReferenceType declaringType(MethodInstance methodInstance){
         List<MethodInstance> overrides = methodInstance.overrides();
-        List<ReferenceType> refTypes = overrides.stream().map(MemberInstance::container).collect(Collectors.toList());
-        ReferenceType highestSuperType =Collections.max(refTypes, (o1, o2) -> o1.descendsFrom(o2) ? -1 : 1);
-        return highestSuperType;
+        Optional<ReferenceType> highestSuperType = overrides.stream()
+                .map(MemberInstance::container)
+                .max((o1, o2) -> o1.descendsFrom(o2) ? -1 : 1);
+        return highestSuperType.get();
     }
 
     private boolean isOverridden(MethodInstance methodInstance) {
         return !methodInstance.container().typeEquals(declaringType(methodInstance));
     }
 
+    /**
+     * Return true if {@code m} was declared in an interface Interface, false otherwise.
+     */
     public boolean isInterfaceCall(MethodInstance m){
         ReferenceType declaringType = declaringType(m);
         return isInterface(declaringType);
     }
 
+    /**
+     * Return true if {@code rt} is a Interface, false otherwise.
+     */
     public boolean isInterface(ReferenceType rt){
         if(rt instanceof ParsedClassType){
             return ((ParsedClassType) rt).flags().isInterface();
@@ -179,8 +180,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
      */
     public Pair<List<MethodInstance>, List<FieldInstance>> layouts(
             ReferenceType rt) {
-        //TODO: for interfaces add super interfaces in BFS (OR Something better)
-
         if (layouts.containsKey(rt.toString())) {
             return layouts.get(rt.toString());
         }
@@ -291,12 +290,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     }
                 };
         Comparator<FieldInstance> fieldComparator =
-                new Comparator<FieldInstance>() {
-                    @Override
-                    public int compare(FieldInstance o1, FieldInstance o2) {
-                        return o1.name().compareTo(o2.name());
-                    }
-                };
+                (o1, o2) -> o1.name().compareTo(o2.name());
 
         dvMethods.sort(methodComparator);
         dvOverridenMethods.sort(methodComparator);
@@ -334,7 +328,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
 
             List<? extends ReferenceType> interfaces = allInterfaces(rt);
-            System.out.println("Interfaces of "+ rt + ": " + interfaces);
             for (int j = 0; j< interfaces.size(); j++){
                 ReferenceType it = interfaces.get(j);
                 String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(rt, it);
@@ -840,7 +833,17 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     private HashSet<ReferenceType> classesUsed = new HashSet<>();
 
     public void addClassType(ReferenceType rt) {
+//        if(classesUsed.contains(rt)) return;
         classesUsed.add(rt);
+//        for(MethodInstance mem : layouts(rt).part1()){
+//            mem.formalTypes().stream()
+//                    .forEach(ft -> {
+//                        if (ft instanceof ReferenceType) {addClassType((ReferenceType) ft);}
+//                    });
+//            if(mem.returnType() instanceof  ReferenceType) {
+//                addClassType((ReferenceType) mem.returnType());
+//            }
+//        }
     }
 
     /**
@@ -1084,5 +1087,56 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         }
         return arrayType;
     }
+
+
+    /**
+     * Make {@code llvmBlock} canonical by flattening sequence nodes and make each block contain at most one label
+     * @param llvmBlock
+     * @return A list of blocks such that each block only contains a single
+     *         label as the first instruction (or no label)
+     */
+    public List<LLVMBlock> makeBlockCanonical(LLVMBlock llvmBlock) {
+        List<LLVMBlock> newBlocks = new ArrayList<>();
+        List<LLVMInstruction> instrs = llvmBlock.instructions().stream()
+                .map(this::flattenInstruction)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+        System.out.println();
+
+        LLVMBlock currBlock = nf.LLVMBlock(CollectionUtil.list());
+        for (LLVMInstruction instr : instrs) {
+            if(instr instanceof LLVMBlock) {
+                newBlocks.add(currBlock);
+                List<LLVMBlock> subBlocks = makeBlockCanonical((LLVMBlock) instr);
+                newBlocks.addAll(subBlocks.subList(0,subBlocks.size()-1));
+                currBlock = subBlocks.get(subBlocks.size()-1);
+            } else if(instr instanceof LLVMSeqLabel){
+                newBlocks.add(currBlock);
+                currBlock = nf.LLVMBlock(CollectionUtil.list()); //Reset the current block
+                currBlock = currBlock.appendInstruction(instr);
+            } else {
+                currBlock = currBlock.appendInstruction(instr);
+            }
+        }
+        newBlocks.add(currBlock);
+        return newBlocks;
+    }
+
+    /**
+     * Flattens all sequence nodes in {@code i}
+     * @return A list of Instructions, the result of flattening all sequence nodes
+     */
+    private List<LLVMInstruction> flattenInstruction(LLVMInstruction i){
+        if(i instanceof LLVMSeq){
+            List<LLVMInstruction> instrs = new ArrayList<>();
+            for (LLVMInstruction instr: ((LLVMSeq) i).instructions()) {
+                instrs.addAll(flattenInstruction(instr));
+            }
+            return instrs;
+        } else {
+            return CollectionUtil.list(i);
+        }
+    }
+
 
 }
