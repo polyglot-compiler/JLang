@@ -20,7 +20,6 @@ import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class PseudoLLVMTranslator extends NodeVisitor {
 
@@ -709,7 +708,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
         // Helper for setting up size globals.
         BiConsumer<ReferenceType, Boolean> addSizeGlobals = (rt, isExtern) -> {
-
             // Ignore array types--they're handled separately.
             if (rt.isArray()) {
                 return;
@@ -749,7 +747,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
             // ITables
             for(ReferenceType i :allInterfaces(rt)){
-                if (classesAdded.contains(i.toString() + rt.toString())) {
+                if (classesAdded.contains(i.toString() + "_" +  rt.toString())) {
                     return;
                 }
                 classesAdded.add(i.toString() + "_" +  rt.toString());
@@ -823,6 +821,18 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         // Referenced classes.
         for (ReferenceType rt : classesUsed) {
             addClassTypes.accept(rt);
+            for(ReferenceType i :allInterfaces(rt)){
+                addClassTypes.accept(i);
+            }
+        }
+
+        for (ReferenceType rt : typesDependedOn) {
+            classTypes.putIfAbsent(
+                    PolyLLVMMangler.classTypeName(rt),
+                    null);
+            classTypes.putIfAbsent(
+                    PolyLLVMMangler.dispatchVectorTypeName(rt),
+                    null);
         }
 
         // Opaque class type.
@@ -832,18 +842,25 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
     private HashSet<ReferenceType> classesUsed = new HashSet<>();
 
+    private HashSet<ReferenceType> typesDependedOn = new HashSet<>();
+
     public void addClassType(ReferenceType rt) {
-//        if(classesUsed.contains(rt)) return;
         classesUsed.add(rt);
-//        for(MethodInstance mem : layouts(rt).part1()){
-//            mem.formalTypes().stream()
-//                    .forEach(ft -> {
-//                        if (ft instanceof ReferenceType) {addClassType((ReferenceType) ft);}
-//                    });
-//            if(mem.returnType() instanceof  ReferenceType) {
-//                addClassType((ReferenceType) mem.returnType());
-//            }
-//        }
+        for(MethodInstance mem : layouts(rt).part1()){
+            mem.formalTypes().stream()
+                    .forEach(ft -> {
+                        if (ft instanceof ReferenceType) {
+                            typesDependedOn.add((ReferenceType) ft);}
+                    });
+            if(mem.returnType() instanceof  ReferenceType) {
+                typesDependedOn.add((ReferenceType) mem.returnType());
+            }
+        }
+        for (FieldInstance f : layouts(rt).part2()){
+            if(f.type() instanceof ReferenceType){
+                typesDependedOn.add((ReferenceType) f.type());
+            }
+        }
     }
 
     /**
