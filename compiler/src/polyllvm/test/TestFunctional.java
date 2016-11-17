@@ -18,7 +18,7 @@ import static org.junit.Assert.assertEquals;
 public class TestFunctional {
     private static final File DIR =
             Paths.get("tests", "isolated").toFile();
-    private static final int TIMEOUT = 10;
+    private static final int TIMEOUT = 600; // 10 minutes
 
     @Parameter
     public File file;
