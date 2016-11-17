@@ -36,6 +36,7 @@ public:
     jarray* chars;
 };
 
+using jbool = bool;
 using jint = int32_t;
 using jlong = int64_t;
 using jfloat = float;

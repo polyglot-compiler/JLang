@@ -22,6 +22,14 @@ void Java_placeholder_Print_println__Ljava_lang_String_2(jstring* s) {
     printJavaStringWithFormat("%ls\n", s);
 }
 
+void Java_placeholder_Print_print__Z(jbool n) {
+    printf("%s", n ? "true" : "false");
+}
+
+void Java_placeholder_Print_println__Z(jbool n) {
+    printf("%s\n", n ? "true" : "false");
+}
+
 void Java_placeholder_Print_print__I(jint n) {
     printf("%d", n);
 }

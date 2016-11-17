@@ -14,6 +14,14 @@ public class Print {
         System.out.print(s);
     }
 
+    public static void println(boolean n) {
+        System.out.println(n);
+    }
+
+    public static void print(boolean n) {
+        System.out.print(n);
+    }
+
     public static void println(int n) {
         System.out.println(n);
     }
