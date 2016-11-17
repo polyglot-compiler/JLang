@@ -1,40 +1,32 @@
 package support;
 
 public class Array {
+    private int len;
 
-    public final int length;
-    public final Object[] contents;
+    private native void clearEntries();
+    private native void setEntry(int i, Object val);
 
-    private Array(int length) {
-        this.length = length;
-        contents = new Object[length];
+    private Array(int len) {
+        this.len = len;
+        clearEntries();
+    }
+
+    private Array(int[] lens, int depth, int maxDepth) {
+        this.len = lens[depth];
+        if (depth + 1 == maxDepth) {
+            clearEntries();
+        } else {
+            for (int i = 0; i < lens[depth]; ++i) {
+                setEntry(i, new Array(lens, depth + 1, maxDepth));
+            }
+        }
     }
 
     /**
-     * The constructor for creating a multidimensional array
-     *
-     * Example Translation: new Object[3][2][5]  ==> new Array({3,2,5})
+     * The constructor for multidimensional arrays.
+     * Translation: new Object[3][2][5] ==> new Array({3,2,5})
      */
-    private Array(int[] lengths) {
-        length = lengths[0];
-        contents = new Object[lengths[0]];
-
-        if (lengths.length == 1) {
-            return;
-        }
-
-        int[] newLengths = new int[lengths.length - 1];
-        for (int i = 0; i < newLengths.length; i++) {
-            newLengths[i] = lengths[i + 1];
-        }
-
-        for (int i = 0; i < length; i++) {
-            contents[i] = new Array(newLengths);
-        }
+    private Array(int[] lens) {
+        this(lens, 0, lens.length);
     }
-
-    public Object clone() throws CloneNotSupportedException {
-        return super.clone();
-    }
-
 }

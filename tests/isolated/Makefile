@@ -46,7 +46,7 @@ polyllvmc:
 	ant -f "../../build.xml" jar
 
 %.class: %.java
-	javac -classpath $(RUNTIME)/classes $<
+	javac -classpath $(RUNTIME)/classes $< || rm -f $@
 
 %.sol: %.class
 	java -cp $(dir $@):$(RUNTIME)/classes $(notdir $*) | tee $@

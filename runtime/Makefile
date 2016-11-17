@@ -2,7 +2,7 @@ BASE_DIR = ..
 RUNTIME = $(BASE_DIR)/runtime
 LLFOLDER = $(BASE_DIR)/runtime/ll
 
-JAVA_SRCS = $(shell find . -name "*.java" -not -path ./src/placeholder/* -not -path ./src/support/*)
+JAVA_SRCS = $(shell find . -name "*.java" -not -path ./src/placeholder/*)
 JNI_SRCS = $(shell find jni -name "*.cpp")
 
 JNI_RES = $(JNI_SRCS:.cpp=.ll)

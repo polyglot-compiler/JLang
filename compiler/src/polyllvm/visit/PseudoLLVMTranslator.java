@@ -695,17 +695,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     private void setupClassSizes() {
         Set<String> classesAdded = new HashSet<>();
 
-        // Arrays.
-        ReferenceType arrayType = getArrayType();
-        LLVMGlobalVarDeclaration arrayDvSize = nf.LLVMGlobalVarDeclaration(
-                PolyLLVMMangler.dispatchVectorVariable(arrayType),
-                /* isExtern */ true,
-                LLVMGlobalVarDeclaration.GLOBAL,
-                nf.LLVMVariableType(PolyLLVMMangler.dispatchVectorTypeName(arrayType)),
-                null);
-        globalSizes.add(arrayDvSize);
-        classesAdded.add(arrayType.toString());
-
         // Helper for setting up size globals.
         BiConsumer<ReferenceType, Boolean> addSizeGlobals = (rt, isExtern) -> {
             // Ignore array types--they're handled separately.
