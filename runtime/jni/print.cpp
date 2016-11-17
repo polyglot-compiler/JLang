@@ -1,29 +1,25 @@
 #include <inttypes.h>
+#include <stdio.h>
 #include "types.h"
 
-#include <stdio.h>
-
-extern "C" {
-
-static void printWithFormat(jstring* s, const char* format) {
-    int64_t* data = (int64_t*) &s->chars->data;
+static void printJavaStringWithFormat(const char* format, jstring* s) {
+    intptr_t* data = (intptr_t*) &s->chars->data;
     jint len = s->chars->len;
-
-    // TODO: This does not support 16-bit characters.
-    char chars[len];
-    for (jint i = 0; i < len; ++i) {
-        chars[i] = (char) data[i];
-    }
-
+    wchar_t chars[len+1];
+    chars[len] = 0;
+    for (jint i = 0; i < len; ++i)
+        chars[i] = (wchar_t) data[i];
     printf(format, chars);
 }
 
+extern "C" {
+
 void Java_placeholder_Print_print__Ljava_lang_String_2(jstring* s) {
-    printWithFormat(s, "%s");
+    printJavaStringWithFormat("%ls", s);
 }
 
 void Java_placeholder_Print_println__Ljava_lang_String_2(jstring* s) {
-    printWithFormat(s, "%s\n");
+    printJavaStringWithFormat("%ls\n", s);
 }
 
 void Java_placeholder_Print_print__I(jint n) {

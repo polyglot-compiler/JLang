@@ -63,7 +63,7 @@ polyllvmc:
 	/usr/local/bin/llc -o $@ $<
 
 %.binary: %.s
-	clang -o $@ $<
+	clang++ -o $@ $<
 
 %.loutput: %.lll
 	/usr/local/bin/lli $< | tee $@
