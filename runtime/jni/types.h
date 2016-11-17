@@ -5,16 +5,36 @@
 
 extern "C" {
 
+// List of interfaces implemented by a Java class.
+class it {
+public:
+    it* next;
+    char* interface_name;
+};
+
+// Dispatch vector for a Java class.
+class dv {
+public:
+    it* it;
+    void* type_info;
+};
+
+// Header of a Java object instance.
+class jobject {
+public:
+    dv* dv;
+};
+
 class support_Array {
 public:
-    void* dv;
+    dv* dv;
     int32_t len;
-    char* data;
+    intptr_t data;
 };
 
 class java_lang_String {
 public:
-    void* dv;
+    dv* dv;
     support_Array* chars;
 };
 
@@ -23,6 +43,7 @@ using jlong = int64_t;
 using jfloat = float;
 using jdouble = double;
 using jstring = java_lang_String;
+using jarray = support_Array;
 
 } // extern "C"
 

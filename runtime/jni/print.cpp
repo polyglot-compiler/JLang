@@ -3,7 +3,7 @@
 #include "types.h"
 
 static void printJavaStringWithFormat(const char* format, jstring* s) {
-    intptr_t* data = (intptr_t*) &s->chars->data;
+    intptr_t* data = &s->chars->data;
     jint len = s->chars->len;
     wchar_t chars[len+1];
     chars[len] = 0;
