@@ -76,10 +76,14 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
                 throw new InternalCompilerError("Unhandled cast: " + n);
             }
         }
-        else if (!castType.isPrimitive() && !exprType.isPrimitive()
-                && exprType.isImplicitCastValid(castType)) {
-            // This cast is an implicit reference cast.
-            instructionType = LLVMConversion.BITCAST;
+        else if (!castType.isPrimitive() && !exprType.isPrimitive()) {
+            if (exprType.isImplicitCastValid(castType)) {
+                // This is an implicit reference cast.
+                instructionType = LLVMConversion.BITCAST;
+            } else {
+                // TODO: Need runtime check to catch invalid down-casts.
+                instructionType = LLVMConversion.BITCAST;
+            }
         }
         else {
             throw new InternalCompilerError("Unhandled cast: " + n);

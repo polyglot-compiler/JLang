@@ -16,7 +16,7 @@ java: $(JAVA_RES)
 
 .PHONY: polyllvmc
 polyllvmc:
-	ant -f "../build.xml" jar > /dev/null
+	ant -f "../build.xml" jar
 
 %.ll: %.cpp
 	clang++ $< -S -emit-llvm -std=c++11 -o $(LLFOLDER)/$@
