@@ -3,9 +3,14 @@
 
 extern "C" {
 
-void Java_support_Array_Array__I(jarray* _this, jint len) {
-    _this->len = len;
-    memset(&_this->data, 0, len * sizeof(void*));
+void Java_support_Array_clearEntries__(jarray* obj) {
+    memset(&obj->data, 0, obj->len * sizeof(obj->data));
+}
+
+void Java_support_Array_setObjectEntry__ILjava_lang_Object_2(jarray* obj,
+                                                             jint i,
+                                                             jobject* val) {
+    ((jobject**) &obj->data)[i] = val;
 }
 
 } // extern "C"

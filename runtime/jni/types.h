@@ -25,25 +25,21 @@ public:
     dv* dv;
 };
 
-class support_Array {
+class jarray : public jobject {
 public:
-    dv* dv;
     int32_t len;
     intptr_t data;
 };
 
-class java_lang_String {
+class jstring : public jobject {
 public:
-    dv* dv;
-    support_Array* chars;
+    jarray* chars;
 };
 
 using jint = int32_t;
 using jlong = int64_t;
 using jfloat = float;
 using jdouble = double;
-using jstring = java_lang_String;
-using jarray = support_Array;
 
 } // extern "C"
 

@@ -1,40 +1,53 @@
 package support;
 
+/**
+ * Constructs single- and multi-dimensional arrays, assisted by
+ * native code. The constructors should never be called directly
+ * from Java code, since we need the compiler to allocate the
+ * correct amount of memory for an array instance.
+ */
 public class Array {
+    private int len;
+    // Array data is only visible to native code.
 
-    public final int length;
-    public final Object[] contents;
+    private native void clearEntries();
+    private native void setObjectEntry(int i, Object val);
 
-    private Array(int length) {
-        this.length = length;
-        contents = new Object[length];
+    /**
+     * Single-dimensional arrays.
+     */
+    private Array(int len) {
+        this.len = len;
+        clearEntries();
     }
 
     /**
-     * The constructor for creating a multidimensional array
-     *
-     * Example Translation: new Object[3][2][5]  ==> new Array({3,2,5})
+     * Multi-dimensional arrays.
+     * new Object[3][2][5] ==> new Array({3,2,5})
      */
-    private Array(int[] lengths) {
-        length = lengths[0];
-        contents = new Object[lengths[0]];
+    private Array(int[] lens) {
+        this(lens[0]);
+        initSubArrays(this, lens, 0, lens.length);
+    }
 
-        if (lengths.length == 1) {
+    /**
+     * Recursively initialize an array with `maxDepth` dimensions.
+     */
+    private static void initSubArrays(Array arr, int[] lens,
+                                     int depth, int maxDepth) {
+        if (depth == maxDepth - 1) {
+            // Note that entries have already been cleared, since
+            // the single-dimensional array constructor is called
+            // for every sub-array.
             return;
         }
 
-        int[] newLengths = new int[lengths.length - 1];
-        for (int i = 0; i < newLengths.length; i++) {
-            newLengths[i] = lengths[i + 1];
-        }
-
-        for (int i = 0; i < length; i++) {
-            contents[i] = new Array(newLengths);
+        for (int i = 0; i < lens[depth]; ++i) {
+            // This cast succeeds because Array and Object[] are
+            // equivalent from the perspective of PolyLLVM.
+            Array subArr = (Array) (Object) new Object[lens[depth + 1]];
+            arr.setObjectEntry(i, subArr);
+            initSubArrays(subArr, lens, depth + 1, maxDepth);
         }
     }
-
-    public Object clone() throws CloneNotSupportedException {
-        return super.clone();
-    }
-
 }
