@@ -43,21 +43,18 @@ public final class TranslationUtils {
                 nf.LLVMVoidType());
 
         // Build the call to the entry function.
-        // TODO: Convert `char** args` into `String[] args`.
+        LLVMVariable args = nf.LLVMVariable("args",llvmStrArrType, LLVMVariable.VarKind.LOCAL);
         List<Pair<LLVMTypeNode, LLVMOperand>> entryArgs = Collections.singletonList(
-                new Pair<>(llvmStrArrType, nf.LLVMNullLiteral(llvmStrArrType)));
+                new Pair<>(llvmStrArrType, args));
         LLVMInstruction callEntry = nf.LLVMCall(
                 nf.LLVMVariable(entryFunc, entryFuncType, LLVMVariable.VarKind.GLOBAL),
                 entryArgs,
                 nf.LLVMVoidType());
 
         // Build the LLVM main function.
-        List<LLVMArgDecl> mainArgs = Arrays.asList(
-                nf.LLVMArgDecl(nf.LLVMIntType(32), "argv"),
-                nf.LLVMArgDecl(nf.LLVMPointerType(nf.LLVMPointerType(nf.LLVMIntType(8))), "args"));
-        LLVMBlock body = nf.LLVMBlock(Arrays.asList(
-                callEntry,
-                nf.LLVMRet()));
-        return nf.LLVMFunction("main", mainArgs, nf.LLVMVoidType(), body);
+        List<LLVMArgDecl> mainArgs = Collections.singletonList(
+                nf.LLVMArgDecl(llvmStrArrType, "args"));
+        LLVMBlock body = nf.LLVMBlock(Arrays.asList(callEntry, nf.LLVMRet()));
+        return nf.LLVMFunction("java_entry_point", mainArgs, nf.LLVMVoidType(), body);
     }
 }
