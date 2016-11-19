@@ -512,6 +512,12 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     }
 
     @Override
+    public LLVMArrayLiteral LLVMArrayLiteral(LLVMArrayType tn, List<LLVMTypedOperand> exprs) {
+        LLVMArrayLiteral n = new LLVMArrayLiteral_c(Position.compilerGenerated(), tn, exprs, null);
+        return ext(n, extFactory().extLLVMArrayLiteral());
+    }
+
+    @Override
     public LLVMGlobalVarDeclaration LLVMGlobalVarDeclaration(String name,
             boolean isExtern, GlobalVariableKind kind, LLVMTypeNode typeNode,
             LLVMOperand initializerConstant) {

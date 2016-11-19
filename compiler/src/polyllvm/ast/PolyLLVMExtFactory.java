@@ -95,6 +95,8 @@ public interface PolyLLVMExtFactory extends ExtFactory {
 
     Ext extLLVMNullLiteral();
 
+    Ext extLLVMArrayLiteral();
+
     Ext extLLVMGlobalVarDeclaration();
 
     Ext extLLVMGetElementPtr();
