@@ -4,16 +4,16 @@ import polyglot.ast.Ext;
 import polyglot.util.CodeWriter;
 import polyglot.util.Position;
 import polyglot.visit.PrettyPrinter;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType;
 
 import java.util.List;
 
-public class LLVMArrayLiteral_c extends LLVMOperand_c implements LLVMArrayLiteral {
-    private final LLVMArrayType typeNode;
+public class LLVMStructLiteral_c extends LLVMOperand_c implements LLVMStructLiteral {
+    private final LLVMStructureType typeNode;
     private final List<LLVMTypedOperand> exprs;
 
-    public LLVMArrayLiteral_c(Position pos, LLVMArrayType tn,
-                              List<LLVMTypedOperand> entries, Ext e) {
+    public LLVMStructLiteral_c(Position pos, LLVMStructureType tn,
+                               List<LLVMTypedOperand> entries, Ext e) {
         super(pos, e);
         this.typeNode = tn;
         this.exprs = entries;
@@ -21,18 +21,18 @@ public class LLVMArrayLiteral_c extends LLVMOperand_c implements LLVMArrayLitera
 
     @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
-        w.write("[");
+        w.write("{");
         int i = 0;
         for (LLVMExpr e : exprs) {
             if (i > 0) w.write(", ");
             print(e, w, pp);
             ++i;
         }
-        w.write("]");
+        w.write("}");
     }
 
     @Override
-    public LLVMArrayType typeNode() {
+    public LLVMStructureType typeNode() {
         return typeNode;
     }
 }

@@ -69,6 +69,8 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
 
     LLVMArrayLiteral LLVMArrayLiteral(LLVMArrayType tn, List<LLVMTypedOperand> exprs);
 
+    LLVMStructLiteral LLVMStructLiteral(LLVMStructureType tn, List<LLVMTypedOperand> exprs);
+
 
     /*
      * LLVM Type Nodes
