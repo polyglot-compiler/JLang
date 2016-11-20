@@ -16,8 +16,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public PseudoLLVMTranslator enterTranslatePseudoLLVM(
-            PseudoLLVMTranslator v) {
+    public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         v.enterClass((ClassDecl) node());
         return super.enterTranslatePseudoLLVM(v);
     }
@@ -66,7 +65,6 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         }
 
         // External class object declarations.
-        // TODO: Will interfaces have class objects?
         Type superType = n.type().superType();
         while (superType != null) {
             LLVMGlobalVarDeclaration decl =
@@ -92,7 +90,12 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
     @Override
     public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         ClassDecl n = (ClassDecl) node();
-        if(n.flags().isInterface()){
+        if (n.flags().isInterface()) {
+            // Interfaces need only declare a class id.
+            PolyLLVMNodeFactory nf = v.nodeFactory();
+            LLVMGlobalVarDeclaration classIdDecl =
+                    ClassObjects.classIdDecl(nf, n.type().toReference(), /* extern */ false);
+            v.addStaticVarReferenced(classIdDecl.name(), classIdDecl);
             return n;
         }
         return super.overrideTranslatePseudoLLVM(v);

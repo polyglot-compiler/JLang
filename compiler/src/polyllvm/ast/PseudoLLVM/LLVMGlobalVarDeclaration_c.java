@@ -37,6 +37,11 @@ public class LLVMGlobalVarDeclaration_c extends LLVMGlobalDeclaration_c
     }
 
     @Override
+    public boolean isExtern() {
+        return isExtern;
+    }
+
+    @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
         w.write("@");
         w.write(name);

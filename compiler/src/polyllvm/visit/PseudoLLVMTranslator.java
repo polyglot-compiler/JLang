@@ -152,10 +152,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
      * Return true if {@code rt} is a Interface, false otherwise.
      */
     public boolean isInterface(ReferenceType rt){
-        if(rt instanceof ParsedClassType){
-            return ((ParsedClassType) rt).flags().isInterface();
-        }
-        return false;
+        return rt instanceof ParsedClassType && ((ParsedClassType) rt).flags().isInterface();
     }
 
     private void setupClassData() {
@@ -193,14 +190,11 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         List<MethodInstance> dvLayout = new ArrayList<>();
         List<FieldInstance> objLayout = new ArrayList<>();
 
-        if(isInterface(rt)){
+        if (isInterface(rt)) {
             dvLayout = interfaceLayout(rt);
         } else {
             ReferenceType superClass = rt;
             while (superClass != null) {
-//            if (superClass.toString().equals("java.lang.Object")) {
-//                break;
-//            }
                 Pair<List<MethodInstance>, List<FieldInstance>> pair =
                         nonOverriddenClassMembers(superClass);
                 dvLayout.addAll(0, pair.part1());
@@ -213,10 +207,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         Pair<List<MethodInstance>, List<FieldInstance>> result =
                 new Pair<>(dvLayout, objLayout);
         layouts.put(rt.toString(), result);
-//        System.out.println("Layout of " + rt + ":");
-//        for (MethodInstance mi : dvLayout) {
-//            System.out.println("    • " + mi);
-//        }
         return result;
     }
 
@@ -1095,7 +1085,10 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     private Map<String, LLVMGlobalVarDeclaration> referencedStaticVars = new HashMap<>();
 
     public void addStaticVarReferenced(String name, LLVMGlobalVarDeclaration var) {
-        referencedStaticVars.put(name, var);
+        LLVMGlobalVarDeclaration prev = referencedStaticVars.get(name);
+        if (prev == null || prev.isExtern()) {
+            referencedStaticVars.put(name, var);
+        }
     }
 
     public Collection<LLVMGlobalVarDeclaration> getReferencedStaticVars() {

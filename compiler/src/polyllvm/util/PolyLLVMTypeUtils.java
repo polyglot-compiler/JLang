@@ -147,20 +147,24 @@ public class PolyLLVMTypeUtils {
         List<MethodInstance> layout = v.layouts(type).part1();
         List<LLVMTypeNode> typeList = new ArrayList<>();
         typeList.add(nf.LLVMPointerType(nf.LLVMIntType(8)));
-        typeList.add(nf.LLVMPointerType(ClassObjects.classObjType(nf, type)));
-        for (int i = 0; i < layout.size(); i++) {
+
+        // Class dispatch vectors and interface tables currently differ in their second entry.
+        if (v.isInterface(type)) {
+            typeList.add(nf.LLVMPointerType(nf.LLVMIntType(8)));
+        } else {
+            typeList.add(nf.LLVMPointerType(ClassObjects.classObjType(nf, type)));
+        }
+
+        for (MethodInstance mi : layout) {
             LLVMTypeNode classTypePointer =
                     nf.LLVMPointerType(nf.LLVMVariableType(PolyLLVMMangler.classTypeName(type)));
             LLVMTypeNode funcType =
-                    PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf,
-                                                               layout.get(i)
-                                                                     .formalTypes(),
-                                                               layout.get(i)
-                                                                     .returnType())
+                    PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf, mi.formalTypes(), mi.returnType())
                                      .prependFormalTypeNode(classTypePointer);
 
             typeList.add(funcType);
         }
+
         return nf.LLVMStructureType(typeList);
     }
 
