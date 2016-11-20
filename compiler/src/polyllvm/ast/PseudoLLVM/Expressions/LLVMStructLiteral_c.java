@@ -9,8 +9,8 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType;
 import java.util.List;
 
 public class LLVMStructLiteral_c extends LLVMOperand_c implements LLVMStructLiteral {
-    private final LLVMStructureType typeNode;
     private final List<LLVMTypedOperand> exprs;
+    private final LLVMStructureType typeNode;
 
     public LLVMStructLiteral_c(Position pos, LLVMStructureType tn,
                                List<LLVMTypedOperand> entries, Ext e) {

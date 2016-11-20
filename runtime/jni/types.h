@@ -12,11 +12,17 @@ public:
     char* interface_name;
 };
 
+class type_info {
+public:
+    int32_t size;
+    void* super_type_ids[];
+};
+
 // Dispatch vector for a Java class.
 class dv {
 public:
     it* it;
-    void* type_info;
+    type_info* type_info;
 };
 
 // Header of a Java object instance.

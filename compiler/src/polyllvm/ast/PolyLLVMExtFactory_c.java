@@ -28,6 +28,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
+    protected Ext extInstanceofImpl() {
+        return new PolyLLVMInstanceofExt();
+    }
+
+    @Override
     protected Ext extIntLitImpl() {
         return new PolyLLVMIntLitExt();
     }

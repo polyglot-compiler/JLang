@@ -2,6 +2,8 @@ import placeholder.Print;
 
 public class InstanceOf {
 
+    // TODO: Test with interfaces.
+
     public static void main(String[] args) {
         f(new InstanceOf());
     }

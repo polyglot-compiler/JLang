@@ -9,6 +9,7 @@ import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.extension.ClassObjects;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
@@ -140,16 +141,14 @@ public class PolyLLVMTypeUtils {
         return polyLLVMDispatchVectorType(v, cd.type());
     }
 
-    public static LLVMTypeNode polyLLVMDispatchVectorType(
-            PseudoLLVMTranslator v, ReferenceType type) {
+    public static LLVMTypeNode polyLLVMDispatchVectorType(PseudoLLVMTranslator v,
+                                                          ReferenceType type) {
+        PolyLLVMNodeFactory nf = v.nodeFactory();
         List<MethodInstance> layout = v.layouts(type).part1();
         List<LLVMTypeNode> typeList = new ArrayList<>();
-        typeList.add(v.nodeFactory()
-                .LLVMPointerType(v.nodeFactory().LLVMIntType(8)));
-        typeList.add(v.nodeFactory()
-                .LLVMPointerType(v.nodeFactory().LLVMIntType(8)));
+        typeList.add(nf.LLVMPointerType(nf.LLVMIntType(8)));
+        typeList.add(nf.LLVMPointerType(ClassObjects.classObjType(nf, type)));
         for (int i = 0; i < layout.size(); i++) {
-            PolyLLVMNodeFactory nf = v.nodeFactory();
             LLVMTypeNode classTypePointer =
                     nf.LLVMPointerType(nf.LLVMVariableType(PolyLLVMMangler.classTypeName(type)));
             LLVMTypeNode funcType =
@@ -162,9 +161,7 @@ public class PolyLLVMTypeUtils {
 
             typeList.add(funcType);
         }
-        LLVMStructureType structureType =
-                v.nodeFactory().LLVMStructureType(typeList);
-        return structureType;
+        return nf.LLVMStructureType(typeList);
     }
 
     public static LLVMTypeNode polyLLVMDispatchVectorVariableType(

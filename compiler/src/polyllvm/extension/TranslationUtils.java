@@ -19,14 +19,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public final class TranslationUtils {
+final class TranslationUtils {
 
     private TranslationUtils() {}
 
     /**
      * Returns an LLVM main function that calls into the specified Java entry point.
      */
-    public static LLVMFunction createEntryPoint(PolyLLVMNodeFactory nf,
+    static LLVMFunction createEntryPoint(PolyLLVMNodeFactory nf,
                                                 TypeSystem ts,
                                                 String entryFunc) {
         // Build the function type for `void main(String[] args)`.

@@ -18,6 +18,8 @@ public class PolyLLVMMangler {
     private static final String CLASS_INIT_STR     = "init";
     private static final String IT_INIT_STR        = "it_init";
     private static final String IT_STR_STR         = "ittype";
+    private static final String TYPE_INFO_STR      = "type_info";
+    private static final String CLASS_ID_STR       = "class_id";
 
     // From the JNI API.
     private static final String UNDERSCORE_ESCAPE = "_1";
@@ -153,5 +155,13 @@ public class PolyLLVMMangler {
 
     public static String interfaceStringVariable(ReferenceType rt) {
         return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IT_STR_STR;
+    }
+
+    public static String classObjName(ReferenceType rt) {
+        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + TYPE_INFO_STR;
+    }
+
+    public static String classIdName(ReferenceType rt) {
+        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + CLASS_ID_STR;
     }
 }

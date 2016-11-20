@@ -1,8 +1,14 @@
 package polyllvm.visit;
 
-import polyglot.ast.*;
+import polyglot.ast.ClassDecl;
+import polyglot.ast.Labeled;
+import polyglot.ast.Loop;
+import polyglot.ast.Node;
 import polyglot.types.*;
-import polyglot.util.*;
+import polyglot.util.CollectionUtil;
+import polyglot.util.InternalCompilerError;
+import polyglot.util.ListUtil;
+import polyglot.util.Pair;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -13,6 +19,7 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.*;
+import polyllvm.extension.ClassObjects;
 import polyllvm.util.*;
 
 import java.util.*;
@@ -670,10 +677,28 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                 }
 
             }
+
+            // Initialize class object pointer.
+            ReferenceType rt = cd.type().toReference();
+            List<LLVMTypedOperand> gepIndices = Arrays.asList(
+                    index0,
+                    nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32), 1), nf.LLVMIntType(32))
+            );
+            LLVMVariable gepResult = PolyLLVMFreshGen.freshLocalVar(
+                    nf, nf.LLVMPointerType(nf.LLVMPointerType(ClassObjects.classObjType(nf, rt))));
+            LLVMGetElementPtr gep = nf.LLVMGetElementPtr(llvmDvVar, gepIndices).result(gepResult);
+            LLVMStore store = nf.LLVMStore(
+                    nf.LLVMPointerType(ClassObjects.classObjType(nf, rt)),
+                    ClassObjects.classObjVar(nf, rt),
+                    gepResult
+            );
+            instrs.add(gep);
+            instrs.add(store);
+
             instrs.add(nf.LLVMRet());
             LLVMFunction ctor =
                     nf.LLVMFunction(PolyLLVMMangler.classInitFunction(cd),
-                                    new ArrayList<LLVMArgDecl>(),
+                                    new ArrayList<>(),
                                     nf.LLVMVoidType(),
                                     nf.LLVMBlock(instrs));
             ctorsFunctions.add(ctor);
