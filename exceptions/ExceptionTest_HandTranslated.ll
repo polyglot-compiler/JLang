@@ -68,16 +68,35 @@ declare void @Java_java_lang_Object_Object__(%class.java_lang_Object* %arg_0)
 
 declare void @Env_java_lang_Object_init()
 
-define void @Java_ExceptionTest_main___3Ljava_lang_String_2(%class.support_Array* %args) {
-%exception = alloca %class.java_lang_Exception*, i32 1
-%flat$3 = alloca %class.java_lang_String*, i32 1
-%flat$1 = alloca %class.java_lang_String*, i32 1
-%flat$2 = alloca %class.support_Array*, i32 1
-%flat$0 = alloca %class.support_Array*, i32 1
-%arg_args = alloca %class.support_Array*, i32 1
-store %class.support_Array* %args, %class.support_Array** %arg_args
+define void @Java_ExceptionTest_main___3Ljava_lang_String_2(%class.support_Array* %args) personality i8* bitcast (i32 (...)* @__jxx_personality_v0 to i8*) {
+	%exception = alloca %class.java_lang_Exception*, i32 1
+	%flat$3 = alloca %class.java_lang_String*, i32 1
+	%flat$1 = alloca %class.java_lang_String*, i32 1
+	%flat$2 = alloca %class.support_Array*, i32 1
+	%flat$0 = alloca %class.support_Array*, i32 1
+	%arg_args = alloca %class.support_Array*, i32 1
+	store %class.support_Array* %args, %class.support_Array** %arg_args
 
-ret void
+	; Allocate stack space for exception
+	%exn.slot = alloca i8*
+	%ehselector.slot = alloca i32
+
+	%_temp.0 = invoke i8* @malloc(i64 40) 
+	           to label %invoke.cont unwind label %lpad
+
+%invoke.cont: 
+	%_temp.1 = bitcast i8* %_temp.0 to %class.java_lang_Exception*
+	%_temp.2 = getelementptr %class.java_lang_Exception, %class.java_lang_Exception* %_temp.1, i32 0, i32 0
+	store %dv.java_lang_Exception* @Env_java_lang_Exception_dv, %dv.java_lang_Exception** %_temp.2
+	invoke void @Java_java_lang_Exception_Exception__(%class.java_lang_Exception* %_temp.1)
+	        to label %invoke.cont2 unwind label %lpad 
+
+%invoke.cont2:
+	store %class.java_lang_Exception* %_temp.1, %class.java_lang_Exception** %exception
+	%exception = call i8* @allocateJavaException(i8*)
+	
+
+	ret void
 }
 
 define void @java_entry_point(%class.support_Array* %args) {
