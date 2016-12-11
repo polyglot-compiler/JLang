@@ -14,7 +14,7 @@ BASE_DIR = ../..
 RUNTIME = $(BASE_DIR)/runtime
 
 SRCS = $(shell find . -name "*.java")
-LL = $(shell find $(RUNTIME)/ll -name "*.ll")
+LL = $(RUNTIME)/runtime.ll
 
 CLASSES = $(SRCS:.java=.class)
 SOL = $(SRCS:.java=.sol)

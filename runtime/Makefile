@@ -26,4 +26,4 @@ polyllvmc:
 	$(BASE_DIR)/bin/polyllvmc -c -d $(LLFOLDER)/$(dir $(subst src/,,$@)) $<
 
 linkall: jni java
-	/usr/local/bin/llvm-link -o runtime.ll $(shell find $(LLFOLDER) -name "*.ll") -S
+	llvm-link -o runtime.ll $(shell find $(LLFOLDER) -name "*.ll") -S
