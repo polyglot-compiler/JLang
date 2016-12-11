@@ -23,15 +23,25 @@
 
 <h2><a id="llvm-ast" class="anchor" href="#llvm-ast" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>LLVM AST</h2>
 
-<p>The LLVM language is described in the <a href="http://www.llvm.org/docs/LangRef.html">Language Reference</a>. Not all of the LLVM language is currently used as a translation target, so only the statements used have associated Polyglot AST nodes. The LLVM language is extended with ESEQ nodes to allow easier translation, which are removed in a <a href="#eseq-removal">compiler pass</a> after translation.</p>
+<p>The LLVM language is described in the <a href="http://www.llvm.org/docs/LangRef.html">Language Reference</a>. Not all of the LLVM language is currently used as a translation target, so only the statements used have associated Polyglot AST nodes. The LLVM language is extended with ESEQ nodes to allow easier translation, which are removed in a <a href="#eseq-removal">compiler pass</a> after translation. There are four main kinds of Nodes for the LLVM AST: top level declarations, statements, expressions, and types. </p>
+
+<p>Top level declarations include a node to represent source files as well as functions, function declarations, global variable declarations, and type declarations. This also includes a node LLVMBlock which represents a basic block of LLVM statements.</p>
+
+<p>Statement nodes represent instructions in LLVM, and must all implement the <tt>LLVMInstruction</tt> interface. </p>
+
+<p>Expression nodes represent expressions in LLVM, and must all implement the <tt>LLVMExpr</tt> interface. </p>
+
+<p>Type nodes represent types in LLVM, and must all implement the <tt>LLVMTypeNode</tt> interface. </p>
+
+
 
 <h2><a id="desugaring-passes" class="anchor" href="#desugaring-passes" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Desugaring Passes</h2>
 
-<p>TODO</p>
+<p>There are currently 3 desugaring passes implemented as a part of PolyLLVM: <tt>StringLiteralRemover</tt>, <tt>AddPrimitiveWideningCastsVisitor</tt>, and <tt>AddVoidReturnVisitor</tt>. The <tt>StringLiteralRemover</tt> pass converts string literals to explicit constructor calls for the <tt>String</tt> class. The <tt>AddPrimitiveWideningCastsVisitor</tt> adds explicit casts where the Java language implicitly casts between two types. The <tt>AddVoidReturnVisitor</tt> adds an explicit return to the end of void functions. Theses are polyglot visitors, so the logic for these transformations is in the extension objects for the Java AST nodes. </p>
 
 <h2><a id="translation-pass" class="anchor" href="#translation-pass" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Translation Pass</h2>
 
-<p>TODO (Explain that translations for each node are in exension objects, but the visitor keeps state for translation)</p>
+<p> The translation pass is also implemented as a polyglot visitor, but the visitor translator maintains additional state for translation. The main data structure the translator uses is a map from Java <tt>Node</tt> objects to <tt>LLVMNode</tt> objects. When translating a Java node, the translation for sub-nodes is retrieved using the <tt>getTranslation</tt> method.</p>
 
 <h2><a id="object-layout" class="anchor" href="#object-layout" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Object Layout</h2>
 
@@ -59,7 +69,7 @@
 
 <h2><a id="post-translation-passes" class="anchor" href="#post-translation-passes" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Post Translation Passes</h2>
 
-<p>Currently the only post translation pass is the <a id="eseq-removal" class="anchor" href="#eseq-removal" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a> ESEQ removal pass.</p>
+<p>Currently the only post translation pass is the <a id="eseq-removal" class="anchor" href="#eseq-removal" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a> ESEQ removal pass. <!--The ESEQ removal pass checks all statement nodes to see if they have an ESEQ as one of their operands, and if so, replaces the statement with a sequence of statements, placing the eseq instructions in the correct order--> </p>
 
 
 
