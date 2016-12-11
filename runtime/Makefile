@@ -19,6 +19,7 @@ polyllvmc:
 	ant -f "$(BASE_DIR)/build.xml" jar
 
 %.ll: %.cpp
+	mkdir -p $(dir $(LLFOLDER)/$@)
 	clang++ $< -S -emit-llvm -std=c++11 -o $(LLFOLDER)/$@
 
 %.ll: %.java polyllvmc
