@@ -17,10 +17,53 @@
 
     <section class="main-content">
 
-<h2>
-<a id="supported-features" class="anchor" href="#supported-features" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>TODO</h2>
+<h2><a id="overview" class="anchor" href="#overview" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Overview</h2>
+
+<p>PolyLLVM is built as an extension to the <a href="https://www.cs.cornell.edu/projects/polyglot/">Polyglot</a> compiler. As PolyLLVM is a backend only, it does not extend the parser, or the type system built into polyglot. PolyLLVM does add a new set of AST nodes for the LLVM source tree, and compiler passes for desugaring and translating the code.</p>
+
+<h2><a id="llvm-ast" class="anchor" href="#llvm-ast" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>LLVM AST</h2>
+
+<p>The LLVM language is described in the <a href="http://www.llvm.org/docs/LangRef.html">Language Reference</a>. Not all of the LLVM language is currently used as a translation target, so only the statements used have associated Polyglot AST nodes. The LLVM language is extended with ESEQ nodes to allow easier translation, which are removed in a <a href="#eseq-removal">compiler pass</a> after translation.</p>
+
+<h2><a id="desugaring-passes" class="anchor" href="#desugaring-passes" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Desugaring Passes</h2>
 
 <p>TODO</p>
+
+<h2><a id="translation-pass" class="anchor" href="#translation-pass" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Translation Pass</h2>
+
+<p>TODO (Explain that translations for each node are in exension objects, but the visitor keeps state for translation)</p>
+
+<h2><a id="object-layout" class="anchor" href="#object-layout" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Object Layout</h2>
+
+<p>TODO</p>
+
+<h2><a id="mangling" class="anchor" href="#mangling" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Mangling</h2>
+
+<p>TODO</p>
+
+<h2><a id="calls" class="anchor" href="#calls" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Method and Interface Calls</h2>
+
+<p>TODO</p>
+
+<h2><a id="instanceof" class="anchor" href="#instanceof" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>InstanceOf</h2>
+
+<p>TODO</p>
+
+<h2><a id="arrays" class="anchor" href="#arrays" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Arrays</h2>
+
+<p>TODO</p>
+
+<h2><a id="native-code" class="anchor" href="#code" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Native Code</h2>
+
+<p>TODO</p>
+
+<h2><a id="post-translation-passes" class="anchor" href="#post-translation-passes" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Post Translation Passes</h2>
+
+<p>Currently the only post translation pass is the <a id="eseq-removal" class="anchor" href="#eseq-removal" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a> ESEQ removal pass.</p>
+
+
+
+
 
     </section>
   </body>
