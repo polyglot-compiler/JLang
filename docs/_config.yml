@@ -1,3 +1,6 @@
+kramdown:
+  input: GFM
+  hard_wrap: false
 project: "PolyLLVM"
 github:
   url: https://github.com/dbd64/PolyLLVM
