@@ -1,5 +1,14 @@
-PolyLLVM Developer Guide
-========
+---
+title: "Developer Guide"
+layout: default
+---
+
+Contents
+--------
+{:.no_toc}
+
+* [table of contents goes here]
+{:toc}
 
 Overview
 --------
@@ -57,15 +66,15 @@ The translation pass is also implemented as a polyglot visitor, but the
 visitor translator maintains additional state for translation. The main
 data structure the translator uses is a map from Java `Node` objects to
 `LLVMNode` objects. When translating a Java node, the translation for
-sub-nodes is retrieved using the `getTranslation` method.  
+sub-nodes is retrieved using the `getTranslation` method.
 
-The translator contains contains helper functions to generate necessary code and declarations, including 
-the necessary type declarations, global variables, and ctor functions. There are helper methods to generate 
-class and interface layouts. 
+The translator contains contains helper functions to generate necessary code and declarations, including
+the necessary type declarations, global variables, and ctor functions. There are helper methods to generate
+class and interface layouts.
 
-All local variables are allocated on the stack, as LLVM has a pass to lift allocated variables to registers. 
-The translator keeps track of allocations and arguments for functions, to generate prologue code to allocate 
-stack space for all variables with the correct names.  
+All local variables are allocated on the stack, as LLVM has a pass to lift allocated variables to registers.
+The translator keeps track of allocations and arguments for functions, to generate prologue code to allocate
+stack space for all variables with the correct names.
 
 Object Layout
 -------------
