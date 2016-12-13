@@ -10,6 +10,7 @@ Contents
 * [table of contents goes here]
 {:toc}
 
+
 Overview
 --------
 
@@ -19,6 +20,7 @@ PolyLLVM is a backend only, it does not extend the parser, or the type
 system built into polyglot. PolyLLVM does add a new set of AST nodes for
 the LLVM source tree, and compiler passes for desugaring and translating
 the code.
+
 
 LLVM AST
 --------
@@ -46,6 +48,7 @@ the `LLVMExpr` interface.
 Type nodes represent types in LLVM, and must all implement the
 `LLVMTypeNode` interface.
 
+
 Desugaring Passes
 -----------------
 
@@ -58,6 +61,7 @@ Java language implicitly casts between two types. The
 `AddVoidReturnVisitor` adds an explicit return to the end of void
 functions. Theses are polyglot visitors, so the logic for these
 transformations is in the extension objects for the Java AST nodes.
+
 
 Translation Pass
 ----------------
@@ -76,35 +80,65 @@ All local variables are allocated on the stack, as LLVM has a pass to lift alloc
 The translator keeps track of allocations and arguments for functions, to generate prologue code to allocate
 stack space for all variables with the correct names.
 
+
 Object Layout
 -------------
 
 TODO
 
-Mangling
---------
 
-TODO
 
 Method and Interface Calls
 --------------------------
 
 TODO
 
+
 InstanceOf
 ----------
 
-TODO
+The following native code is used to execute an `instanceof` check at runtime.
+
+```
+extern "C" {
+
+bool instanceof(jobject* obj, void* compare_type_id) {
+    type_info* type_info = obj->dv->type_info;
+    for (int32_t i = 0, end = type_info->size; i < end; ++i)
+        if (type_info->super_type_ids[i] == compare_type_id)
+            return true;
+    return false;
+}
+
+} // extern "C"
+```
+
+The function accesses the dispatch vector of `obj` to retrieve a table containing all super-classes and super-interfaces, and looks for a match with `compare_type_id`.
+
 
 Arrays
 ------
 
 TODO
 
-Native Code
------------
 
-TODO
+Native Code and Mangling
+------------------------
+
+We use native C code in many parts of the runtime, including
+- Array access and initialization
+- Converting command-line arguments to Java strings
+- Calling the Java entry point
+- Type reflection (e.g., `instanceof`)
+- Printing to stdout
+- Interface method calls
+
+Wherever possible, native C code should be preferred over handwritten or compiler-generated LLVM IR. Native code currently resides in the `runtime/jni` directory.
+
+For an example, consider the [native code used to implement `instanceof`](#instanceof). When translating a reference to `instanceof` in Java source code, PolyLLVM emits a call to this native code with the correct arguments. The runtime build system is responsible for including the compiled native code in a `runtime.ll` file linked with each program.
+
+To facilitate potential JNI support, we mangle types as specified in the JNI API [here](https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/types.html#type_signatures) and [here](https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names). Mangling can get complicated, so when implementing native code that will be called through a Java native method, it is easiest to first compile the Java native method declaration, then inspect the generated LLVM IR to retrieve the correctly mangled method name.
+
 
 Post Translation Passes
 -----------------------

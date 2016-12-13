@@ -10,6 +10,7 @@ Contents
 * [table of contents goes here]
 {:toc}
 
+
 Installation
 ------------
 
@@ -25,6 +26,7 @@ $ make -C runtime
 ```
 
 [Ant](http://ant.apache.org) is needed to build the compiler, and [LLVM](http://llvm.org/releases/) is needed to build the runtime. Both should be available through your package manager of choice.
+
 
 Compiling Hello World
 ---------------------
@@ -42,3 +44,9 @@ $ bin/link HelloWorld.ll
 ```
 
 which creates an assembly file `HelloWorld.s` and an executable file `HelloWorld.binary`.
+
+
+Using PolyLLVM With Another Extension
+-------------------------------------
+
+Coming soon.
