@@ -119,7 +119,9 @@ The function accesses the dispatch vector of `obj` to retrieve a table containin
 Arrays
 ------
 
-TODO
+A Java array (e.g., `int[3]`) is implemented as a contiguous region of memory, with one word to hold the length. Arrays must behave as standard Java objects with respect to type information, so for simplicity arrays are implemented as a Java class (see `Array.java` in the `runtime` directory). The catch is that PolyLLVM allocate extra memory for `Array` instances in order to store data elements. This memory is accessed using native methods `clearEntries` and `setObjectEntry`.
+
+Currently, array elements are always one word in size.
 
 
 Native Code and Mangling
