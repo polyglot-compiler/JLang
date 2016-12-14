@@ -128,6 +128,7 @@ Native Code and Mangling
 ------------------------
 
 We use native C code in many parts of the runtime, including
+
 - Array access and initialization
 - Converting command-line arguments to Java strings
 - Calling the Java entry point
