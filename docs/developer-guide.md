@@ -119,7 +119,41 @@ as in the dispatch vector
 Method and Interface Calls
 --------------------------
 
-TODO
+Static method calls are translated by calling the mangled method name with the translated arguments.
+To translate a instance method call, the method pointer has to be retrieved from the dispatch vector. 
+The translator exposes a method `getMethodIndex` to lookup the method in the dispatch vector layout and return the index.
+Using the result of this call `methodIndex`, the following pseudocode illustrates method calls.
+
+```
+obj->dv[methodIndex](this, arg1, arg2, ...)
+```
+
+The first argument is the pointer to the calling object, and the rest of the arguments are translated and passed in order.
+
+Due to the type system in LLVM, to call a superclass method, bitcasts must be introduced to pass the subclass as a superclass, otherwise, they are translated as static calls.
+
+Interface method calls have to look up the method in the correct interface table, so the linked list
+of interfaces implemented is iterated over, comparing the interface strings. The java type system
+guarantees there will be a match, so when the correct table is found, the method at `methodIndex` 
+is returned.The following native code is used to look up the method pointer for an interface method call
+
+```
+extern "C" {
+
+void* __getInterfaceMethod(jobject* obj, char* interface_string, int methodIndex) {
+    it* itable = obj->dv->it;
+    while(itable != 0){
+        if (strcmp(itable->interface_name, interface_string) == 0) {
+            return ((void **) itable)[methodIndex];
+        } else {
+            itable = itable->next;
+        }
+    }
+    std::abort(); //Should not reach here
+}
+
+} // extern "C"
+```
 
 
 InstanceOf
