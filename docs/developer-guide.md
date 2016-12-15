@@ -17,7 +17,7 @@ Overview
 PolyLLVM is built as an extension to the
 [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler. As
 PolyLLVM is a backend only, it does not extend the parser, or the type
-system built into polyglot. PolyLLVM does add a new set of AST nodes for
+system built into polyglot. PolyLLVM adds a new set of AST nodes for
 the LLVM source tree, and compiler passes for desugaring and translating
 the code.
 
@@ -84,9 +84,37 @@ stack space for all variables with the correct names.
 Object Layout
 -------------
 
-TODO
+Objects are layed out with a pointer to the dispatch vector, followed by the fields, as shown below. 
+The fields are ordered by class first, and within a class are in lexicographical order.  
 
+| Dispatch Vector Pointer |
+|:-------------------------:|
+| Field 1                 |
+| Field 2                 |
+|            ⋮            |
 
+The dispatch vectors are layed out with a pointer to the interface table linked list first, followed by 
+a pointer to the class type info, followed by the methods. The methods are ordered by class first, and 
+within a class are ordered by visibility. Public methods are first, followed by package, protected, and 
+lastly private. Within a visibility, the methods are ordered by name in lexicographical order.
+
+|Interface Table Pointer    |
+|Type Info Pointer          |
+|:-------------------------:|
+|Method 1                   |
+|Method 2                   |
+|            ⋮              |
+
+The interface tables are layed out with a pointer to the next interface table, followed by the 
+interface name as a null terminated string, follwed by the methods. The methods are ordered in the same order
+as in the dispatch vector
+
+|Interface Table Pointer    |
+|char* interface_name       |
+|:-------------------------:|
+|Method 1                   |
+|Method 2                   |
+|            ⋮              |
 
 Method and Interface Calls
 --------------------------
