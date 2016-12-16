@@ -40,13 +40,22 @@ type declarations. This also includes a node LLVMBlock which represents
 a basic block of LLVM statements.
 
 Statement nodes represent instructions in LLVM, and must all implement
-the `LLVMInstruction` interface.
+the `LLVMInstruction` interface. All instructions must implement the `result`
+method to update the register the instruction places its result, as well as 
+`retType` to retrieve the type returned by the instruction. 
 
 Expression nodes represent expressions in LLVM, and must all implement
-the `LLVMExpr` interface.
+the `LLVMExpr` interface. Expressions include literals, as well as variables, 
+lables, ESEQs. The expression interface exposes a `typenode` method for retrieving
+the its type. If an expression can be used as an operand to an instruction,
+it must implement the `LLVMOperand` interface as well. 
 
 Type nodes represent types in LLVM, and must all implement the
-`LLVMTypeNode` interface.
+`LLVMTypeNode` interface. The interface does not expose any additional methods.
+
+All AST nodes which implement `LLVMNode` must implement the `prettyPrint` method, 
+as well as the `visitChildren` method. If applicable, the nodes should implement 
+`removeESeq`.  
 
 
 Desugaring Passes
@@ -78,7 +87,12 @@ class and interface layouts.
 
 All local variables are allocated on the stack, as LLVM has a pass to lift allocated variables to registers.
 The translator keeps track of allocations and arguments for functions, to generate prologue code to allocate
-stack space for all variables with the correct names.
+stack space for all variables with the correct names. This is done as LLVM code must be in
+SSA form, except for memory locations. 
+
+The translator maintains a list of Java loop labels, and their associated head and end label
+used for translation. The translator exposes functions for entering and exiting loops to maintin
+its internal data structure. 
 
 
 Object Layout
@@ -208,4 +222,5 @@ To facilitate potential JNI support, we mangle types as specified in the JNI API
 Post Translation Passes
 -----------------------
 
-Currently the only post translation pass is the ESEQ removal pass.
+Currently the only post translation pass is the ESEQ removal pass. This lifts `LLVMESeq` nodes 
+to sequence nodes after the translation step. 
