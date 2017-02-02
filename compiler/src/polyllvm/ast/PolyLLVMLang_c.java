@@ -4,7 +4,6 @@ import polyglot.ast.*;
 import polyglot.util.InternalCompilerError;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.visit.*;
-import sun.nio.ch.PollArrayWrapper;
 
 public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     public static final PolyLLVMLang_c instance = new PolyLLVMLang_c();
@@ -34,11 +33,6 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
 
     protected PolyLLVMOps PolyLLVMOps(Node n) {
         return polyllvmExt(n);
-    }
-
-    @Override
-    public final Node print(Node n, PrintVisitor v) {
-        return PolyLLVMOps(n).print(v);
     }
 
     @Override
@@ -73,11 +67,6 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
         return PolyLLVMOps(n).translatePseudoLLVMConditional(v,
                                                              trueLabel,
                                                              falseLabel);
-    }
-
-    @Override
-    public Node llvmVarToStack(Node n, LLVMVarToStack v) {
-        return PolyLLVMOps(n).llvmVarToStack(v);
     }
 
     @Override

@@ -8,8 +8,6 @@ import polyllvm.visit.*;
 public interface PolyLLVMLang extends JLang {
     // TODO: Declare any dispatch methods for new AST operations
 
-    Node print(Node n, PrintVisitor v);
-
     Node removeStringLiterals(Node n, StringLiteralRemover llvmTranslation);
 
     PseudoLLVMTranslator enterTranslatePseudoLLVM(Node n,
@@ -23,8 +21,6 @@ public interface PolyLLVMLang extends JLang {
             LLVMLabel trueLabel, LLVMLabel falseLabel);
 
     Node addVoidReturn(Node n, AddVoidReturnVisitor addVoidReturnVisitor);
-
-    Node llvmVarToStack(Node n, LLVMVarToStack llvmVarToStack);
 
     Node removeESeq(Node n, RemoveESeqVisitor removeESeqVisitor);
 
