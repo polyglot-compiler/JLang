@@ -1,5 +1,7 @@
 package polyllvm.extension;
 
+import org.bytedeco.javacpp.*;
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.If;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
@@ -15,37 +17,33 @@ import polyllvm.visit.PseudoLLVMTranslator;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.bytedeco.javacpp.LLVM.LLVMAppendBasicBlock;
+
 public class PolyLLVMIfExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         If n = (If) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
 
-        LLVMLabel trueLabel = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
-        LLVMLabel falseLabel = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
-        LLVMLabel endLabel = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
-        LLVMInstruction cond =
-                (LLVMInstruction) lang().translatePseudoLLVMConditional(n.cond(),
-                                                                        v,
-                                                                        trueLabel,
-                                                                        falseLabel);
-        List<LLVMInstruction> instructions = new ArrayList<>();
-        instructions.add(cond);
-        instructions.add(nf.LLVMSeqLabel(trueLabel));
-        instructions.add(((LLVMBlock) v.getTranslation(n.consequent())).instructions(nf));
-        instructions.add(nf.LLVMBr(endLabel));
-        instructions.add(nf.LLVMSeqLabel(falseLabel));
-        if (n.alternative() != null) {
-            instructions.add(((LLVMBlock) v.getTranslation(n.alternative())).instructions(nf));
-        }
-        instructions.add(nf.LLVMBr(endLabel));
-        instructions.add(nf.LLVMSeqLabel(endLabel));
+        LLVMBasicBlockRef entry = v.currentBlock;
+        LLVMBasicBlockRef iftrue = v.getTranslation(n.consequent());
+        LLVMBasicBlockRef iffalse = n.alternative() == null ? LLVMAppendBasicBlock(v.currFn(), "if_false")
+                : v.getTranslation(n.alternative());
+        LLVMBasicBlockRef end = LLVMAppendBasicBlock(v.currFn(), "end");
 
-        LLVMSeq translation = nf.LLVMSeq(instructions);
+        LLVMPositionBuilderAtEnd(v.builder, entry);
 
-        v.addTranslation(n, translation);
+        lang().translateLLVMConditional(n.cond(), v, iftrue, iffalse);
+
+        LLVMPositionBuilderAtEnd(v.builder, iftrue);
+        LLVMBuildBr(v.builder, end);
+
+        LLVMPositionBuilderAtEnd(v.builder, iffalse);
+        LLVMBuildBr(v.builder, end);
+
+        v.currentBlock = end;
+
         return super.translatePseudoLLVM(v);
     }
 
