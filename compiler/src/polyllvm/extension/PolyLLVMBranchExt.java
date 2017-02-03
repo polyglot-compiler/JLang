@@ -1,5 +1,7 @@
 package polyllvm.extension;
 
+import org.bytedeco.javacpp.LLVM;
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Branch;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
@@ -17,18 +19,18 @@ public class PolyLLVMBranchExt extends PolyLLVMExt {
         Branch n = (Branch) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
-        LLVMBr br;
+        LLVMValueRef br;
         if (n.kind() == Branch.BREAK && n.label() != null) {
-            br = nf.LLVMBr(nf.LLVMLabel(v.getLoopEnd(n.label())));
+            br = LLVMBuildBr(v.builder, v.getLoopEnd(n.label()));
         }
         else if (n.kind() == Branch.BREAK && n.label() == null) {
-            br = nf.LLVMBr(nf.LLVMLabel(v.getLoopEnd()));
+            br = LLVMBuildBr(v.builder, v.getLoopEnd());
         }
         else if (n.kind() == Branch.CONTINUE && n.label() != null) {
-            br = nf.LLVMBr(nf.LLVMLabel(v.getLoopHead(n.label())));
+            br = LLVMBuildBr(v.builder, v.getLoopHead(n.label()));
         }
         else if (n.kind() == Branch.CONTINUE && n.label() == null) {
-            br = nf.LLVMBr(nf.LLVMLabel(v.getLoopHead()));
+            br = LLVMBuildBr(v.builder, v.getLoopHead());
         }
         else {
             throw new InternalCompilerError("Unknown branch type: " + n.kind());

@@ -14,6 +14,7 @@ public class PolyLLVMBlockExt extends PolyLLVMExt {
         LLVMBasicBlockRef res = LLVMAppendBasicBlock(v.currFn(), "start");
         LLVMPositionBuilderAtEnd(v.builder, res);
         v.addTranslation(node(), res);
+        v.currentBlock = res;
         return super.enterTranslatePseudoLLVM(v);
     }
 }

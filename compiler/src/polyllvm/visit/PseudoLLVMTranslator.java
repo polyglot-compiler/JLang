@@ -982,11 +982,11 @@ public class PseudoLLVMTranslator extends NodeVisitor {
      */
 
     /**
-     * loops is a list of (String * (String * String)), where the first String
-     * is a label (or null), and the pair of strings is the head label and end
-     * label for that loop.
+     * loops is a list of (String * (LLVMBasicBlockRef * LLVMBasicBlockRef)),
+     * where the String is a label (or null), and the pair of basic blocks is the
+     * head block and end block for that loop.
      */
-    private LinkedList<Pair<String, Pair<String, String>>> loops =
+    private LinkedList<Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>>> loops =
             new LinkedList<>();
 
     public void enterLoop(Loop n) {
@@ -1000,39 +1000,32 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         }
         //Else the loop is unlabled to generate a fresh label
         else {
-            String head =
-                    PolyLLVMFreshGen.freshNamedLabel(nf, "loop.head").name();
-            String end =
-                    PolyLLVMFreshGen.freshNamedLabel(nf, "loop.end").name();
-            Pair<String, Pair<String, String>> pair =
+            LLVMBasicBlockRef head = LLVMAppendBasicBlock(currFn(), "loop_head");
+            LLVMBasicBlockRef end = LLVMAppendBasicBlock(currFn(), "loop_end");
+
+            Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>> pair =
                     new Pair<>("", new Pair<>(head, end));
             loops.push(pair);
         }
 
     }
 
-    public Pair<String, String> leaveLoop() {
+    public Pair<LLVMBasicBlockRef, LLVMBasicBlockRef> leaveLoop() {
         return loops.pop().part2();
     }
 
     private Labeled label;
-    private String labelhead;
-    private String labelend;
+    private LLVMBasicBlockRef labelhead;
+    private LLVMBasicBlockRef labelend;
 
     public void enterLabeled(Labeled n) {
         label = n;
-        labelhead =
-                PolyLLVMFreshGen.freshNamedLabel(nf,
-                                                 "loop." + n.label() + ".head")
-                                .name();
-        labelend =
-                PolyLLVMFreshGen.freshNamedLabel(nf,
-                                                 "loop." + n.label() + ".end")
-                                .name();
+        labelhead = LLVMAppendBasicBlock(currFn(), n.label() + "_head");
+        labelend = LLVMAppendBasicBlock(currFn(), n.label() + "_end");
     }
 
-    public String getLoopEnd(String label) {
-        for (Pair<String, Pair<String, String>> pair : loops) {
+    public LLVMBasicBlockRef getLoopEnd(String label) {
+        for (Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>> pair : loops) {
             if (pair.part1().equals(label)) {
                 return pair.part2().part2();
             }
@@ -1041,8 +1034,8 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                 + " is not on loop stack");
     }
 
-    public String getLoopHead(String label) {
-        for (Pair<String, Pair<String, String>> pair : loops) {
+    public LLVMBasicBlockRef getLoopHead(String label) {
+        for (Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>> pair : loops) {
             if (pair.part1().equals(label)) {
                 return pair.part2().part1();
             }
@@ -1052,13 +1045,13 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                 + " is not on loop stack");
     }
 
-    public String getLoopHead() {
-        Pair<String, Pair<String, String>> pair = loops.get(0);
+    public LLVMBasicBlockRef getLoopHead() {
+        Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>> pair = loops.get(0);
         return pair.part2().part1();
     }
 
-    public String getLoopEnd() {
-        Pair<String, Pair<String, String>> pair = loops.get(0);
+    public LLVMBasicBlockRef getLoopEnd() {
+        Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>> pair = loops.get(0);
         return pair.part2().part2();
     }
 

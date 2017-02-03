@@ -1,5 +1,7 @@
 package polyllvm.extension;
 
+import org.bytedeco.javacpp.LLVM;
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Node;
 import polyglot.ast.While;
 import polyglot.util.Pair;
@@ -29,30 +31,23 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         While n = (While) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
 
-        Pair<String, String> labels = v.leaveLoop();
+        Pair<LLVMBasicBlockRef, LLVMBasicBlockRef> labels = v.leaveLoop();
 
-        LLVMLabel head = nf.LLVMLabel(labels.part1());
-        LLVMLabel end = nf.LLVMLabel(labels.part2());
-        LLVMLabel l1 = PolyLLVMFreshGen.freshLabel(nf);
+        LLVMBasicBlockRef head = labels.part1();
+        LLVMBasicBlockRef end = labels.part2();
+        LLVMBasicBlockRef l1 = v.getTranslation(n.body());
 
-        List<LLVMInstruction> instrs = new ArrayList<>();
-        instrs.add(nf.LLVMBr(head));
-        instrs.add(nf.LLVMSeqLabel(head));
-        instrs.add((LLVMInstruction) lang().translatePseudoLLVMConditional(n.cond(),
-                                                                           v,
-                                                                           l1,
-                                                                           end));
-        instrs.add(nf.LLVMSeqLabel(l1));
-        LLVMBlock bodyTranslation = (LLVMBlock) v.getTranslation(n.body());
-        instrs.add(bodyTranslation.instructions(nf));
-        instrs.add(nf.LLVMBr(head));
-        instrs.add(nf.LLVMSeqLabel(end));
+        LLVMPositionBuilderAtEnd(v.builder, v.currentBlock);
+        LLVMBuildBr(v.builder, head);
 
-        LLVMSeq seq = nf.LLVMSeq(instrs);
+        LLVMPositionBuilderAtEnd(v.builder, head);
+        lang().translateLLVMConditional(n.cond(), v, l1, end);
 
-        v.addTranslation(n, seq);
+        LLVMPositionBuilderAtEnd(v.builder, l1);
+        LLVMBuildBr(v.builder, head);
+
+        v.currentBlock = end;
 
         return super.translatePseudoLLVM(v);
     }
