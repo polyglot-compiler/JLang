@@ -14,7 +14,7 @@ public class PolyLLVMFormalExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Formal n = (Formal) node();
-        LLVMTypeNode t = (LLVMTypeNode) v.getTranslation(n.type());
+        LLVMTypeNode t = v.getTranslation(n.type());
         LLVMArgDecl ad = v.nodeFactory().LLVMArgDecl(t, n.name());
         v.addTranslation(n, ad);
         return super.translatePseudoLLVM(v);

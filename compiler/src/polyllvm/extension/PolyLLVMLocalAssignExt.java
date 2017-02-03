@@ -23,7 +23,7 @@ public class PolyLLVMLocalAssignExt extends PolyLLVMAssignExt {
         LocalAssign n = (LocalAssign) node();
         Local target = n.left();
         PolyLLVMNodeFactory nf = v.nodeFactory();
-        LLVMNode expr = (LLVMNode) v.getTranslation(n.right());
+        LLVMNode expr = v.getTranslation(n.right());
 
         if (!(expr instanceof LLVMOperand)) {
             throw new InternalCompilerError("Expression `" + n.right() + "` ("

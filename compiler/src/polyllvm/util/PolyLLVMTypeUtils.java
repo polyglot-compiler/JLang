@@ -15,8 +15,64 @@ import polyllvm.visit.PseudoLLVMTranslator;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.bytedeco.javacpp.LLVM.*;
+
 public class PolyLLVMTypeUtils {
 
+    public static LLVMTypeRef llvmType(Type t) {
+        if (t.isBoolean()) {
+            return LLVMInt1Type();
+        } else if (t.isLongOrLess()) {
+            return LLVMIntType(numBitsOfIntegralType(t));
+        } else if (t.isVoid()) {
+            return LLVMVoidType();
+        } else if (t.isFloat()) {
+            return LLVMFloatType();
+        } else if (t.isDouble()) {
+            return LLVMDoubleType();
+        } else if (t.isArray()) {
+            ArrayType arrayType = t.toArray();
+            if (arrayType.base().isReference()) {
+                String classTypeName = "class.support_Array";
+                return LLVMPointerType(LLVMVoidType(), /* addressSpace */ 0);
+//                throw new InternalCompilerError("Array Type not handled : " + arrayType); // TODO
+            } else if (arrayType.base().isPrimitive()) {
+                //TODO : Change to depend on primitive type
+                String classTypeName = "class.support_Array";
+                throw new InternalCompilerError("Array Type not handled : " + arrayType); // TODO
+            } else {
+                throw new InternalCompilerError("Array Type not handled : " + arrayType);
+            }
+        }
+        else if (t.isClass()) {
+            String classTypeName = PolyLLVMMangler.classTypeName(t.toReference());
+            throw new InternalCompilerError("Class Type not handled"); // TODO
+        }
+        else if (t.isNull()) {
+            //TODO: Figure out something better
+            return LLVMPointerType(LLVMVoidType(), /* address space */ 0);
+        }
+        else {
+            try {
+                throw new InternalCompilerError("Only integral types,"
+                        + " Boolean types, float, double,"
+                        + " void, and classes currently supported, not \"" + t
+                        + "\".");
+            }
+            catch (InternalCompilerError e) {
+                System.out.println(e
+                        + "\n    (For more info go to PolyLLVMTypeUtils"
+                        + " and print the stack trace)");
+            }
+            return null;
+        }
+    }
+
+    public static LLVMTypeRef llvmType(TypeNode tn) {
+        return llvmType(tn.type());
+    }
+
+    // TODO: Delete this
     public static LLVMTypeNode polyLLVMTypeNode(PolyLLVMNodeFactory nf, Type t) {
         if (t.isByte()) {
             return nf.LLVMIntType(8);

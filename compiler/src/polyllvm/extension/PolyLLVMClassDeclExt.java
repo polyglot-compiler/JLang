@@ -38,7 +38,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                     funcDecls.add((LLVMFunctionDeclaration) v.getTranslation(cm));
                 } else {
                     // Normal procedure declarations.
-                    LLVMFunction translated = (LLVMFunction) v.getTranslation(pd);
+                    LLVMFunction translated = v.getTranslation(pd);
                     funcs.add(translated);
 
                     // TODO: This is not restrictive enough--we may need to check that the method

@@ -35,25 +35,33 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     private PolyLLVMNodeFactory nf;
     private TypeSystem ts;
 
-    private Map<Node, Object> translations;
-    private Deque<ClassDecl> classes;
+    private Map<Node, Object> translations = new LinkedHashMap<>();
+    private Deque<ClassDecl> classes = new ArrayDeque<>();
 
-    private List<ClassDecl> classesVisited;
+    private List<ClassDecl> classesVisited = new ArrayList<>();
 
     private HashMap<String, LLVMTypeNode> classTypes;
     private List<LLVMGlobalVarDeclaration> globalSizes;
     private List<LLVMFunction> ctorsFunctions;
     private Set<String> containers;
 
+    public final LLVMModuleRef mod;
     public final LLVMBuilderRef builder;
+
+    /**
+     * A stack of all enclosing functions.
+     */
+    private Deque<LLVMValueRef> functions = new ArrayDeque<>();
+    public void pushFn(LLVMValueRef fn) { functions.push(fn); }
+    public void popFn()                 { functions.pop(); }
+    public LLVMValueRef currFn()        { return functions.peek(); }
 
     public PseudoLLVMTranslator(PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());
         this.nf = nf;
         this.ts = ts;
-        translations = new LinkedHashMap<>();
-        classes = new ArrayDeque<>();
         classesVisited = new ArrayList<>();
+        mod = null; // TODO
         builder = LLVMCreateBuilder();
     }
 
@@ -107,8 +115,9 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     /**
      * Return the translation for {@code n}, if none exists return null
      */
-    public Object getTranslation(Node n) {
-        return translations.get(n);
+    @SuppressWarnings("unchecked")
+    public <T> T getTranslation(Node n) {
+        return (T) translations.get(n);
     }
 
     /**

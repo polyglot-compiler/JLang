@@ -6,7 +6,6 @@ import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMNode;
@@ -45,7 +44,7 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
             LLVMLabel trueLabel, LLVMLabel falseLabel) {
         PolyLLVMNodeFactory nf = v.nodeFactory();
         LLVMTypedOperand typedTranslation =
-                nf.LLVMTypedOperand((LLVMOperand) v.getTranslation(node()),
+                nf.LLVMTypedOperand(v.getTranslation(node()),
                                     nf.LLVMIntType(1));
         LLVMInstruction translation =
                 nf.LLVMBr(typedTranslation, trueLabel, falseLabel);

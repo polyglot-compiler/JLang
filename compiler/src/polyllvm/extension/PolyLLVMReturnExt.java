@@ -4,12 +4,10 @@ import polyglot.ast.*;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMReturnExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -36,18 +34,11 @@ public class PolyLLVMReturnExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Return n = (Return) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        Expr expr = n.expr();
-        if (expr == null) {
-            v.addTranslation(n, nf.LLVMRet());
-        }
-        else {
-            LLVMOperand o = (LLVMOperand) v.getTranslation(expr);
-            LLVMTypeNode llvmType =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf, expr.type());
-            v.addTranslation(n, nf.LLVMRet(llvmType, o));
-        }
-
+        Expr e = n.expr();
+        LLVMValueRef res = e == null
+                ? LLVMBuildRetVoid(v.builder)
+                : LLVMBuildRet(v.builder, v.getTranslation(e));
+        v.addTranslation(n, res);
         return super.translatePseudoLLVM(v);
     }
 }
