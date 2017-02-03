@@ -1,10 +1,11 @@
 package polyllvm.extension;
 
 import polyglot.ast.Binary;
-import polyglot.ast.Binary.Operator;
+import polyglot.ast.Binary.*;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
+import polyglot.types.Type;
 import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
@@ -14,18 +15,15 @@ import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMBr;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMICmp;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMStringUtils;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringLiteralRemover;
+
+import static org.bytedeco.javacpp.LLVM.*;
+import static polyglot.ast.Binary.*;
 
 public class PolyLLVMBinaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -186,216 +184,102 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         return super.addPrimitiveWideningCasts(v);
     }
 
+    private static boolean isUnsigned(Type t) {
+        return t.isChar();
+    }
+
+    private static int llvmComparisonKind(Operator op, Type t) {
+        if      (op == LT) return isUnsigned(t) ? LLVMIntULT : LLVMIntSLT;
+        else if (op == LE) return isUnsigned(t) ? LLVMIntULE : LLVMIntSLE;
+        else if (op == EQ) return LLVMIntEQ;
+        else if (op == NE) return LLVMIntNE;
+        else if (op == GE) return isUnsigned(t) ? LLVMIntUGE : LLVMIntSGE;
+        else if (op == GT) return isUnsigned(t) ? LLVMIntUGT : LLVMIntSGT;
+        else {
+            throw new InternalCompilerError("This operation is not a comparison");
+        }
+    }
+
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Binary n = (Binary) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        LLVMOperand left = (LLVMOperand) v.getTranslation(n.left());
-        LLVMOperand right = (LLVMOperand) v.getTranslation(n.right());
+        Type type = n.type();
+        LLVMValueRef left = (LLVMValueRef) v.getTranslation(n.left());
+        LLVMValueRef right = (LLVMValueRef) v.getTranslation(n.right());
         Operator op = n.operator();
-        if (n.left().type().isLongOrLess() && n.right().type().isLongOrLess()) {
-            int intSize =
-                    Math.max(PolyLLVMTypeUtils.numBitsOfIntegralType(n.left()
-                                                                      .type()),
-                             PolyLLVMTypeUtils.numBitsOfIntegralType(n.right()
-                                                                      .type()));
-            LLVMInstruction translation;
-            LLVMTypeNode tn;
+        LLVMValueRef res;
+
+        // TODO: Will need to add widening casts here.
+
+        if (type.isLongOrLess()) {
+            // Integer arithmetic.
             if (op == Binary.ADD) {
-                tn = nf.LLVMIntType(intSize);
-                translation = nf.LLVMAdd((LLVMIntType) tn, left, right);
+                res = LLVMBuildAdd(v.builder, left, right, "add");
+            } else if (op == SUB) {
+                res = LLVMBuildSub(v.builder, left, right, "sub");
+            } else if (op == MUL) {
+                res = LLVMBuildMul(v.builder, left, right, "mul");
+            } else if (op == DIV && type.isChar()) {
+                res = LLVMBuildUDiv(v.builder, left, right, "udiv");
+            } else if (op == DIV) {
+                res = LLVMBuildSDiv(v.builder, left, right, "div");
+            } else if (op == MOD && type.isChar()) {
+                res = LLVMBuildURem(v.builder, left, right, "umod");
+            } else if (op == MOD) {
+                res = LLVMBuildSRem(v.builder, left, right, "mod");
+            } else if (op == BIT_OR) {
+                res = LLVMBuildOr(v.builder, left, right, "or");
+            } else if (op == BIT_AND) {
+                res = LLVMBuildAnd(v.builder, left, right, "and");
+            } else if (op == BIT_XOR) {
+                res = LLVMBuildXor(v.builder, left, right, "xor");
+            } else if (op == SHL) {
+                res = LLVMBuildShl(v.builder, left, right, "shl");
+            } else if (op == USHR || (op == SHR && type.isChar())) {
+                res = LLVMBuildLShr(v.builder, left, right, "lshr");
+            } else if (op == SHR) {
+                res = LLVMBuildAShr(v.builder, left, right, "ashr");
+            } else {
+                throw new InternalCompilerError("Invalid integer operation");
             }
-            else if (op == Binary.SUB) {
-                tn = nf.LLVMIntType(intSize);
-                translation = nf.LLVMSub((LLVMIntType) tn, left, right);
-
-            }
-            else if (op == Binary.MUL) {
-                tn = nf.LLVMIntType(intSize);
-                translation = nf.LLVMMul((LLVMIntType) tn, left, right);
-
-            }
-//            else if (op == Binary.DIV) {
-//            }
-//            else if (op == Binary.MOD) {
-//            }
-//            else if (op == Binary.BIT_OR) {
-//            }
-//            else if (op == Binary.BIT_AND) {
-//            }
-//            else if (op == Binary.BIT_XOR) {
-//            }
-//            else if (op == Binary.SHL) {
-//            }
-//            else if (op == Binary.SHR) {
-//            }
-//            else if (op == Binary.USHR) {
-//            }
-            else if (op == Binary.GT) {
-                tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp((LLVMIntType) tn,
-                                          LLVMICmp.sgt,
-                                          nf.LLVMIntType(intSize),
-                                          left,
-                                          right);
-
-            }
-            else if (op == Binary.LT) {
-                tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp((LLVMIntType) tn,
-                                          LLVMICmp.slt,
-                                          nf.LLVMIntType(intSize),
-                                          left,
-                                          right);
-            }
-            else if (op == Binary.EQ) {
-                tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp((LLVMIntType) tn,
-                                          LLVMICmp.eq,
-                                          nf.LLVMIntType(intSize),
-                                          left,
-                                          right);
-            }
-            else if (op == Binary.LE) {
-                tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp((LLVMIntType) tn,
-                                          LLVMICmp.sle,
-                                          nf.LLVMIntType(intSize),
-                                          left,
-                                          right);
-            }
-            else if (op == Binary.GE) {
-                tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp((LLVMIntType) tn,
-                                          LLVMICmp.sge,
-                                          nf.LLVMIntType(intSize),
-                                          left,
-                                          right);
-            }
-            else if (op == Binary.NE) {
-                tn = nf.LLVMIntType(1);
-                translation = nf.LLVMICmp((LLVMIntType) tn,
-                                          LLVMICmp.ne,
-                                          nf.LLVMIntType(intSize),
-                                          left,
-                                          right);
-            }
-//            else if (op == Binary.COND_AND) {
-//            }
-//            else if (op == Binary.COND_OR) {
-//            }
-            else {
-                throw new InternalCompilerError("Operator " + op
-                        + " is not currently supported for integral types");
-            }
-
-            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, tn);
-            translation = translation.result(result);
-            v.addTranslation(n, nf.LLVMESeq(translation, result));
         }
-        else if (n.type().isFloat()) {
-            throw new InternalCompilerError("Adding floats temporarily not supported");
+        else if (type.isBoolean()) {
+            // Comparison.
+            res = LLVMBuildICmp(v.builder, llvmComparisonKind(op, type), left, right, "cmp");
         }
-        else if (n.type().isDouble()) {
-            LLVMInstruction translation;
-            LLVMTypeNode tn;
-            if (op == Binary.ADD) {
-                tn = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
-                translation = nf.LLVMFAdd(tn, left, right);
+        else if (type.isFloat() || type.isDouble()) {
+            // Floating point arithmetic.
+            if (op == ADD) {
+                res = LLVMBuildFAdd(v.builder, left, right, "fadd");
+            } else if (op == SUB) {
+                res = LLVMBuildFSub(v.builder, left, right, "fsub");
+            } else if (op == MUL) {
+                res = LLVMBuildFMul(v.builder, left, right, "fmul");
+            } else if (op == DIV) {
+                res = LLVMBuildFDiv(v.builder, left, right, "fdiv");
+            } else {
+                throw new InternalCompilerError("Invalid floating point operation");
             }
-            // else if (op == Binary.SUB) {
-
-            // }
-            // else if (op == Binary.MUL) {
-            // }
-//            else if (op == Binary.DIV) {
-//            }
-//            else if (op == Binary.MOD) {
-//            }
-//            else if (op == Binary.BIT_OR) {
-//            }
-//            else if (op == Binary.BIT_AND) {
-//            }
-//            else if (op == Binary.BIT_XOR) {
-//            }
-//            else if (op == Binary.SHL) {
-//            }
-//            else if (op == Binary.SHR) {
-//            }
-//            else if (op == Binary.USHR) {
-//            }
-            // else if (op == Binary.GT) {
-            // }
-            // else if (op == Binary.LT) {
-            // }
-            // else if (op == Binary.EQ) {
-            // }
-            // else if (op == Binary.LE) {
-            // }
-            // else if (op == Binary.GE) {
-            // }
-            // else if (op == Binary.NE) {
-            // }
-//            else if (op == Binary.COND_AND) {
-//            }
-//            else if (op == Binary.COND_OR) {
-//            }
-            else {
-                throw new InternalCompilerError("Operator " + op
-                        + " is not currently supported for doubles");
-            }
-
-            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, tn);
-            translation = translation.result(result);
-            v.addTranslation(n, nf.LLVMESeq(translation, result));
+        } else {
+            throw new InternalCompilerError("Invalid binary operation result type");
         }
+
+        v.addTranslation(n, res);
         return super.translatePseudoLLVM(v);
     }
 
     @Override
     public Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
-            LLVMLabel trueLabel, LLVMLabel falseLabel) {
+                                               LLVMLabel trueLabel, LLVMLabel falseLabel) {
         Binary n = (Binary) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
-//        LLVMOperand left = (LLVMOperand) v.getTranslation(n.left());
-//        LLVMOperand right = (LLVMOperand) v.getTranslation(n.right());
         Operator op = n.operator();
+        if (op == Binary.COND_AND || op == Binary.COND_OR)
+            throw new InternalCompilerError("Short-circuiting AND/OR not supported as binop");
 
-//        if (op == Binary.GT) {
-//        }
-//        else if (op == Binary.LT) {
-//        }
-//        else if (op == Binary.EQ) {
-//        }
-//        else if (op == Binary.LE) {
-//        }
-//        else if (op == Binary.GE) {
-//        }
-//        else if (op == Binary.NE) {
-//        }
-        if (op == Binary.COND_AND) {
-            throw new InternalCompilerError("Conditional translation of AND not supported");
-        }
-        else if (op == Binary.COND_OR) {
-            throw new InternalCompilerError("Conditional translation of OR not supported");
-        }
-        else {
-            if (!(v.getTranslation(n) instanceof LLVMOperand)) {
-                throw new InternalCompilerError("Binary " + n
-                        + " is not translated to an LLVMOperand");
-            }
-            LLVMOperand translation = (LLVMOperand) v.getTranslation(n);
-//            LLVMInstruction cmp = (LLVMInstruction) translation;
-//            LLVMVariable tmp = PolyLLVMFreshGen.freshLocalVar(nf);
-//            cmp = cmp.result(tmp);
-            LLVMTypeNode tn = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
-            LLVMTypedOperand cond = nf.LLVMTypedOperand(translation, tn);
-            LLVMBr br = nf.LLVMBr(cond, trueLabel, falseLabel);
-//            List<LLVMInstruction> instructions = new ArrayList<>();
-//            instructions.add(br);
-            return br;//nf.LLVMSeq( instructions);
-        }
-//        return super.translatePseudoLLVMConditional(v, trueLabel, falseLabel);
+        LLVMOperand translation = (LLVMOperand) v.getTranslation(n);
+        LLVMTypeNode tn = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+        LLVMTypedOperand cond = nf.LLVMTypedOperand(translation, tn);
+        return  nf.LLVMBr(cond, trueLabel, falseLabel);
     }
-
 }

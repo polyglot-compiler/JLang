@@ -28,12 +28,14 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static org.bytedeco.javacpp.LLVM.*;
+
 public class PseudoLLVMTranslator extends NodeVisitor {
 
     private PolyLLVMNodeFactory nf;
     private TypeSystem ts;
 
-    private Map<Node, LLVMNode> translations;
+    private Map<Node, Object> translations;
     private Deque<ClassDecl> classes;
 
     private List<ClassDecl> classesVisited;
@@ -43,6 +45,8 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     private List<LLVMFunction> ctorsFunctions;
     private Set<String> containers;
 
+    public final LLVMBuilderRef builder;
+
     public PseudoLLVMTranslator(PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());
         this.nf = nf;
@@ -50,6 +54,13 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         translations = new LinkedHashMap<>();
         classes = new ArrayDeque<>();
         classesVisited = new ArrayList<>();
+        builder = LLVMCreateBuilder();
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        super.finalize();
+        LLVMDisposeBuilder(builder);
     }
 
     @Override
@@ -74,7 +85,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
     /**
      * Get the node factory used by the compiler to create new nodes
-     * @return
      */
     public PolyLLVMNodeFactory nodeFactory() {
         return nf;
@@ -82,7 +92,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
     /**
      * Get the Type System used by the compiler
-     * @return
      */
     public TypeSystem typeSystem() {
         return ts;
@@ -90,18 +99,15 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
     /**
      * Add the translation from n -> lln
-     * @param n
-     * @param lln
      */
-    public void addTranslation(Node n, LLVMNode lln) {
+    public void addTranslation(Node n, Object lln) {
         translations.put(n, lln);
     }
 
     /**
      * Return the translation for {@code n}, if none exists return null
-     * @param n
      */
-    public LLVMNode getTranslation(Node n) {
+    public Object getTranslation(Node n) {
         return translations.get(n);
     }
 
@@ -122,7 +128,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
     /**
      * Return the current class
-     * @return
      */
     public ClassDecl getCurrentClass() {
         return classes.peek();

@@ -187,9 +187,9 @@ public class PolyLLVMTypeUtils {
             return 16;
         else if (t.isInt())
             return 32;
-        else if (t.isLong()) return 64;
-        throw new InternalCompilerError("Type " + t
-                + " is not an integral type");
+        else if (t.isLong())
+            return 64;
+        throw new InternalCompilerError("Type " + t + " is not an integral type");
     }
 
     public static LLVMTypeNode polyLLVMMethodTypeNode(PolyLLVMNodeFactory nf,

@@ -19,7 +19,7 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
         }
         if (e == null) {
             throw new InternalCompilerError("No PolyLLVM extension object for node "
-                    + n + " (" + n.getClass() + ")", n.position());
+                                            + n + " (" + n.getClass() + ")", n.position());
         }
         return (PolyLLVMExt) e;
     }
@@ -27,12 +27,6 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     @Override
     public final PolyLLVMLang lang() {
         return PolyLLVMLang_c.instance;
-    }
-
-    @Override
-    public Node print(PrintVisitor v) {
-        System.out.println("NODE: " + node());
-        return node();
     }
 
     @Override
@@ -64,11 +58,6 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     @Override
     public Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
             LLVMLabel trueLabel, LLVMLabel falseLabel) {
-        return node();
-    }
-
-    @Override
-    public Node llvmVarToStack(LLVMVarToStack v) {
         return node();
     }
 
