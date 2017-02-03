@@ -28,7 +28,8 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
 
         LLVMBasicBlockRef entry = v.currentBlock;
         LLVMBasicBlockRef iftrue = v.getTranslation(n.consequent());
-        LLVMBasicBlockRef iffalse = n.alternative() == null ? LLVMAppendBasicBlock(v.currFn(), "if_false")
+        LLVMBasicBlockRef iffalse = n.alternative() == null
+                ? LLVMAppendBasicBlock(v.currFn(), "if_false")
                 : v.getTranslation(n.alternative());
         LLVMBasicBlockRef end = LLVMAppendBasicBlock(v.currFn(), "end");
 
@@ -42,6 +43,7 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
         LLVMPositionBuilderAtEnd(v.builder, iffalse);
         LLVMBuildBr(v.builder, end);
 
+        LLVMPositionBuilderAtEnd(v.builder, end);
         v.currentBlock = end;
 
         return super.translatePseudoLLVM(v);
