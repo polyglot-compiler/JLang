@@ -6,6 +6,7 @@ import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
 import polyglot.types.TypeSystem;
+import polyglot.util.CollectionUtil;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
@@ -26,6 +27,8 @@ import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringLiteralRemover;
+
+import java.util.List;
 
 public class PolyLLVMBinaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -373,13 +376,23 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
 //        }
 //        else if (op == Binary.NE) {
 //        }
-        if (op == Binary.COND_AND) {
-            throw new InternalCompilerError("Conditional translation of AND not supported");
-        }
-        else if (op == Binary.COND_OR) {
-            throw new InternalCompilerError("Conditional translation of OR not supported");
-        }
-        else {
+        if (op == Binary.COND_AND ){
+            LLVMLabel l1 = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
+            List l = CollectionUtil.list(
+                    lang().translatePseudoLLVMConditional(n.left(), v, l1, falseLabel),
+                    nf.LLVMSeqLabel(l1),
+                    lang().translatePseudoLLVMConditional(n.right(), v, trueLabel,falseLabel)
+            );
+            return nf.LLVMSeq(l);
+        } else if (op == Binary.COND_OR) {
+            LLVMLabel l1 = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
+            List l = CollectionUtil.list(
+                    lang().translatePseudoLLVMConditional(n.left(), v, trueLabel, l1),
+                    nf.LLVMSeqLabel(l1),
+                    lang().translatePseudoLLVMConditional(n.right(), v, trueLabel,falseLabel)
+            );
+            return nf.LLVMSeq(l);
+        }        else {
             if (!(v.getTranslation(n) instanceof LLVMOperand)) {
                 throw new InternalCompilerError("Binary " + n
                         + " is not translated to an LLVMOperand");
