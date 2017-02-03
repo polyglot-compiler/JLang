@@ -1,5 +1,8 @@
 package polyllvm.extension;
 
+import org.bytedeco.javacpp.LLVM;
+import static org.bytedeco.javacpp.LLVM.*;
+
 import polyglot.ast.BooleanLit;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
@@ -33,6 +36,15 @@ public class PolyLLVMBooleanLitExt extends PolyLLVMExt {
         }
         else {
             return nf.LLVMBr(falseLabel);
+        }
+    }
+
+    @Override
+    public void translateLLVMConditional(PseudoLLVMTranslator v, LLVM.LLVMBasicBlockRef trueBlock, LLVM.LLVMBasicBlockRef falseBlock) {
+        if(((BooleanLit) node()).value()){
+            LLVMBuildBr(v.builder, trueBlock);
+        } else {
+            LLVMBuildBr(v.builder, falseBlock);
         }
     }
 }

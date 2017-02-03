@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.Binary;
 import polyglot.ast.Binary.*;
 import polyglot.ast.Expr;
@@ -7,6 +8,7 @@ import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
 import polyglot.types.Type;
 import polyglot.types.TypeSystem;
+import polyglot.util.CollectionUtil;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
@@ -16,11 +18,14 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMStringUtils;
 import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringLiteralRemover;
+
+import java.util.List;
 
 import static org.bytedeco.javacpp.LLVM.*;
 import static polyglot.ast.Binary.*;
@@ -274,12 +279,53 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         Binary n = (Binary) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
         Operator op = n.operator();
-        if (op == Binary.COND_AND || op == Binary.COND_OR)
-            throw new InternalCompilerError("Short-circuiting AND/OR not supported as binop");
+        if (op == Binary.COND_AND ){
+            LLVMLabel l1 = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
+            List l = CollectionUtil.list(
+                lang().translatePseudoLLVMConditional(n.left(), v, l1, falseLabel),
+                nf.LLVMSeqLabel(l1),
+                lang().translatePseudoLLVMConditional(n.right(), v, trueLabel,falseLabel)
+            );
+            return nf.LLVMSeq(l);
+        } else if (op == Binary.COND_OR) {
+            LLVMLabel l1 = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
+            List l = CollectionUtil.list(
+                    lang().translatePseudoLLVMConditional(n.left(), v, trueLabel, l1),
+                    nf.LLVMSeqLabel(l1),
+                    lang().translatePseudoLLVMConditional(n.right(), v, trueLabel,falseLabel)
+            );
+            return nf.LLVMSeq(l);
+        }
 
-        LLVMOperand translation = (LLVMOperand) v.getTranslation(n);
+        LLVMOperand translation = v.getTranslation(n);
         LLVMTypeNode tn = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
         LLVMTypedOperand cond = nf.LLVMTypedOperand(translation, tn);
         return  nf.LLVMBr(cond, trueLabel, falseLabel);
+    }
+
+    @Override
+    public void translateLLVMConditional(PseudoLLVMTranslator v, LLVMBasicBlockRef trueBlock, LLVMBasicBlockRef falseBlock) {
+        Binary n = (Binary) node();
+        Operator op = n.operator();
+        if (op == Binary.COND_AND ){
+            LLVMBasicBlockRef initial = v.currentBlock;
+            LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
+            LLVMPositionBuilderAtEnd(v.builder, v.currentBlock);
+            lang().translateLLVMConditional(n.left(), v, l1, falseBlock);
+            LLVMPositionBuilderAtEnd(v.builder, l1);
+            lang().translateLLVMConditional(n, v, trueBlock, falseBlock);
+            v.currentBlock = initial;
+        } else if (op == Binary.COND_OR) {
+            LLVMBasicBlockRef initial = v.currentBlock;
+            LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
+            LLVMPositionBuilderAtEnd(v.builder, v.currentBlock);
+            lang().translateLLVMConditional(n.left(), v, trueBlock, l1);
+            LLVMPositionBuilderAtEnd(v.builder, l1);
+            lang().translateLLVMConditional(n, v, trueBlock, falseBlock);
+            v.currentBlock = initial;
+        }
+
+        LLVMValueRef val = v.getTranslation(n);
+        LLVMBuildCondBr(v.builder, val, trueBlock, falseBlock);
     }
 }

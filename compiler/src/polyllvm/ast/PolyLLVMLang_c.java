@@ -1,5 +1,6 @@
 package polyllvm.ast;
 
+import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.*;
 import polyglot.util.InternalCompilerError;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
@@ -67,6 +68,12 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
         return PolyLLVMOps(n).translatePseudoLLVMConditional(v,
                                                              trueLabel,
                                                              falseLabel);
+    }
+
+    @Override
+    public void translateLLVMConditional(Node n, PseudoLLVMTranslator v, LLVM.LLVMBasicBlockRef trueBlock, LLVM.LLVMBasicBlockRef falseBlock) {
+        PolyLLVMOps(n).translateLLVMConditional(v,trueBlock,falseBlock);
+
     }
 
     @Override

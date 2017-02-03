@@ -1,5 +1,8 @@
 package polyllvm.extension;
 
+import org.bytedeco.javacpp.LLVM;
+import static org.bytedeco.javacpp.LLVM.*;
+
 import polyglot.ast.Local;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
@@ -50,5 +53,10 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
                 nf.LLVMBr(typedTranslation, trueLabel, falseLabel);
 
         return translation;
+    }
+
+    @Override
+    public void translateLLVMConditional(PseudoLLVMTranslator v, LLVM.LLVMBasicBlockRef trueBlock, LLVM.LLVMBasicBlockRef falseBlock) {
+        LLVMBuildCondBr(v.builder, v.getTranslation(node()), trueBlock, falseBlock);
     }
 }

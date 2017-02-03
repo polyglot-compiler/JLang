@@ -1,5 +1,6 @@
 package polyllvm.ast;
 
+import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.JLang;
 import polyglot.ast.Node;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
@@ -19,6 +20,11 @@ public interface PolyLLVMLang extends JLang {
 
     Node translatePseudoLLVMConditional(Node n, PseudoLLVMTranslator v,
             LLVMLabel trueLabel, LLVMLabel falseLabel);
+
+    void translateLLVMConditional(Node n, PseudoLLVMTranslator v,
+                                  LLVM.LLVMBasicBlockRef trueBlock,
+                                  LLVM.LLVMBasicBlockRef falseBlock);
+
 
     Node addVoidReturn(Node n, AddVoidReturnVisitor addVoidReturnVisitor);
 

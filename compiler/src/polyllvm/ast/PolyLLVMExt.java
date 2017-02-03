@@ -1,5 +1,6 @@
 package polyllvm.ast;
 
+import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.Ext;
 import polyglot.ast.Ext_c;
 import polyglot.ast.Node;
@@ -60,6 +61,11 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
             LLVMLabel trueLabel, LLVMLabel falseLabel) {
         return node();
     }
+
+    @Override
+    public void translateLLVMConditional(PseudoLLVMTranslator v,
+                                         LLVM.LLVMBasicBlockRef trueBlock,
+                                         LLVM.LLVMBasicBlockRef falseBlock) { }
 
     @Override
     public final Node removeESeq(RemoveESeqVisitor v) {

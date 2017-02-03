@@ -1,5 +1,8 @@
 package polyllvm.ast;
 
+import org.bytedeco.javacpp.LLVM;
+import static org.bytedeco.javacpp.LLVM.*;
+
 import polyglot.ast.Node;
 import polyglot.ast.NodeOps;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
@@ -20,6 +23,20 @@ public interface PolyLLVMOps extends NodeOps {
 
     Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
             LLVMLabel trueLabel, LLVMLabel falseLabel);
+
+    /**
+     * Adds the conditional translation of this node to the current block. If this node
+     * evaluates to true, jump to {@code trueBlock}, otherwise jump to
+     * {@code falseBlock}. Creates additional blocks if needed.
+     * Does not switch the current block of v.
+     * @param v
+     * @param trueBlock
+     * @param falseBlock
+     */
+    void translateLLVMConditional(PseudoLLVMTranslator v,
+                                               LLVMBasicBlockRef trueBlock,
+                                               LLVMBasicBlockRef falseBlock);
+
 
     Node addVoidReturn(AddVoidReturnVisitor v);
 
