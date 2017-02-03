@@ -33,7 +33,7 @@ public class PolyLLVMFieldAssignExt extends PolyLLVMAssignExt {
         Field field = n.left();
         Receiver objectTarget = field.target();
         PolyLLVMNodeFactory nf = v.nodeFactory();
-        LLVMNode expr = v.getTranslation(n.right());
+        LLVMNode expr = (LLVMNode) v.getTranslation(n.right());
         LLVMTypeNode fieldTypeNode = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, field.type());
 
         if (!(expr instanceof LLVMOperand)) {

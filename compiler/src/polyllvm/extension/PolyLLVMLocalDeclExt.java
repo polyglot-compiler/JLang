@@ -28,7 +28,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
             return super.translatePseudoLLVM(v);
         }
 
-        LLVMNode decl = v.getTranslation(n.init());
+        LLVMNode decl = (LLVMNode) v.getTranslation(n.init());
 
         if (!(decl instanceof LLVMOperand)) {
             throw new InternalCompilerError("Initializer " + n.init() + " ("
