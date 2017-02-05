@@ -30,12 +30,6 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     }
 
     @Override
-    public Node print(PrintVisitor v) {
-        System.out.println("NODE: " + node());
-        return node();
-    }
-
-    @Override
     public Node removeStringLiterals(StringLiteralRemover v) {
         return node();
     }
@@ -64,11 +58,6 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     @Override
     public Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
             LLVMLabel trueLabel, LLVMLabel falseLabel) {
-        return node();
-    }
-
-    @Override
-    public Node llvmVarToStack(LLVMVarToStack v) {
         return node();
     }
 

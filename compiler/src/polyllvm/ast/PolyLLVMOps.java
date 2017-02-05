@@ -10,8 +10,6 @@ import polyllvm.visit.*;
  */
 public interface PolyLLVMOps extends NodeOps {
 
-    Node print(PrintVisitor v);
-
     Node removeStringLiterals(StringLiteralRemover v);
 
     PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v);
@@ -24,8 +22,6 @@ public interface PolyLLVMOps extends NodeOps {
             LLVMLabel trueLabel, LLVMLabel falseLabel);
 
     Node addVoidReturn(AddVoidReturnVisitor v);
-
-    Node llvmVarToStack(LLVMVarToStack v);
 
     Node removeESeq(RemoveESeqVisitor v);
 
