@@ -1,6 +1,5 @@
 package polyllvm.extension;
 
-import org.bytedeco.javacpp.PointerPointer;
 import polyglot.ast.Formal;
 import polyglot.ast.MethodDecl;
 import polyglot.ast.Node;
@@ -52,10 +51,8 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         LLVMTypeRef retType = n instanceof MethodDecl
                 ? PolyLLVMTypeUtils.llvmType(((MethodDecl) n).returnType())
                 : LLVMVoidType();
-        @SuppressWarnings("unchecked")
-        PointerPointer argTypesArr = new PointerPointer(argTypes.toArray(new LLVMTypeRef[0]));
-        LLVMTypeRef funcType = LLVMFunctionType(
-                retType, argTypesArr, argTypes.size(), /* isVarArg */ 0);
+        LLVMTypeRef[] argTypesArr = argTypes.toArray(new LLVMTypeRef[0]);
+        LLVMTypeRef funcType = PolyLLVMTypeUtils.llvmFunctionType(retType, argTypesArr);
 
         // Add function to module.
         LLVMValueRef res;

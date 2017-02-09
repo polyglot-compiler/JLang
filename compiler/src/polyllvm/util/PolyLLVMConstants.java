@@ -20,4 +20,9 @@ public class PolyLLVMConstants {
      * The default size of the table for interfaces
      */
     public static int INTERFACE_TABLE_SIZE = 10;
+
+    /**
+     * The default address space for all LLVM pointers.
+     */
+    public static int LLVM_ADDR_SPACE = 0;
 }

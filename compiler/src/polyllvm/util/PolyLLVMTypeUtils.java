@@ -1,5 +1,6 @@
 package polyllvm.util;
 
+import org.bytedeco.javacpp.PointerPointer;
 import polyglot.ast.ClassDecl;
 import polyglot.ast.TypeNode;
 import polyglot.types.*;
@@ -18,6 +19,10 @@ import java.util.List;
 import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMTypeUtils {
+
+    public static LLVMTypeRef llvmPtrSizedIntType() {
+        return LLVMInt64Type();
+    }
 
     public static LLVMTypeRef llvmType(Type t) {
         if (t.isBoolean()) {
@@ -139,6 +144,11 @@ public class PolyLLVMTypeUtils {
         }
     }
 
+    public static LLVMTypeRef llvmFunctionType(LLVMTypeRef ret, LLVMTypeRef ...args) {
+        return LLVMFunctionType(ret, new PointerPointer<>(args), args.length, /* isVarArgs */ 0);
+    }
+
+    // TODO
     public static LLVMFunctionType polyLLVMFunctionTypeNode(
             PolyLLVMNodeFactory nf, List<? extends Type> formalTypes,
             Type returnType) {

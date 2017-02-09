@@ -26,9 +26,7 @@ final class TranslationUtils {
     /**
      * Returns an LLVM main function that calls into the specified Java entry point.
      */
-    static LLVMFunction createEntryPoint(PolyLLVMNodeFactory nf,
-                                                TypeSystem ts,
-                                                String entryFunc) {
+    static LLVMFunction createEntryPoint(PolyLLVMNodeFactory nf, TypeSystem ts, String entryFunc) {
         // Build the function type for `void main(String[] args)`.
         Type strType;
         try {
