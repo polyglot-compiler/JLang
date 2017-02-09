@@ -65,20 +65,14 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     public void addEntryPoint(LLVMValueRef entryPoint) { entryPoints.add(entryPoint); }
     public List<LLVMValueRef> getEntryPoints() { return ListUtil.copy(entryPoints, false); }
 
-    public PseudoLLVMTranslator(String moduleName, PolyLLVMNodeFactory nf, TypeSystem ts) {
+    public PseudoLLVMTranslator(LLVMModuleRef mod, LLVMBuilderRef builder,
+                                PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());
+        this.mod = mod;
+        this.builder = builder;
         this.nf = nf;
         this.ts = ts;
         classesVisited = new ArrayList<>();
-        mod = LLVMModuleCreateWithName(moduleName);
-        builder = LLVMCreateBuilder();
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        super.finalize();
-        LLVMDisposeModule(mod);
-        LLVMDisposeBuilder(builder);
     }
 
     @Override

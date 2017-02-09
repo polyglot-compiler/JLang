@@ -44,11 +44,9 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         List<LLVMFunctionDeclaration> funcDecls = new ArrayList<>();
         List<LLVMGlobalDeclaration> globals = new ArrayList<>();
 
-        for (ClassMember cm : n.body().members()) {
-            if (isEntryPoint(cm, v.typeSystem())) {
-                v.addEntryPoint(v.getTranslation(cm));
-            }
-        }
+        n.body().members().stream()
+                .filter(cm -> isEntryPoint(cm, v.typeSystem()))
+                .forEach(cm -> v.addEntryPoint(v.getTranslation(cm)));
 
         // External class object declarations.
         Type superType = n.type().superType();

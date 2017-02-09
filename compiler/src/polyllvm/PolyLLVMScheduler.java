@@ -1,10 +1,12 @@
 package polyllvm;
 
+import org.bytedeco.javacpp.BytePointer;
+import org.bytedeco.javacpp.Pointer;
+import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
-import polyglot.frontend.CyclicDependencyException;
+import polyglot.frontend.*;
 import polyglot.frontend.ExtensionInfo;
-import polyglot.frontend.JLScheduler;
-import polyglot.frontend.Job;
+import polyglot.frontend.goals.CodeGenerated;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
@@ -16,6 +18,8 @@ import polyglot.visit.MakeNarrowingAssignmentsExplicit;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.visit.*;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMScheduler extends JLScheduler {
 
@@ -171,12 +175,49 @@ public class PolyLLVMScheduler extends JLScheduler {
         return internGoal(g);
     }
 
-    public Goal LLVMTranslate(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        TypeSystem ts = extInfo.typeSystem();
-        PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
+    private static class LLVMOutputPass extends AbstractPass {
+        LLVMOutputPass(Goal goal) {
+            super(goal);
+        }
 
-        Goal g = new VisitorGoal(job, new PseudoLLVMTranslator(job.source().name(), nf, ts));
+        @Override
+        public boolean run() {
+            ExtensionInfo extInfo = goal.job().extensionInfo();
+            PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
+            TypeSystem ts = extInfo.typeSystem();
+
+            LLVMModuleRef mod = LLVMModuleCreateWithName(goal.job().source().name());
+            LLVMBuilderRef builder = LLVMCreateBuilder();
+            PseudoLLVMTranslator translator = new PseudoLLVMTranslator(mod, builder, nf, ts);
+
+            Node ast = goal.job().ast();
+            ast.visit(translator);
+
+            BytePointer error = new BytePointer((Pointer) null);
+            LLVMVerifyModule(mod, LLVMPrintMessageAction, error);
+            LLVMDisposeMessage(error);
+
+            LLVMDumpModule(mod);
+            LLVMDisposeBuilder(builder);
+            LLVMDisposeModule(mod);
+
+            return true;
+        }
+    }
+
+    private static class LLVMOutputGoal extends CodeGenerated {
+        LLVMOutputGoal(Job job) {
+            super(job);
+        }
+
+        @Override
+        public Pass createPass(ExtensionInfo extInfo) {
+            return new LLVMOutputPass(this);
+        }
+    }
+
+    public Goal LLVMTranslate(Job job) {
+        Goal g = new LLVMOutputGoal(job);
         try {
             // Make sure we have type information before we translate things.
             g.addPrerequisiteGoal(CodeCleaner(job), this);
