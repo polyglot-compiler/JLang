@@ -45,11 +45,11 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             // LLVMTypeNode objType = LLVMUtils.polyLLVMObjectVariableType(v, v.getCurrentClass().type());
         }
         for (Formal formal : n.formals()) {
-            argTypes.add(LLVMUtils.llvmType(formal.type()));
+            argTypes.add(LLVMUtils.typeRef(formal.type(), v.mod));
             // v.addArgument(formal.name(), tn); // TODO
         }
         LLVMTypeRef retType = n instanceof MethodDecl
-                ? LLVMUtils.llvmType(((MethodDecl) n).returnType())
+                ? LLVMUtils.typeRef(((MethodDecl) n).returnType(), v.mod)
                 : LLVMVoidType();
         LLVMTypeRef[] argTypesArr = argTypes.toArray(new LLVMTypeRef[0]);
         LLVMTypeRef funcType = LLVMUtils.functionType(retType, argTypesArr);

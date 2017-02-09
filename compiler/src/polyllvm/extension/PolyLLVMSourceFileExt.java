@@ -18,7 +18,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     @Override
     public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         // Add a malloc declaration to the current module.
-        LLVMTypeRef retType = LLVMPointerType(LLVMInt8Type(), Constants.LLVM_ADDR_SPACE);
+        LLVMTypeRef retType = LLVMUtils.ptrTypeRef(LLVMInt8Type());
         LLVMTypeRef argType = LLVMUtils.llvmPtrSizedIntType();
         LLVMTypeRef funcType = LLVMUtils.functionType(retType, argType);
         LLVMAddFunction(v.mod, Constants.MALLOC, funcType);
@@ -33,7 +33,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
             // Build a trampoline between the LLVM entry point and the Java entry point.
             LLVMValueRef javaEntryPoint = entryPoints.iterator().next();
             TypeSystem ts = v.typeSystem();
-            LLVMTypeRef argType = LLVMUtils.llvmType(ts.arrayOf(ts.String()));
+            LLVMTypeRef argType = LLVMUtils.typeRef(ts.arrayOf(ts.String()), v.mod);
             LLVMTypeRef funcType = LLVMUtils.functionType(LLVMVoidType(), argType);
             LLVMValueRef func = LLVMAddFunction(v.mod, Constants.ENTRY_TRAMPOLINE, funcType);
             LLVMBasicBlockRef block = LLVMAppendBasicBlock(func, "body");

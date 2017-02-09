@@ -24,7 +24,18 @@ public class LLVMUtils {
         return LLVMInt64Type();
     }
 
-    public static LLVMTypeRef llvmType(Type t) {
+    public static LLVMTypeRef ptrTypeRef(LLVMTypeRef elemType) {
+        return LLVMPointerType(elemType, Constants.LLVM_ADDR_SPACE);
+    }
+
+    private static LLVMTypeRef structTypeRef(String mangledName, LLVMModuleRef mod) {
+        LLVMTypeRef res = LLVMGetTypeByName(mod, mangledName);
+        if (res == null)
+            res = LLVMStructCreateNamed(LLVMGetGlobalContext(), mangledName);
+        return res;
+    }
+
+    public static LLVMTypeRef typeRef(Type t, LLVMModuleRef mod) {
         if (t.isBoolean()) {
             return LLVMInt1Type();
         } else if (t.isLongOrLess()) {
@@ -36,45 +47,17 @@ public class LLVMUtils {
         } else if (t.isDouble()) {
             return LLVMDoubleType();
         } else if (t.isArray()) {
-            ArrayType arrayType = t.toArray();
-            if (arrayType.base().isReference()) {
-                String classTypeName = "class.support_Array";
-                return LLVMPointerType(LLVMVoidType(), /* addressSpace */ 0);
-//                throw new InternalCompilerError("Array Type not handled : " + arrayType); // TODO
-            } else if (arrayType.base().isPrimitive()) {
-                //TODO : Change to depend on primitive type
-                String classTypeName = "class.support_Array";
-                throw new InternalCompilerError("Array Type not handled : " + arrayType); // TODO
-            } else {
-                throw new InternalCompilerError("Array Type not handled : " + arrayType);
-            }
-        }
-        else if (t.isClass()) {
-            String classTypeName = PolyLLVMMangler.classTypeName(t.toReference());
-            throw new InternalCompilerError("Class Type not handled"); // TODO
-        }
-        else if (t.isNull()) {
-            //TODO: Figure out something better
-            return LLVMPointerType(LLVMVoidType(), /* address space */ 0);
-        }
-        else {
-            try {
-                throw new InternalCompilerError("Only integral types,"
-                        + " Boolean types, float, double,"
-                        + " void, and classes currently supported, not \"" + t
-                        + "\".");
-            }
-            catch (InternalCompilerError e) {
-                System.out.println(e
-                        + "\n    (For more info go to LLVMUtils"
-                        + " and print the stack trace)");
-            }
-            return null;
-        }
+            return ptrTypeRef(structTypeRef(Constants.ARR_CLASS, mod));
+        } else if (t.isClass()) {
+            String mangledName = PolyLLVMMangler.classTypeName(t.toReference());
+            return ptrTypeRef(structTypeRef(mangledName, mod));
+        } else if (t.isNull()) {
+            return ptrTypeRef(LLVMInt8Type());
+        } else throw new InternalCompilerError("Invalid type");
     }
 
-    public static LLVMTypeRef llvmType(TypeNode tn) {
-        return llvmType(tn.type());
+    public static LLVMTypeRef typeRef(TypeNode tn, LLVMModuleRef mod) {
+        return typeRef(tn.type(), mod);
     }
 
     // TODO: Delete this
@@ -106,12 +89,12 @@ public class LLVMUtils {
         else if (t.isArray()) {
             ArrayType arrayType = t.toArray();
             if (arrayType.base().isReference()) {
-                String classTypeName = "class.support_Array";
+                String classTypeName = Constants.ARR_CLASS;
                 return nf.LLVMPointerType(nf.LLVMVariableType(classTypeName));
             }
             else if (arrayType.base().isPrimitive()) {
                 //TODO : Change to depend on primitive type
-                String classTypeName = "class.support_Array";
+                String classTypeName = Constants.ARR_CLASS;
                 return nf.LLVMPointerType(nf.LLVMVariableType(classTypeName));
 
             }

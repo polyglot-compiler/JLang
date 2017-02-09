@@ -4,6 +4,7 @@ public class Constants {
     public static String THIS_STR = "_this";
     public static String MALLOC = "malloc";
     public static String ENTRY_TRAMPOLINE = "java_entry_point";
+    public static String ARR_CLASS = "class.support_Array";
     public static int LLVM_ADDR_SPACE = 0;
 
     /**

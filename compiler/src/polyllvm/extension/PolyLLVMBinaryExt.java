@@ -304,7 +304,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
     public void translateLLVMConditional(PseudoLLVMTranslator v, LLVMBasicBlockRef trueBlock, LLVMBasicBlockRef falseBlock) {
         Binary n = (Binary) node();
         Operator op = n.operator();
-        if (op == Binary.COND_AND ){
+        if (op == Binary.COND_AND) {
             LLVMBasicBlockRef initial = v.currentBlock;
             LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
             LLVMPositionBuilderAtEnd(v.builder, v.currentBlock);

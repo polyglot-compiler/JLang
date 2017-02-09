@@ -119,7 +119,7 @@ public class LLVMGetElementPtr_c extends LLVMInstruction_c
 
 //            instructions.add(reconstruct(this,
 //                                         typeNode,
-//                                         ptrType,
+//                                         ptrTypeRef,
 //                                         var.expr(),
 //                                         dereferenceList));
 //            return v.nodeFactory().LLVMSeq(instructions);
