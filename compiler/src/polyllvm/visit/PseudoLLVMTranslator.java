@@ -59,18 +59,19 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     public void popFn()                 { functions.pop(); }
     public LLVMValueRef currFn()        { return functions.peek(); }
 
-    public PseudoLLVMTranslator(PolyLLVMNodeFactory nf, TypeSystem ts) {
+    public PseudoLLVMTranslator(String moduleName, PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());
         this.nf = nf;
         this.ts = ts;
         classesVisited = new ArrayList<>();
-        mod = null; // TODO
+        mod = LLVMModuleCreateWithName(moduleName);
         builder = LLVMCreateBuilder();
     }
 
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
+        LLVMDisposeModule(mod);
         LLVMDisposeBuilder(builder);
     }
 

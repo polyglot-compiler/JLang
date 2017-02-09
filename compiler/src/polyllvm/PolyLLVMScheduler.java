@@ -174,11 +174,9 @@ public class PolyLLVMScheduler extends JLScheduler {
     public Goal LLVMTranslate(Job job) {
         ExtensionInfo extInfo = job.extensionInfo();
         TypeSystem ts = extInfo.typeSystem();
-        NodeFactory nf = extInfo.nodeFactory();
+        PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
 
-        Goal g = new VisitorGoal(job,
-                                 new PseudoLLVMTranslator((PolyLLVMNodeFactory) nf,
-                                                          ts));
+        Goal g = new VisitorGoal(job, new PseudoLLVMTranslator(job.source().name(), nf, ts));
         try {
             // Make sure we have type information before we translate things.
             g.addPrerequisiteGoal(CodeCleaner(job), this);
