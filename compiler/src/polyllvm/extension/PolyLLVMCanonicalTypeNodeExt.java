@@ -7,7 +7,7 @@ import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.util.PolyLLVMTypeUtils;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMCanonicalTypeNodeExt extends PolyLLVMExt {
@@ -17,7 +17,7 @@ public class PolyLLVMCanonicalTypeNodeExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         CanonicalTypeNode n = (CanonicalTypeNode) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
-        LLVMTypeNode t = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+        LLVMTypeNode t = LLVMUtils.polyLLVMTypeNode(nf, n.type());
         v.addTranslation(n, t);
         if (n.type().isReference()) {
             v.addClassType((ReferenceType) n.type());

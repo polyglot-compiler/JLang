@@ -8,8 +8,8 @@ import polyglot.types.Flags;
 import polyglot.types.ProcedureInstance;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 
@@ -42,17 +42,17 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         ArrayList<LLVMTypeRef> argTypes = new ArrayList<>();
         if (!pi.flags().isStatic()) {
             argTypes.add(LLVMVoidType()); // TODO
-            // LLVMTypeNode objType = PolyLLVMTypeUtils.polyLLVMObjectVariableType(v, v.getCurrentClass().type());
+            // LLVMTypeNode objType = LLVMUtils.polyLLVMObjectVariableType(v, v.getCurrentClass().type());
         }
         for (Formal formal : n.formals()) {
-            argTypes.add(PolyLLVMTypeUtils.llvmType(formal.type()));
+            argTypes.add(LLVMUtils.llvmType(formal.type()));
             // v.addArgument(formal.name(), tn); // TODO
         }
         LLVMTypeRef retType = n instanceof MethodDecl
-                ? PolyLLVMTypeUtils.llvmType(((MethodDecl) n).returnType())
+                ? LLVMUtils.llvmType(((MethodDecl) n).returnType())
                 : LLVMVoidType();
         LLVMTypeRef[] argTypesArr = argTypes.toArray(new LLVMTypeRef[0]);
-        LLVMTypeRef funcType = PolyLLVMTypeUtils.llvmFunctionType(retType, argTypesArr);
+        LLVMTypeRef funcType = LLVMUtils.functionType(retType, argTypesArr);
 
         // Add function to module.
         LLVMValueRef res;

@@ -14,9 +14,9 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.*;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion.Instruction;
-import polyllvm.util.PolyLLVMConstants;
+import polyllvm.util.LLVMUtils;
+import polyllvm.util.Constants;
 import polyllvm.util.PolyLLVMFreshGen;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.List;
@@ -46,7 +46,7 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
         //Cast the array element
 
         LLVMTypeNode typeOfElement =
-                PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+                LLVMUtils.polyLLVMTypeNode(nf, n.type());
 
         LLVMVariable castResult =
                 PolyLLVMFreshGen.freshLocalVar(nf, typeOfElement);
@@ -104,7 +104,7 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
                                                     result,
                                                     array,
                                                     0,
-                                                    PolyLLVMConstants.ARRAYELEMENTOFFSET);
+                                                    Constants.ARRAYELEMENTOFFSET);
 
 //      %_elementPtr.0 = getelementptr i8*, i8** %_result.0, i64 0
 

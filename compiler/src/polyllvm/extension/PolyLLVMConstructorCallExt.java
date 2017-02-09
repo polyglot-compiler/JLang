@@ -13,10 +13,10 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.util.PolyLLVMConstants;
+import polyllvm.util.LLVMUtils;
+import polyllvm.util.Constants;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
@@ -38,24 +38,24 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
         LLVMTypeNode thisArgType;
 
         if (n.kind() == ConstructorCall.THIS) {
-            thisArgType = PolyLLVMTypeUtils.polyLLVMTypeNode(nf,
+            thisArgType = LLVMUtils.polyLLVMTypeNode(nf,
                                                              n.constructorInstance()
                                                               .container());
-            thisArg = nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
+            thisArg = nf.LLVMVariable(Constants.THIS_STR,
                                       thisArgType,
                                       LLVMVariable.VarKind.LOCAL);
         }
         else if (n.kind() == ConstructorCall.SUPER) {
             LLVMTypeNode thisType =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf,
+                    LLVMUtils.polyLLVMTypeNode(nf,
                                                        v.getCurrentClass()
                                                         .type());
             LLVMTypeNode superType =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf,
+                    LLVMUtils.polyLLVMTypeNode(nf,
                                                        n.constructorInstance()
                                                         .container());
             LLVMVariable thisVariable =
-                    nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
+                    nf.LLVMVariable(Constants.THIS_STR,
                                     thisType,
                                     LLVMVariable.VarKind.LOCAL);
             LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, superType);
@@ -86,7 +86,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
         LLVMTypeNode tn =
-                PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                LLVMUtils.polyLLVMMethodTypeNode(nf,
                                                          n.constructorInstance()
                                                           .container(),
                                                          n.constructorInstance()

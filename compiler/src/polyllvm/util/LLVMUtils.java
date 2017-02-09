@@ -18,7 +18,7 @@ import java.util.List;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
-public class PolyLLVMTypeUtils {
+public class LLVMUtils {
 
     public static LLVMTypeRef llvmPtrSizedIntType() {
         return LLVMInt64Type();
@@ -66,7 +66,7 @@ public class PolyLLVMTypeUtils {
             }
             catch (InternalCompilerError e) {
                 System.out.println(e
-                        + "\n    (For more info go to PolyLLVMTypeUtils"
+                        + "\n    (For more info go to LLVMUtils"
                         + " and print the stack trace)");
             }
             return null;
@@ -137,15 +137,21 @@ public class PolyLLVMTypeUtils {
             }
             catch (InternalCompilerError e) {
                 System.out.println(e
-                        + "\n    (For more info go to PolyLLVMTypeUtils"
+                        + "\n    (For more info go to LLVMUtils"
                         + " and print the stack trace)");
             }
             return null;
         }
     }
 
-    public static LLVMTypeRef llvmFunctionType(LLVMTypeRef ret, LLVMTypeRef ...args) {
+    public static LLVMTypeRef functionType(LLVMTypeRef ret, LLVMTypeRef ...args) {
         return LLVMFunctionType(ret, new PointerPointer<>(args), args.length, /* isVarArgs */ 0);
+    }
+
+    public static LLVMValueRef buildCall(LLVMBuilderRef builder,
+                                         LLVMValueRef func,
+                                         LLVMValueRef ...args) {
+        return LLVMBuildCall(builder, func, new PointerPointer<>(args), args.length, "call");
     }
 
     // TODO
@@ -164,7 +170,7 @@ public class PolyLLVMTypeUtils {
             Type returnType) {
         LLVMTypeNode classTypePointer =
                 nf.LLVMPointerType(nf.LLVMVariableType(PolyLLVMMangler.classTypeName(type)));
-        return PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf,
+        return LLVMUtils.polyLLVMFunctionTypeNode(nf,
                                                           formalTypes,
                                                           returnType)
                                 .prependFormalTypeNode(classTypePointer);
@@ -225,7 +231,7 @@ public class PolyLLVMTypeUtils {
             LLVMTypeNode classTypePointer =
                     nf.LLVMPointerType(nf.LLVMVariableType(PolyLLVMMangler.classTypeName(type)));
             LLVMTypeNode funcType =
-                    PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf, mi.formalTypes(), mi.returnType())
+                    LLVMUtils.polyLLVMFunctionTypeNode(nf, mi.formalTypes(), mi.returnType())
                                      .prependFormalTypeNode(classTypePointer);
 
             typeList.add(funcType);

@@ -17,9 +17,9 @@ import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMStore;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.List;
@@ -34,7 +34,7 @@ public class PolyLLVMFieldAssignExt extends PolyLLVMAssignExt {
         Receiver objectTarget = field.target();
         PolyLLVMNodeFactory nf = v.nodeFactory();
         LLVMNode expr = (LLVMNode) v.getTranslation(n.right());
-        LLVMTypeNode fieldTypeNode = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, field.type());
+        LLVMTypeNode fieldTypeNode = LLVMUtils.polyLLVMTypeNode(nf, field.type());
 
         if (!(expr instanceof LLVMOperand)) {
             throw new InternalCompilerError("Expression `" + n.right() + "` ("

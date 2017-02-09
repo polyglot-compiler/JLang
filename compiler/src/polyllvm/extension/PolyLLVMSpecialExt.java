@@ -11,9 +11,9 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.util.PolyLLVMConstants;
+import polyllvm.util.Constants;
 import polyllvm.util.PolyLLVMFreshGen;
-import polyllvm.util.PolyLLVMTypeUtils;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMSpecialExt extends PolyLLVMExt {
@@ -30,21 +30,21 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
 
         if (n.kind() == Special.THIS) {
             LLVMTypeNode thisType =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+                    LLVMUtils.polyLLVMTypeNode(nf, n.type());
             v.addTranslation(n,
-                             nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
+                             nf.LLVMVariable(Constants.THIS_STR,
                                              thisType,
                                              VarKind.LOCAL));
         }
         else if (n.kind() == Special.SUPER) {
             LLVMTypeNode thisType =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf,
+                    LLVMUtils.polyLLVMTypeNode(nf,
                                                        v.getCurrentClass()
                                                         .type());
             LLVMTypeNode superType =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+                    LLVMUtils.polyLLVMTypeNode(nf, n.type());
             LLVMVariable thisVariable =
-                    nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
+                    nf.LLVMVariable(Constants.THIS_STR,
                                     thisType,
                                     LLVMVariable.VarKind.LOCAL);
             LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, superType);

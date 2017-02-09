@@ -17,10 +17,10 @@ import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMStore;
-import polyllvm.util.PolyLLVMConstants;
+import polyllvm.util.Constants;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.util.PolyLLVMTypeUtils;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
@@ -49,14 +49,14 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         ReferenceType classtype = ci.container();
         LLVMTypeNode typeNode =
-                PolyLLVMTypeUtils.polyLLVMTypeNode(nf, classtype);
+                LLVMUtils.polyLLVMTypeNode(nf, classtype);
 
         //Allocate space for the new object - need to get the size of the object
         LLVMVariable mallocRet =
                 PolyLLVMFreshGen.freshLocalVar(nf,
                                                nf.LLVMPointerType(nf.LLVMIntType(8)));
 
-        LLVMVariable mallocFunction = nf.LLVMVariable(PolyLLVMConstants.MALLOC,
+        LLVMVariable mallocFunction = nf.LLVMVariable(Constants.MALLOC,
                                                       nf.LLVMPointerType(nf.LLVMIntType(8)),
                                                       VarKind.GLOBAL);
 
@@ -78,7 +78,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         //Set the Dispatch vector
         LLVMTypeNode dvTypeNode =
-                PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(v,
+                LLVMUtils.polyLLVMDispatchVectorVariableType(v,
                                                                      classtype);
         LLVMTypedOperand index0 =
                 nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32), 0),
@@ -94,7 +94,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         LLVMStore storeDVIntoObject =
                 nf.LLVMStore(nf.LLVMPointerType(dvTypeNode),
                              nf.LLVMVariable(PolyLLVMMangler.dispatchVectorVariable(classtype),
-                                             PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(v,
+                                             LLVMUtils.polyLLVMDispatchVectorVariableType(v,
                                                                                                   classtype),
                                              LLVMVariable.VarKind.GLOBAL),
                              gepResult);
@@ -102,7 +102,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
         LLVMTypeNode tn =
-                PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                LLVMUtils.polyLLVMMethodTypeNode(nf,
                                                          n.constructorInstance()
                                                           .container(),
                                                          n.constructorInstance()

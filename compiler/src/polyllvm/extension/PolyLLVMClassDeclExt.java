@@ -2,7 +2,7 @@ package polyllvm.extension;
 
 import polyglot.ast.*;
 import polyglot.types.Type;
-import polyglot.util.InternalCompilerError;
+import polyglot.types.TypeSystem;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -21,6 +21,20 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         return super.enterTranslatePseudoLLVM(v);
     }
 
+    /**
+     * Returns true iff the class member has the signature `public static void main(String[] args)`.
+     */
+    private static boolean isEntryPoint(ClassMember cm, TypeSystem ts) {
+        if (!(cm instanceof ProcedureDecl) || cm instanceof MethodDecl)
+            return false;
+        ProcedureDecl pd = (ProcedureDecl) cm;
+        return pd.name().equals("main")
+                && pd.flags().isStatic()
+                && pd.flags().isPublic()
+                && pd.formals().size() == 1
+                && pd.formals().iterator().next().declType().equals(ts.arrayOf(ts.String()));
+    }
+
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         ClassDecl n = (ClassDecl) node();
@@ -31,36 +45,8 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         List<LLVMGlobalDeclaration> globals = new ArrayList<>();
 
         for (ClassMember cm : n.body().members()) {
-            if (cm instanceof ProcedureDecl) {
-                ProcedureDecl pd = (ProcedureDecl) cm;
-                if (pd.flags().isNative() || pd.flags().isAbstract()) {
-                    // Native or Abstract procedure declarations.
-                    funcDecls.add((LLVMFunctionDeclaration) v.getTranslation(cm));
-                } else {
-                    // Normal procedure declarations.
-                    LLVMFunction translated = v.getTranslation(pd);
-                    funcs.add(translated);
-
-                    // TODO: This is not restrictive enough--we may need to check that the method
-                    //       is also public, static, and has the right signature.
-                    if (pd.name().equals("main")) {
-                        // This is the entry point to the program.
-                        // We emit an LLVM main function that calls into this one.
-                        // TODO: Eventually we want the user to be able to choose the entry point.
-                        funcs.add(TranslationUtils.createEntryPoint(
-                                nf, v.typeSystem(), translated.name()));
-                    }
-                }
-            }
-            else if (cm instanceof FieldDecl) {
-                FieldDecl fd = (FieldDecl) cm;
-                if (fd.flags().isStatic()) {
-                    // Static field declarations.
-                    globals.add((LLVMGlobalVarDeclaration) v.getTranslation(fd));
-                }
-            }
-            else {
-                throw new InternalCompilerError("Could not translate member: " + cm);
+            if (isEntryPoint(cm, v.typeSystem())) {
+                v.addEntryPoint(v.getTranslation(cm));
             }
         }
 

@@ -13,8 +13,8 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMStore;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMFreshGen;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMArrayAccessAssignExt extends PolyLLVMAssignExt {
@@ -31,7 +31,7 @@ public class PolyLLVMArrayAccessAssignExt extends PolyLLVMAssignExt {
                 PolyLLVMArrayAccessExt.translateArrayAccessPointer(n.left(), v);
 
         LLVMTypeNode typeOfExpr =
-                PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.right().type());
+                LLVMUtils.polyLLVMTypeNode(nf, n.right().type());
 
         LLVMVariable castResult =
                 PolyLLVMFreshGen.freshLocalVar(nf,

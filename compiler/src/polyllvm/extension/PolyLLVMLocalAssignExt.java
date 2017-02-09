@@ -12,7 +12,7 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
 import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMStore;
-import polyllvm.util.PolyLLVMTypeUtils;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMLocalAssignExt extends PolyLLVMAssignExt {
@@ -32,7 +32,7 @@ public class PolyLLVMLocalAssignExt extends PolyLLVMAssignExt {
                     + v.getTranslation(n.right()) + ")");
         }
 
-        LLVMTypeNode tn = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+        LLVMTypeNode tn = LLVMUtils.polyLLVMTypeNode(nf, n.type());
         LLVMVariable ptr =
                 nf.LLVMVariable(v.varName(target.name()), tn, VarKind.LOCAL);
 

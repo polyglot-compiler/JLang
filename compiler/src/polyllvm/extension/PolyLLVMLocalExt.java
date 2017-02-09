@@ -15,7 +15,7 @@ import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.util.PolyLLVMFreshGen;
-import polyllvm.util.PolyLLVMTypeUtils;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMLocalExt extends PolyLLVMExt {
@@ -30,7 +30,7 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
 //                                n.name(),
 //                                VarKind.LOCAL);
         LLVMTypeNode typeNode =
-                PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+                LLVMUtils.polyLLVMTypeNode(nf, n.type());
 
         LLVMVariable expr = PolyLLVMFreshGen.freshLocalVar(nf, typeNode);
 

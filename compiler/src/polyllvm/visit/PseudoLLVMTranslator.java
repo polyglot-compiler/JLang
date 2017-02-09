@@ -50,7 +50,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
     public LLVMBasicBlockRef currentBlock;
 
-
     /**
      * A stack of all enclosing functions.
      */
@@ -58,6 +57,13 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     public void pushFn(LLVMValueRef fn) { functions.push(fn); }
     public void popFn()                 { functions.pop(); }
     public LLVMValueRef currFn()        { return functions.peek(); }
+
+    /**
+     * A list of all potential entry points (i.e., Java main functions).
+     */
+    private List<LLVMValueRef> entryPoints = new ArrayList<>();
+    public void addEntryPoint(LLVMValueRef entryPoint) { entryPoints.add(entryPoint); }
+    public List<LLVMValueRef> getEntryPoints() { return ListUtil.copy(entryPoints, false); }
 
     public PseudoLLVMTranslator(String moduleName, PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());
@@ -346,14 +352,14 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                 ReferenceType it = interfaces.get(j);
                 String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(rt, it);
                 LLVMTypeNode itType =
-                        PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, it);
+                        LLVMUtils.polyLLVMDispatchVectorVariableType(this, it);
                 LLVMVariable llvmItVar =
                         nf.LLVMVariable(interfaceTableVar,
                                 nf.LLVMPointerType(itType),
                                 LLVMVariable.VarKind.GLOBAL);
 
                 String dvVar = PolyLLVMMangler.dispatchVectorVariable(rt);
-                LLVMTypeNode dvType = PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, rt);
+                LLVMTypeNode dvType = LLVMUtils.polyLLVMDispatchVectorVariableType(this, rt);
                 LLVMVariable llvmDvVar = nf.LLVMVariable(dvVar, nf.LLVMPointerType(dvType), VarKind.GLOBAL);
 
                 // Add list to Class DV
@@ -380,7 +386,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                 if(j != interfaces.size()-1){
                     ReferenceType nextIt = interfaces.get(j + 1);
                     String nextITableVar = PolyLLVMMangler.InterfaceTableVariable(rt, nextIt);
-                    LLVMTypeNode nextItType = PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, nextIt);
+                    LLVMTypeNode nextItType = LLVMUtils.polyLLVMDispatchVectorVariableType(this, nextIt);
                     LLVMVariable llvmNextItVar = nf.LLVMVariable(nextITableVar,
                                     nf.LLVMPointerType(nextItType),
                                     LLVMVariable.VarKind.GLOBAL);
@@ -442,13 +448,13 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     MethodInstance miClass = methodInList(mi, classLayout);
 
                     LLVMTypeNode classFuncType =
-                            PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                            LLVMUtils.polyLLVMMethodTypeNode(nf,
                                     rt,
                                     miClass.formalTypes(),
                                     miClass.returnType());
 
                     LLVMTypeNode interfaceFuncType =
-                            PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                            LLVMUtils.polyLLVMMethodTypeNode(nf,
                                     it,
                                     mi.formalTypes(),
                                     mi.returnType());
@@ -462,7 +468,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                             PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMPointerType(interfaceFuncType));
                     LLVMGetElementPtr gepInterfaceDV =
                             PolyLLVMFreshGen.freshGetElementPtr(nf, gepResultStore, llvmItVar,
-                                    0, k + PolyLLVMConstants.DISPATCH_VECTOR_OFFSET);
+                                    0, k + Constants.DISPATCH_VECTOR_OFFSET);
 
 
                     LLVMESeq eseqVal = nf.LLVMESeq(gepClassDV, gepResultVal);
@@ -510,7 +516,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
             String dvVar = PolyLLVMMangler.dispatchVectorVariable(cd.type().toReference());
             LLVMTypeNode dvType =
-                    PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this,
+                    LLVMUtils.polyLLVMDispatchVectorVariableType(this,
                                                                          cd.type());
 
             LLVMVariable llvmDvVar =
@@ -557,7 +563,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     List<LLVMTypedOperand> l =
                             CollectionUtil.list(index0,
                                                 nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
-                                                                                      i + PolyLLVMConstants.DISPATCH_VECTOR_OFFSET),
+                                                                                      i + Constants.DISPATCH_VECTOR_OFFSET),
                                                                     nf.LLVMIntType(32)));
 
                     LLVMGetElementPtr gep = nf.LLVMGetElementPtr(llvmDvVar, l);
@@ -570,7 +576,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     LLVMTypeNode classTypePointer =
                             nf.LLVMPointerType(nf.LLVMVariableType(PolyLLVMMangler.classTypeName(cd)));
                     LLVMTypeNode funcType =
-                            PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf,
+                            LLVMUtils.polyLLVMFunctionTypeNode(nf,
                                                                        overridenMethod.formalTypes(),
                                                                        overridenMethod.returnType())
                                              .prependFormalTypeNode(classTypePointer);
@@ -589,7 +595,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     List<LLVMTypedOperand> l =
                             CollectionUtil.list(index0,
                                                 nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
-                                                                                      i + PolyLLVMConstants.DISPATCH_VECTOR_OFFSET),
+                                                                                      i + Constants.DISPATCH_VECTOR_OFFSET),
                                                                     nf.LLVMIntType(32)));
                     LLVMGetElementPtr gep = nf.LLVMGetElementPtr(llvmDvVar, l);
                     LLVMVariable gepResult =
@@ -598,7 +604,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     LLVMESeq eseq =
                             nf.LLVMESeq(gep.result(gepResult), gepResult);
                     LLVMTypeNode funcType =
-                            PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                            LLVMUtils.polyLLVMMethodTypeNode(nf,
                                                                      cd.type(),
                                                                      newMethod.formalTypes(),
                                                                      newMethod.returnType());
@@ -616,7 +622,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     String superDvVar =
                             PolyLLVMMangler.dispatchVectorVariable(superType);
                     LLVMTypeNode superDvType =
-                            PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this,
+                            LLVMUtils.polyLLVMDispatchVectorVariableType(this,
                                                                                  superType);
 
                     LLVMVariable llvmSuperDvVar =
@@ -627,7 +633,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                     List<LLVMTypedOperand> l =
                             CollectionUtil.list(index0,
                                                 nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(64),
-                                                                                      i + PolyLLVMConstants.DISPATCH_VECTOR_OFFSET),
+                                                                                      i + Constants.DISPATCH_VECTOR_OFFSET),
                                                                     nf.LLVMIntType(32)));
 
                     LLVMGetElementPtr gepVal =
@@ -636,12 +642,12 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                             nf.LLVMGetElementPtr(llvmDvVar, l);
 
                     LLVMTypeNode classFuncType =
-                            PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                            LLVMUtils.polyLLVMMethodTypeNode(nf,
                                                                      cd.type(),
                                                                      mi.formalTypes(),
                                                                      mi.returnType());
                     LLVMTypeNode superClassFuncType =
-                            PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                            LLVMUtils.polyLLVMMethodTypeNode(nf,
                                                                      superType,
                                                                      mi.formalTypes(),
                                                                      mi.returnType());
@@ -758,7 +764,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
             // DV size.
             LLVMTypeNode dvTypeVariable =
-                    PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, rt);
+                    LLVMUtils.polyLLVMDispatchVectorVariableType(this, rt);
             LLVMGlobalVarDeclaration dvSizeDecl = nf.LLVMGlobalVarDeclaration(
                     PolyLLVMMangler.dispatchVectorVariable(rt),
                     isExtern,
@@ -775,7 +781,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                 classesAdded.add(i.toString() + "_" +  rt.toString());
 
                 LLVMTypeNode interfaceTypeVariable =
-                        PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(this, i);
+                        LLVMUtils.polyLLVMDispatchVectorVariableType(this, i);
                 LLVMGlobalVarDeclaration itableDecl = nf.LLVMGlobalVarDeclaration(
                         PolyLLVMMangler.InterfaceTableVariable(rt, i),
                         isExtern,
@@ -817,16 +823,16 @@ public class PseudoLLVMTranslator extends NodeVisitor {
                 nf.LLVMStructureType(arrayStruct));
         classTypes.putIfAbsent(
                 PolyLLVMMangler.dispatchVectorTypeName(arrayType),
-                PolyLLVMTypeUtils.polyLLVMDispatchVectorType(this, arrayType));
+                LLVMUtils.polyLLVMDispatchVectorType(this, arrayType));
 
         // Helper for adding structure type and dv type.
         Consumer<ReferenceType> addClassTypes = rt -> {
             classTypes.putIfAbsent(
                     PolyLLVMMangler.classTypeName(rt),
-                    PolyLLVMTypeUtils.polyLLVMObjectType(this, rt));
+                    LLVMUtils.polyLLVMObjectType(this, rt));
             classTypes.putIfAbsent(
                     PolyLLVMMangler.dispatchVectorTypeName(rt),
-                    PolyLLVMTypeUtils.polyLLVMDispatchVectorType(this, rt));
+                    LLVMUtils.polyLLVMDispatchVectorType(this, rt));
         };
 
         // Parsed classes and their superclasses.
@@ -1060,7 +1066,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         List<MethodInstance> methodLayout = layouts(type).part1();
         for (int i = 0; i < methodLayout.size(); i++) {
             if (methodLayout.get(i).isSameMethod(methodInstance)) {
-                return i + PolyLLVMConstants.DISPATCH_VECTOR_OFFSET;
+                return i + Constants.DISPATCH_VECTOR_OFFSET;
             }
         }
         throw new InternalCompilerError("The method " + methodInstance

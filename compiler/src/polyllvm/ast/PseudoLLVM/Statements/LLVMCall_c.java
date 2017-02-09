@@ -13,7 +13,7 @@ import polyllvm.ast.PseudoLLVM.LLVMArgDecl;
 import polyllvm.ast.PseudoLLVM.LLVMFunctionDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.util.PolyLLVMConstants;
+import polyllvm.util.Constants;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.RemoveESeqVisitor;
 
@@ -38,7 +38,7 @@ public class LLVMCall_c extends LLVMInstruction_c implements LLVMCall {
 
     @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
-        if (function.name().equals(PolyLLVMConstants.MALLOC)) {
+        if (function.name().equals(Constants.MALLOC)) {
             w.write("\n");
         }
 

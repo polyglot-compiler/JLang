@@ -4,7 +4,7 @@ import polyglot.ast.IntLit;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.PolyLLVMTypeUtils;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -16,7 +16,7 @@ public class PolyLLVMIntLitExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         IntLit n = (IntLit) node();
         assert n.type().isLongOrLess();
-        LLVMValueRef res = LLVMConstInt(PolyLLVMTypeUtils.llvmType(n.type()),
+        LLVMValueRef res = LLVMConstInt(LLVMUtils.llvmType(n.type()),
                                         n.value(), /* sign-extend */ 0);
         v.addTranslation(n, res);
         return super.translatePseudoLLVM(v);

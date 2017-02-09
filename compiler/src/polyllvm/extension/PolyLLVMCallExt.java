@@ -2,7 +2,6 @@ package polyllvm.extension;
 
 import polyglot.ast.*;
 import polyglot.types.MethodInstance;
-import polyglot.types.ParsedClassType;
 import polyglot.types.ReferenceType;
 import polyglot.types.Type;
 import polyglot.util.CollectionUtil;
@@ -10,7 +9,6 @@ import polyglot.util.Pair;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMIntLiteral;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
@@ -22,10 +20,10 @@ import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMLoad;
-import polyllvm.util.PolyLLVMConstants;
+import polyllvm.util.LLVMUtils;
+import polyllvm.util.Constants;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 
@@ -89,7 +87,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.methodInstance());
         LLVMTypeNode tn =
-                PolyLLVMTypeUtils.polyLLVMFunctionTypeNode(nf,
+                LLVMUtils.polyLLVMFunctionTypeNode(nf,
                                                            n.methodInstance()
                                                             .formalTypes(),
                                                            n.methodInstance()
@@ -114,7 +112,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         MethodInstance superMethod = n.methodInstance().overrides().get(0);
 
         LLVMTypeNode toType =
-                PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                LLVMUtils.polyLLVMMethodTypeNode(nf,
                                                          v.getCurrentClass()
                                                           .type(),
                                                          n.methodInstance()
@@ -123,7 +121,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                                                           .returnType());
 
         LLVMTypeNode superMethodType =
-                PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                LLVMUtils.polyLLVMMethodTypeNode(nf,
                                                          superMethod.container(),
                                                          superMethod.formalTypes(),
                                                          superMethod.returnType());
@@ -144,10 +142,10 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         instructions.add(castFunction);
 
         LLVMTypeNode thisType =
-                PolyLLVMTypeUtils.polyLLVMTypeNode(nf,
+                LLVMUtils.polyLLVMTypeNode(nf,
                                                    v.getCurrentClass().type());
         LLVMOperand thisTranslation =
-                nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
+                nf.LLVMVariable(Constants.THIS_STR,
                                 thisType,
                                 VarKind.LOCAL);
 
@@ -160,7 +158,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                          nf.LLVMESeq(nf.LLVMSeq(instructions), pair.part2()));
 
         LLVMTypeNode superTypeNode =
-                PolyLLVMTypeUtils.polyLLVMTypeNode(nf, superMethod.container());
+                LLVMUtils.polyLLVMTypeNode(nf, superMethod.container());
         LLVMOperand superTranslation =
                 nf.LLVMVariable(PolyLLVMFreshGen.freshNamedLabel(nf, "argument")
                                                 .name(),
@@ -168,7 +166,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                                 LLVMVariable.VarKind.LOCAL);
 
         arguments = setupArguments(v, n, nf, superTranslation, superTypeNode);
-        LLVMTypeNode retType = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+        LLVMTypeNode retType = LLVMUtils.polyLLVMTypeNode(nf, n.type());
         v.addStaticCall(nf.LLVMCall(superMethodPtr, arguments, retType));
 
     }
@@ -182,9 +180,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMOperand thisTranslation =
                 (LLVMOperand) v.getTranslation(n.target());
         LLVMTypeNode thisType =
-                PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.target().type());
+                LLVMUtils.polyLLVMTypeNode(nf, n.target().type());
         LLVMTypeNode functionPtrType =
-                PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                LLVMUtils.polyLLVMMethodTypeNode(nf,
                                                          referenceType,
                                                          n.methodInstance()
                                                           .formalTypes(),
@@ -192,7 +190,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                                                           .returnType());
 
         LLVMTypeNode dvTypeVariable =
-                PolyLLVMTypeUtils.polyLLVMDispatchVectorVariableType(v,
+                LLVMUtils.polyLLVMDispatchVectorVariableType(v,
                                                                      referenceType);
         LLVMVariable dvDoublePtrResult =
                 PolyLLVMFreshGen.freshNamedLocalVar(nf,
@@ -256,9 +254,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMOperand thisTranslation =
                 (LLVMOperand) v.getTranslation(n.target());
         LLVMTypeNode thisType =
-                PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.target().type());
+                LLVMUtils.polyLLVMTypeNode(nf, n.target().type());
         LLVMTypeNode functionPtrType =
-                PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
+                LLVMUtils.polyLLVMMethodTypeNode(nf,
                         referenceType,
                         n.methodInstance()
                                 .formalTypes(),

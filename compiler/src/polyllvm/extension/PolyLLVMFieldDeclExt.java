@@ -8,8 +8,8 @@ import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
@@ -28,7 +28,7 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
                     mangledName,
                     /* isExtern */ false,
                     LLVMGlobalVarDeclaration.GLOBAL,
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.declType()),
+                    LLVMUtils.polyLLVMTypeNode(nf, n.declType()),
                     (LLVMOperand) v.getTranslation(n.init()));
             v.addTranslation(n, globalDecl);
         }

@@ -1,8 +1,10 @@
 package polyllvm.util;
 
-public class PolyLLVMConstants {
-    public static String THISSTRING = "_this";
+public class Constants {
+    public static String THIS_STR = "_this";
     public static String MALLOC = "malloc";
+    public static String ENTRY_TRAMPOLINE = "java_entry_point";
+    public static int LLVM_ADDR_SPACE = 0;
 
     /**
      * Offset from start of array object to the contents
@@ -20,9 +22,4 @@ public class PolyLLVMConstants {
      * The default size of the table for interfaces
      */
     public static int INTERFACE_TABLE_SIZE = 10;
-
-    /**
-     * The default address space for all LLVM pointers.
-     */
-    public static int LLVM_ADDR_SPACE = 0;
 }

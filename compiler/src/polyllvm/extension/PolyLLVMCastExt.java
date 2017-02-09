@@ -13,8 +13,8 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion.Instruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMFreshGen;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMCastExt extends PolyLLVMExt {
@@ -28,10 +28,10 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
         Type exprType = n.expr().type();
-        LLVMTypeNode exprTypeNode = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, exprType);
+        LLVMTypeNode exprTypeNode = LLVMUtils.polyLLVMTypeNode(nf, exprType);
 
         Type castType = n.castType().type();
-        LLVMTypeNode castTypeNode = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, castType);
+        LLVMTypeNode castTypeNode = LLVMUtils.polyLLVMTypeNode(nf, castType);
 
         LLVMOperand exprTranslation = (LLVMOperand) v.getTranslation(n.expr());
 

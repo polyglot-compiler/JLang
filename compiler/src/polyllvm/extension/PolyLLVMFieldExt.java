@@ -15,9 +15,9 @@ import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMLoad;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.List;
@@ -30,7 +30,7 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
         Field n = (Field) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
         Receiver target = n.target();
-        LLVMTypeNode fieldTypeNode = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
+        LLVMTypeNode fieldTypeNode = LLVMUtils.polyLLVMTypeNode(nf, n.type());
 
         if (n.flags().isStatic()) {
             // Static fields.

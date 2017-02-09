@@ -13,8 +13,8 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMFreshGen;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
@@ -50,7 +50,7 @@ public class PolyLLVMProcedureCallExt extends PolyLLVMExt {
                     + arg + " to function " + n.procedureInstance()
                     + "is not translated");
             LLVMTypeNode typeNode =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf, arg.type());
+                    LLVMUtils.polyLLVMTypeNode(nf, arg.type());
             LLVMOperand operand = (LLVMOperand) v.getTranslation(arg);
             arguments.add(new Pair<>(typeNode, operand));
         }
@@ -65,7 +65,7 @@ public class PolyLLVMProcedureCallExt extends PolyLLVMExt {
         LLVMTypeNode callTypeNode;
         if (n instanceof Call) {
             callTypeNode =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf, ((Call) n).type());
+                    LLVMUtils.polyLLVMTypeNode(nf, ((Call) n).type());
         }
         else {
             callTypeNode = nf.LLVMVoidType();
@@ -77,7 +77,7 @@ public class PolyLLVMProcedureCallExt extends PolyLLVMExt {
         if (n instanceof Call && !((Call) n).type().isVoid()) {
 
             LLVMTypeNode retTn =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf,
+                    LLVMUtils.polyLLVMTypeNode(nf,
                                                        ((Call) n).methodInstance()
                                                                  .returnType());
             result = PolyLLVMFreshGen.freshLocalVar(nf, retTn);
