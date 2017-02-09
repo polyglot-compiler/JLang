@@ -193,78 +193,75 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         return t.isChar();
     }
 
-    private static int llvmComparisonKind(Operator op, Type t) {
+    private static int llvmIntBinopCode(Operator op, Type type) {
+        if      (op == ADD)     return LLVMAdd;
+        else if (op == SUB)     return LLVMSub;
+        else if (op == MUL)     return LLVMMul;
+        else if (op == DIV)     return isUnsigned(type) ? LLVMUDiv : LLVMSDiv;
+        else if (op == MOD)     return isUnsigned(type) ? LLVMURem : LLVMSRem;
+        else if (op == BIT_OR)  return LLVMOr;
+        else if (op == BIT_AND) return LLVMAnd;
+        else if (op == BIT_XOR) return LLVMXor;
+        else if (op == SHL)     return LLVMShl;
+        else if (op == USHR)    return LLVMLShr;
+        else if (op == SHR)     return isUnsigned(type) ? LLVMLShr : LLVMAShr;
+        else throw new InternalCompilerError("Invalid integer operation");
+    }
+
+    private static int llvmFloatBinopCode(Operator op) {
+        if      (op == ADD) return LLVMFAdd;
+        else if (op == SUB) return LLVMFSub;
+        else if (op == MUL) return LLVMFMul;
+        else if (op == DIV) return LLVMFDiv;
+        else throw new InternalCompilerError("Invalid floating point operation");
+    }
+
+    private static int llvmICmpBinopCode(Operator op, Type t) {
         if      (op == LT) return isUnsigned(t) ? LLVMIntULT : LLVMIntSLT;
         else if (op == LE) return isUnsigned(t) ? LLVMIntULE : LLVMIntSLE;
         else if (op == EQ) return LLVMIntEQ;
         else if (op == NE) return LLVMIntNE;
         else if (op == GE) return isUnsigned(t) ? LLVMIntUGE : LLVMIntSGE;
         else if (op == GT) return isUnsigned(t) ? LLVMIntUGT : LLVMIntSGT;
-        else {
-            throw new InternalCompilerError("This operation is not a comparison");
-        }
+        else throw new InternalCompilerError("This operation is not a comparison");
+    }
+
+    private static int llvmFCmpBinopCode(Operator op) {
+        // Java floating point uses ordered comparisons (i.e., comparisons with NaN return false).
+        if      (op == LT) return LLVMRealOLT;
+        else if (op == LE) return LLVMRealOLE;
+        else if (op == EQ) return LLVMRealOEQ;
+        else if (op == NE) return LLVMRealONE;
+        else if (op == GE) return LLVMRealOGE;
+        else if (op == GT) return LLVMRealOGT;
+        else throw new InternalCompilerError("This operation is not a comparison");
     }
 
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Binary n = (Binary) node();
-        Type type = n.type();
+        Type resType = n.type();
         LLVMValueRef left = v.getTranslation(n.left());
         LLVMValueRef right = v.getTranslation(n.right());
         Operator op = n.operator();
-        LLVMValueRef res;
 
         // TODO: Will need to add widening casts here.
+        assert(n.left().type().equals(n.right().type()));
+        Type elemType = n.left().type();
 
-        if (type.isLongOrLess()) {
-            // Integer arithmetic.
-            if (op == Binary.ADD) {
-                res = LLVMBuildAdd(v.builder, left, right, "add");
-            } else if (op == SUB) {
-                res = LLVMBuildSub(v.builder, left, right, "sub");
-            } else if (op == MUL) {
-                res = LLVMBuildMul(v.builder, left, right, "mul");
-            } else if (op == DIV && type.isChar()) {
-                res = LLVMBuildUDiv(v.builder, left, right, "udiv");
-            } else if (op == DIV) {
-                res = LLVMBuildSDiv(v.builder, left, right, "div");
-            } else if (op == MOD && type.isChar()) {
-                res = LLVMBuildURem(v.builder, left, right, "umod");
-            } else if (op == MOD) {
-                res = LLVMBuildSRem(v.builder, left, right, "mod");
-            } else if (op == BIT_OR) {
-                res = LLVMBuildOr(v.builder, left, right, "or");
-            } else if (op == BIT_AND) {
-                res = LLVMBuildAnd(v.builder, left, right, "and");
-            } else if (op == BIT_XOR) {
-                res = LLVMBuildXor(v.builder, left, right, "xor");
-            } else if (op == SHL) {
-                res = LLVMBuildShl(v.builder, left, right, "shl");
-            } else if (op == USHR || (op == SHR && type.isChar())) {
-                res = LLVMBuildLShr(v.builder, left, right, "lshr");
-            } else if (op == SHR) {
-                res = LLVMBuildAShr(v.builder, left, right, "ashr");
-            } else {
-                throw new InternalCompilerError("Invalid integer operation");
-            }
-        }
-        else if (type.isBoolean()) {
-            // Comparison.
-            res = LLVMBuildICmp(v.builder, llvmComparisonKind(op, type), left, right, "cmp");
-        }
-        else if (type.isFloat() || type.isDouble()) {
-            // Floating point arithmetic.
-            if (op == ADD) {
-                res = LLVMBuildFAdd(v.builder, left, right, "fadd");
-            } else if (op == SUB) {
-                res = LLVMBuildFSub(v.builder, left, right, "fsub");
-            } else if (op == MUL) {
-                res = LLVMBuildFMul(v.builder, left, right, "fmul");
-            } else if (op == DIV) {
-                res = LLVMBuildFDiv(v.builder, left, right, "fdiv");
-            } else {
-                throw new InternalCompilerError("Invalid floating point operation");
-            }
+        LLVMValueRef res;
+        if (resType.isLongOrLess()) {
+            // Integer binop.
+            res = LLVMBuildBinOp(v.builder, llvmIntBinopCode(op, elemType), left, right, "binop");
+        } else if (resType.isFloat() || resType.isDouble()) {
+            // Floating point binop.
+            res = LLVMBuildBinOp(v.builder, llvmFloatBinopCode(op), left, right, "binop");
+        } else if (resType.isBoolean() && elemType.isLongOrLess()) {
+            // Integer comparison.
+            res = LLVMBuildICmp(v.builder, llvmICmpBinopCode(op, elemType), left, right, "cmp");
+        } else if (resType.isBoolean() && (elemType.isFloat() || elemType.isDouble())) {
+            // Floating point comparison.
+            res = LLVMBuildFCmp(v.builder, llvmFCmpBinopCode(op), left, right, "cmp");
         } else {
             throw new InternalCompilerError("Invalid binary operation result type");
         }
