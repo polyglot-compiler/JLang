@@ -32,11 +32,6 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         return super.addPrimitiveWideningCasts(v);
     }
 
-    protected LLVMTypeRef llvmRetType(LLVMModuleRef mod) {
-        // Override in subclasses.
-        return LLVMVoidType();
-    }
-
     @Override
     public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         ProcedureDecl n = (ProcedureDecl) node();
@@ -77,7 +72,8 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         v.clearArguments();
         v.clearAllocations();
         v.popFn();
-        if (LLVMGetTypeKind(llvmRetType(v.mod)) == LLVMVoidTypeKind)
+        LLVMBasicBlockRef block = LLVMGetInsertBlock(v.builder);
+        if (LLVMGetBasicBlockTerminator(block) == null)
             LLVMBuildRetVoid(v.builder);
         return super.translatePseudoLLVM(v);
     }
