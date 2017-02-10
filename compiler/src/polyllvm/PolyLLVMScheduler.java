@@ -33,7 +33,7 @@ public class PolyLLVMScheduler extends JLScheduler {
         NodeFactory nf = extInfo.nodeFactory();
         Goal g = new VisitorGoal(job, new StringLiteralRemover(ts, nf));
         try {
-            g.addPrerequisiteGoal(Disambiguated(job), this);//Validated(job), this);
+            g.addPrerequisiteGoal(Disambiguated(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
@@ -202,25 +202,12 @@ public class PolyLLVMScheduler extends JLScheduler {
         }
     }
 
-    public Goal LLVMTranslate(Job job) {
+    @Override
+    public Goal CodeGenerated(Job job) {
         Goal g = new LLVMOutputGoal(job);
         try {
             // Make sure we have type information before we translate things.
             g.addPrerequisiteGoal(CodeCleaner(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
-    @Override
-    public Goal CodeGenerated(Job job) {
-        Goal g = LLVMCodeGenerated.create(this, job);
-//        Goal g = new EmptyGoal(job, "CodeGenerated");
-        // Add a prerequisite goal to translate CArray features.
-        try {
-            g.addPrerequisiteGoal(LLVMTranslate(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
