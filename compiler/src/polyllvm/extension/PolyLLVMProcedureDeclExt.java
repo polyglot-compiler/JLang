@@ -39,11 +39,11 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         // Build function type.
         ArrayList<LLVMTypeRef> argTypes = new ArrayList<>();
-        if (!pi.flags().isStatic()) {
-            argTypes.add(LLVMVoidType()); // TODO
-            // LLVMTypeNode objType = LLVMUtils.polyLLVMObjectVariableType(v, v.getCurrentClass().type());
-        }
-        n.formals().stream().map(f -> LLVMUtils.typeRef(f.declType(), v.mod)).forEach(argTypes::add);
+        if (!pi.flags().isStatic())
+            argTypes.add(LLVMUtils.typeRef(v.getCurrentClass().type(), v.mod));
+        n.formals().stream()
+                .map(f -> LLVMUtils.typeRef(f.declType(), v.mod))
+                .forEach(argTypes::add);
         LLVMTypeRef retType = n instanceof MethodDecl
                 ? LLVMUtils.typeRef(((MethodDecl) n).returnType().type(), v.mod)
                 : LLVMVoidType();
@@ -53,16 +53,14 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         // Add function to module.
         LLVMValueRef res;
         String name = PolyLLVMMangler.mangleProcedureName(pi);
-        if (pi.flags().contains(Flags.NATIVE) || pi.flags().contains(Flags.ABSTRACT)) {
-            res = LLVMAddGlobal(v.mod, funcType, name);
-        } else {
-            res = LLVMAddFunction(v.mod, name, funcType);
-            v.pushFn(res);
-            LLVMBasicBlockRef entry = LLVMAppendBasicBlock(v.currFn(), "entry");
+        res = LLVMAddFunction(v.mod, name, funcType);
+        if (!pi.flags().contains(Flags.NATIVE) && !pi.flags().contains(Flags.ABSTRACT)) {
+            LLVMBasicBlockRef entry = LLVMAppendBasicBlock(res, "entry");
             LLVMPositionBuilderAtEnd(v.builder, entry);
             // TODO: Add alloca instructions for local variables here.
         }
 
+        v.pushFn(res);
         v.addTranslation(n, res);
         return super.enterTranslatePseudoLLVM(v);
     }
