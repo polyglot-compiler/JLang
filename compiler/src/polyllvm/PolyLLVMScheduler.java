@@ -178,12 +178,21 @@ public class PolyLLVMScheduler extends JLScheduler {
             Node ast = goal.job().ast();
             ast.visit(translator);
 
+            // Verify.
             BytePointer error = new BytePointer((Pointer) null);
             LLVMVerifyModule(mod, LLVMPrintMessageAction, error);
             LLVMDisposeMessage(error);
+            error.setNull();
 
-            System.out.println("--- Dumping LLVM Module ---");
-            LLVMDumpModule(mod);
+            // TODO: Make this more robust.
+            // Emit.
+            String srcName = goal.job().source().name();
+            String srcExt = extInfo.defaultFileExtension();
+            String outExt = extInfo.getOptions().output_ext;
+            String outName = srcName.substring(0, srcName.length() - srcExt.length()) + outExt;
+            LLVMPrintModuleToFile(mod, outName, error);
+            LLVMDisposeMessage(error);
+            error.setNull();
             LLVMDisposeBuilder(builder);
             LLVMDisposeModule(mod);
 
