@@ -127,9 +127,15 @@ public class LLVMUtils {
         return LLVMFunctionType(ret, new PointerPointer<>(args), args.length, /* isVarArgs */ 0);
     }
 
-    public static LLVMValueRef buildCall(LLVMBuilderRef builder,
-                                         LLVMValueRef func,
-                                         LLVMValueRef ...args) {
+    public static LLVMValueRef buildProcedureCall(LLVMBuilderRef builder,
+                                                  LLVMValueRef func,
+                                                  LLVMValueRef ...args) {
+        return LLVMBuildCall(builder, func, new PointerPointer<>(args), args.length, "");
+    }
+
+    public static LLVMValueRef buildMethodCall(LLVMBuilderRef builder,
+                                               LLVMValueRef func,
+                                               LLVMValueRef ...args) {
         return LLVMBuildCall(builder, func, new PointerPointer<>(args), args.length, "call");
     }
 

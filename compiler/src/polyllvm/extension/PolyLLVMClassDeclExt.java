@@ -1,8 +1,8 @@
 package polyllvm.extension;
 
-import polyglot.ast.*;
+import polyglot.ast.ClassDecl;
+import polyglot.ast.Node;
 import polyglot.types.Type;
-import polyglot.types.TypeSystem;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -21,20 +21,6 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         return super.enterTranslatePseudoLLVM(v);
     }
 
-    /**
-     * Returns true iff the class member has the signature `public static void main(String[] args)`.
-     */
-    private static boolean isEntryPoint(ClassMember cm, TypeSystem ts) {
-        if (!(cm instanceof ProcedureDecl) || cm instanceof MethodDecl)
-            return false;
-        ProcedureDecl pd = (ProcedureDecl) cm;
-        return pd.name().equals("main")
-                && pd.flags().isStatic()
-                && pd.flags().isPublic()
-                && pd.formals().size() == 1
-                && pd.formals().iterator().next().declType().equals(ts.arrayOf(ts.String()));
-    }
-
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         ClassDecl n = (ClassDecl) node();
@@ -43,10 +29,6 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         List<LLVMFunction> funcs = new ArrayList<>();
         List<LLVMFunctionDeclaration> funcDecls = new ArrayList<>();
         List<LLVMGlobalDeclaration> globals = new ArrayList<>();
-
-        n.body().members().stream()
-                .filter(cm -> isEntryPoint(cm, v.typeSystem()))
-                .forEach(cm -> v.addEntryPoint(v.getTranslation(cm)));
 
         // External class object declarations.
         Type superType = n.type().superType();

@@ -38,7 +38,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
             LLVMValueRef func = LLVMAddFunction(v.mod, Constants.ENTRY_TRAMPOLINE, funcType);
             LLVMBasicBlockRef block = LLVMAppendBasicBlock(func, "body");
             LLVMPositionBuilderAtEnd(v.builder, block);
-            LLVMUtils.buildCall(v.builder, javaEntryPoint, LLVMGetFirstParam(func));
+            LLVMUtils.buildProcedureCall(v.builder, javaEntryPoint, LLVMGetFirstParam(func));
             LLVMBuildRetVoid(v.builder);
         }
         return super.translatePseudoLLVM(v);
