@@ -1,10 +1,14 @@
 package polyllvm.ast;
 
-import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.*;
 import polyglot.util.InternalCompilerError;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.visit.*;
+import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
+import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.RemoveESeqVisitor;
+import polyllvm.visit.StringLiteralRemover;
+
+import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
 
 public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     public static final PolyLLVMLang_c instance = new PolyLLVMLang_c();
@@ -66,9 +70,10 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     }
 
     @Override
-    public void translateLLVMConditional(Node n, PseudoLLVMTranslator v, LLVM.LLVMBasicBlockRef trueBlock, LLVM.LLVMBasicBlockRef falseBlock) {
-        PolyLLVMOps(n).translateLLVMConditional(v,trueBlock,falseBlock);
-
+    public void translateLLVMConditional(Node n, PseudoLLVMTranslator v,
+                                         LLVMBasicBlockRef trueBlock,
+                                         LLVMBasicBlockRef falseBlock) {
+        PolyLLVMOps(n).translateLLVMConditional(v, trueBlock, falseBlock);
     }
 
     @Override

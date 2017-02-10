@@ -45,5 +45,4 @@ public interface PolyLLVMOps extends NodeOps {
             AddPrimitiveWideningCastsVisitor v);
 
     Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v);
-
 }
