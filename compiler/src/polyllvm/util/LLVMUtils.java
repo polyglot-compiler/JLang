@@ -56,10 +56,6 @@ public class LLVMUtils {
         } else throw new InternalCompilerError("Invalid type");
     }
 
-    public static LLVMTypeRef typeRef(TypeNode tn, LLVMModuleRef mod) {
-        return typeRef(tn.type(), mod);
-    }
-
     // TODO: Delete this
     public static LLVMTypeNode polyLLVMTypeNode(PolyLLVMNodeFactory nf, Type t) {
         if (t.isByte()) {

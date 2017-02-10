@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import polyglot.ast.MethodDecl;
 import polyglot.ast.Node;
 import polyglot.ast.ProcedureDecl;
 import polyglot.types.Flags;
@@ -47,8 +48,10 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             argTypes.add(LLVMVoidType()); // TODO
             // LLVMTypeNode objType = LLVMUtils.polyLLVMObjectVariableType(v, v.getCurrentClass().type());
         }
-        n.formals().stream().map(f -> LLVMUtils.typeRef(f.type(), v.mod)).forEach(argTypes::add);
-        LLVMTypeRef retType = llvmRetType(v.mod);
+        n.formals().stream().map(f -> LLVMUtils.typeRef(f.declType(), v.mod)).forEach(argTypes::add);
+        LLVMTypeRef retType = n instanceof MethodDecl
+                ? LLVMUtils.typeRef(((MethodDecl) n).returnType().type(), v.mod)
+                : LLVMVoidType();
         LLVMTypeRef[] argTypesArr = argTypes.toArray(new LLVMTypeRef[0]);
         LLVMTypeRef funcType = LLVMUtils.functionType(retType, argTypesArr);
 
@@ -74,6 +77,8 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         v.clearArguments();
         v.clearAllocations();
         v.popFn();
+        if (LLVMGetTypeKind(llvmRetType(v.mod)) == LLVMVoidTypeKind)
+            LLVMBuildRetVoid(v.builder);
         return super.translatePseudoLLVM(v);
     }
 }
