@@ -58,11 +58,6 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     }
 
     @Override
-    public Node addVoidReturn(Node n, AddVoidReturnVisitor v) {
-        return PolyLLVMOps(n).addVoidReturn(v);
-    }
-
-    @Override
     public Node translatePseudoLLVMConditional(Node n, PseudoLLVMTranslator v,
             LLVMLabel trueLabel, LLVMLabel falseLabel) {
         return PolyLLVMOps(n).translatePseudoLLVMConditional(v,

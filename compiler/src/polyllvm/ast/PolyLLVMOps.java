@@ -1,12 +1,14 @@
 package polyllvm.ast;
 
-import org.bytedeco.javacpp.LLVM;
-import static org.bytedeco.javacpp.LLVM.*;
-
 import polyglot.ast.Node;
 import polyglot.ast.NodeOps;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.visit.*;
+import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
+import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.RemoveESeqVisitor;
+import polyllvm.visit.StringLiteralRemover;
+
+import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
 
 /**
  * Operations any PolyLLVM compatible node must implement.
@@ -36,9 +38,6 @@ public interface PolyLLVMOps extends NodeOps {
     void translateLLVMConditional(PseudoLLVMTranslator v,
                                                LLVMBasicBlockRef trueBlock,
                                                LLVMBasicBlockRef falseBlock);
-
-
-    Node addVoidReturn(AddVoidReturnVisitor v);
 
     Node removeESeq(RemoveESeqVisitor v);
 

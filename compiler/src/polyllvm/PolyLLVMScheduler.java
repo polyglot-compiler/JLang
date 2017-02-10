@@ -146,28 +146,13 @@ public class PolyLLVMScheduler extends JLScheduler {
         return internGoal(g);
     }
 
-    public Goal AddVoidReturn(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        TypeSystem ts = extInfo.typeSystem();
-        PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new AddVoidReturnVisitor(ts, nf));
-        try {
-            // Make sure we have type information before we translate things.
-            g.addPrerequisiteGoal(AddPrimitiveWideningCasts(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
     public Goal CodeCleaner(Job job) {
         ExtensionInfo extInfo = job.extensionInfo();
         NodeFactory nf = extInfo.nodeFactory();
         Goal g = new EmptyGoal(job, "CodeCleaner");//new VisitorGoal(job, new CodeCleaner(nf)); //
         try {
             // Make sure we have type information before we translate things.
-            g.addPrerequisiteGoal(AddVoidReturn(job), this);
+            g.addPrerequisiteGoal(AddPrimitiveWideningCasts(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
@@ -197,6 +182,7 @@ public class PolyLLVMScheduler extends JLScheduler {
             LLVMVerifyModule(mod, LLVMPrintMessageAction, error);
             LLVMDisposeMessage(error);
 
+            System.out.println("--- Dumping LLVM Module ---");
             LLVMDumpModule(mod);
             LLVMDisposeBuilder(builder);
             LLVMDisposeModule(mod);
@@ -228,13 +214,12 @@ public class PolyLLVMScheduler extends JLScheduler {
         return internGoal(g);
     }
 
-    public Goal LLVMVarToStack(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        NodeFactory nf = extInfo.nodeFactory();
-
-        Goal g = new EmptyGoal(job, "hi");//new VisitorGoal(job, new LLVMVarToStack((PolyLLVMNodeFactory) nf));
+    @Override
+    public Goal CodeGenerated(Job job) {
+        Goal g = LLVMCodeGenerated.create(this, job);
+//        Goal g = new EmptyGoal(job, "CodeGenerated");
+        // Add a prerequisite goal to translate CArray features.
         try {
-            // Make sure we have type information before we translate things.
             g.addPrerequisiteGoal(LLVMTranslate(job), this);
         }
         catch (CyclicDependencyException e) {
@@ -242,52 +227,4 @@ public class PolyLLVMScheduler extends JLScheduler {
         }
         return internGoal(g);
     }
-
-    public Goal RemoveESeq(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        NodeFactory nf = extInfo.nodeFactory();
-
-        Goal g = new VisitorGoal(job,
-                                 new RemoveESeqVisitor((PolyLLVMNodeFactory) nf)); //new EmptyGoal(job, "RemoveESeq");
-        try {
-            g.addPrerequisiteGoal(LLVMVarToStack(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
-    @Override
-    public Goal CodeGenerated(Job job) {
-        Goal g = LLVMCodeGenerated.create(this, job);
-//        Goal g = new EmptyGoal(job, "CodeGenerated");
-        // Add a prerequisite goal to translate CArray features.
-        try {
-            g.addPrerequisiteGoal(RemoveESeq(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
-//    @Override
-//    public boolean runToCompletion() {
-//        boolean complete = super.runToCompletion();
-//        if (complete) {
-//            // Call the compiler for output files to compile our translated
-//            // code.
-//            ExtensionInfo outExtInfo = extInfo.outputExtensionInfo();
-//            Scheduler outScheduler = outExtInfo.scheduler();
-//
-//            // Create a goal to compile every source file.
-//            for (Job job : outScheduler.jobs()) {
-//                Job newJob = outScheduler.addJob(job.source(), job.ast());
-//                outScheduler.addGoal(outExtInfo.getCompileGoal(newJob));
-//            }
-//            return outScheduler.runToCompletion();
-//        }
-//        return complete;
-//    }
 }
