@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyglot.ast.Unary;
@@ -16,6 +17,7 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMBitwiseBinaryInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
@@ -52,29 +54,22 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
 
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
-        System.out.println("Translating Unary : " + node());
         Unary n = (Unary) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
         Operator op = n.operator();
         Expr expr = n.expr();
-        LLVMOperand exprTranslation = (LLVMOperand) v.getTranslation(expr);
+        LLVMValueRef exprTranslation = v.getTranslation(expr);
         if (Unary.BIT_NOT == op) {
-            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, exprTranslation.typeNode());
-            LLVMInstruction xor =
-                    nf.LLVMBitwiseBinaryInstruction(LLVMBitwiseBinaryInstruction.XOR,
-                            result, (LLVMIntType) exprTranslation.typeNode(),
-                            exprTranslation, nf.LLVMIntLiteral(exprTranslation.typeNode(), -1));
-            LLVMExpr eseq = nf.LLVMESeq(xor, result);
-            v.addTranslation(n, eseq);
+            LLVMValueRef bitnot = LLVMBuildXor(v.builder, exprTranslation,
+                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), -1, /* sign-extend */ 0), "bit_not");
+            v.addTranslation(n, bitnot);
         }
         else if (Unary.NEG == op) {
-            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, exprTranslation.typeNode());
-            LLVMInstruction sub =
-                    nf.LLVMSub(result, (LLVMIntType) exprTranslation.typeNode(),
-                            nf.LLVMIntLiteral(exprTranslation.typeNode(), 0), exprTranslation);
-            LLVMExpr eseq = nf.LLVMESeq(sub, result);
-            v.addTranslation(n, eseq);
+            LLVMValueRef neg = LLVMBuildSub(v.builder,
+                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), 0, /* sign-extend */ 0),
+                    exprTranslation, "neg");
+            v.addTranslation(n, neg);
         }
         else if (Unary.POST_INC == op) {
         }
@@ -85,23 +80,16 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         else if (Unary.PRE_DEC == op) {
         }
         else if (Unary.POS == op) {
-            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, exprTranslation.typeNode());
-            LLVMInstruction add =
-                    nf.LLVMAdd(result, (LLVMIntType) exprTranslation.typeNode(),
-                            nf.LLVMIntLiteral(exprTranslation.typeNode(), 0), exprTranslation);
-            LLVMExpr eseq = nf.LLVMESeq(add, result);
-            v.addTranslation(n, eseq);
+            LLVMValueRef neg = LLVMBuildAdd(v.builder, exprTranslation,
+                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), 0, /* sign-extend */ 0), "pos");
+            v.addTranslation(n, neg);
         }
         else if (Unary.NOT == op) {
             //Easy case: expr will be boolean
             // Use expr XOR 1
-            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, exprTranslation.typeNode());
-            LLVMInstruction xor =
-                    nf.LLVMBitwiseBinaryInstruction(LLVMBitwiseBinaryInstruction.XOR,
-                            result, (LLVMIntType) exprTranslation.typeNode(),
-                            exprTranslation, nf.LLVMIntLiteral(exprTranslation.typeNode(), 1));
-            LLVMExpr eseq = nf.LLVMESeq(xor, result);
-            v.addTranslation(n, eseq);
+            LLVMValueRef neg = LLVMBuildXor(v.builder, exprTranslation,
+                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), 1, /* sign-extend */ 0), "pos");
+            v.addTranslation(n, neg);
         }
         else {
 
