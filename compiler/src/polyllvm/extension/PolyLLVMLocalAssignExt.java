@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Local;
 import polyglot.ast.LocalAssign;
 import polyglot.ast.Node;
@@ -22,23 +23,9 @@ public class PolyLLVMLocalAssignExt extends PolyLLVMAssignExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         LocalAssign n = (LocalAssign) node();
         Local target = n.left();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        LLVMNode expr = v.getTranslation(n.right());
 
-        if (!(expr instanceof LLVMOperand)) {
-            throw new InternalCompilerError("Expression `" + n.right() + "` ("
-                    + n.right().getClass()
-                    + ") was not translated to an LLVMOperand " + "("
-                    + v.getTranslation(n.right()) + ")");
-        }
-
-        LLVMTypeNode tn = LLVMUtils.polyLLVMTypeNode(nf, n.type());
-        LLVMVariable ptr =
-                nf.LLVMVariable(v.varName(target.name()), tn, VarKind.LOCAL);
-
-        LLVMOperand value = (LLVMOperand) expr;
-        LLVMStore store = nf.LLVMStore(tn, value, ptr);
-        v.addTranslation(node(), store);
+        LLVMValueRef expr = v.getTranslation(n.right());
+        LLVMBuildStore(v.builder, expr, v.getVariable(target.name()));
 
         return super.translatePseudoLLVM(v);
     }

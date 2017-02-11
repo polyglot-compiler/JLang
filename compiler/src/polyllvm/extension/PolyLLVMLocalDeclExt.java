@@ -1,5 +1,8 @@
 package polyllvm.extension;
 
+import org.bytedeco.javacpp.LLVM;
+import static org.bytedeco.javacpp.LLVM.*;
+
 import polyglot.ast.LocalDecl;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
@@ -11,6 +14,7 @@ import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMStore;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
@@ -19,27 +23,22 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         LocalDecl n = (LocalDecl) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
 
-        LLVMTypeNode typeNode = v.getTranslation(n.type());
-        v.addAllocation(n.name(), typeNode);
+        LLVMBasicBlockRef currentBlock = LLVMGetInsertBlock(v.builder);
 
-        if (n.init() == null) {
+        LLVMBasicBlockRef firstBlock = LLVMGetFirstBasicBlock(v.currFn());
+        LLVMPositionBuilderAtEnd(v.builder,firstBlock);
+        LLVMValueRef alloc = LLVMBuildAlloca(v.builder, LLVMUtils.typeRef(n.type().type(),v.mod), n.name());
+        v.addAllocation(n.name(), alloc);
+
+        LLVMPositionBuilderAtEnd(v.builder, currentBlock);
+
+        if(n.init() == null){
             return super.translatePseudoLLVM(v);
         }
 
-        LLVMNode decl = v.getTranslation(n.init());
-
-        if (!(decl instanceof LLVMOperand)) {
-            throw new InternalCompilerError("Initializer " + n.init() + " ("
-                    + n.init().getClass() + ") was not translated to an"
-                    + " LLVMOperand, it was translated: " + decl);
-        }
-        LLVMVariable ptr =
-                nf.LLVMVariable(v.varName(n.name()), typeNode, LLVMVariable.VarKind.LOCAL);
-        LLVMStore store = nf.LLVMStore(typeNode, (LLVMOperand) decl, ptr);
-        v.addTranslation(n, store);
-
+        LLVMValueRef init = v.getTranslation(n.init());
+        v.addTranslation(n, LLVMBuildStore(v.builder, init, alloc));
         return super.translatePseudoLLVM(v);
     }
 }

@@ -70,6 +70,8 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         funcRef = LLVMAddFunction(v.mod, name, funcType);
         if (!pi.flags().contains(Flags.NATIVE) && !pi.flags().contains(Flags.ABSTRACT)) {
             // TODO: Add alloca instructions for local variables here.
+            LLVMBasicBlockRef entry = LLVMAppendBasicBlock(v.currFn(), "entry_alloca_instrs");
+            LLVMPositionBuilderAtEnd(v.builder, entry);
         }
 
         // Register as entry point if applicable.

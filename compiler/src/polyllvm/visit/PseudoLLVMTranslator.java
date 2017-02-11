@@ -910,12 +910,12 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     /*
      * Functions for generating loads and stores from stack allocated variables
      */
-    private Map<String, LLVMTypeNode> allocations = new HashMap<>();
-    private Map<String, LLVMTypeNode> arguments = new HashMap<>();
+    private Map<String, LLVMValueRef> allocations = new HashMap<>();
+    private Map<String, LLVMValueRef> arguments = new HashMap<>();
 
-    public void addArgument(String arg, LLVMTypeNode tn) {
-        arguments.put(arg, tn);
-    }
+//    public void addArgument(String arg, LLVMTypeNode tn) {
+//        arguments.put(arg, tn);
+//    }
 
     public boolean isArg(String name) {
         return arguments.containsKey(name);
@@ -925,8 +925,12 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         arguments.clear();
     }
 
-    public void addAllocation(String var, LLVMTypeNode tn) {
-        allocations.put(var, tn);
+    public void addAllocation(String var, LLVMValueRef v) {
+        allocations.put(var, v);
+    }
+
+    public LLVMValueRef getVariable(String var){
+        return allocations.get(var);
     }
 
     public void clearAllocations() {
@@ -940,43 +944,43 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         return var;
     }
 
-    public Pair<LLVMLoad, LLVMVariable> variableLoad(String name,
-            LLVMTypeNode tn) {
-        LLVMVariable temp = PolyLLVMFreshGen.freshLocalVar(nf, tn);
-        LLVMPointerType varPtrType = nf.LLVMPointerType(tn);
-        LLVMVariable var =
-                nf.LLVMVariable(varName(name), varPtrType, LLVMVariable.VarKind.LOCAL);
-        LLVMLoad load = nf.LLVMLoad(temp, tn, var);
-        return new Pair<>(load, temp);
-    }
+//    public Pair<LLVMLoad, LLVMVariable> variableLoad(String name,
+//            LLVMTypeNode tn) {
+//        LLVMVariable temp = PolyLLVMFreshGen.freshLocalVar(nf, tn);
+//        LLVMPointerType varPtrType = nf.LLVMPointerType(tn);
+//        LLVMVariable var =
+//                nf.LLVMVariable(varName(name), varPtrType, LLVMVariable.VarKind.LOCAL);
+//        LLVMLoad load = nf.LLVMLoad(temp, tn, var);
+//        return new Pair<>(load, temp);
+//    }
 
-    public List<LLVMInstruction> allocationInstructions() {
-        List<LLVMInstruction> allocs = new ArrayList<>();
-        for (Entry<String, LLVMTypeNode> e : allocations.entrySet()) {
-            LLVMAlloca a = nf.LLVMAlloca(e.getValue());
-            LLVMPointerType allocResultType = nf.LLVMPointerType(e.getValue());
-            allocs.add(a.result(nf.LLVMVariable(varName(e.getKey()),
-                                                allocResultType,
-                                                LLVMVariable.VarKind.LOCAL)));
-        }
-        for (Entry<String, LLVMTypeNode> e : arguments.entrySet()) {
-            LLVMAlloca a = nf.LLVMAlloca(e.getValue());
-            LLVMPointerType allocResultType = nf.LLVMPointerType(e.getValue());
-            allocs.add(a.result(nf.LLVMVariable(varName(e.getKey()),
-                                                allocResultType,
-                                                LLVMVariable.VarKind.LOCAL)));
-            LLVMTypeNode valueType = null;
-            LLVMTypeNode ptrType = nf.LLVMPointerType(allocResultType);
-            allocs.add(nf.LLVMStore(e.getValue(),
-                                    nf.LLVMVariable(e.getKey(),
-                                                    valueType,
-                                                    VarKind.LOCAL),
-                                    nf.LLVMVariable(varName(e.getKey()),
-                                                    ptrType,
-                                                    LLVMVariable.VarKind.LOCAL)));
-        }
-        return allocs;
-    }
+//    public List<LLVMInstruction> allocationInstructions() {
+//        List<LLVMInstruction> allocs = new ArrayList<>();
+//        for (Entry<String, LLVMTypeNode> e : allocations.entrySet()) {
+//            LLVMAlloca a = nf.LLVMAlloca(e.getValue());
+//            LLVMPointerType allocResultType = nf.LLVMPointerType(e.getValue());
+//            allocs.add(a.result(nf.LLVMVariable(varName(e.getKey()),
+//                                                allocResultType,
+//                                                LLVMVariable.VarKind.LOCAL)));
+//        }
+//        for (Entry<String, LLVMTypeNode> e : arguments.entrySet()) {
+//            LLVMAlloca a = nf.LLVMAlloca(e.getValue());
+//            LLVMPointerType allocResultType = nf.LLVMPointerType(e.getValue());
+//            allocs.add(a.result(nf.LLVMVariable(varName(e.getKey()),
+//                                                allocResultType,
+//                                                LLVMVariable.VarKind.LOCAL)));
+//            LLVMTypeNode valueType = null;
+//            LLVMTypeNode ptrType = nf.LLVMPointerType(allocResultType);
+//            allocs.add(nf.LLVMStore(e.getValue(),
+//                                    nf.LLVMVariable(e.getKey(),
+//                                                    valueType,
+//                                                    VarKind.LOCAL),
+//                                    nf.LLVMVariable(varName(e.getKey()),
+//                                                    ptrType,
+//                                                    LLVMVariable.VarKind.LOCAL)));
+//        }
+//        return allocs;
+//    }
 
     /*
      * Functions for translating loops

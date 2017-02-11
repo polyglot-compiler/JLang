@@ -24,21 +24,7 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Local n = (Local) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-//        LLVMVariable translation =
-//                nf.LLVMVariable(Position.compilerGenerated(),
-//                                n.name(),
-//                                VarKind.LOCAL);
-        LLVMTypeNode typeNode =
-                LLVMUtils.polyLLVMTypeNode(nf, n.type());
-
-        LLVMVariable expr = PolyLLVMFreshGen.freshLocalVar(nf, typeNode);
-
-        LLVMVariable ptr =
-                nf.LLVMVariable(v.varName(n.name()), typeNode, LLVMVariable.VarKind.LOCAL);
-        LLVMInstruction instruction = nf.LLVMLoad(expr, typeNode, ptr);
-        LLVMNode translation = nf.LLVMESeq(instruction, expr);
-        v.addTranslation(n, translation);
+        v.addTranslation(n, LLVMBuildLoad(v.builder, v.getVariable(n.name()), "load_" + n.name()));
         return super.translatePseudoLLVM(v);
     }
 
