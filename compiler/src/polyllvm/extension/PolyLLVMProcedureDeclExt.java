@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import polyglot.ast.Formal;
 import polyglot.ast.MethodDecl;
 import polyglot.ast.Node;
 import polyglot.ast.ProcedureDecl;
@@ -65,9 +66,11 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         LLVMTypeRef funcType = LLVMUtils.functionType(retType, argTypesArr);
 
         // Add function to module.
-        LLVMValueRef funcRef;
         String name = PolyLLVMMangler.mangleProcedureName(pi);
-        funcRef = LLVMAddFunction(v.mod, name, funcType);
+        LLVMValueRef funcRef= LLVMGetNamedFunction(v.mod, name);
+        if(funcRef == null || funcRef.isNull()) {
+            funcRef = LLVMAddFunction(v.mod, name, funcType);
+        }
         if (!pi.flags().contains(Flags.NATIVE) && !pi.flags().contains(Flags.ABSTRACT)) {
             // TODO: Add alloca instructions for local variables here.
             LLVMBasicBlockRef entry = LLVMAppendBasicBlock(v.currFn(), "entry_alloca_instrs");
@@ -96,7 +99,6 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             LLVMBuildRetVoid(v.builder);
         }
 
-        v.clearArguments();
         v.clearAllocations();
         v.popFn();
         return super.translatePseudoLLVM(v);
