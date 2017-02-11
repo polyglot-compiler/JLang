@@ -1,5 +1,8 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
+import org.bytedeco.javacpp.LLVM;
+
 import polyglot.ast.*;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
@@ -29,6 +32,7 @@ import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -81,93 +85,61 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
     private void translateStaticCall(PseudoLLVMTranslator v) {
         Call n = (Call) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        List<LLVMInstruction> instructions = new ArrayList<>();
 
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.methodInstance());
-        LLVMTypeNode tn =
-                LLVMUtils.polyLLVMFunctionTypeNode(nf,
-                                                           n.methodInstance()
-                                                            .formalTypes(),
-                                                           n.methodInstance()
-                                                            .returnType());
-        LLVMVariable func =
-                nf.LLVMVariable(mangledFuncName, tn, LLVMVariable.VarKind.GLOBAL);
 
-        List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
-                setupArguments(v, n, nf);
-        Pair<LLVMCall, LLVMVariable> pair =
-                setupCall(v, n, nf, func, arguments, false);
-        instructions.add(pair.part1());
-        v.addTranslation(n,
-                         nf.LLVMESeq(nf.LLVMSeq(instructions), pair.part2()));
+        LLVMTypeRef tn = LLVMUtils.functionType(n.methodInstance().formalTypes(),
+                n.methodInstance().returnType(),v.mod);
+
+        LLVMValueRef[] args = n.arguments().stream()
+                .map(arg -> v.getTranslation(arg))
+                .toArray(LLVMValueRef[]::new);
+
+        LLVMValueRef func = LLVMUtils.getFunction(v.mod, mangledFuncName, tn);
+        if(n.methodInstance().returnType().isVoid()){
+            v.addTranslation(n, LLVMUtils.buildProcedureCall(v.builder, func, args));
+        } else{
+            v.addTranslation(n, LLVMUtils.buildMethodCall(v.builder, func, args));
+        }
+
     }
 
     private void translateSuperCall(PseudoLLVMTranslator v) {
         Call n = (Call) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        List<LLVMInstruction> instructions = new ArrayList<>();
-
         MethodInstance superMethod = n.methodInstance().overrides().get(0);
 
-        LLVMTypeNode toType =
-                LLVMUtils.polyLLVMMethodTypeNode(nf,
-                                                         v.getCurrentClass()
-                                                          .type(),
-                                                         n.methodInstance()
-                                                          .formalTypes(),
-                                                         n.methodInstance()
-                                                          .returnType());
+        LLVMTypeRef toType = LLVMUtils.methodType(v.getCurrentClass().type(),
+                n.methodInstance().formalTypes(),
+                n.methodInstance().returnType(),
+                v.mod);
 
-        LLVMTypeNode superMethodType =
-                LLVMUtils.polyLLVMMethodTypeNode(nf,
-                                                         superMethod.container(),
-                                                         superMethod.formalTypes(),
-                                                         superMethod.returnType());
-        LLVMVariable superMethodPtr =
-                nf.LLVMVariable(PolyLLVMMangler.mangleProcedureName(superMethod),
-                                superMethodType,
-                                LLVMVariable.VarKind.GLOBAL);
+        LLVMTypeRef superMethodType = LLVMUtils.methodType(
+                superMethod.container(),
+                superMethod.formalTypes(),
+                superMethod.returnType(),
+                v.mod);
 
-        LLVMVariable superMethodCastPtr =
-                PolyLLVMFreshGen.freshLocalVar(nf, toType);
+        LLVMValueRef superFunc = LLVMUtils.getFunction(v.mod,
+                PolyLLVMMangler.mangleProcedureName(superMethod),
+                superMethodType);
 
-        LLVMConversion castFunction =
-                nf.LLVMConversion(LLVMConversion.BITCAST,
-                                  superMethodCastPtr,
-                                  superMethodType,
-                                  superMethodPtr,
-                                  toType);
-        instructions.add(castFunction);
+        LLVMValueRef superBitCast = LLVMBuildBitCast(v.builder, superFunc, toType,"bitcast_super");
 
-        LLVMTypeNode thisType =
-                LLVMUtils.polyLLVMTypeNode(nf,
-                                                   v.getCurrentClass().type());
-        LLVMOperand thisTranslation =
-                nf.LLVMVariable(Constants.THIS_STR,
-                                thisType,
-                                VarKind.LOCAL);
 
-        List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
-                setupArguments(v, n, nf, thisTranslation, thisType);
-        Pair<LLVMCall, LLVMVariable> pair =
-                setupCall(v, n, nf, superMethodCastPtr, arguments, true);
-        instructions.add(pair.part1());
-        v.addTranslation(n,
-                         nf.LLVMESeq(nf.LLVMSeq(instructions), pair.part2()));
+        LLVMValueRef thisArg = LLVMGetParam(v.currFn(), 0);
 
-        LLVMTypeNode superTypeNode =
-                LLVMUtils.polyLLVMTypeNode(nf, superMethod.container());
-        LLVMOperand superTranslation =
-                nf.LLVMVariable(PolyLLVMFreshGen.freshNamedLabel(nf, "argument")
-                                                .name(),
-                                superTypeNode,
-                                LLVMVariable.VarKind.LOCAL);
+        LLVMValueRef[] args =
+                Stream.concat(
+                    Stream.of(thisArg),
+                    n.arguments().stream().map(arg -> v.getTranslation(arg)))
+                .toArray(LLVMValueRef[]::new);
 
-        arguments = setupArguments(v, n, nf, superTranslation, superTypeNode);
-        LLVMTypeNode retType = LLVMUtils.polyLLVMTypeNode(nf, n.type());
-        v.addStaticCall(nf.LLVMCall(superMethodPtr, arguments, retType));
+        if(n.methodInstance().returnType().isVoid()){
+            v.addTranslation(n, LLVMUtils.buildProcedureCall(v.builder, superBitCast, args));
+        } else{
+            v.addTranslation(n, LLVMUtils.buildMethodCall(v.builder, superBitCast, args));
+        }
 
     }
 

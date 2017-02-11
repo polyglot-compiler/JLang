@@ -15,6 +15,7 @@ import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -127,6 +128,24 @@ public class LLVMUtils {
         return LLVMFunctionType(ret, new PointerPointer<>(args), args.length, /* isVarArgs */ 0);
     }
 
+    public static LLVMTypeRef functionType(List<? extends Type> formalTypes,
+                                           Type returnType, LLVMModuleRef mod) {
+        LLVMTypeRef[] args = formalTypes.stream()
+                .map(t -> typeRef(t, mod))
+                .toArray(LLVMTypeRef[]::new);
+
+        return functionType(typeRef(returnType, mod), args);
+    }
+
+    public static LLVMTypeRef methodType(ReferenceType type, List<? extends Type> formalTypes,
+                                             Type returnType, LLVMModuleRef mod) {
+        LLVMTypeRef[] args = Stream.concat(
+                    Stream.of(typeRef(type, mod)),
+                    formalTypes.stream().map(t -> typeRef(t, mod)))
+                .toArray(LLVMTypeRef[]::new);
+        return functionType(typeRef(returnType, mod), args);
+    }
+
     public static LLVMValueRef buildProcedureCall(LLVMBuilderRef builder,
                                                   LLVMValueRef func,
                                                   LLVMValueRef ...args) {
@@ -137,6 +156,17 @@ public class LLVMUtils {
                                                LLVMValueRef func,
                                                LLVMValueRef ...args) {
         return LLVMBuildCall(builder, func, new PointerPointer<>(args), args.length, "call");
+    }
+
+    /**
+     * If the function is already in the module, return it, otherwise add it to the module and return it.
+     */
+    public static LLVMValueRef getFunction(LLVMModuleRef mod, String functionName, LLVMTypeRef functionType){
+        LLVMValueRef func = LLVMGetNamedFunction(mod, functionName);
+        if(func != null){
+            return func;
+        }
+        return LLVMAddFunction(mod, functionName, functionType);
     }
 
     // TODO

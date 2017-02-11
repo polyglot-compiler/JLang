@@ -13,13 +13,15 @@ public class PolyLLVMEvalExt extends PolyLLVMExt {
 
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
-        LLVMNode translation = (LLVMNode) v.getTranslation(((Eval) node()).expr());
-        if (translation instanceof LLVMESeq) {
-            v.addTranslation(node(), ((LLVMESeq) translation).instruction());
-        }
-        else {
-            v.addTranslation(node(), translation);
-        }
+//        LLVMNode translation = (LLVMNode) v.getTranslation(((Eval) node()).expr());
+//        if (translation instanceof LLVMESeq) {
+//            v.addTranslation(node(), ((LLVMESeq) translation).instruction());
+//        }
+//        else {
+//            v.addTranslation(node(), translation);
+//        }
+
+        //TODO: figure out if need to add anything to module?
         return super.translatePseudoLLVM(v);
     }
 }
