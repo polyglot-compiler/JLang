@@ -11,7 +11,11 @@ public class PolyLLVMBlockExt extends PolyLLVMExt {
 
     @Override
     public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+        LLVMBasicBlockRef currBlock = v.currentBlock;
         LLVMBasicBlockRef block = LLVMAppendBasicBlock(v.currFn(), "block");
+        if(LLVMGetBasicBlockTerminator(currBlock) == null || LLVMGetBasicBlockTerminator(currBlock).isNull()){
+            LLVMBuildBr(v.builder, block);
+        }
         LLVMPositionBuilderAtEnd(v.builder, block);
         v.addTranslation(node(), block);
         v.currentBlock = block;
