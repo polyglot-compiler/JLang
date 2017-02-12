@@ -24,7 +24,7 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
                 : ifEnd;
 
         v.visitEdge(n, n.cond());
-        LLVMBuildCondBr(v.builder, v.getTranslation(n.cond()), ifTrue, ifFalse);
+        lang().translateLLVMConditional(n.cond(), v, ifTrue, ifFalse);
 
         BiConsumer<LLVMBasicBlockRef, Stmt> emitBlock = (block, stmt) -> {
             LLVMPositionBuilderAtEnd(v.builder, block);
