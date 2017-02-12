@@ -52,7 +52,8 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         LLVMValueRef funcRef = LLVMUtils.funcRef(v.mod, pi, funcType);
         if (!pi.flags().contains(Flags.NATIVE) && !pi.flags().contains(Flags.ABSTRACT)) {
             // TODO: Add alloca instructions for local variables here.
-            LLVMBasicBlockRef entry = LLVMAppendBasicBlock(funcRef, "entry");
+            LLVMBasicBlockRef entry = LLVMAppendBasicBlock(funcRef, "allocs_entry");
+            LLVMBasicBlockRef body_entry = LLVMAppendBasicBlock(funcRef, "body_entry");
             LLVMPositionBuilderAtEnd(v.builder, entry);
 
             for (int i=0;i<n.formals().size(); i++) {
@@ -62,6 +63,11 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 LLVMBuildStore(v.builder, LLVMGetParam(funcRef, i), alloc);
                 v.addAllocation(formal.name(), alloc);
             }
+
+            LLVMBuildBr(v.builder, body_entry);
+            LLVMPositionBuilderAtEnd(v.builder,body_entry);
+
+
         }
 
         // Register as entry point if applicable.
