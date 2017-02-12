@@ -22,33 +22,31 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public PseudoLLVMTranslator enterTranslatePseudoLLVM(
-            PseudoLLVMTranslator v) {
-        v.enterLoop((While) node());
-        return super.enterTranslatePseudoLLVM(v);
-    }
-
-    @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         While n = (While) node();
+        v.enterLoop(n);
 
-        Pair<LLVMBasicBlockRef, LLVMBasicBlockRef> labels = v.leaveLoop();
+        Pair<LLVMBasicBlockRef, LLVMBasicBlockRef> labels = v.peekLoop();
 
         LLVMBasicBlockRef head = labels.part1();
         LLVMBasicBlockRef end = labels.part2();
-        LLVMBasicBlockRef l1 = v.getTranslation(n.body());
+        LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
 
-        LLVMPositionBuilderAtEnd(v.builder, v.currentBlock);
+        LLVMPositionBuilderAtEnd(v.builder, LLVMGetInsertBlock(v.builder));
         LLVMBuildBr(v.builder, head);
 
         LLVMPositionBuilderAtEnd(v.builder, head);
+        v.visitEdge(n, n.cond());
         lang().translateLLVMConditional(n.cond(), v, l1, end);
 
         LLVMPositionBuilderAtEnd(v.builder, l1);
-        LLVMBuildBr(v.builder, head);
-
-        v.currentBlock = end;
-
-        return super.translatePseudoLLVM(v);
+        v.visitEdge(n, n.body());
+        LLVMBasicBlockRef blockEnd = LLVMGetInsertBlock(v.builder);
+        if (LLVMGetBasicBlockTerminator(blockEnd) == null) {
+            LLVMBuildBr(v.builder, head);
+        }
+        LLVMPositionBuilderAtEnd(v.builder, end);
+        v.leaveLoop();
+        return n;
     }
 }

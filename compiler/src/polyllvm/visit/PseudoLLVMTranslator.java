@@ -959,6 +959,10 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     public Pair<LLVMBasicBlockRef, LLVMBasicBlockRef> leaveLoop() {
         return loops.pop().part2();
     }
+    public Pair<LLVMBasicBlockRef, LLVMBasicBlockRef> peekLoop() {
+        return loops.peek().part2();
+    }
+
 
     private Labeled label;
     private LLVMBasicBlockRef labelhead;
