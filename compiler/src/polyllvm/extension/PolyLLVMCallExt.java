@@ -87,8 +87,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.methodInstance());
 
-        LLVMTypeRef tn = LLVMUtils.functionType(n.methodInstance().formalTypes(),
-                n.methodInstance().returnType(),v.mod);
+        LLVMTypeRef tn = LLVMUtils.functionType(n.methodInstance().returnType(), n.methodInstance().formalTypes(),
+                v.mod);
 
         LLVMValueRef[] args = n.arguments().stream()
                 .map(v::getTranslation)
@@ -108,14 +108,12 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         MethodInstance superMethod = n.methodInstance().overrides().get(0);
 
         LLVMTypeRef toType = LLVMUtils.methodType(v.getCurrentClass().type(),
-                n.methodInstance().formalTypes(),
-                n.methodInstance().returnType(),
+                n.methodInstance().returnType(), n.methodInstance().formalTypes(),
                 v.mod);
 
         LLVMTypeRef superMethodType = LLVMUtils.methodType(
                 superMethod.container(),
-                superMethod.formalTypes(),
-                superMethod.returnType(),
+                superMethod.returnType(), superMethod.formalTypes(),
                 v.mod);
 
         LLVMValueRef superFunc = LLVMUtils.getFunction(v.mod,
