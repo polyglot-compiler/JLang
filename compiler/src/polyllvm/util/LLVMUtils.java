@@ -128,17 +128,19 @@ public class LLVMUtils {
         return LLVMFunctionType(ret, new PointerPointer<>(args), args.length, /* isVarArgs */ 0);
     }
 
-    public static LLVMTypeRef functionType(List<? extends Type> formalTypes,
-                                           Type returnType, LLVMModuleRef mod) {
+    // TODO: Just make one that takes in a procedure decl.
+    public static LLVMTypeRef functionType(Type returnType, List<? extends Type> formalTypes,
+                                           LLVMModuleRef mod) {
         LLVMTypeRef[] args = formalTypes.stream()
                 .map(t -> typeRef(t, mod))
                 .toArray(LLVMTypeRef[]::new);
-
         return functionType(typeRef(returnType, mod), args);
     }
 
-    public static LLVMTypeRef methodType(ReferenceType type, List<? extends Type> formalTypes,
-                                             Type returnType, LLVMModuleRef mod) {
+    public static LLVMTypeRef methodType(ReferenceType type,
+                                         Type returnType,
+                                         List<? extends Type> formalTypes,
+                                         LLVMModuleRef mod) {
         LLVMTypeRef[] args = Stream.concat(
                     Stream.of(typeRef(type, mod)),
                     formalTypes.stream().map(t -> typeRef(t, mod)))
@@ -161,12 +163,18 @@ public class LLVMUtils {
     /**
      * If the function is already in the module, return it, otherwise add it to the module and return it.
      */
-    public static LLVMValueRef getFunction(LLVMModuleRef mod, String functionName, LLVMTypeRef functionType){
+    public static LLVMValueRef getFunction(LLVMModuleRef mod, String functionName, LLVMTypeRef functionType) {
         LLVMValueRef func = LLVMGetNamedFunction(mod, functionName);
-        if(func != null){
-            return func;
+        if (func == null) {
+            func = LLVMAddFunction(mod, functionName, functionType);
         }
-        return LLVMAddFunction(mod, functionName, functionType);
+        return func;
+    }
+
+    public static LLVMValueRef funcRef(LLVMModuleRef mod,
+                                       ProcedureInstance pi,
+                                       LLVMTypeRef funcType) {
+        return getFunction(mod, PolyLLVMMangler.mangleProcedureName(pi), funcType);
     }
 
     // TODO

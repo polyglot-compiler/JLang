@@ -1,8 +1,5 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
-import org.bytedeco.javacpp.LLVM;
-
 import polyglot.ast.*;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
@@ -24,7 +21,6 @@ import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMLoad;
 import polyllvm.util.LLVMUtils;
-import polyllvm.util.Constants;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
@@ -33,6 +29,8 @@ import polyllvm.visit.PseudoLLVMTranslator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -89,11 +87,11 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.methodInstance());
 
-        LLVMTypeRef tn = LLVMUtils.functionType(n.methodInstance().formalTypes(),
-                n.methodInstance().returnType(),v.mod);
+        LLVMTypeRef tn = LLVMUtils.functionType(n.methodInstance().returnType(), n.methodInstance().formalTypes(),
+                v.mod);
 
         LLVMValueRef[] args = n.arguments().stream()
-                .map(arg -> v.getTranslation(arg))
+                .map(v::getTranslation)
                 .toArray(LLVMValueRef[]::new);
 
         LLVMValueRef func = LLVMUtils.getFunction(v.mod, mangledFuncName, tn);
@@ -110,14 +108,12 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         MethodInstance superMethod = n.methodInstance().overrides().get(0);
 
         LLVMTypeRef toType = LLVMUtils.methodType(v.getCurrentClass().type(),
-                n.methodInstance().formalTypes(),
-                n.methodInstance().returnType(),
+                n.methodInstance().returnType(), n.methodInstance().formalTypes(),
                 v.mod);
 
         LLVMTypeRef superMethodType = LLVMUtils.methodType(
                 superMethod.container(),
-                superMethod.formalTypes(),
-                superMethod.returnType(),
+                superMethod.returnType(), superMethod.formalTypes(),
                 v.mod);
 
         LLVMValueRef superFunc = LLVMUtils.getFunction(v.mod,
@@ -132,7 +128,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMValueRef[] args =
                 Stream.concat(
                     Stream.of(thisArg),
-                    n.arguments().stream().map(arg -> v.getTranslation(arg)))
+                    n.arguments().stream().map(v::getTranslation))
                 .toArray(LLVMValueRef[]::new);
 
         if(n.methodInstance().returnType().isVoid()){
@@ -149,8 +145,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         List<LLVMInstruction> instructions = new ArrayList<>();
 
         ReferenceType referenceType = (ReferenceType) n.target().type();
-        LLVMOperand thisTranslation =
-                (LLVMOperand) v.getTranslation(n.target());
+        LLVMOperand thisTranslation = v.getTranslation(n.target());
         LLVMTypeNode thisType =
                 LLVMUtils.polyLLVMTypeNode(nf, n.target().type());
         LLVMTypeNode functionPtrType =
@@ -223,8 +218,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMPointerType bytePointerType = nf.LLVMPointerType(nf.LLVMIntType(8));
 
         ReferenceType referenceType = (ReferenceType) n.target().type();
-        LLVMOperand thisTranslation =
-                (LLVMOperand) v.getTranslation(n.target());
+        LLVMOperand thisTranslation = v.getTranslation(n.target());
         LLVMTypeNode thisType =
                 LLVMUtils.polyLLVMTypeNode(nf, n.target().type());
         LLVMTypeNode functionPtrType =
