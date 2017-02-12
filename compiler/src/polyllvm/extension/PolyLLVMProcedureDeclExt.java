@@ -75,7 +75,6 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             // TODO: Add alloca instructions for local variables here.
             LLVMBasicBlockRef entry = LLVMAppendBasicBlock(funcRef, "entry_alloca_instrs");
             LLVMPositionBuilderAtEnd(v.builder, entry);
-            v.currentBlock = entry;
 
             for (int i=0;i<n.formals().size(); i++) {
                 Formal formal = n.formals().get(i);

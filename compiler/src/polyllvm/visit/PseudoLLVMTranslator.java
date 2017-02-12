@@ -48,8 +48,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     public final LLVMModuleRef mod;
     public final LLVMBuilderRef builder;
 
-    public LLVMBasicBlockRef currentBlock;
-
     /**
      * A stack of all enclosing functions.
      */
