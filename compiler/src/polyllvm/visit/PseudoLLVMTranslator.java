@@ -197,8 +197,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     /**
      * Get the field and method layout for a given class
      */
-    public Pair<List<MethodInstance>, List<FieldInstance>> layouts(
-            ReferenceType rt) {
+    public Pair<List<MethodInstance>, List<FieldInstance>> layouts(ReferenceType rt) {
         if (layouts.containsKey(rt.toString())) {
             return layouts.get(rt.toString());
         }

@@ -8,13 +8,11 @@ import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.extension.ClassObjects;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -30,11 +28,18 @@ public class LLVMUtils {
         return LLVMPointerType(elemType, Constants.LLVM_ADDR_SPACE);
     }
 
-    private static LLVMTypeRef structTypeRef(String mangledName, LLVMModuleRef mod) {
+    private static LLVMTypeRef structTypeRefOpaque(String mangledName, LLVMModuleRef mod) {
         LLVMTypeRef res = LLVMGetTypeByName(mod, mangledName);
         if (res == null)
             res = LLVMStructCreateNamed(LLVMGetGlobalContext(), mangledName);
         return res;
+    }
+
+    private static LLVMTypeRef structTypeRef(ReferenceType rt, LLVMModuleRef mod) {
+        String mangledName = PolyLLVMMangler.classTypeName(rt);
+        LLVMTypeRef structType = structTypeRefOpaque(mangledName, mod);
+        // TODO
+        return ptrTypeRef(structType);
     }
 
     public static LLVMTypeRef typeRef(Type t, LLVMModuleRef mod) {
@@ -49,10 +54,9 @@ public class LLVMUtils {
         } else if (t.isDouble()) {
             return LLVMDoubleType();
         } else if (t.isArray()) {
-            return ptrTypeRef(structTypeRef(Constants.ARR_CLASS, mod));
+            return ptrTypeRef(structTypeRefOpaque(Constants.ARR_CLASS, mod));
         } else if (t.isClass()) {
-            String mangledName = PolyLLVMMangler.classTypeName(t.toReference());
-            return ptrTypeRef(structTypeRef(mangledName, mod));
+            return structTypeRef(t.toReference(), mod);
         } else if (t.isNull()) {
             return ptrTypeRef(LLVMInt8Type());
         } else throw new InternalCompilerError("Invalid type");
@@ -222,23 +226,21 @@ public class LLVMUtils {
         return LLVMBuildGEP(builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
 
-    public static LLVMTypeNode polyLLVMObjectType(PseudoLLVMTranslator v,
-            ReferenceType rt) {
+    public static LLVMTypeNode polyLLVMObjectType(PseudoLLVMTranslator v, ReferenceType rt) {
         Pair<List<MethodInstance>, List<FieldInstance>> layouts = v.layouts(rt);
         List<LLVMTypeNode> typeList = new ArrayList<>();
-        typeList.add(v.nodeFactory()
-                      .LLVMPointerType(polyLLVMDispatchVectorVariableType(v,
-                                                                          rt)));
-        for (FieldInstance f : layouts.part2()) {
-            typeList.add(polyLLVMTypeNode(v.nodeFactory(), f.type()));
-        }
-        LLVMStructureType structureType =
-                v.nodeFactory().LLVMStructureType(typeList);
-
-        return structureType;
+        typeList.add(v.nodeFactory().LLVMPointerType(polyLLVMDispatchVectorVariableType(v, rt)));
+        layouts.part2().stream()
+                .map(f -> polyLLVMTypeNode(v.nodeFactory(), f.type()))
+                .forEach(typeList::add);
+        return v.nodeFactory().LLVMStructureType(typeList);
     }
 
-    public static LLVMTypeRef objectStructType(PseudoLLVMTranslator v, ReferenceType rt){
+    private static void setStructBody(LLVMTypeRef struct, LLVMTypeRef... types) {
+        LLVMStructSetBody(struct, new PointerPointer<>(types), types.length, /* packed */ 0);
+    }
+
+    public static LLVMTypeRef objectStructType(PseudoLLVMTranslator v, ReferenceType rt) {
         Pair<List<MethodInstance>, List<FieldInstance>> layouts = v.layouts(rt);
         LLVMTypeRef dvType = LLVMPointerType(
                         LLVMGetTypeByName(v.mod,PolyLLVMMangler.dispatchVectorTypeName(rt)), Constants.LLVM_ADDR_SPACE);
@@ -249,8 +251,7 @@ public class LLVMUtils {
         return structType(typeRefs);
     }
 
-    public static LLVMTypeNode polyLLVMObjectType(PseudoLLVMTranslator v,
-            ClassDecl cd) {
+    public static LLVMTypeNode polyLLVMObjectType(PseudoLLVMTranslator v, ClassDecl cd) {
         return polyLLVMObjectType(v, cd.type());
     }
 
