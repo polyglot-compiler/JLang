@@ -178,6 +178,10 @@ public class LLVMUtils {
         return getFunction(mod, PolyLLVMMangler.mangleProcedureName(pi), funcType);
     }
 
+    public static LLVMTypeRef structType(LLVMTypeRef... types) {
+        return LLVMStructType(new PointerPointer<>(types), types.length, /*Packed*/ 0);
+    }
+
     /**
      * If the global is already in the module, return it, otherwise add it to the module and return it.
      */
@@ -232,6 +236,17 @@ public class LLVMUtils {
                 v.nodeFactory().LLVMStructureType(typeList);
 
         return structureType;
+    }
+
+    public static LLVMTypeRef objectStructType(PseudoLLVMTranslator v, ReferenceType rt){
+        Pair<List<MethodInstance>, List<FieldInstance>> layouts = v.layouts(rt);
+        LLVMTypeRef dvType = LLVMPointerType(
+                        LLVMGetTypeByName(v.mod,PolyLLVMMangler.dispatchVectorTypeName(rt)), Constants.LLVM_ADDR_SPACE);
+        LLVMTypeRef[] typeRefs = Stream.concat(
+                Stream.of(dvType),
+                layouts.part2().stream().map(fi -> typeRef(fi.type(), v.mod))
+        ).toArray(LLVMTypeRef[]::new);
+        return structType(typeRefs);
     }
 
     public static LLVMTypeNode polyLLVMObjectType(PseudoLLVMTranslator v,
