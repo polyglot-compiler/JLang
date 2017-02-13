@@ -14,6 +14,7 @@ import polyllvm.extension.ClassObjects;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -177,6 +178,17 @@ public class LLVMUtils {
         return getFunction(mod, PolyLLVMMangler.mangleProcedureName(pi), funcType);
     }
 
+    /**
+     * If the global is already in the module, return it, otherwise add it to the module and return it.
+     */
+    public static LLVMValueRef getGlobal(LLVMModuleRef mod, String globalName, LLVMTypeRef globalType) {
+        LLVMValueRef global = LLVMGetNamedGlobal(mod,globalName);
+        if (global == null) {
+            global = LLVMAddGlobal(mod, globalType, globalName);
+        }
+        return global;
+    }
+
     // TODO
     public static LLVMFunctionType polyLLVMFunctionTypeNode(
             PolyLLVMNodeFactory nf, List<? extends Type> formalTypes,
@@ -197,6 +209,13 @@ public class LLVMUtils {
                                                           formalTypes,
                                                           returnType)
                                 .prependFormalTypeNode(classTypePointer);
+    }
+
+
+    public static LLVMValueRef buildGEP(LLVMBuilderRef builder,
+                                        LLVMValueRef ptr,
+                                        LLVMValueRef ...indices) {
+        return LLVMBuildGEP(builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
 
     public static LLVMTypeNode polyLLVMObjectType(PseudoLLVMTranslator v,

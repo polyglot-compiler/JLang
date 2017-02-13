@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Field;
 import polyglot.ast.Node;
 import polyglot.ast.Receiver;
@@ -35,41 +36,17 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
         if (n.flags().isStatic()) {
             // Static fields.
             String mangledGlobalName = PolyLLVMMangler.mangleStaticFieldName(n);
-            LLVMTypeNode ptrTypeNode = nf.LLVMPointerType(fieldTypeNode);
-            LLVMVariable.VarKind ptrKind = LLVMVariable.VarKind.GLOBAL;
-            LLVMVariable ptr = nf.LLVMVariable(mangledGlobalName, ptrTypeNode, ptrKind);
-            LLVMVariable var = PolyLLVMFreshGen.freshLocalVar(nf, fieldTypeNode);
-            LLVMInstruction load = nf.LLVMLoad(var, fieldTypeNode, ptr);
-            v.addTranslation(n, nf.LLVMESeq(load, var));
-
-            LLVMGlobalVarDeclaration externDecl = nf.LLVMGlobalVarDeclaration(
-                    mangledGlobalName,
-                    /* isExtern */ true,
-                    LLVMGlobalVarDeclaration.GLOBAL,
-                    fieldTypeNode,
-                    /* initValue */ null);
-            v.addStaticVarReferenced(mangledGlobalName, externDecl);
+            LLVMValueRef global = LLVMUtils.getGlobal(v.mod, mangledGlobalName, LLVMUtils.ptrTypeRef(LLVMUtils.typeRef(n.type(), v.mod)));
+            v.addTranslation(n, LLVMBuildLoad(v.builder, global, "static_field_access"));
         }
         else {
             // Instance fields.
-            LLVMOperand thisTranslation = (LLVMOperand) v.getTranslation(target);
+            LLVMValueRef thisTranslation = v.getTranslation(target);
             int fieldIndex = v.getFieldIndex((ReferenceType) n.target().type(), n.fieldInstance());
-            LLVMTypedOperand index0 = nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32), 0),
-                                                          nf.LLVMIntType(32));
-            LLVMTypedOperand fieldIndexOperand =
-                    nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32), fieldIndex),
-                                        nf.LLVMIntType(32));
+            LLVMValueRef gep = LLVMUtils.buildGEP(v.builder, thisTranslation,
+                    LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), fieldIndex, 0));
+            v.addTranslation(n, LLVMBuildLoad(v.builder, gep, "load_field"));
 
-            List<LLVMTypedOperand> gepIndexList = CollectionUtil.list(index0, fieldIndexOperand);
-            LLVMVariable fieldPtr =
-                    PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMPointerType(fieldTypeNode));
-            LLVMInstruction gep = nf.LLVMGetElementPtr(thisTranslation, gepIndexList)
-                                    .result(fieldPtr);
-
-            LLVMVariable field = PolyLLVMFreshGen.freshLocalVar(nf, fieldTypeNode);
-            LLVMLoad loadField = nf.LLVMLoad(field, fieldTypeNode, fieldPtr);
-            v.addTranslation(n, nf.LLVMESeq(nf.LLVMSeq(CollectionUtil.list(gep, loadField)),
-                                            field));
         }
 
         return super.translatePseudoLLVM(v);

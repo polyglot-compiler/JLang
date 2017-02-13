@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.*;
 import polyglot.types.*;
 import polyglot.util.CollectionUtil;
@@ -136,7 +137,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
                                     sizeCastVar);
 
         PolyLLVMNewExt extension = (PolyLLVMNewExt) PolyLLVMExt.ext(newArray);
-        extension.translateWithSize(v, size);
+        extension.translateWithSize(v, (LLVMValueRef)size);
         return newArray;
     }
 

@@ -1,9 +1,14 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
+
+import org.bytedeco.javacpp.PointerPointer;
+import org.bytedeco.javacpp.annotation.Const;
 import polyglot.ast.New;
 import polyglot.ast.Node;
 import polyglot.types.ConstructorInstance;
 import polyglot.types.ReferenceType;
+import polyglot.types.reflect.Constant;
 import polyglot.util.CollectionUtil;
 import polyglot.util.Pair;
 import polyglot.util.SerialVersionUID;
@@ -37,94 +42,44 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         ConstructorInstance ci = n.constructorInstance();
         ReferenceType classtype = ci.container();
         int mallocSize = v.layouts(classtype).part2().size() * 8;
-        translateWithSize(v, nf.LLVMIntLiteral(nf.LLVMIntType(64), mallocSize));
+        translateWithSize(v, LLVMConstInt(LLVMInt64Type(), mallocSize, 0));
         return super.translatePseudoLLVM(v);
     }
 
-    public void translateWithSize(PseudoLLVMTranslator v, LLVMOperand size) {
+    public void translateWithSize(PseudoLLVMTranslator v, LLVMValueRef size) {
         New n = (New) node();
         ConstructorInstance ci = n.constructorInstance();
 
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
         ReferenceType classtype = ci.container();
-        LLVMTypeNode typeNode =
-                LLVMUtils.polyLLVMTypeNode(nf, classtype);
+
+        System.out.println("TYPE OF class "+classtype+": " + LLVMPrintTypeToString(LLVMGetTypeByName(v.mod,PolyLLVMMangler.classTypeName(classtype))).getString());
+        ;
 
         //Allocate space for the new object - need to get the size of the object
-        LLVMVariable mallocRet =
-                PolyLLVMFreshGen.freshLocalVar(nf,
-                                               nf.LLVMPointerType(nf.LLVMIntType(8)));
-
-        LLVMVariable mallocFunction = nf.LLVMVariable(Constants.MALLOC,
-                                                      nf.LLVMPointerType(nf.LLVMIntType(8)),
-                                                      VarKind.GLOBAL);
-
-        List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
-                CollectionUtil.list(new Pair<LLVMTypeNode, LLVMOperand>(nf.LLVMIntType(64),
-                                                                        size));
-        LLVMTypeNode retType = nf.LLVMPointerType(nf.LLVMIntType(8));
-        LLVMCall mallocCall = nf.LLVMCall(mallocFunction, arguments, retType)
-                                .result(mallocRet);
+        LLVMValueRef mallocFunc = LLVMGetNamedFunction(v.mod, Constants.MALLOC);
+        LLVMValueRef obj = LLVMUtils.buildMethodCall(v.builder, mallocFunc, size);
 
         //Bitcast object
-        LLVMVariable newObject = PolyLLVMFreshGen.freshLocalVar(nf, typeNode);
-        LLVMConversion conversion =
-                nf.LLVMConversion(LLVMConversion.BITCAST,
-                                  newObject,
-                                  retType,
-                                  mallocRet,
-                                  typeNode);
-
+        LLVMValueRef cast = LLVMBuildBitCast(v.builder, obj, LLVMUtils.typeRef(classtype, v.mod), "obj_cast");
+        LLVMTypeRef typeOf = LLVMTypeOf(cast);
+        System.out.println("TYPE OF CAST: " + LLVMPrintTypeToString(typeOf).getString());
         //Set the Dispatch vector
-        LLVMTypeNode dvTypeNode =
-                LLVMUtils.polyLLVMDispatchVectorVariableType(v,
-                                                                     classtype);
-        LLVMTypedOperand index0 =
-                nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32), 0),
-                                    nf.LLVMIntType(32));
-        List<LLVMTypedOperand> gepIndexList =
-                CollectionUtil.list(index0, index0);
-        LLVMVariable gepResult =
-                PolyLLVMFreshGen.freshLocalVar(nf,
-                                               nf.LLVMPointerType(dvTypeNode));
-        LLVMInstruction gep =
-                nf.LLVMGetElementPtr(newObject, gepIndexList).result(gepResult);
+        LLVMValueRef gep = LLVMUtils.buildGEP(v.builder, cast, 
+                LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 0, 0));
+        LLVMValueRef dvGlobal = LLVMGetNamedGlobal(v.mod, PolyLLVMMangler.dispatchVectorVariable(classtype));
+        LLVMBuildStore(v.builder, dvGlobal, gep);
 
-        LLVMStore storeDVIntoObject =
-                nf.LLVMStore(nf.LLVMPointerType(dvTypeNode),
-                             nf.LLVMVariable(PolyLLVMMangler.dispatchVectorVariable(classtype),
-                                             LLVMUtils.polyLLVMDispatchVectorVariableType(v,
-                                                                                                  classtype),
-                                             LLVMVariable.VarKind.GLOBAL),
-                             gepResult);
         //Call the constructor function
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
-        LLVMTypeNode tn =
-                LLVMUtils.polyLLVMMethodTypeNode(nf,
-                                                         n.constructorInstance()
-                                                          .container(),
-                                                         n.constructorInstance()
-                                                          .formalTypes());
-        LLVMVariable func =
-                nf.LLVMVariable(mangledFuncName, tn, LLVMVariable.VarKind.GLOBAL);
 
-        List<Pair<LLVMTypeNode, LLVMOperand>> constructorArgs =
-                setupArguments(v, n, nf, newObject, typeNode);
-        Pair<LLVMCall, LLVMVariable> pair =
-                setupCall(v, n, nf, func, constructorArgs, false);
+        LLVMTypeRef constructorType = LLVMUtils.functionType(n.constructorInstance().container(), n.constructorInstance().formalTypes(), v.mod);
+        LLVMValueRef constructor = LLVMUtils.getFunction(v.mod, mangledFuncName, constructorType);
+        LLVMUtils.buildProcedureCall(v.builder, constructor, cast);
 
-        List<LLVMInstruction> instrs =
-                list(mallocCall,
-                     conversion,
-                     gep,
-                     storeDVIntoObject,
-                     pair.part1());
-
-        v.addStaticCall(pair.part1());
-
-        v.addTranslation(n, nf.LLVMESeq(nf.LLVMSeq(instrs), newObject));
+        v.addTranslation(n, obj);
     }
 
     @SafeVarargs
