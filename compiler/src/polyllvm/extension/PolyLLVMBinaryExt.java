@@ -246,7 +246,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         Operator op = n.operator();
 
         // TODO: Will need to add widening casts here.
-        assert(n.left().type().equals(n.right().type()));
+        assert(n.left().type().typeEquals(n.right().type()));
         Type elemType = n.left().type();
 
         LLVMValueRef res;

@@ -1,26 +1,20 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
-import polyglot.ast.Expr;
-import polyglot.ast.Node;
-import polyglot.ast.Unary;
-import polyglot.ast.Unary.Operator;
+import com.sun.tools.javac.util.List;
+import polyglot.ast.*;
+import polyglot.ast.Unary.*;
 import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMExpr;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMIntType;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMBitwiseBinaryInstruction;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.util.LLVMUtils;
-import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import static org.bytedeco.javacpp.LLVM.*;
+import static polyglot.ast.Unary.*;
 
 public class PolyLLVMUnaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -33,7 +27,8 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         Operator op = n.operator();
         Expr expr = n.expr();
 
-        if (Unary.NEG == op && expr.type().isIntOrLess()) {
+        // TODO: Why do we add casts here?
+        if (op == NEG && expr.type().isIntOrLess()) {
             expr = nf.Cast(Position.compilerGenerated(),
                            nf.CanonicalTypeNode(Position.compilerGenerated(),
                                                 v.typeSystem().Int()),
@@ -41,7 +36,7 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
                      .type(v.typeSystem().Int());
 
         }
-        else if (Unary.POS == op && expr.type().isIntOrLess()) {
+        else if (op == POS && expr.type().isIntOrLess()) {
             return nf.Cast(Position.compilerGenerated(),
                            nf.CanonicalTypeNode(Position.compilerGenerated(),
                                                 v.typeSystem().Int()),
@@ -55,45 +50,62 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Unary n = (Unary) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-
+        Type t = n.type();
+        NodeFactory nf = v.nodeFactory();
         Operator op = n.operator();
         Expr expr = n.expr();
-        LLVMValueRef exprTranslation = v.getTranslation(expr);
-        if (Unary.BIT_NOT == op) {
-            LLVMValueRef bitnot = LLVMBuildXor(v.builder, exprTranslation,
-                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), -1, /* sign-extend */ 0), "bit_not");
-            v.addTranslation(n, bitnot);
+        LLVMValueRef exprRef = v.getTranslation(expr);
+        LLVMTypeRef exprTypeRef = LLVMUtils.typeRef(expr.type(), v.mod);
+
+        LLVMValueRef translation;
+        if (op.equals(BIT_NOT)) {
+            LLVMValueRef negOne = LLVMConstInt(exprTypeRef, -1, /* sign-extend */ 0);
+            translation = LLVMBuildXor(v.builder, exprRef, negOne, "bit_not");
         }
-        else if (Unary.NEG == op) {
-            LLVMValueRef neg = LLVMBuildSub(v.builder,
-                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), 0, /* sign-extend */ 0),
-                    exprTranslation, "neg");
-            v.addTranslation(n, neg);
+        else if (op.equals(NEG)) {
+            translation = t.isLongOrLess()
+                    ? LLVMBuildNeg (v.builder, exprRef, "neg")
+                    : LLVMBuildFNeg(v.builder, exprRef, "neg");
         }
-        else if (Unary.POST_INC == op) {
+        else if (op.equals(POS)) {
+            translation = exprRef;
         }
-        else if (Unary.POST_DEC == op) {
+        else if (op.equals(NOT)) {
+            assert t.typeEquals(v.typeSystem().Boolean());
+            translation = LLVMBuildNot(v.builder, exprRef, "not");
         }
-        else if (Unary.PRE_INC == op) {
-        }
-        else if (Unary.PRE_DEC == op) {
-        }
-        else if (Unary.POS == op) {
-            LLVMValueRef neg = LLVMBuildAdd(v.builder, exprTranslation,
-                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), 0, /* sign-extend */ 0), "pos");
-            v.addTranslation(n, neg);
-        }
-        else if (Unary.NOT == op) {
-            //Easy case: expr will be boolean
-            // Use expr XOR 1
-            LLVMValueRef neg = LLVMBuildXor(v.builder, exprTranslation,
-                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), 1, /* sign-extend */ 0), "pos");
-            v.addTranslation(n, neg);
+        else if (List.of(PRE_INC, PRE_DEC, POST_INC, POST_DEC).contains(op)) {
+            // De-sugar increment operation into a vanilla assignment.
+            boolean pre = op.equals(PRE_INC) || op.equals(PRE_DEC);
+            boolean inc = op.equals(PRE_INC) || op.equals(POST_INC);
+            Binary.Operator binop = inc ? Binary.ADD : Binary.SUB;
+            Position pos = Position.COMPILER_GENERATED;
+            Expr delta = expr.type().isLongOrLess()
+                    ? nf.IntLit(pos, IntLit.LONG, 1)
+                    : nf.FloatLit(pos, FloatLit.DOUBLE, 1.);
+            TypeNode exprTypeNode = nf.CanonicalTypeNode(pos, expr.type());
+            Expr castDelta = nf.Cast(pos, exprTypeNode, delta);
+            Expr newValue = nf.Binary(pos, expr, binop, castDelta);
+
+            Assign assign;
+            if (expr instanceof Local) {
+                assign = nf.LocalAssign(pos, (Local) expr, Assign.ASSIGN, newValue);
+            } else if (expr instanceof Field) {
+                assign = nf.FieldAssign(pos, (Field) expr, Assign.ASSIGN, newValue);
+            } else if (expr instanceof ArrayAccess) {
+                assign = nf.ArrayAccessAssign(pos, (ArrayAccess) expr, Assign.ASSIGN, newValue);
+            } else {
+                throw new InternalCompilerError("Invalid operand to increment operation");
+            }
+
+            v.visitEdge(n, assign);
+            translation = pre ? v.getTranslation(newValue) : exprRef;
         }
         else {
-
+            throw new InternalCompilerError("Invalid unary operation");
         }
+
+        v.addTranslation(n, translation);
         return super.translatePseudoLLVM(v);
     }
 
