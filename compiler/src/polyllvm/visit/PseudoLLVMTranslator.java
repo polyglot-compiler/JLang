@@ -882,30 +882,8 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         }
     }
 
-    /**
-     * Return a list of global declarations for all classes defined.
-     * @return
-     */
-    public List<LLVMGlobalDeclaration> globalDeclarations() {
-        setupClassData();
-        List<LLVMGlobalDeclaration> typeDecls = new ArrayList<>();
-        for (Entry<String, LLVMTypeNode> e : classTypes.entrySet()) {
-            typeDecls.add(nf.LLVMTypeDeclaration(e.getKey(), e.getValue()));
-        }
-        typeDecls.addAll(globalSizes);
-        return typeDecls;
-    }
-
-    /**
-     * Return a list of ctor functions to run before application is started.
-     * @return
-     */
-    public List<LLVMFunction> ctorFunctions() {
-        return ListUtil.copy(ctorsFunctions, false);
-    }
-
     /*
-     * Functions for generating loads and stores from stack allocated variables
+     * Functions for generating loads and stores from stack allocated variables (including arguments)
      */
     private Map<String, LLVMValueRef> allocations = new HashMap<>();
 
@@ -1069,55 +1047,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
             throw new InternalCompilerError("Could not load array type");
         }
         return arrayType;
-    }
-
-
-    /**
-     * Make {@code llvmBlock} canonical by flattening sequence nodes and make each block contain at most one label
-     * @param llvmBlock
-     * @return A list of blocks such that each block only contains a single
-     *         label as the first instruction (or no label)
-     */
-    public List<LLVMBlock> makeBlockCanonical(LLVMBlock llvmBlock) {
-        List<LLVMBlock> newBlocks = new ArrayList<>();
-        List<LLVMInstruction> instrs = llvmBlock.instructions().stream()
-                .map(this::flattenInstruction)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
-
-        LLVMBlock currBlock = nf.LLVMBlock(CollectionUtil.list());
-        for (LLVMInstruction instr : instrs) {
-            if(instr instanceof LLVMBlock) {
-                newBlocks.add(currBlock);
-                List<LLVMBlock> subBlocks = makeBlockCanonical((LLVMBlock) instr);
-                newBlocks.addAll(subBlocks.subList(0,subBlocks.size()-1));
-                currBlock = subBlocks.get(subBlocks.size()-1);
-            } else if(instr instanceof LLVMSeqLabel){
-                newBlocks.add(currBlock);
-                currBlock = nf.LLVMBlock(CollectionUtil.list()); //Reset the current block
-                currBlock = currBlock.appendInstruction(instr);
-            } else {
-                currBlock = currBlock.appendInstruction(instr);
-            }
-        }
-        newBlocks.add(currBlock);
-        return newBlocks;
-    }
-
-    /**
-     * Flattens all sequence nodes in {@code i}
-     * @return A list of Instructions, the result of flattening all sequence nodes
-     */
-    private List<LLVMInstruction> flattenInstruction(LLVMInstruction i){
-        if(i instanceof LLVMSeq){
-            List<LLVMInstruction> instrs = new ArrayList<>();
-            for (LLVMInstruction instr: ((LLVMSeq) i).instructions()) {
-                instrs.addAll(flattenInstruction(instr));
-            }
-            return instrs;
-        } else {
-            return CollectionUtil.list(i);
-        }
     }
 
 
