@@ -5,7 +5,6 @@ import polyglot.util.InternalCompilerError;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
-import polyllvm.visit.RemoveESeqVisitor;
 import polyllvm.visit.StringLiteralRemover;
 
 import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
@@ -74,11 +73,6 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
                                          LLVMBasicBlockRef trueBlock,
                                          LLVMBasicBlockRef falseBlock) {
         PolyLLVMOps(n).translateLLVMConditional(v, trueBlock, falseBlock);
-    }
-
-    @Override
-    public Node removeESeq(Node n, RemoveESeqVisitor v) {
-        return PolyLLVMOps(n).removeESeq(v);
     }
 
     @Override

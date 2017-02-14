@@ -6,16 +6,12 @@ import polyglot.util.*;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
 import polyllvm.ast.PseudoLLVM.LLVMArgDecl;
 import polyllvm.ast.PseudoLLVM.LLVMFunctionDeclaration;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.util.Constants;
-import polyllvm.util.PolyLLVMFreshGen;
-import polyllvm.visit.RemoveESeqVisitor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -138,46 +134,6 @@ public class LLVMCall_c extends LLVMInstruction_c implements LLVMCall {
         }
 
         return nf.LLVMFunctionDeclaration(function.name(), args, retType);
-    }
-
-    @Override
-    public LLVMNode removeESeq(RemoveESeqVisitor v) {
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-
-        List<LLVMInstruction> instructions = new ArrayList<>();
-        List<LLVMInstruction> loads = new ArrayList<>();
-        List<Pair<LLVMTypeNode, LLVMOperand>> newArgs = new ArrayList<>();
-        for (Pair<LLVMTypeNode, LLVMOperand> p : arguments) {
-            if (p.part2() instanceof LLVMESeq) {
-                LLVMESeq e = (LLVMESeq) p.part2();
-                LLVMTypeNode ptrType = nf.LLVMPointerType(p.part1());
-                LLVMVariable tempPointer =
-                        PolyLLVMFreshGen.freshLocalVar(nf, ptrType);
-                LLVMAlloca allocTemp = nf.LLVMAlloca(p.part1());
-                allocTemp = allocTemp.result(tempPointer);
-                LLVMStore moveArg =
-                        nf.LLVMStore(p.part1(), e.expr(), tempPointer);
-
-                instructions.add(e.instruction());
-                instructions.add(allocTemp);
-                instructions.add(moveArg);
-
-                LLVMVariable freshTemp =
-                        PolyLLVMFreshGen.freshLocalVar(nf, p.part1());
-                LLVMOperand ft = freshTemp;
-                newArgs.add(new Pair<>(p.part1(), ft));
-
-                LLVMLoad loadArg =
-                        nf.LLVMLoad(freshTemp, p.part1(), tempPointer);
-                loads.add(loadArg);
-            }
-            else {
-                newArgs.add(p);
-            }
-        }
-        instructions.addAll(loads);
-        instructions.add(arguments(newArgs));
-        return nf.LLVMSeq(instructions);
     }
 
     @Override

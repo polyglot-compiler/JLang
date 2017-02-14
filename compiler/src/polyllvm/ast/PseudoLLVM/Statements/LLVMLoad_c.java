@@ -7,16 +7,9 @@ import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.visit.RemoveESeqVisitor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class LLVMLoad_c extends LLVMInstruction_c implements LLVMLoad {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -75,24 +68,6 @@ public class LLVMLoad_c extends LLVMInstruction_c implements LLVMLoad {
     @Override
     public LLVMTypeNode retType() {
         return typeNode;
-    }
-
-    @Override
-    public LLVMNode removeESeq(RemoveESeqVisitor v) {
-        if (ptr instanceof LLVMESeq) {
-            PolyLLVMNodeFactory nf = v.nodeFactory();
-
-            LLVMESeq eseq = (LLVMESeq) ptr;
-
-            List<LLVMInstruction> instructions = new ArrayList<>();
-            instructions.add(eseq.instruction());
-            instructions.add(reconstruct(this, typeNode, eseq.expr()));
-            LLVMSeq llvmSeq =
-                    nf.LLVMSeq(instructions);
-
-            return llvmSeq;
-        }
-        return this;
     }
 
 }

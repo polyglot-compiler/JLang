@@ -7,8 +7,9 @@ import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
-import polyllvm.visit.*;
+import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
+import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.StringLiteralRemover;
 
 public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -61,11 +62,6 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     public void translateLLVMConditional(PseudoLLVMTranslator v,
                                          LLVM.LLVMBasicBlockRef trueBlock,
                                          LLVM.LLVMBasicBlockRef falseBlock) { }
-
-    @Override
-    public final Node removeESeq(RemoveESeqVisitor v) {
-        return ((LLVMNode) node()).removeESeq(v);
-    }
 
     @Override
     public AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(

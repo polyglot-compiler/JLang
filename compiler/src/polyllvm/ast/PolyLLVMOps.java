@@ -5,7 +5,6 @@ import polyglot.ast.NodeOps;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
-import polyllvm.visit.RemoveESeqVisitor;
 import polyllvm.visit.StringLiteralRemover;
 
 import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
@@ -38,8 +37,6 @@ public interface PolyLLVMOps extends NodeOps {
     void translateLLVMConditional(PseudoLLVMTranslator v,
                                                LLVMBasicBlockRef trueBlock,
                                                LLVMBasicBlockRef falseBlock);
-
-    Node removeESeq(RemoveESeqVisitor v);
 
     AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(
             AddPrimitiveWideningCastsVisitor v);

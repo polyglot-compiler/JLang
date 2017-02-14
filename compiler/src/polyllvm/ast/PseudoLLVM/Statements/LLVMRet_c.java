@@ -4,14 +4,9 @@ import polyglot.ast.Node;
 import polyglot.util.*;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.visit.RemoveESeqVisitor;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 public class LLVMRet_c extends LLVMInstruction_c implements LLVMRet {
@@ -85,29 +80,6 @@ public class LLVMRet_c extends LLVMInstruction_c implements LLVMRet {
     @Override
     public LLVMTypeNode retType() {
         throw new InternalCompilerError("LLVM instruction ret does not have a type");
-    }
-
-    @Override
-    public LLVMNode removeESeq(RemoveESeqVisitor v) {
-        if (!retInfo.isPresent()) {
-            return this;
-        }
-        Pair<LLVMTypeNode, LLVMOperand> ri = retInfo.get();
-        if (ri.part2() instanceof LLVMESeq) {
-            LLVMESeq e = (LLVMESeq) ri.part2();
-
-            List<LLVMInstruction> instructions = new ArrayList<>();
-            instructions.add(e.instruction());
-            instructions.add(reconstruct(this,
-                                         Optional.of(new Pair<>(ri.part1(),
-                                                                e.expr()))));
-            return v.nodeFactory().LLVMSeq(instructions);
-
-        }
-        else {
-            return this;
-        }
-
     }
 
 }
