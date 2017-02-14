@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.types.ReferenceType;
 import polyglot.types.Type;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -8,12 +9,14 @@ import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMStructureType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.bytedeco.javacpp.LLVM.LLVMInt8Type;
 import static polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind.GLOBAL;
 import static polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration.CONSTANT;
 
@@ -23,6 +26,14 @@ import static polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration.CONSTANT;
 public final class ClassObjects {
 
     public ClassObjects() {}
+
+    public static LLVMTypeRef classIdVarTypeRef() {
+        return LLVMInt8Type();
+    }
+
+    public static LLVMTypeRef classIdVarPtrTypeRef() {
+        return  LLVMUtils.ptrTypeRef(classIdVarTypeRef());
+    }
 
     public static LLVMTypeNode classIdVarType(PolyLLVMNodeFactory nf) {
         return nf.LLVMIntType(8);
@@ -68,8 +79,16 @@ public final class ClassObjects {
         return nf.LLVMArrayType(classIdVarPtrType(nf), countSupertypes(rt));
     }
 
+    public static LLVMTypeRef classObjArrTypeRef(ReferenceType rt) {
+        return LLVMArrayType(classIdVarPtrTypeRef(), countSupertypes(rt));
+    }
+
     public static LLVMStructureType classObjType(PolyLLVMNodeFactory nf, ReferenceType rt) {
         return nf.LLVMStructureType(Arrays.asList(nf.LLVMIntType(32), classObjArrType(nf, rt)));
+    }
+
+    public static LLVMTypeRef classObjTypeRef(ReferenceType rt) {
+        return LLVMUtils.structType(LLVMInt32Type(), classObjArrTypeRef(rt));
     }
 
     public static LLVMVariable classObjVar(PolyLLVMNodeFactory nf, ReferenceType rt) {
