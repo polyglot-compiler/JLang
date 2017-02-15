@@ -1,14 +1,24 @@
 package polyllvm.extension;
 
 import polyglot.ast.*;
+import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
+import polyllvm.visit.PseudoLLVMTranslator;
 
 public class PolyLLVMAssignExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
+
+    @Override
+    public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+        Assign n = (Assign) node();
+        if (!n.operator().equals(Assign.ASSIGN))
+            throw new InternalCompilerError("Non-vanilla assignments should be de-sugared");
+        return super.enterTranslatePseudoLLVM(v);
+    }
 
     @Override
     public Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v) {

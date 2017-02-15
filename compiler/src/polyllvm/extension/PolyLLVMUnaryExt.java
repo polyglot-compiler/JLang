@@ -75,8 +75,9 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
             translation = LLVMBuildNot(v.builder, exprRef, "not");
         }
         else if (List.of(PRE_INC, PRE_DEC, POST_INC, POST_DEC).contains(op)) {
-            // TODO: If we keep using the expression flattener pass, just assert unreachable.
             // De-sugar increment operation into a vanilla assignment.
+            // This is done here rather than in a separate visitor pass in order to avoid
+            // the need for an ESeq node.
             boolean pre = op.equals(PRE_INC) || op.equals(PRE_DEC);
             boolean inc = op.equals(PRE_INC) || op.equals(POST_INC);
             Binary.Operator binop = inc ? Binary.ADD : Binary.SUB;
