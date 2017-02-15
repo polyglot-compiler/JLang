@@ -29,10 +29,9 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
         Type exprType = n.expr().type();
-        LLVMTypeRef exprTypeRef = LLVMUtils.typeRef(exprType, v.mod);
 
         Type castType = n.castType().type();
-        LLVMTypeRef castTypeRef = LLVMUtils.typeRef(castType, v.mod);
+        LLVMTypeRef castTypeRef = LLVMUtils.typeRef(castType, v);
 
         LLVMValueRef exprTranslation = v.getTranslation(n.expr());
 

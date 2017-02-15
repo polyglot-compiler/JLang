@@ -32,31 +32,26 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         ReferenceType classtype = ci.container();
 
-        System.out.println("TYPE OF class "+classtype+": " + LLVMPrintTypeToString(LLVMGetTypeByName(v.mod,PolyLLVMMangler.classTypeName(classtype))).getString());
-        ;
-
         //Allocate space for the new object - need to get the size of the object
         LLVMValueRef mallocFunc = LLVMGetNamedFunction(v.mod, Constants.MALLOC);
         LLVMValueRef obj = LLVMUtils.buildMethodCall(v.builder, mallocFunc, size);
 
         //Bitcast object
-        LLVMValueRef cast = LLVMBuildBitCast(v.builder, obj, LLVMUtils.typeRef(classtype, v.mod), "obj_cast");
-        LLVMTypeRef typeOf = LLVMTypeOf(cast);
-        System.out.println("TYPE OF CAST: " + LLVMPrintTypeToString(typeOf).getString());
+        LLVMValueRef cast = LLVMBuildBitCast(v.builder, obj, LLVMUtils.typeRef(classtype, v), "obj_cast");
         //Set the Dispatch vector
         LLVMValueRef gep = LLVMUtils.buildGEP(v.builder, cast, 
                 LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 0, 0));
-        LLVMValueRef dvGlobal = LLVMGetNamedGlobal(v.mod, PolyLLVMMangler.dispatchVectorVariable(classtype));
+        LLVMValueRef dvGlobal = LLVMUtils.getGlobal(v.mod, PolyLLVMMangler.dispatchVectorVariable(classtype), LLVMUtils.dvTypeRef(classtype,v));
         LLVMBuildStore(v.builder, dvGlobal, gep);
 
         //Call the constructor function
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
 
-        LLVMTypeRef constructorType = LLVMUtils.functionType(n.constructorInstance().container(), n.constructorInstance().formalTypes(), v.mod);
+        LLVMTypeRef constructorType = LLVMUtils.functionType(n.constructorInstance().container(), n.constructorInstance().formalTypes(), v);
         LLVMValueRef constructor = LLVMUtils.getFunction(v.mod, mangledFuncName, constructorType);
         LLVMUtils.buildProcedureCall(v.builder, constructor, cast);
 
-        v.addTranslation(n, obj);
+        v.addTranslation(n, cast);
     }
 }

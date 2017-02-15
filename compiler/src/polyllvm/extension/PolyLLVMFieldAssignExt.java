@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Field;
 import polyglot.ast.FieldAssign;
 import polyglot.ast.Node;
@@ -32,59 +33,28 @@ public class PolyLLVMFieldAssignExt extends PolyLLVMAssignExt {
         FieldAssign n = (FieldAssign) node();
         Field field = n.left();
         Receiver objectTarget = field.target();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        LLVMNode expr = (LLVMNode) v.getTranslation(n.right());
-        LLVMTypeNode fieldTypeNode = LLVMUtils.polyLLVMTypeNode(nf, field.type());
-
-        if (!(expr instanceof LLVMOperand)) {
-            throw new InternalCompilerError("Expression `" + n.right() + "` ("
-                    + n.right().getClass()
-                    + ") was not translated to an LLVMOperand " + "("
-                    + v.getTranslation(n.right()) + ")");
-        }
+        LLVMValueRef expr = v.getTranslation(n.right());
+        LLVMTypeRef fieldTypeRef = LLVMUtils.typeRef(field.type(), v);
 
         if (field.flags().isStatic()) {
             // Static fields.
             String mangledGlobalName = PolyLLVMMangler.mangleStaticFieldName(field);
-            LLVMTypeNode ptrTypeNode = nf.LLVMPointerType(fieldTypeNode);
-            LLVMVariable.VarKind ptrKind = LLVMVariable.VarKind.GLOBAL;
-            LLVMVariable ptr = nf.LLVMVariable(mangledGlobalName, ptrTypeNode, ptrKind);
-            LLVMInstruction store = nf.LLVMStore(fieldTypeNode, (LLVMOperand) expr, ptr);
+            LLVMValueRef global = LLVMUtils.getGlobal(v.mod, mangledGlobalName, fieldTypeRef);
+            LLVMValueRef store = LLVMBuildStore(v.builder, expr, global);
             v.addTranslation(n, store);
-
-            LLVMGlobalVarDeclaration externDecl = nf.LLVMGlobalVarDeclaration(
-                    mangledGlobalName,
-                    /* isExtern */ true,
-                    LLVMGlobalVarDeclaration.GLOBAL,
-                    fieldTypeNode,
-                    /* initValue */ null);
-            v.addStaticVarReferenced(mangledGlobalName, externDecl);
         }
         else {
             // Instance fields.
-            LLVMOperand objectTranslation =
-                    (LLVMOperand) v.getTranslation(objectTarget);
+            LLVMValueRef objectTranslation = v.getTranslation(objectTarget);
             int fieldIndex = v.getFieldIndex((ReferenceType) objectTarget.type(),
                     field.fieldInstance());
-            LLVMTypedOperand index0 =
-                    nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32), 0),
-                            nf.LLVMIntType(32));
-            LLVMTypedOperand fieldIndexOperand =
-                    nf.LLVMTypedOperand(nf.LLVMIntLiteral(nf.LLVMIntType(32),
-                            fieldIndex),
-                            nf.LLVMIntType(32));
-            List<LLVMTypedOperand> gepIndexList =
-                    CollectionUtil.list(index0, fieldIndexOperand);
-            LLVMVariable fieldPtr =
-                    PolyLLVMFreshGen.freshLocalVar(nf,
-                            nf.LLVMPointerType(fieldTypeNode));
-            LLVMInstruction gep =
-                    nf.LLVMGetElementPtr(objectTranslation, gepIndexList)
-                            .result(fieldPtr);
+            LLVMValueRef gep = LLVMUtils.buildGEP(v.builder,objectTranslation,
+                    LLVMConstInt(LLVMInt32Type(), 0, /*sign extend*/ 0),
+                    LLVMConstInt(LLVMInt32Type(), fieldIndex, /*sign extend*/ 0));
+            expr = LLVMBuildBitCast(v.builder, expr, LLVMUtils.typeRef(n.type(), v), "assign_cast");
+            v.addTranslation(n, LLVMBuildStore(v.builder, expr, gep));
 
-            LLVMStore store = nf.LLVMStore(fieldTypeNode, (LLVMOperand) expr, fieldPtr);
 
-            v.addTranslation(n, nf.LLVMSeq(CollectionUtil.list(gep, store)));
         }
 
         return super.translatePseudoLLVM(v);

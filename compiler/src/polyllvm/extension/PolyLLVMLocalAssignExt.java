@@ -25,7 +25,8 @@ public class PolyLLVMLocalAssignExt extends PolyLLVMAssignExt {
         Local target = n.left();
 
         LLVMValueRef expr = v.getTranslation(n.right());
-        LLVMBuildStore(v.builder, expr, v.getVariable(target.name()));
+        expr = LLVMBuildBitCast(v.builder, expr, LLVMUtils.typeRef(n.type(), v), "assign_cast");
+        v.addTranslation(n,LLVMBuildStore(v.builder, expr, v.getVariable(target.name())));
 
         return super.translatePseudoLLVM(v);
     }

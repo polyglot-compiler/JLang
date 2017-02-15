@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Node;
 import polyglot.ast.Special;
 import polyglot.util.InternalCompilerError;
@@ -29,12 +30,7 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
         }
 
         if (n.kind() == Special.THIS) {
-            LLVMTypeNode thisType =
-                    LLVMUtils.polyLLVMTypeNode(nf, n.type());
-            v.addTranslation(n,
-                             nf.LLVMVariable(Constants.THIS_STR,
-                                             thisType,
-                                             VarKind.LOCAL));
+            v.addTranslation(n, LLVMGetParam(v.currFn(), 0));
         }
         else if (n.kind() == Special.SUPER) {
             LLVMTypeNode thisType =

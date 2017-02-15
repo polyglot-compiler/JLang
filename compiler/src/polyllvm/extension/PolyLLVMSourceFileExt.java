@@ -33,7 +33,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
             // Build a trampoline between the LLVM entry point and the Java entry point.
             LLVMValueRef javaEntryPoint = entryPoints.iterator().next();
             TypeSystem ts = v.typeSystem();
-            LLVMTypeRef argType = LLVMUtils.typeRef(ts.arrayOf(ts.String()), v.mod);
+            LLVMTypeRef argType = LLVMUtils.typeRef(ts.arrayOf(ts.String()), v);
             LLVMTypeRef funcType = LLVMUtils.functionType(LLVMVoidType(), argType);
             LLVMValueRef func = LLVMAddFunction(v.mod, Constants.ENTRY_TRAMPOLINE, funcType);
             LLVMBasicBlockRef block = LLVMAppendBasicBlock(func, "body");

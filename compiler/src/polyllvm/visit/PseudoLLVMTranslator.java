@@ -152,7 +152,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         return highestSuperType.get();
     }
 
-    private boolean isOverridden(MethodInstance methodInstance) {
+    public boolean isOverridden(MethodInstance methodInstance) {
         return !methodInstance.container().typeEquals(declaringType(methodInstance));
     }
 
@@ -204,20 +204,26 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
         List<MethodInstance> dvLayout = new ArrayList<>();
         List<FieldInstance> objLayout = new ArrayList<>();
+        HashSet<MethodInstance> overridenMethods =  new HashSet<>();
 
         if (isInterface(rt)) {
             dvLayout = interfaceLayout(rt);
         } else {
             ReferenceType superClass = rt;
             while (superClass != null) {
-                Pair<List<MethodInstance>, List<FieldInstance>> pair =
-                        nonOverriddenClassMembers(superClass);
-                dvLayout.addAll(0, pair.part1());
-                objLayout.addAll(0, pair.part2());
+                Triple<List<MethodInstance>, List<MethodInstance>, List<FieldInstance>> classMembers = classMembers(superClass);
+                dvLayout.addAll(0, classMembers.part1());
+                objLayout.addAll(0, classMembers.part3());
+                classMembers.part2().stream().forEach(overridenMethods::add);
 
                 superClass = (ReferenceType) superClass.superType();
             }
         }
+
+        List<MethodInstance> dvLayoutCopy = dvLayout;
+
+        overridenMethods.forEach(mi ->
+                dvLayoutCopy.set(getMethodIndex(rt, mi, dvLayoutCopy) - Constants.DISPATCH_VECTOR_OFFSET, mi));
 
         Pair<List<MethodInstance>, List<FieldInstance>> result =
                 new Pair<>(dvLayout, objLayout);
@@ -715,7 +721,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     private MethodInstance methodInList(MethodInstance mi,
             List<MethodInstance> methods) {
         for (MethodInstance m : methods) {
-            if (m.isSameMethod(mi)) {//m.name().equals(mi.name())) {
+            if (m.isSameMethod(mi)) {
                 return m;
             }
         }
@@ -983,7 +989,10 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     }
 
     public int getMethodIndex(ReferenceType type, MethodInstance methodInstance) {
-        List<MethodInstance> methodLayout = layouts(type).part1();
+        return getMethodIndex(type, methodInstance, layouts(type).part1());
+    }
+
+    public int getMethodIndex(ReferenceType type, MethodInstance methodInstance, List<MethodInstance> methodLayout) {
         for (int i = 0; i < methodLayout.size(); i++) {
             if (methodLayout.get(i).isSameMethod(methodInstance)) {
                 return i + Constants.DISPATCH_VECTOR_OFFSET;
@@ -992,6 +1001,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         throw new InternalCompilerError("The method " + methodInstance
                 + " is not in the class " + type);
     }
+
 
     public int getFieldIndex(ReferenceType type, FieldInstance fieldInstance) {
         List<FieldInstance> objectLayout = layouts(type).part2();

@@ -27,6 +27,7 @@ import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -87,8 +88,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.methodInstance());
 
-        LLVMTypeRef tn = LLVMUtils.functionType(n.methodInstance().returnType(), n.methodInstance().formalTypes(),
-                v.mod);
+        LLVMTypeRef tn = LLVMUtils.functionType(n.methodInstance().returnType(), n.methodInstance().formalTypes(), v);
 
         LLVMValueRef[] args = n.arguments().stream()
                 .map(v::getTranslation)
@@ -109,12 +109,12 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
         LLVMTypeRef toType = LLVMUtils.methodType(v.getCurrentClass().type(),
                 n.methodInstance().returnType(), n.methodInstance().formalTypes(),
-                v.mod);
+                v);
 
         LLVMTypeRef superMethodType = LLVMUtils.methodType(
                 superMethod.container(),
                 superMethod.returnType(), superMethod.formalTypes(),
-                v.mod);
+                v);
 
         LLVMValueRef superFunc = LLVMUtils.getFunction(v.mod,
                 PolyLLVMMangler.mangleProcedureName(superMethod),
@@ -141,74 +141,38 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
     private void translateMethodCall(PseudoLLVMTranslator v) {
         Call n = (Call) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        List<LLVMInstruction> instructions = new ArrayList<>();
 
         ReferenceType referenceType = (ReferenceType) n.target().type();
-        LLVMOperand thisTranslation = v.getTranslation(n.target());
-        LLVMTypeNode thisType =
-                LLVMUtils.polyLLVMTypeNode(nf, n.target().type());
-        LLVMTypeNode functionPtrType =
-                LLVMUtils.polyLLVMMethodTypeNode(nf,
-                                                         referenceType,
-                                                         n.methodInstance()
-                                                          .formalTypes(),
-                                                         n.methodInstance()
-                                                          .returnType());
+        LLVMValueRef thisTranslation = v.getTranslation(n.target());
 
-        LLVMTypeNode dvTypeVariable =
-                LLVMUtils.polyLLVMDispatchVectorVariableType(v,
-                                                                     referenceType);
-        LLVMVariable dvDoublePtrResult =
-                PolyLLVMFreshGen.freshNamedLocalVar(nf,
-                                                    "dvDoublePtrResult",
-                                                    nf.LLVMPointerType(dvTypeVariable));
-        LLVMInstruction gepDVDoublePtr =
-                PolyLLVMFreshGen.freshGetElementPtr(nf,
-                                                    dvDoublePtrResult,
-                                                    thisTranslation,
-                                                    0,
-                                                    0);
-        instructions.add(gepDVDoublePtr);
+        LLVMValueRef dvDoublePtr = LLVMUtils.buildGEP(v.builder, thisTranslation,
+                LLVMConstInt(LLVMInt32Type(), 0, /* sign-extend */ 0),
+                LLVMConstInt(LLVMInt32Type(), 0, /* sign-extend */ 0));
 
-        LLVMVariable dvPtrValue =
-                PolyLLVMFreshGen.freshNamedLocalVar(nf,
-                                                    "dvPtrValue",
-                                                    nf.LLVMPointerType(dvTypeVariable));
-
-        LLVMLoad loadDV = nf.LLVMLoad(dvPtrValue,
-                                      nf.LLVMPointerType(dvTypeVariable),
-                                      dvDoublePtrResult);
-        instructions.add(loadDV);
+        LLVMValueRef dvPtr = LLVMBuildLoad(v.builder, dvDoublePtr, "dv_ptr");
 
         int methodIndex = v.getMethodIndex(referenceType, n.methodInstance());
 
-        LLVMVariable funcDoublePtr =
-                PolyLLVMFreshGen.freshLocalVar(nf, functionPtrType);
+        LLVMTypeRef res = LLVMGetTypeByName(v.mod, PolyLLVMMangler.dispatchVectorTypeName(referenceType));
+        LLVMTypeRef methodType = LLVMStructGetTypeAtIndex(res, methodIndex);
+        int i = LLVMGetPointerAddressSpace(LLVMTypeOf(dvPtr));
+        LLVMValueRef funcDoublePtr = LLVMUtils.buildGEP(v.builder, dvPtr,
+                LLVMConstInt(LLVMInt32Type(), 0, /* sign-extend */ 0),
+                LLVMConstInt(LLVMInt32Type(), methodIndex, /* sign-extend */ 0));
 
-        LLVMInstruction funcPtrInstruction =
-                PolyLLVMFreshGen.freshGetElementPtr(nf,
-                                                    funcDoublePtr,
-                                                    dvPtrValue,
-                                                    0,
-                                                    methodIndex);
-        instructions.add(funcPtrInstruction);
+        LLVMValueRef methodPtr = LLVMBuildLoad(v.builder, funcDoublePtr, "load_method_ptr");
 
-        LLVMVariable functionPtr =
-                PolyLLVMFreshGen.freshLocalVar(nf, functionPtrType);
+        LLVMValueRef[] args = Stream.concat(
+                Stream.of(thisTranslation),
+                n.arguments().stream().map(arg -> v.getTranslation(arg))
+            ).toArray(LLVMValueRef[]::new);
 
-        LLVMLoad loadFunctionPtr =
-                nf.LLVMLoad(functionPtr, functionPtrType, funcDoublePtr);
-        instructions.add(loadFunctionPtr);
+        if(n.methodInstance().returnType().isVoid()){
+            v.addTranslation(n,LLVMUtils.buildProcedureCall(v.builder, methodPtr, args));
+        } else {
+            v.addTranslation(n,LLVMUtils.buildMethodCall(v.builder, methodPtr, args));
 
-        List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
-                setupArguments(v, n, nf, thisTranslation, thisType);
-        Pair<LLVMCall, LLVMVariable> pair =
-                setupCall(v, n, nf, functionPtr, arguments, true);
-        instructions.add(pair.part1());
-        v.addTranslation(n,
-                         nf.LLVMESeq(nf.LLVMSeq(instructions), pair.part2()));
-
+        }
     }
 
     private void translateInterfaceMethodCall(PseudoLLVMTranslator v) {

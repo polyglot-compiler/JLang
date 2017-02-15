@@ -16,7 +16,7 @@ public class PolyLLVMIntLitExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         IntLit n = (IntLit) node();
         assert n.type().isLongOrLess();
-        LLVMValueRef res = LLVMConstInt(LLVMUtils.typeRef(n.type(), v.mod),
+        LLVMValueRef res = LLVMConstInt(LLVMUtils.typeRef(n.type(), v),
                                         n.value(), /* sign-extend */ 0);
         v.addTranslation(n, res);
         return super.translatePseudoLLVM(v);

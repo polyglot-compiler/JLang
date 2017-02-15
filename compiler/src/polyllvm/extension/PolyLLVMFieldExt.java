@@ -36,7 +36,7 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
         if (n.flags().isStatic()) {
             // Static fields.
             String mangledGlobalName = PolyLLVMMangler.mangleStaticFieldName(n);
-            LLVMValueRef global = LLVMUtils.getGlobal(v.mod, mangledGlobalName, LLVMUtils.ptrTypeRef(LLVMUtils.typeRef(n.type(), v.mod)));
+            LLVMValueRef global = LLVMUtils.getGlobal(v.mod, mangledGlobalName, LLVMUtils.ptrTypeRef(LLVMUtils.typeRef(n.type(), v)));
             v.addTranslation(n, LLVMBuildLoad(v.builder, global, "static_field_access"));
         }
         else {

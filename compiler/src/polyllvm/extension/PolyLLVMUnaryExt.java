@@ -62,12 +62,12 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         LLVMValueRef exprTranslation = v.getTranslation(expr);
         if (Unary.BIT_NOT == op) {
             LLVMValueRef bitnot = LLVMBuildXor(v.builder, exprTranslation,
-                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), -1, /* sign-extend */ 0), "bit_not");
+                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v), -1, /* sign-extend */ 0), "bit_not");
             v.addTranslation(n, bitnot);
         }
         else if (Unary.NEG == op) {
             LLVMValueRef neg = LLVMBuildSub(v.builder,
-                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), 0, /* sign-extend */ 0),
+                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v), 0, /* sign-extend */ 0),
                     exprTranslation, "neg");
             v.addTranslation(n, neg);
         }
@@ -81,14 +81,14 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         }
         else if (Unary.POS == op) {
             LLVMValueRef neg = LLVMBuildAdd(v.builder, exprTranslation,
-                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), 0, /* sign-extend */ 0), "pos");
+                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v), 0, /* sign-extend */ 0), "pos");
             v.addTranslation(n, neg);
         }
         else if (Unary.NOT == op) {
             //Easy case: expr will be boolean
             // Use expr XOR 1
             LLVMValueRef neg = LLVMBuildXor(v.builder, exprTranslation,
-                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v.mod), 1, /* sign-extend */ 0), "pos");
+                    LLVMConstInt(LLVMUtils.typeRef(expr.type(), v), 1, /* sign-extend */ 0), "pos");
             v.addTranslation(n, neg);
         }
         else {
