@@ -1,6 +1,5 @@
 package polyllvm.extension;
 
-import polyglot.ast.Local;
 import polyglot.ast.LocalAssign;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
@@ -13,14 +12,13 @@ public class PolyLLVMLocalAssignExt extends PolyLLVMAssignExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+        // Override in order to avoid emitting a load for the target.
         LocalAssign n = (LocalAssign) node();
-        Local target = n.left();
-
+        v.visitEdge(n, n.right());
         LLVMValueRef expr = v.getTranslation(n.right());
-        LLVMBuildStore(v.builder, expr, v.getVariable(target.name()));
-
-        return super.translatePseudoLLVM(v);
+        LLVMValueRef ptr = v.getVariable(n.left().name());
+        LLVMBuildStore(v.builder, expr, ptr);
+        return n;
     }
-
 }
