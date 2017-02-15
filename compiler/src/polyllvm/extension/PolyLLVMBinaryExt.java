@@ -1,10 +1,7 @@
 package polyllvm.extension;
 
-import polyglot.ast.Binary;
+import polyglot.ast.*;
 import polyglot.ast.Binary.*;
-import polyglot.ast.Expr;
-import polyglot.ast.Node;
-import polyglot.ast.NodeFactory;
 import polyglot.types.Type;
 import polyglot.types.TypeSystem;
 import polyglot.util.CollectionUtil;
@@ -25,6 +22,7 @@ import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringLiteralRemover;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -82,111 +80,40 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
 
     @Override
     public Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v) {
+        // Rules for Binary Numeric Promotion found in Java Language Spec 5.6.2.
         Binary n = (Binary) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        Expr left = n.left();
-        Expr right = n.right();
-
         Operator op = n.operator();
-        // Rules for Binary Numeric Promotion found in Java Lang. Spec 5.6.2
-        // All binary operands except for shifts, or, and are subject to the rules
-        if (!(op == Binary.SHL || op == Binary.SHR || op == Binary.USHR
-                || op == Binary.COND_OR || op == Binary.COND_AND)
-                && left.type().isPrimitive() && right.type().isPrimitive()) {
-            //"If either operand is of type double, the other is converted to double."
-            if (left.type().isDouble() && !right.type().isDouble()) {
-                right = nf.Cast(Position.compilerGenerated(),
-                                nf.CanonicalTypeNode(Position.compilerGenerated(),
-                                                     left.type()),
-                                right)
-                          .type(left.type());
-            }
-            else if (!left.type().isDouble() && right.type().isDouble()) {
-                left = nf.Cast(Position.compilerGenerated(),
-                               nf.CanonicalTypeNode(Position.compilerGenerated(),
-                                                    right.type()),
-                               left)
-                         .type(right.type());
-            }
-            else if (left.type().isDouble() && right.type().isDouble()) {
-                //Both are doubles -- do nothing
-            }
-            //Otherwise, if either operand is of type float, the other is converted to float.
-            else if (left.type().isFloat() && !right.type().isFloat()) {
-                right = nf.Cast(Position.compilerGenerated(),
-                                nf.CanonicalTypeNode(Position.compilerGenerated(),
-                                                     left.type()),
-                                right)
-                          .type(left.type());
-            }
-            else if (!left.type().isFloat() && right.type().isFloat()) {
-                left = nf.Cast(Position.compilerGenerated(),
-                               nf.CanonicalTypeNode(Position.compilerGenerated(),
-                                                    right.type()),
-                               left)
-                         .type(right.type());
-            }
-            else if (left.type().isFloat() && right.type().isFloat()) {
-                //Both are floats -- do nothing
+        Type l = n.left().type();
+        Type r = n.right().type();
 
-            }
-            //Otherwise, if either operand is of type long, the other is converted to long
-            else if (left.type().isLong() && !right.type().isLong()) {
-                right = nf.Cast(Position.compilerGenerated(),
-                                nf.CanonicalTypeNode(Position.compilerGenerated(),
-                                                     left.type()),
-                                right)
-                          .type(left.type());
-            }
-            else if (!left.type().isLong() && right.type().isLong()) {
-                left = nf.Cast(Position.compilerGenerated(),
-                               nf.CanonicalTypeNode(Position.compilerGenerated(),
-                                                    right.type()),
-                               left)
-                         .type(right.type());
-            }
-            else if (left.type().isLong() && right.type().isLong()) {
-                //Both are longs -- do nothing
-
-            }
-            //Otherwise, both operands are converted to type int
-            else if (!left.type().isInt() && right.type().isInt()) {
-                left = nf.Cast(Position.compilerGenerated(),
-                               nf.CanonicalTypeNode(Position.compilerGenerated(),
-                                                    right.type()),
-                               left)
-                         .type(right.type());
-
-            }
-            else if (left.type().isInt() && !right.type().isInt()) {
-                right = nf.Cast(Position.compilerGenerated(),
-                                nf.CanonicalTypeNode(Position.compilerGenerated(),
-                                                     left.type()),
-                                right)
-                          .type(left.type());
-            }
-            else if (left.type().isInt() && right.type().isInt()) {
-                //Do nothing: they are both already ints
-            }
-            else {
-                TypeSystem ts = v.typeSystem();
-                left = nf.Cast(Position.compilerGenerated(),
-                               nf.CanonicalTypeNode(Position.compilerGenerated(),
-                                                    ts.Int()),
-                               left)
-                         .type(ts.Int());
-                right = nf.Cast(Position.compilerGenerated(),
-                                nf.CanonicalTypeNode(Position.compilerGenerated(),
-                                                     ts.Int()),
-                                right)
-                          .type(ts.Int());
-            }
-            n = n.left(left);
-            n = n.right(right);
-            return n;
+        if (!l.isNumeric() || !r.isNumeric()) {
+            return super.addPrimitiveWideningCasts(v);
         }
 
-        return super.addPrimitiveWideningCasts(v);
+        // All binary operands except for {shifts, or, and} are subject to the rules.
+        if (Arrays.asList(SHL, SHR, USHR, COND_OR, COND_AND).contains(op)) {
+            return super.addPrimitiveWideningCasts(v);
+        }
+
+        TypeSystem ts = v.typeSystem();
+        Type castType;
+        if (l.isIntOrLess() && r.isIntOrLess()) {
+            castType = ts.Int();
+        } else if (ts.isImplicitCastValid(l, r)) {
+            castType = r;
+        } else {
+            assert ts.isImplicitCastValid(r, l);
+            castType = l;
+        }
+
+        PolyLLVMNodeFactory nf = v.nodeFactory();
+        Position pos = Position.compilerGenerated();
+        TypeNode castTypeNode = nf.CanonicalTypeNode(pos, castType);
+        if (!l.typeEquals(castType))
+            n = n.left(nf.Cast(pos, castTypeNode, n.left()));
+        if (!r.typeEquals(castType))
+            n = n.right(nf.Cast(pos, castTypeNode, n.right()));
+        return n;
     }
 
     private static boolean isUnsigned(Type t) {
@@ -245,8 +172,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         LLVMValueRef right = v.getTranslation(n.right());
         Operator op = n.operator();
 
-        // TODO: Will need to add widening casts here.
-        assert(n.left().type().typeEquals(n.right().type()));
+        assert n.left().type().typeEquals(n.right().type());
         Type elemType = n.left().type();
 
         LLVMValueRef res;
