@@ -23,7 +23,6 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
                 ? LLVMAppendBasicBlock(v.currFn(), "if_false")
                 : ifEnd;
 
-        v.visitEdge(n, n.cond());
         lang().translateLLVMConditional(n.cond(), v, ifTrue, ifFalse);
 
         BiConsumer<LLVMBasicBlockRef, Stmt> emitBlock = (block, stmt) -> {

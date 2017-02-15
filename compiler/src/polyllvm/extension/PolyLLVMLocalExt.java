@@ -18,11 +18,4 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
         v.addTranslation(n, val);
         return super.translatePseudoLLVM(v);
     }
-
-    @Override
-    public void translateLLVMConditional(PseudoLLVMTranslator v,
-                                         LLVMBasicBlockRef trueBlock,
-                                         LLVMBasicBlockRef falseBlock) {
-        LLVMBuildCondBr(v.builder, v.getTranslation(node()), trueBlock, falseBlock);
-    }
 }

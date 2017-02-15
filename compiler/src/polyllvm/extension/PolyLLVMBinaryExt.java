@@ -4,26 +4,17 @@ import polyglot.ast.*;
 import polyglot.ast.Binary.*;
 import polyglot.types.Type;
 import polyglot.types.TypeSystem;
-import polyglot.util.CollectionUtil;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.util.LLVMUtils;
-import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMStringUtils;
 import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringLiteralRemover;
 
 import java.util.Arrays;
-import java.util.List;
 
 import static org.bytedeco.javacpp.LLVM.*;
 import static polyglot.ast.Binary.*;
@@ -197,56 +188,25 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
     }
 
     @Override
-    public Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
-                                               LLVMLabel trueLabel, LLVMLabel falseLabel) {
-        Binary n = (Binary) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        Operator op = n.operator();
-        if (op == Binary.COND_AND ){
-            LLVMLabel l1 = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
-            List<LLVMInstruction> l = CollectionUtil.list(
-                    (LLVMInstruction) lang().translatePseudoLLVMConditional(n.left(), v, l1, falseLabel),
-                    nf.LLVMSeqLabel(l1),
-                    (LLVMInstruction) lang().translatePseudoLLVMConditional(n.right(), v, trueLabel,falseLabel)
-            );
-            return nf.LLVMSeq(l);
-        } else if (op == Binary.COND_OR) {
-            LLVMLabel l1 = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
-            List<LLVMInstruction> l = CollectionUtil.list(
-                    (LLVMInstruction) lang().translatePseudoLLVMConditional(n.left(), v, trueLabel, l1),
-                    nf.LLVMSeqLabel(l1),
-                    (LLVMInstruction) lang().translatePseudoLLVMConditional(n.right(), v, trueLabel,falseLabel)
-            );
-            return nf.LLVMSeq(l);
-        }
-
-        LLVMOperand translation = v.getTranslation(n);
-        LLVMTypeNode tn = LLVMUtils.polyLLVMTypeNode(nf, n.type());
-        LLVMTypedOperand cond = nf.LLVMTypedOperand(translation, tn);
-        return  nf.LLVMBr(cond, trueLabel, falseLabel);
-    }
-
-    @Override
-    public void translateLLVMConditional(PseudoLLVMTranslator v, LLVMBasicBlockRef trueBlock, LLVMBasicBlockRef falseBlock) {
+    public void translateLLVMConditional(PseudoLLVMTranslator v,
+                                         LLVMBasicBlockRef trueBlock,
+                                         LLVMBasicBlockRef falseBlock) {
         Binary n = (Binary) node();
         Operator op = n.operator();
         if (op == Binary.COND_AND) {
-            LLVMBasicBlockRef initial = LLVMGetInsertBlock(v.builder);
             LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
-            LLVMPositionBuilderAtEnd(v.builder, initial);
             lang().translateLLVMConditional(n.left(), v, l1, falseBlock);
             LLVMPositionBuilderAtEnd(v.builder, l1);
-            lang().translateLLVMConditional(n, v, trueBlock, falseBlock);
-        } else if (op == Binary.COND_OR) {
-            LLVMBasicBlockRef initial = LLVMGetInsertBlock(v.builder);
+            lang().translateLLVMConditional(n.right(), v, trueBlock, falseBlock);
+        }
+        else if (op == Binary.COND_OR) {
             LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
-            LLVMPositionBuilderAtEnd(v.builder, initial);
             lang().translateLLVMConditional(n.left(), v, trueBlock, l1);
             LLVMPositionBuilderAtEnd(v.builder, l1);
-            lang().translateLLVMConditional(n, v, trueBlock, falseBlock);
+            lang().translateLLVMConditional(n.right(), v, trueBlock, falseBlock);
         }
-
-        LLVMValueRef val = v.getTranslation(n);
-        LLVMBuildCondBr(v.builder, val, trueBlock, falseBlock);
+        else {
+            super.translateLLVMConditional(v, trueBlock, falseBlock);
+        }
     }
 }
