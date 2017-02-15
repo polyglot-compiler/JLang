@@ -1,7 +1,6 @@
 package polyllvm.util;
 
 import polyglot.ast.Expr;
-import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
 import polyglot.ast.StringLit;
 import polyglot.types.TypeSystem;
@@ -13,7 +12,7 @@ import java.util.List;
 
 public class PolyLLVMStringUtils {
 
-    public static Node stringToConstructor(StringLit n, NodeFactory nf,
+    public static Expr stringToConstructor(StringLit n, NodeFactory nf,
             TypeSystem ts) {
         List<Expr> bytes = new ArrayList<>();
         for (int i = 0; i < n.value().getBytes().length; i++) {

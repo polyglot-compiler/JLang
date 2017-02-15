@@ -24,46 +24,32 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
 
     @Override
     public Node removeStringLiterals(StringLiteralRemover v) {
+        // TODO: Verify correctness with Java Language Spec 5.1.11 and 15.18.1.
         Binary n = (Binary) node();
         NodeFactory nf = v.nodeFactory();
         TypeSystem ts = v.typeSystem();
-        if (n.left().type().isSubtype(ts.String()) && !n.left().type().isNull()
-                || n.right().type().isSubtype(ts.String())
-                        && !n.right().type().isNull()) {
-            Expr left = n.left();
-            Expr right = n.right();
-            if (left.toString().equals("null")) {
-                left = (Expr) PolyLLVMStringUtils.stringToConstructor(nf.StringLit(Position.compilerGenerated(),
-                                                                                   left.toString()),
-                                                                      nf,
-                                                                      ts);
+        Expr left = n.left(), right = n.right();
+        Type leftType = left.type(), rightType = right.type();
+        if (leftType.isSubtype(ts.String()) && !leftType.isNull()
+                || rightType.isSubtype(ts.String()) && !n.right().type().isNull()) {
+            Position pos = Position.COMPILER_GENERATED;
+            if (leftType.isNull()) {
+                left = PolyLLVMStringUtils.stringToConstructor(nf.StringLit(pos, left.toString()), nf, ts);
             }
-            else if (!n.left().type().isSubtype(ts.String())) {
-                left = nf.Call(left.position(),
-                               nf.Id(Position.compilerGenerated(),
-                                     "java.lang.String.valueOf"),
-                               left)
+            else if (!leftType.isSubtype(ts.String())) {
+                left = nf.Call(left.position(), nf.Id(pos, "java.lang.String.valueOf"), left)
                          .type(ts.String());
             }
-            if (right.toString().equals("null")) {
-                right = (Expr) PolyLLVMStringUtils.stringToConstructor(nf.StringLit(Position.compilerGenerated(),
-                                                                                    right.toString()),
-                                                                       nf,
-                                                                       ts);
+            if (rightType.isNull()) {
+                right = PolyLLVMStringUtils.stringToConstructor(nf.StringLit(pos, right.toString()), nf, ts);
             }
             else if (!n.right().type().isSubtype(ts.String())) {
-                right = nf.Call(right.position(),
-                                nf.Id(Position.compilerGenerated(),
-                                      "java.lang.String.valueOf"),
-                                right)
-                          .type(ts.String());
+                right = nf.Call(right.position(), nf.Id(pos, "java.lang.String.valueOf"), right)
+                        .type(ts.String());
             }
 
-            return nf.Call(n.position(),
-                           left,
-                           nf.Id(Position.compilerGenerated(), "concat"),
-                           right)
-                     .type(ts.String());
+            return nf.Call(n.position(), left, nf.Id(Position.compilerGenerated(), "concat"), right)
+                    .type(ts.String());
         }
 
         return super.removeStringLiterals(v);
@@ -193,13 +179,13 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
                                          LLVMBasicBlockRef falseBlock) {
         Binary n = (Binary) node();
         Operator op = n.operator();
-        if (op == Binary.COND_AND) {
+        if (op.equals(Binary.COND_AND)) {
             LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
             lang().translateLLVMConditional(n.left(), v, l1, falseBlock);
             LLVMPositionBuilderAtEnd(v.builder, l1);
             lang().translateLLVMConditional(n.right(), v, trueBlock, falseBlock);
         }
-        else if (op == Binary.COND_OR) {
+        else if (op.equals(Binary.COND_OR)) {
             LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
             lang().translateLLVMConditional(n.left(), v, trueBlock, l1);
             LLVMPositionBuilderAtEnd(v.builder, l1);
