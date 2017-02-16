@@ -164,6 +164,11 @@ public class PolyLLVMScheduler extends JLScheduler {
             LLVMDisposeMessage(error);
             error.setNull();
 
+            //Run Passes
+            LLVMPassManagerRef pass = LLVMCreatePassManager();
+            LLVMAddStripDeadPrototypesPass(pass);
+            LLVMRunPassManager(pass, mod);
+
             // TODO: Make this more robust.
             // Emit.
             String srcName = goal.job().source().name();
