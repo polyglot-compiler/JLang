@@ -7,16 +7,9 @@ import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.visit.RemoveESeqVisitor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class LLVMConversion_c extends LLVMInstruction_c
         implements LLVMConversion {
@@ -61,20 +54,6 @@ public class LLVMConversion_c extends LLVMInstruction_c
         print(value, w, pp);
         w.write(" to ");
         print(toType, w, pp);
-    }
-
-    @Override
-    public LLVMNode removeESeq(RemoveESeqVisitor v) {
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        if (value instanceof LLVMESeq) {
-            LLVMESeq val = (LLVMESeq) value;
-
-            List<LLVMInstruction> instructions = new ArrayList<>();
-            instructions.add(val.instruction());
-            instructions.add(reconstruct(this, valueType, val.expr(), toType));
-            return nf.LLVMSeq(instructions);
-        }
-        return super.removeESeq(v);
     }
 
     @Override

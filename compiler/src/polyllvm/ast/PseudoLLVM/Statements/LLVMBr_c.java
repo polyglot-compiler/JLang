@@ -8,17 +8,9 @@ import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
 import polyglot.visit.PrettyPrinter;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.visit.RemoveESeqVisitor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class LLVMBr_c extends LLVMInstruction_c implements LLVMBr {
     /*
@@ -115,26 +107,4 @@ public class LLVMBr_c extends LLVMInstruction_c implements LLVMBr {
         return cond(this, temp);
     }
 
-    @Override
-    public LLVMNode removeESeq(RemoveESeqVisitor v) {
-        if (cond != null) {
-            PolyLLVMNodeFactory nf = v.nodeFactory();
-            LLVMOperand untypedOp = cond.operand();
-            if (untypedOp instanceof LLVMESeq) {
-                LLVMESeq e = (LLVMESeq) untypedOp;
-                LLVMTypedOperand llvmTypedOperand =
-                        nf.LLVMTypedOperand(e.expr(),
-                                            cond.typeNode());
-
-                List<LLVMInstruction> instructions = new ArrayList<>();
-                instructions.add(e.instruction());
-                instructions.add(reconstruct(this,
-                                             llvmTypedOperand,
-                                             trueLabel,
-                                             falseLabel));
-                return nf.LLVMSeq(instructions);
-            }
-        }
-        return this;
-    }
 }

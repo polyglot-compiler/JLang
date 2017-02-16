@@ -1,27 +1,9 @@
 package polyllvm.extension;
 
-import polyglot.ast.Eval;
-import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
-import polyllvm.visit.PseudoLLVMTranslator;
 
+// TODO: Delete this.
 public class PolyLLVMEvalExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
-
-    @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
-//        LLVMNode translation = (LLVMNode) v.getTranslation(((Eval) node()).expr());
-//        if (translation instanceof LLVMESeq) {
-//            v.addTranslation(node(), ((LLVMESeq) translation).instruction());
-//        }
-//        else {
-//            v.addTranslation(node(), translation);
-//        }
-
-        //TODO: figure out if need to add anything to module?
-        return super.translatePseudoLLVM(v);
-    }
 }

@@ -7,8 +7,11 @@ import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
-import polyllvm.visit.*;
+import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
+import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.StringLiteralRemover;
+
+import static org.bytedeco.javacpp.LLVM.LLVMBuildCondBr;
 
 public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -36,8 +39,7 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     }
 
     @Override
-    public PseudoLLVMTranslator enterTranslatePseudoLLVM(
-            PseudoLLVMTranslator v) {
+    public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         return v;
     }
 
@@ -53,18 +55,17 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
 
     @Override
     public Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
-            LLVMLabel trueLabel, LLVMLabel falseLabel) {
+                                               LLVMLabel trueLabel,
+                                               LLVMLabel falseLabel) {
         return node();
     }
 
     @Override
     public void translateLLVMConditional(PseudoLLVMTranslator v,
                                          LLVM.LLVMBasicBlockRef trueBlock,
-                                         LLVM.LLVMBasicBlockRef falseBlock) { }
-
-    @Override
-    public final Node removeESeq(RemoveESeqVisitor v) {
-        return ((LLVMNode) node()).removeESeq(v);
+                                         LLVM.LLVMBasicBlockRef falseBlock) {
+        Node n = v.visitEdge(null, node());
+        LLVMBuildCondBr(v.builder, v.getTranslation(n), trueBlock, falseBlock);
     }
 
     @Override

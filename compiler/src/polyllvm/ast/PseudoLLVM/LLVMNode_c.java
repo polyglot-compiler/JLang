@@ -6,7 +6,6 @@ import polyglot.ast.Node_c;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyglot.visit.NodeVisitor;
-import polyllvm.visit.RemoveESeqVisitor;
 
 import java.io.ByteArrayOutputStream;
 
@@ -19,11 +18,6 @@ public abstract class LLVMNode_c extends Node_c implements LLVMNode {
 
     public LLVMNode_c(Position pos, Ext e) {
         super(pos, e);
-    }
-
-    @Override
-    public LLVMNode removeESeq(RemoveESeqVisitor v) {
-        return this;
     }
 
     @Override

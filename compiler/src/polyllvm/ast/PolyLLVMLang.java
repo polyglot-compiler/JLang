@@ -25,8 +25,6 @@ public interface PolyLLVMLang extends JLang {
                                   LLVM.LLVMBasicBlockRef trueBlock,
                                   LLVM.LLVMBasicBlockRef falseBlock);
 
-    Node removeESeq(Node n, RemoveESeqVisitor removeESeqVisitor);
-
     AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(Node n,
             AddPrimitiveWideningCastsVisitor v);
 
