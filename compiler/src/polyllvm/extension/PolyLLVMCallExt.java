@@ -177,64 +177,46 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
     private void translateInterfaceMethodCall(PseudoLLVMTranslator v) {
         Call n = (Call) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        List<LLVMInstruction> instructions = new ArrayList<>();
-        LLVMPointerType bytePointerType = nf.LLVMPointerType(nf.LLVMIntType(8));
+        ReferenceType rt = (ReferenceType) n.target().type();
+        MethodInstance mi = n.methodInstance();
+        LLVMValueRef thisTranslation = v.getTranslation(n.target());
 
-        ReferenceType referenceType = (ReferenceType) n.target().type();
-        LLVMOperand thisTranslation = v.getTranslation(n.target());
-        LLVMTypeNode thisType =
-                LLVMUtils.polyLLVMTypeNode(nf, n.target().type());
-        LLVMTypeNode functionPtrType =
-                LLVMUtils.polyLLVMMethodTypeNode(nf,
-                        referenceType,
-                        n.methodInstance()
-                                .formalTypes(),
-                        n.methodInstance()
-                                .returnType());
+        LLVMTypeRef methodType = LLVMUtils.methodType(rt, mi.returnType(), mi.formalTypes(), v);
 
-        int methodIndex = v.getMethodIndex(referenceType, n.methodInstance());
+        int methodIndex = v.getMethodIndex(rt, mi);
 
-        LLVMArrayType arrayType = nf.LLVMArrayType(nf.LLVMIntType(8), referenceType.toString().length() + 1);
-        LLVMVariable interfaceStringPtr = nf.LLVMVariable(PolyLLVMMangler.interfaceStringVariable(referenceType),
-                nf.LLVMPointerType(arrayType), VarKind.GLOBAL);
-        LLVMVariable interfaceStringBytePointer =
-                PolyLLVMFreshGen.freshNamedLocalVar(nf, "interface_string", bytePointerType);
-        LLVMInstruction toBytePtr =
-                PolyLLVMFreshGen.freshGetElementPtr(nf,interfaceStringBytePointer,interfaceStringPtr,0,0);
+        LLVMValueRef interfaceStringPtr = LLVMUtils.getGlobal(v.mod, PolyLLVMMangler.interfaceStringVariable(rt),
+                LLVMArrayType(LLVMInt8Type(), rt.toString().length() + 1));
+        LLVMValueRef interfaceStringBytePtr = LLVMUtils.buildGEP(v.builder, interfaceStringPtr,
+                LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 0, 0));
 
-        LLVMVariable thisBytePointer =
-                PolyLLVMFreshGen.freshLocalVar(nf, bytePointerType);
-        LLVMConversion castThisBytePointer = nf.LLVMConversion(LLVMConversion.BITCAST, thisBytePointer,
-                thisType, thisTranslation, bytePointerType);
+        LLVMValueRef obj_bitcast = LLVMBuildBitCast(v.builder, thisTranslation,
+                LLVMUtils.ptrTypeRef(LLVMInt8Type()), "cast_for_interface_call");
 
-        //void* __getInterfaceMethod(jobject* o, char* interface_string, int methodIndex)
-        List<LLVMTypeNode> argumentTypes = CollectionUtil.list(bytePointerType, bytePointerType, nf.LLVMIntType(32));
-        LLVMFunctionType getInterfaceMethodFunctionType = nf.LLVMFunctionType(argumentTypes, bytePointerType);
-        List<Pair<LLVMTypeNode, LLVMOperand>> argsGetMethod = CollectionUtil.list(
-                new Pair<>(bytePointerType, nf.LLVMESeq(castThisBytePointer, thisBytePointer)),
-                new Pair<>(bytePointerType, nf.LLVMESeq(toBytePtr,interfaceStringBytePointer)),
-                new Pair<>(nf.LLVMIntType(32), nf.LLVMIntLiteral(nf.LLVMIntType(32),methodIndex)));
-        LLVMVariable functionPtrTemp =
-                PolyLLVMFreshGen.freshLocalVar(nf, bytePointerType);
-        LLVMCall getInterfaceMethod = nf.LLVMCall(
-                nf.LLVMVariable("__getInterfaceMethod", getInterfaceMethodFunctionType, VarKind.GLOBAL),
-                argsGetMethod, bytePointerType).result(functionPtrTemp);
-        v.addStaticCall(getInterfaceMethod);
+        LLVMTypeRef getInterfaceMethodType = LLVMUtils.functionType(
+                LLVMUtils.ptrTypeRef(LLVMInt8Type()), // void* return type
+                LLVMUtils.ptrTypeRef(LLVMInt8Type()), // jobject*
+                LLVMUtils.ptrTypeRef(LLVMInt8Type()), // char*
+                LLVMInt32Type()                       // int
+        );
+        LLVMValueRef getInterfaceMethod = LLVMUtils.getFunction(v.mod, "__getInterfaceMethod", getInterfaceMethodType);
+        LLVMValueRef interfaceMethod = LLVMUtils.buildMethodCall(v.builder, getInterfaceMethod,
+                obj_bitcast, interfaceStringBytePtr, LLVMConstInt(LLVMInt32Type(), methodIndex, /* sign-extend */ 0));
 
-        LLVMVariable functionPtr =
-                PolyLLVMFreshGen.freshLocalVar(nf, functionPtrType);
-        LLVMConversion bitcast = nf.LLVMConversion(LLVMConversion.BITCAST, functionPtr, bytePointerType,
-                nf.LLVMESeq(getInterfaceMethod, functionPtrTemp), functionPtrType);
-        instructions.add(bitcast);
+        LLVMValueRef cast = LLVMBuildBitCast(v.builder, interfaceMethod, methodType, "cast_interface_method");
 
-        List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
-                setupArguments(v, n, nf, thisTranslation, thisType);
-        Pair<LLVMCall, LLVMVariable> pair =
-                setupCall(v, n, nf, functionPtr, arguments, true);
-        instructions.add(pair.part1());
-        v.addTranslation(n, nf.LLVMESeq(nf.LLVMSeq(instructions), pair.part2()));
 
+        LLVMValueRef[] args =
+                Stream.concat(
+                        Stream.of(thisTranslation),
+                        n.arguments().stream().map(v::getTranslation))
+                        .toArray(LLVMValueRef[]::new);
+
+        if(n.methodInstance().returnType().isVoid()){
+            v.addTranslation(n, LLVMUtils.buildProcedureCall(v.builder, cast, args));
+        } else{
+            v.addTranslation(n, LLVMUtils.buildMethodCall(v.builder, cast, args));
+        }
     }
 
 

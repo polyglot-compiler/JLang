@@ -33,24 +33,9 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
             v.addTranslation(n, LLVMGetParam(v.currFn(), 0));
         }
         else if (n.kind() == Special.SUPER) {
-            LLVMTypeNode thisType =
-                    LLVMUtils.polyLLVMTypeNode(nf,
-                                                       v.getCurrentClass()
-                                                        .type());
-            LLVMTypeNode superType =
-                    LLVMUtils.polyLLVMTypeNode(nf, n.type());
-            LLVMVariable thisVariable =
-                    nf.LLVMVariable(Constants.THIS_STR,
-                                    thisType,
-                                    LLVMVariable.VarKind.LOCAL);
-            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, superType);
-            LLVMInstruction cast =
-                    nf.LLVMConversion(LLVMConversion.BITCAST,
-                                      thisType,
-                                      thisVariable,
-                                      superType)
-                      .result(result);
-            v.addTranslation(n, nf.LLVMESeq(cast, result));
+            LLVMValueRef to_super = LLVMBuildBitCast(v.builder,
+                    LLVMGetParam(v.currFn(), 0), LLVMUtils.typeRef(n.type(), v), "cast_to_super");
+            v.addTranslation(n, to_super);
         }
 
         return super.translatePseudoLLVM(v);
