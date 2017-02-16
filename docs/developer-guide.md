@@ -41,21 +41,21 @@ a basic block of LLVM statements.
 
 Statement nodes represent instructions in LLVM, and must all implement
 the `LLVMInstruction` interface. All instructions must implement the `result`
-method to update the register the instruction places its result, as well as 
-`retType` to retrieve the type returned by the instruction. 
+method to update the register the instruction places its result, as well as
+`retType` to retrieve the type returned by the instruction.
 
 Expression nodes represent expressions in LLVM, and must all implement
-the `LLVMExpr` interface. Expressions include literals, as well as variables, 
+the `LLVMExpr` interface. Expressions include literals, as well as variables,
 lables, ESEQs. The expression interface exposes a `typenode` method for retrieving
 the its type. If an expression can be used as an operand to an instruction,
-it must implement the `LLVMOperand` interface as well. 
+it must implement the `LLVMOperand` interface as well.
 
 Type nodes represent types in LLVM, and must all implement the
 `LLVMTypeNode` interface. The interface does not expose any additional methods.
 
-All AST nodes which implement `LLVMNode` must implement the `prettyPrint` method, 
-as well as the `visitChildren` method. If applicable, the nodes should implement 
-`removeESeq`.  
+All AST nodes which implement `LLVMNode` must implement the `prettyPrint` method,
+as well as the `visitChildren` method. If applicable, the nodes should implement
+`removeESeq`.
 
 
 Desugaring Passes
@@ -88,18 +88,18 @@ class and interface layouts.
 All local variables are allocated on the stack, as LLVM has a pass to lift allocated variables to registers.
 The translator keeps track of allocations and arguments for functions, to generate prologue code to allocate
 stack space for all variables with the correct names. This is done as LLVM code must be in
-SSA form, except for memory locations. 
+SSA form, except for memory locations.
 
 The translator maintains a list of Java loop labels, and their associated head and end label
 used for translation. The translator exposes functions for entering and exiting loops to maintin
-its internal data structure. 
+its internal data structure.
 
 
 Object Layout
 -------------
 
-Objects are layed out with a pointer to the dispatch vector, followed by the fields, as shown below. 
-The fields are ordered by class first, and within a class are in lexicographical order.  
+Objects are layed out with a pointer to the dispatch vector, followed by the fields, as shown below.
+The fields are ordered by class first, and within a class are in lexicographical order.
 
 | Dispatch Vector Pointer |
 |:-------------------------:|
@@ -107,9 +107,9 @@ The fields are ordered by class first, and within a class are in lexicographical
 | Field 2                 |
 |            ⋮            |
 
-The dispatch vectors are layed out with a pointer to the interface table linked list first, followed by 
-a pointer to the class type info, followed by the methods. The methods are ordered by class first, and 
-within a class are ordered by visibility. Public methods are first, followed by package, protected, and 
+The dispatch vectors are layed out with a pointer to the interface table linked list first, followed by
+a pointer to the class type info, followed by the methods. The methods are ordered by class first, and
+within a class are ordered by visibility. Public methods are first, followed by package, protected, and
 lastly private. Within a visibility, the methods are ordered by name in lexicographical order.
 
 |Interface Table Pointer    |
@@ -119,7 +119,7 @@ lastly private. Within a visibility, the methods are ordered by name in lexicogr
 |Method 2                   |
 |            ⋮              |
 
-The interface tables are layed out with a pointer to the next interface table, followed by the 
+The interface tables are layed out with a pointer to the next interface table, followed by the
 interface name as a null terminated string, follwed by the methods. The methods are ordered in the same order
 as in the dispatch vector
 
@@ -134,7 +134,7 @@ Method and Interface Calls
 --------------------------
 
 Static method calls are translated by calling the mangled method name with the translated arguments.
-To translate a instance method call, the method pointer has to be retrieved from the dispatch vector. 
+To translate a instance method call, the method pointer has to be retrieved from the dispatch vector.
 The translator exposes a method `getMethodIndex` to lookup the method in the dispatch vector layout and return the index.
 Using the result of this call `methodIndex`, the following pseudocode illustrates method calls.
 
@@ -148,7 +148,7 @@ Due to the type system in LLVM, to call a superclass method, bitcasts must be in
 
 Interface method calls have to look up the method in the correct interface table, so the linked list
 of interfaces implemented is iterated over, comparing the interface strings. The java type system
-guarantees there will be a match, so when the correct table is found, the method at `methodIndex` 
+guarantees there will be a match, so when the correct table is found, the method at `methodIndex`
 is returned.The following native code is used to look up the method pointer for an interface method call
 
 ```
@@ -219,8 +219,11 @@ For an example, consider the [native code used to implement `instanceof`](#insta
 To facilitate potential JNI support, we mangle types as specified in the JNI API [here](https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/types.html#type_signatures) and [here](https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names). Mangling can get complicated, so when implementing native code that will be called through a Java native method, it is easiest to first compile the Java native method declaration, then inspect the generated LLVM IR to retrieve the correctly mangled method name.
 
 
-Post Translation Passes
------------------------
+Control Flow Translation
+------------------------
 
-Currently the only post translation pass is the ESEQ removal pass. This lifts `LLVMESeq` nodes 
-to sequence nodes after the translation step. 
+The LLVM C API requires that code be emitted as a collection of basic blocks. The key invariant while translating control flow is as follows:
+
+> After traversing an AST subtree, all paths through the corresponding CFG end at a common block, and the instruction builder is positioned at the end of this block.
+
+For example, an if-statement will (1) build the conditional branch, (2) position the builder at the `true` block, (3) recurse into the `consequent` child, (4) position the builder at the `false` block, and (5) recurse into the `alternative` child. After each recursion it adds a branch to the end block (unless there is already a terminating instruction). Finally, it positions the builder at the end block.
