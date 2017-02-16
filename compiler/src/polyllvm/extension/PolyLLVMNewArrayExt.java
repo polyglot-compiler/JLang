@@ -1,6 +1,5 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.*;
 import polyglot.types.*;
 import polyglot.util.CollectionUtil;
@@ -20,6 +19,8 @@ import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
 
 public class PolyLLVMNewArrayExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -137,6 +138,8 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
                                     sizeCastVar);
 
         PolyLLVMNewExt extension = (PolyLLVMNewExt) PolyLLVMExt.ext(newArray);
+
+        // TODO: Allocate the right size for packed arrays.
         extension.translateWithSize(v, (LLVMValueRef)size);
         return newArray;
     }

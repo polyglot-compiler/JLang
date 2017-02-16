@@ -10,7 +10,7 @@ public class Constants {
     /**
      * Offset from start of array object to the contents
      */
-    public static int ARRAYELEMENTOFFSET = 2;
+    public static int ARR_ELEM_OFFSET = 2;
 
     /**
      * Offset from start of dispatch vector to the 0th method

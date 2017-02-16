@@ -1,9 +1,6 @@
 package polyllvm.util;
 
-import org.bytedeco.javacpp.LLVM;
 import org.bytedeco.javacpp.PointerPointer;
-import polyglot.ast.ClassDecl;
-import polyglot.ast.TypeNode;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
@@ -14,9 +11,9 @@ import polyllvm.extension.ClassObjects;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -155,6 +152,16 @@ public class LLVMUtils {
     public static LLVMValueRef buildGEP(LLVMBuilderRef builder,
                                         LLVMValueRef ptr,
                                         LLVMValueRef ...indices) {
+        // TODO: If safe to do so, might be better to use LLVMBuildInBoundsGEP.
+        return LLVMBuildGEP(builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
+    }
+
+    public static LLVMValueRef buildStructGEP(LLVMBuilderRef builder,
+                                              LLVMValueRef ptr,
+                                              long ...longIndices) {
+        LLVMValueRef[] indices = LongStream.of(longIndices)
+                .mapToObj(i -> LLVMConstInt(LLVMInt32Type(), i, /* sign-extend */ 0))
+                .toArray(LLVMValueRef[]::new);
         return LLVMBuildGEP(builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
 
