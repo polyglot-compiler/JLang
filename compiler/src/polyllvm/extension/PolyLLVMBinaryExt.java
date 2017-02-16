@@ -86,10 +86,8 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
         Position pos = Position.compilerGenerated();
         TypeNode castTypeNode = nf.CanonicalTypeNode(pos, castType);
-        if (!l.typeEquals(castType))
-            n = n.left(nf.Cast(pos, castTypeNode, n.left()));
-        if (!r.typeEquals(castType))
-            n = n.right(nf.Cast(pos, castTypeNode, n.right()));
+        n = n.left(nf.Cast(pos, castTypeNode, n.left()).type(castType));
+        n = n.right(nf.Cast(pos, castTypeNode, n.right()).type(castType));
         return n;
     }
 

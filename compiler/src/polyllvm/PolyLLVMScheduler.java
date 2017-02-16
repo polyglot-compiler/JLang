@@ -46,8 +46,19 @@ public class PolyLLVMScheduler extends JLScheduler {
         NodeFactory nf = extInfo.nodeFactory();
         Goal g = new VisitorGoal(job, new LoopNormalizer(job, ts, nf));
         try {
-            // Make sure we have type information before we translate things.
             g.addPrerequisiteGoal(StringLiteralRemover(job), this);
+        }
+        catch (CyclicDependencyException e) {
+            throw new InternalCompilerError(e);
+        }
+        return internGoal(g);
+    }
+
+    public Goal SugarRemoved(Job job) {
+        NodeFactory nf = extInfo.nodeFactory();
+        Goal g = new VisitorGoal(job, new SugarRemover(nf));
+        try {
+            g.addPrerequisiteGoal(LoopNormalizer(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
@@ -62,7 +73,7 @@ public class PolyLLVMScheduler extends JLScheduler {
         NodeFactory nf = extInfo.nodeFactory();
         Goal g = new VisitorGoal(job, new TypeChecker(job, ts, nf));
         try {
-            g.addPrerequisiteGoal(LoopNormalizer(job), this);
+            g.addPrerequisiteGoal(SugarRemoved(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
@@ -183,14 +194,8 @@ public class PolyLLVMScheduler extends JLScheduler {
     @Override
     public Goal CodeGenerated(Job job) {
         NodeFactory nf = extInfo.nodeFactory();
-
-        Goal typeCheck = TypeChecked(job);
-        Goal sugarRemover = new VisitorGoal(job, new SugarRemover(nf));
         Goal translate = new LLVMOutputGoal(job);
-
         try {
-            // Simplify AST before type checking.
-            typeCheck.addPrerequisiteGoal(sugarRemover, this);
             translate.addPrerequisiteGoal(CodeCleaner(job), this);
 
         }

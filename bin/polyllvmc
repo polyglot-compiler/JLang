@@ -35,7 +35,7 @@ java=java
 ext=polyllvm
 
 polyglot() {
-  eval "$java" "$vmargs" -classpath "'$classpath'" polyllvm.Main -c "$@"
+  eval "$java" -ea "$vmargs" -classpath "'$classpath'" polyllvm.Main -c "$@"
 }
 
 while true; do

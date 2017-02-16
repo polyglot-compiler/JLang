@@ -10,6 +10,7 @@ import polyglot.visit.NodeVisitor;
 /**
  * De-sugars inconvenient syntactic structures.
  * Currently converts `l += r` into `l = l + r`, and analogously for -=, *=, etc.
+ * Runs before type checking.
  */
 public class SugarRemover extends NodeVisitor {
     private NodeFactory nf;
@@ -46,5 +47,10 @@ public class SugarRemover extends NodeVisitor {
         } else {
             return n;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "SugarRemover";
     }
 }
