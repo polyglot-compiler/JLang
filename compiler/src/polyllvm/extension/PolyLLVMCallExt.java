@@ -1,65 +1,22 @@
 package polyllvm.extension;
 
-import polyglot.ast.*;
+import polyglot.ast.Call;
+import polyglot.ast.Expr;
+import polyglot.ast.Node;
+import polyglot.ast.Special;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
-import polyglot.types.Type;
-import polyglot.util.CollectionUtil;
-import polyglot.util.Pair;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMLoad;
 import polyllvm.util.LLVMUtils;
-import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
-
-    @Override
-    public Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v) {
-        Call n = (Call) node();
-        NodeFactory nf = v.nodeFactory();
-        List<Expr> args = new ArrayList<>();
-        List<? extends Type> types = n.methodInstance().formalTypes();
-        for (int i = 0; i < n.arguments().size(); i++) {
-            Expr expr = n.arguments().get(i);
-            Type t = types.get(i);
-            if (!t.equals(expr.type())) {
-                CanonicalTypeNode castTypeNode =
-                        nf.CanonicalTypeNode(Position.compilerGenerated(), t);
-                Expr cast = nf.Cast(Position.compilerGenerated(),
-                                    castTypeNode,
-                                    expr)
-                              .type(t);
-                args.add(cast);
-            }
-            else {
-                args.add(expr);
-            }
-        }
-        return n.arguments(args);
-    }
 
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {

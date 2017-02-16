@@ -7,7 +7,6 @@ import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringLiteralRemover;
 
@@ -54,29 +53,10 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     }
 
     @Override
-    public Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
-                                               LLVMLabel trueLabel,
-                                               LLVMLabel falseLabel) {
-        return node();
-    }
-
-    @Override
     public void translateLLVMConditional(PseudoLLVMTranslator v,
                                          LLVM.LLVMBasicBlockRef trueBlock,
                                          LLVM.LLVMBasicBlockRef falseBlock) {
         Node n = v.visitEdge(null, node());
         LLVMBuildCondBr(v.builder, v.getTranslation(n), trueBlock, falseBlock);
     }
-
-    @Override
-    public AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(
-            AddPrimitiveWideningCastsVisitor v) {
-        return v;
-    }
-
-    @Override
-    public Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v) {
-        return node();
-    }
-
 }
