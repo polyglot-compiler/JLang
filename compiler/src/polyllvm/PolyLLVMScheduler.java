@@ -6,14 +6,16 @@ import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
 import polyglot.frontend.*;
 import polyglot.frontend.ExtensionInfo;
-import polyglot.frontend.goals.*;
+import polyglot.frontend.goals.CodeGenerated;
+import polyglot.frontend.goals.EmptyGoal;
+import polyglot.frontend.goals.Goal;
+import polyglot.frontend.goals.VisitorGoal;
 import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
 import polyglot.visit.LoopNormalizer;
-import polyglot.visit.MakeNarrowingAssignmentsExplicit;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
+import polyllvm.visit.MakeCastsExplicitVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringLiteralRemover;
 import polyllvm.visit.SugarRemover;
@@ -83,14 +85,10 @@ public class PolyLLVMScheduler extends JLScheduler {
 
     @Override
     public Goal Serialized(Job job) {
-        Goal g = new EmptyGoal(job, "Serialized");
+        // Avoid serializing classes.
+        Goal g = new EmptyGoal(job, "SerializedPlaceholder");
         try {
-            g.addPrerequisiteGoal(ExitPathsChecked(job), this);
-            g.addPrerequisiteGoal(ConstructorCallsChecked(job), this);
-            g.addPrerequisiteGoal(ReachabilityChecked(job), this);
-            g.addPrerequisiteGoal(InitializationsChecked(job), this);
-            g.addPrerequisiteGoal(ForwardReferencesChecked(job), this);
-            g.addPrerequisiteGoal(ExceptionsChecked(job), this);
+            g.addPrerequisiteGoal(Validated(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
@@ -98,41 +96,13 @@ public class PolyLLVMScheduler extends JLScheduler {
         return internGoal(g);
     }
 
-    public Goal MakeNarrowingAssignmentsExplicit(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new MakeNarrowingAssignmentsExplicit(nf));
-        try {
-            g.addPrerequisiteGoal(Serialized(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
-    public Goal AddPrimitiveWideningCasts(Job job) {
+    public Goal MakeCastsExplicit(Job job) {
         ExtensionInfo extInfo = job.extensionInfo();
         PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
         TypeSystem ts = extInfo.typeSystem();
-        Goal g = new VisitorGoal(job,
-                                 new AddPrimitiveWideningCastsVisitor(nf, ts));
+        Goal g = new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf));
         try {
-            g.addPrerequisiteGoal(MakeNarrowingAssignmentsExplicit(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
-    public Goal CodeCleaner(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new EmptyGoal(job, "CodeCleaner");//new VisitorGoal(job, new CodeCleaner(nf)); //
-        try {
-            // Make sure we have type information before we translate things.
-            g.addPrerequisiteGoal(AddPrimitiveWideningCasts(job), this);
+            g.addPrerequisiteGoal(Serialized(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
@@ -196,7 +166,7 @@ public class PolyLLVMScheduler extends JLScheduler {
         NodeFactory nf = extInfo.nodeFactory();
         Goal translate = new LLVMOutputGoal(job);
         try {
-            translate.addPrerequisiteGoal(CodeCleaner(job), this);
+            translate.addPrerequisiteGoal(MakeCastsExplicit(job), this);
 
         }
         catch (CyclicDependencyException e) {
