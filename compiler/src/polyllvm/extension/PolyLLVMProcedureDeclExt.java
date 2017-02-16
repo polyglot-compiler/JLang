@@ -8,7 +8,6 @@ import polyglot.types.*;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.LLVMUtils;
-import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.List;
@@ -18,19 +17,6 @@ import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
-
-    @Override
-    public AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(
-            AddPrimitiveWideningCastsVisitor v) {
-        v.setCurrentMethod((ProcedureDecl) node());
-        return super.enterAddPrimitiveWideningCasts(v);
-    }
-
-    @Override
-    public Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v) {
-        v.popCurrentMethod();
-        return super.addPrimitiveWideningCasts(v);
-    }
 
     @Override
     public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {

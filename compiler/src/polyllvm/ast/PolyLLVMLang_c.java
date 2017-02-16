@@ -2,8 +2,6 @@ package polyllvm.ast;
 
 import polyglot.ast.*;
 import polyglot.util.InternalCompilerError;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringLiteralRemover;
 
@@ -61,30 +59,9 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     }
 
     @Override
-    public Node translatePseudoLLVMConditional(Node n, PseudoLLVMTranslator v,
-            LLVMLabel trueLabel, LLVMLabel falseLabel) {
-        return PolyLLVMOps(n).translatePseudoLLVMConditional(v,
-                                                             trueLabel,
-                                                             falseLabel);
-    }
-
-    @Override
     public void translateLLVMConditional(Node n, PseudoLLVMTranslator v,
                                          LLVMBasicBlockRef trueBlock,
                                          LLVMBasicBlockRef falseBlock) {
         PolyLLVMOps(n).translateLLVMConditional(v, trueBlock, falseBlock);
     }
-
-    @Override
-    public AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(
-            Node n, AddPrimitiveWideningCastsVisitor v) {
-        return PolyLLVMOps(n).enterAddPrimitiveWideningCasts(v);
-    }
-
-    @Override
-    public Node addPrimitiveWideningCasts(Node n,
-            AddPrimitiveWideningCastsVisitor v) {
-        return PolyLLVMOps(n).addPrimitiveWideningCasts(v);
-    }
-
 }

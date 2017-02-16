@@ -159,6 +159,7 @@ public class LLVMUtils {
     public static LLVMValueRef buildStructGEP(LLVMBuilderRef builder,
                                               LLVMValueRef ptr,
                                               long ...longIndices) {
+        // LLVM suggests using i32 offsets for struct GEP instructions.
         LLVMValueRef[] indices = LongStream.of(longIndices)
                 .mapToObj(i -> LLVMConstInt(LLVMInt32Type(), i, /* sign-extend */ 0))
                 .toArray(LLVMValueRef[]::new);

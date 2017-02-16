@@ -1,20 +1,19 @@
 package polyllvm.extension;
 
-import polyglot.ast.*;
+import polyglot.ast.Binary;
 import polyglot.ast.Binary.*;
+import polyglot.ast.Expr;
+import polyglot.ast.Node;
+import polyglot.ast.NodeFactory;
 import polyglot.types.Type;
 import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.util.PolyLLVMStringUtils;
-import polyllvm.visit.AddPrimitiveWideningCastsVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringLiteralRemover;
-
-import java.util.Arrays;
 
 import static org.bytedeco.javacpp.LLVM.*;
 import static polyglot.ast.Binary.*;
@@ -53,42 +52,6 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         }
 
         return super.removeStringLiterals(v);
-    }
-
-    @Override
-    public Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v) {
-        // Rules for Binary Numeric Promotion found in Java Language Spec 5.6.2.
-        Binary n = (Binary) node();
-        Operator op = n.operator();
-        Type l = n.left().type();
-        Type r = n.right().type();
-
-        if (!l.isNumeric() || !r.isNumeric()) {
-            return super.addPrimitiveWideningCasts(v);
-        }
-
-        // All binary operands except for {shifts, or, and} are subject to the rules.
-        if (Arrays.asList(SHL, SHR, USHR, COND_OR, COND_AND).contains(op)) {
-            return super.addPrimitiveWideningCasts(v);
-        }
-
-        TypeSystem ts = v.typeSystem();
-        Type castType;
-        if (l.isIntOrLess() && r.isIntOrLess()) {
-            castType = ts.Int();
-        } else if (ts.isImplicitCastValid(l, r)) {
-            castType = r;
-        } else {
-            assert ts.isImplicitCastValid(r, l);
-            castType = l;
-        }
-
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        Position pos = Position.compilerGenerated();
-        TypeNode castTypeNode = nf.CanonicalTypeNode(pos, castType);
-        n = n.left(nf.Cast(pos, castTypeNode, n.left()).type(castType));
-        n = n.right(nf.Cast(pos, castTypeNode, n.right()).type(castType));
-        return n;
     }
 
     private static boolean isUnsigned(Type t) {
