@@ -84,12 +84,23 @@ public class PolyLLVMScheduler extends JLScheduler {
         TypeSystem ts = extInfo.typeSystem();
         NodeFactory nf = extInfo.nodeFactory();
         Goal g = new VisitorGoal(job, new StringConversionVisitor(job, ts, nf));
-        Goal reTypeCheck = new VisitorGoal(job, new TypeChecker(job, ts, nf));
         try {
             g.addPrerequisiteGoal(AssignmentsDesugared(job), this);
             g.addPrerequisiteGoal(TypeChecked(job), this);
-            reTypeCheck.addPrerequisiteGoal(g, this);
-            MakeCastsExplicit(job).addPrerequisiteGoal(reTypeCheck, this);
+        }
+        catch (CyclicDependencyException e) {
+            throw new InternalCompilerError(e);
+        }
+        return internGoal(g);
+    }
+
+    public Goal ReTypeChecked(Job job) {
+        ExtensionInfo extInfo = job.extensionInfo();
+        TypeSystem ts = extInfo.typeSystem();
+        NodeFactory nf = extInfo.nodeFactory();
+        Goal g = new VisitorGoal(job, new TypeChecker(job, ts, nf));
+        try {
+            g.addPrerequisiteGoal(StringConverter(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
@@ -103,7 +114,7 @@ public class PolyLLVMScheduler extends JLScheduler {
         TypeSystem ts = extInfo.typeSystem();
         Goal g = new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf));
         try {
-            g.addPrerequisiteGoal(StringConverter(job), this);
+            g.addPrerequisiteGoal(ReTypeChecked(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
