@@ -6,9 +6,7 @@ import polyglot.ast.Ext_c;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
 import polyllvm.visit.PseudoLLVMTranslator;
-import polyllvm.visit.StringLiteralRemover;
 
 import static org.bytedeco.javacpp.LLVM.LLVMBuildCondBr;
 
@@ -30,11 +28,6 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     @Override
     public final PolyLLVMLang lang() {
         return PolyLLVMLang_c.instance;
-    }
-
-    @Override
-    public Node removeStringLiterals(StringLiteralRemover v) {
-        return node();
     }
 
     @Override

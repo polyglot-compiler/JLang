@@ -2,57 +2,18 @@ package polyllvm.extension;
 
 import polyglot.ast.Binary;
 import polyglot.ast.Binary.*;
-import polyglot.ast.Expr;
 import polyglot.ast.Node;
-import polyglot.ast.NodeFactory;
 import polyglot.types.Type;
-import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.PolyLLVMStringUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
-import polyllvm.visit.StringLiteralRemover;
 
 import static org.bytedeco.javacpp.LLVM.*;
 import static polyglot.ast.Binary.*;
 
 public class PolyLLVMBinaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
-
-    @Override
-    public Node removeStringLiterals(StringLiteralRemover v) {
-        // TODO: Verify correctness with Java Language Spec 5.1.11 and 15.18.1.
-        Binary n = (Binary) node();
-        NodeFactory nf = v.nodeFactory();
-        TypeSystem ts = v.typeSystem();
-        Expr left = n.left(), right = n.right();
-        Type leftType = left.type(), rightType = right.type();
-        if (leftType.isSubtype(ts.String()) && !leftType.isNull()
-                || rightType.isSubtype(ts.String()) && !n.right().type().isNull()) {
-            Position pos = Position.COMPILER_GENERATED;
-            if (leftType.isNull()) {
-                left = PolyLLVMStringUtils.stringToConstructor(nf.StringLit(pos, left.toString()), nf, ts);
-            }
-            else if (!leftType.isSubtype(ts.String())) {
-                left = nf.Call(left.position(), nf.Id(pos, "java.lang.String.valueOf"), left)
-                         .type(ts.String());
-            }
-            if (rightType.isNull()) {
-                right = PolyLLVMStringUtils.stringToConstructor(nf.StringLit(pos, right.toString()), nf, ts);
-            }
-            else if (!n.right().type().isSubtype(ts.String())) {
-                right = nf.Call(right.position(), nf.Id(pos, "java.lang.String.valueOf"), right)
-                        .type(ts.String());
-            }
-
-            return nf.Call(n.position(), left, nf.Id(Position.compilerGenerated(), "concat"), right)
-                    .type(ts.String());
-        }
-
-        return super.removeStringLiterals(v);
-    }
 
     private static boolean isUnsigned(Type t) {
         return t.isChar();

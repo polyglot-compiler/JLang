@@ -14,7 +14,9 @@ import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.ast.PseudoLLVM.Expressions.*;
 import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
-import polyllvm.ast.PseudoLLVM.*;
+import polyllvm.ast.PseudoLLVM.LLVMArgDecl;
+import polyllvm.ast.PseudoLLVM.LLVMFunction;
+import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMPointerType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
@@ -23,13 +25,12 @@ import polyllvm.extension.ClassObjects;
 import polyllvm.util.*;
 
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
+// TODO: Can simplify things by extending ContextVisitor.
 public class PseudoLLVMTranslator extends NodeVisitor {
 
     private PolyLLVMNodeFactory nf;
