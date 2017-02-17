@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Instanceof;
 import polyglot.ast.Node;
 import polyglot.types.ReferenceType;
@@ -15,6 +16,7 @@ import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
 import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.PseudoLLVMTranslator;
 
@@ -28,39 +30,27 @@ public class PolyLLVMInstanceofExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Instanceof n = (Instanceof) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
-        LLVMOperand obj = (LLVMOperand) v.getTranslation(n.expr());
+        LLVMValueRef obj =  v.getTranslation(n.expr());
         ReferenceType compareRt = n.compareType().type().toReference();
-        LLVMOperand compTypeIdVar = ClassObjects.classIdVar(nf, compareRt);
+        LLVMValueRef compTypeIdVar = ClassObjects.classIdVarRef(v.mod, compareRt);
+        LLVMTypeRef bytePtrType = LLVMUtils.ptrTypeRef(LLVMInt8Type());
 
         // Declared the class id variable for the compare type.
-        LLVMGlobalVarDeclaration compTypeIdDecl =
-                ClassObjects.classIdDecl(nf, compareRt, /* extern */ true);
-        v.addStaticVarReferenced(compTypeIdDecl.name(), compTypeIdDecl);
+        LLVMValueRef compTypeIdDecl = ClassObjects.classIdDeclRef(v.mod, compareRt, /* extern */ true);
+        System.out.println("class id: " + LLVMPrintValueToString(compTypeIdDecl).getString());
 
         // Cast obj to a byte pointer.
-        LLVMTypeNode bytePtrType = nf.LLVMPointerType(nf.LLVMIntType(8));
-        LLVMVariable objBytePtr = PolyLLVMFreshGen.freshLocalVar(nf, bytePtrType);
-        LLVMConversion objBitcast = nf.LLVMConversion(
-                LLVMConversion.BITCAST,
-                objBytePtr, obj.typeNode(),
-                obj, bytePtrType
-        );
+        LLVMValueRef objBitcast = LLVMBuildBitCast(v.builder, obj, bytePtrType, "cast_obj_byte_ptr");
+        System.out.println("bitcast: " + LLVMPrintValueToString(objBitcast).getString());
 
         // Build call to native code.
-        List<LLVMTypeNode> argTypes = Arrays.asList(bytePtrType, bytePtrType);
-        LLVMTypeNode retType = nf.LLVMIntType(1);
-        LLVMFunctionType funcType = nf.LLVMFunctionType(argTypes, retType);
-        LLVMVariable funcVar = nf.LLVMVariable("instanceof", funcType, LLVMVariable.VarKind.GLOBAL);
-        List<Pair<LLVMTypeNode, LLVMOperand>> args = Arrays.asList(
-                new Pair<>(bytePtrType, objBytePtr),
-                new Pair<>(bytePtrType, compTypeIdVar)
-        );
-        LLVMVariable ret = PolyLLVMFreshGen.freshLocalVar(nf, retType);
-        LLVMCall call = nf.LLVMCall(funcVar, args, retType).result(ret);
-        v.addStaticCall(call);
+        LLVMValueRef function = LLVMUtils.getFunction(v.mod, "instanceof",
+                LLVMUtils.functionType(LLVMInt1Type(), bytePtrType, bytePtrType));
+        System.out.println("instanceof function: " + LLVMPrintValueToString(function).getString());
+        LLVMValueRef result = LLVMUtils.buildMethodCall(v.builder, function, objBitcast, compTypeIdVar);
+        System.out.println("result: " + LLVMPrintValueToString(result).getString());
 
-        LLVMSeq seq = nf.LLVMSeq(Arrays.asList(objBitcast, call));
-        v.addTranslation(n, nf.LLVMESeq(seq, ret));
+        v.addTranslation(n, result);
         return super.translatePseudoLLVM(v);
     }
 }

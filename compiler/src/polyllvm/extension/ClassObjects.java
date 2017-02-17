@@ -46,7 +46,7 @@ public final class ClassObjects {
     }
 
     public static LLVMValueRef classIdVarRef(LLVMModuleRef mod, ReferenceType rt) {
-        return LLVMUtils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarPtrTypeRef());
+        return LLVMUtils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarTypeRef());
     }
 
     public static LLVMValueRef classObjRef(LLVMModuleRef mod, ReferenceType rt) {

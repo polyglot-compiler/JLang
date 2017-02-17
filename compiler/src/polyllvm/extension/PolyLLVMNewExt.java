@@ -22,7 +22,8 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         ConstructorInstance ci = n.constructorInstance();
         ReferenceType classtype = ci.container();
-        int mallocSize = v.layouts(classtype).part2().size() * 8;
+        int mallocSize =
+                (v.layouts(classtype).part2().size() + /*Allocate space for DV ptr*/ 1) * 8;
         translateWithSize(v, LLVMConstInt(LLVMInt64Type(), mallocSize, 0));
         return super.translatePseudoLLVM(v);
     }
@@ -49,9 +50,10 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
 
-        LLVMTypeRef constructorType = LLVMUtils.functionType(n.constructorInstance().container(), n.constructorInstance().formalTypes(), v);
+
+        LLVMTypeRef constructorType =LLVMUtils.methodType(n.constructorInstance().container(), v.typeSystem().Void(), n.constructorInstance().formalTypes(), v);
         LLVMValueRef constructor = LLVMUtils.getFunction(v.mod, mangledFuncName, constructorType);
-        LLVMUtils.buildProcedureCall(v.builder, constructor, cast);
+        LLVMValueRef procedureCall = LLVMUtils.buildProcedureCall(v.builder, constructor, cast);
 
         v.addTranslation(n, cast);
     }
