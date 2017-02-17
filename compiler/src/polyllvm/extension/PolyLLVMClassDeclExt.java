@@ -1,16 +1,13 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Node;
 import polyglot.types.Type;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.*;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class PolyLLVMClassDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -24,30 +21,27 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         ClassDecl n = (ClassDecl) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-
-        List<LLVMFunction> funcs = new ArrayList<>();
-        List<LLVMFunctionDeclaration> funcDecls = new ArrayList<>();
-        List<LLVMGlobalDeclaration> globals = new ArrayList<>();
 
         // External class object declarations.
         Type superType = n.type().superType();
         while (superType != null) {
-            LLVMGlobalVarDeclaration decl =
-                    ClassObjects.classIdDecl(nf, superType.toReference(), /* extern */ true);
-            v.addStaticVarReferenced(decl.name(), decl);
+            ClassObjects.classIdDeclRef(v.mod, superType.toReference(), /* extern */ true);
             superType = superType.toReference().superType();
         }
         n.interfaces().stream().map(tn -> tn.type().toReference())
-                               .map(rt -> ClassObjects.classIdDecl(nf, rt, /* extern */ true))
-                               .forEach(decl -> v.addStaticVarReferenced(decl.name(), decl));
+                               .map(rt -> ClassObjects.classIdDeclRef(v.mod, rt, /* extern */ true));
 
         // Class object for this class.
-        globals.add(ClassObjects.classIdDecl(nf, n.type().toReference(), /* extern */ false));
-        globals.add(ClassObjects.classObj(nf, n.type().toReference()));
+        ClassObjects.classIdDeclRef(v.mod, n.type().toReference(), /* extern */ false);
+        ClassObjects.classObjRef(v.mod, n.type().toReference());
 
-        LLVMSourceFile llf = nf.LLVMSourceFile(null, null, funcs, funcDecls, globals);
-        v.addTranslation(n, llf);
+
+        //Set the DV for this class.
+        LLVMValueRef dvGlobal = LLVMUtils.getDvGlobal(v, n.type());
+        LLVMValueRef[] dvMethods = LLVMUtils.dvMethods(v, n.type());
+        LLVMValueRef initStruct = LLVMUtils.buildConstStruct(dvMethods);
+        LLVMSetInitializer(dvGlobal, initStruct);
+
         v.leaveClass();
         return super.translatePseudoLLVM(v);
     }
@@ -58,10 +52,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         ClassDecl n = (ClassDecl) node();
         if (n.flags().isInterface()) {
             // Interfaces need only declare a class id.
-            PolyLLVMNodeFactory nf = v.nodeFactory();
-            LLVMGlobalVarDeclaration classIdDecl =
-                    ClassObjects.classIdDecl(nf, n.type().toReference(), /* extern */ false);
-            v.addStaticVarReferenced(classIdDecl.name(), classIdDecl);
+            ClassObjects.classIdDeclRef(v.mod, n.type().toReference(), /* extern */ false);
             return n;
         }
         return super.overrideTranslatePseudoLLVM(v);

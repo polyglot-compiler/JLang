@@ -182,7 +182,6 @@ public class LLVMUtils {
 
     private static LLVMTypeRef[] dvMethodTypes(PseudoLLVMTranslator v, ReferenceType rt) {
         List<MethodInstance> layout = v.layouts(rt).part1();
-        dvMethods(v,rt);
         List<LLVMTypeRef> typeList = new ArrayList<>();
         typeList.add(ptrTypeRef(LLVMInt8Type()));
 
@@ -201,17 +200,35 @@ public class LLVMUtils {
 
     }
 
-    private static LLVMValueRef[] dvMethods(PseudoLLVMTranslator v, ReferenceType rt) {
-        List<MethodInstance> layout = v.layouts(rt).part1();
-        LLVMValueRef[] methods = IntStream.range(0, layout.size()).mapToObj(i -> {
-            MethodInstance mi = layout.get(i);
-            return getFunction(v.mod, PolyLLVMMangler.mangleProcedureName(mi), methodType(mi.container(), mi.returnType(), mi.formalTypes(), v));
-        }).toArray(LLVMValueRef[]::new);
-        return methods;
+    public static LLVMValueRef getDvGlobal(PseudoLLVMTranslator v, ReferenceType classtype) {
+        return LLVMUtils.getGlobal(v.mod, PolyLLVMMangler.dispatchVectorVariable(classtype), LLVMUtils.dvTypeRef(classtype,v));
     }
 
 
-        public static int numBitsOfIntegralType(Type t) {
+    public static LLVMValueRef[] dvMethods(PseudoLLVMTranslator v, ReferenceType rt) {
+        List<MethodInstance> layout = v.layouts(rt).part1();
+        LLVMValueRef[] methods = Stream.concat(
+                //TODO: First element is the interface table list
+                Stream.of(LLVMConstNull(ptrTypeRef(LLVMInt8Type())), ClassObjects.classObjRef(v.mod, rt)),
+                IntStream.range(0, layout.size()).mapToObj(i -> {
+                    MethodInstance mi = layout.get(i);
+                    LLVMValueRef function = getFunction(v.mod, PolyLLVMMangler.mangleProcedureName(mi),
+                            methodType(mi.container(), mi.returnType(), mi.formalTypes(), v));
+                    return LLVMConstBitCast(function, ptrTypeRef(methodType(rt, mi.returnType(), mi.formalTypes(), v)));
+                })).toArray(LLVMValueRef[]::new);
+        return methods;
+    }
+
+    public static LLVMValueRef buildConstArray(LLVMTypeRef type, LLVMValueRef ...values) {
+        return LLVMConstArray(type, new PointerPointer<>(values), values.length);
+    }
+
+    public static LLVMValueRef buildConstStruct(LLVMValueRef ...values) {
+        return LLVMConstStruct(new PointerPointer<>(values), values.length, /*Unpacked struct*/0);
+    }
+
+
+    public static int numBitsOfIntegralType(Type t) {
         if (t.isByte())
             return 8;
         else if (t.isShort() || t.isChar())
@@ -222,7 +239,6 @@ public class LLVMUtils {
             return 64;
         throw new InternalCompilerError("Type " + t + " is not an integral type");
     }
-
 
     //TODO: REMOVE These functions
 

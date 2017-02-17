@@ -17,7 +17,7 @@ public class PolyLLVMLocalAssignExt extends PolyLLVMAssignExt {
         assert n.left().type().typeEquals(n.right().type()) : "casts should already be added";
         v.visitEdge(n, n.right());
         LLVMValueRef expr = v.getTranslation(n.right());
-        LLVMValueRef ptr = v.getVariable(n.left().name());
+        LLVMValueRef ptr = v.getLocalVariable(n.left().name());
         LLVMBuildStore(v.builder, expr, ptr);
         return n;
     }

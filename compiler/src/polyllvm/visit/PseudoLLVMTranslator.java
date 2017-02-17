@@ -897,7 +897,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         allocations.put(var, v);
     }
 
-    public LLVMValueRef getVariable(String var){
+    public LLVMValueRef getLocalVariable(String var){
         return allocations.get(var);
     }
 

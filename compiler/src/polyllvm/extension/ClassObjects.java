@@ -35,6 +35,45 @@ public final class ClassObjects {
         return  LLVMUtils.ptrTypeRef(classIdVarTypeRef());
     }
 
+    public static LLVMValueRef classIdDeclRef(LLVMModuleRef mod,
+                                                       ReferenceType rt,
+                                                       boolean extern) {
+        LLVMValueRef global = LLVMUtils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarTypeRef());
+        if(!extern){
+            LLVMSetInitializer(global, LLVMConstInt(LLVMInt8Type(), 0, /*sign-extend*/ 0));
+        }
+        return global;
+    }
+
+    public static LLVMValueRef classIdVarRef(LLVMModuleRef mod, ReferenceType rt) {
+        return LLVMUtils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarPtrTypeRef());
+    }
+
+    public static LLVMValueRef classObjRef(LLVMModuleRef mod, ReferenceType rt) {
+        List<LLVMValueRef> classObjPtrOperands = new ArrayList<>();
+
+        Type superType = rt;
+        while (superType != null) {
+            classObjPtrOperands.add(classIdVarRef(mod, superType.toReference()));
+            superType = superType.toReference().superType();
+        }
+
+        rt.interfaces().stream().map(it -> classIdVarRef(mod, it))
+                .forEach(classObjPtrOperands::add);
+
+        LLVMValueRef classObjPtrs = LLVMUtils.buildConstArray(classIdVarPtrTypeRef(), classObjPtrOperands.toArray(new LLVMValueRef[1]));
+        LLVMValueRef numSupertypes = LLVMConstInt(LLVMInt32Type(), countSupertypes(rt), /*sign-extend*/ 0);
+        LLVMValueRef classObjStruct = LLVMUtils.buildConstStruct(numSupertypes, classObjPtrs);
+
+        LLVMValueRef global = LLVMUtils.getGlobal(mod, PolyLLVMMangler.classObjName(rt), LLVMTypeOf(classObjStruct));
+        LLVMSetExternallyInitialized(global, 0);
+        LLVMSetInitializer(global, classObjStruct);
+
+        return global;
+    }
+
+
+
     public static LLVMTypeNode classIdVarType(PolyLLVMNodeFactory nf) {
         return nf.LLVMIntType(8);
     }

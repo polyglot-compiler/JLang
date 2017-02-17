@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.New;
 import polyglot.ast.Node;
 import polyglot.types.ConstructorInstance;
@@ -41,7 +42,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         //Set the Dispatch vector
         LLVMValueRef gep = LLVMUtils.buildGEP(v.builder, cast, 
                 LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 0, 0));
-        LLVMValueRef dvGlobal = LLVMUtils.getGlobal(v.mod, PolyLLVMMangler.dispatchVectorVariable(classtype), LLVMUtils.dvTypeRef(classtype,v));
+        LLVMValueRef dvGlobal = LLVMUtils.getDvGlobal(v, classtype);
         LLVMBuildStore(v.builder, dvGlobal, gep);
 
         //Call the constructor function

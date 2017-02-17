@@ -30,10 +30,10 @@ public class MakeCastsExplicitVisitor extends AscriptionVisitor {
 
     @Override
     public Expr ascribe(Expr e, Type toType) throws SemanticException {
-        if (e.type().typeEquals(toType)) {
+        // Avoid adding casts to void.
+        if (e.type().typeEquals(toType) || toType.isVoid()) {
             return super.ascribe(e, toType);
         } else {
-            assert !toType.isVoid();
             NodeFactory nf = nodeFactory();
             Position pos = Position.COMPILER_GENERATED;
             TypeNode typeNode = nf.CanonicalTypeNode(pos, toType);

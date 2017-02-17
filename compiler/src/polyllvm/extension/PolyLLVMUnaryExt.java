@@ -11,6 +11,8 @@ import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
+import java.util.Arrays;
+
 import static org.bytedeco.javacpp.LLVM.*;
 import static polyglot.ast.Unary.*;
 
@@ -44,7 +46,7 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
             assert t.typeEquals(v.typeSystem().Boolean());
             translation = LLVMBuildNot(v.builder, exprRef, "not");
         }
-        else if (List.of(PRE_INC, PRE_DEC, POST_INC, POST_DEC).contains(op)) {
+        else if (Arrays.asList(PRE_INC, PRE_DEC, POST_INC, POST_DEC).contains(op)) {
             // De-sugar increment operation into a vanilla assignment.
             // This is done here rather than in a separate visitor pass in order to avoid
             // the need for an ESeq node.

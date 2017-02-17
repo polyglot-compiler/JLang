@@ -14,7 +14,7 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Local n = (Local) node();
-        LLVMValueRef val = LLVMBuildLoad(v.builder, v.getVariable(n.name()), "load_" + n.name());
+        LLVMValueRef val = LLVMBuildLoad(v.builder, v.getLocalVariable(n.name()), "load_" + n.name());
         v.addTranslation(n, val);
         return super.translatePseudoLLVM(v);
     }
