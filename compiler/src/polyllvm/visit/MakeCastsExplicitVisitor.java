@@ -9,6 +9,12 @@ import polyglot.util.Position;
 import polyglot.visit.AscriptionVisitor;
 import polyglot.visit.NodeVisitor;
 
+/**
+ * Turn all implicit casts and type promotions into explicit casts.
+ * Examples:
+ * {@code char c = 1} -> {@code char c = (char) 1}.
+ * {@code 1 + 2l} -> {@code ((long) 1) + 2l}.
+ */
 public class MakeCastsExplicitVisitor extends AscriptionVisitor {
 
     public MakeCastsExplicitVisitor(Job job, TypeSystem ts, NodeFactory nf) {

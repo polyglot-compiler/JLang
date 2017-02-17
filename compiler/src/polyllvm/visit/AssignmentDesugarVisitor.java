@@ -12,10 +12,10 @@ import polyglot.visit.NodeVisitor;
  * Currently converts `l += r` into `l = l + r`, and analogously for -=, *=, etc.
  * Runs before type checking.
  */
-public class SugarRemover extends NodeVisitor {
+public class AssignmentDesugarVisitor extends NodeVisitor {
     private NodeFactory nf;
 
-    public SugarRemover(NodeFactory nf) {
+    public AssignmentDesugarVisitor(NodeFactory nf) {
         super(nf.lang());
         this.nf = nf;
     }
@@ -51,6 +51,6 @@ public class SugarRemover extends NodeVisitor {
 
     @Override
     public String toString() {
-        return "SugarRemover";
+        return "AssignmentDesugarVisitor";
     }
 }

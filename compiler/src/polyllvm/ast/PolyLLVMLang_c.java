@@ -3,7 +3,6 @@ package polyllvm.ast;
 import polyglot.ast.*;
 import polyglot.util.InternalCompilerError;
 import polyllvm.visit.PseudoLLVMTranslator;
-import polyllvm.visit.StringLiteralRemover;
 
 import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
 
@@ -35,11 +34,6 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
 
     protected PolyLLVMOps PolyLLVMOps(Node n) {
         return polyllvmExt(n);
-    }
-
-    @Override
-    public Node removeStringLiterals(Node n, StringLiteralRemover v) {
-        return PolyLLVMOps(n).removeStringLiterals(v);
     }
 
     @Override

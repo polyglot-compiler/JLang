@@ -15,10 +15,7 @@ import polyglot.util.InternalCompilerError;
 import polyglot.visit.LoopNormalizer;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.visit.MakeCastsExplicitVisitor;
-import polyllvm.visit.PseudoLLVMTranslator;
-import polyllvm.visit.StringLiteralRemover;
-import polyllvm.visit.SugarRemover;
+import polyllvm.visit.*;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -28,11 +25,11 @@ public class PolyLLVMScheduler extends JLScheduler {
         super(extInfo);
     }
 
-    public Goal StringLiteralRemover(Job job) {
+    public Goal LoopNormalizer(Job job) {
         ExtensionInfo extInfo = job.extensionInfo();
         TypeSystem ts = extInfo.typeSystem();
         NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new StringLiteralRemover(ts, nf));
+        Goal g = new VisitorGoal(job, new LoopNormalizer(job, ts, nf));
         try {
             g.addPrerequisiteGoal(Disambiguated(job), this);
         }
@@ -42,23 +39,9 @@ public class PolyLLVMScheduler extends JLScheduler {
         return internGoal(g);
     }
 
-    public Goal LoopNormalizer(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        TypeSystem ts = extInfo.typeSystem();
+    public Goal AssignmentsDesugared(Job job) {
         NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new LoopNormalizer(job, ts, nf));
-        try {
-            g.addPrerequisiteGoal(StringLiteralRemover(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
-    public Goal SugarRemoved(Job job) {
-        NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new SugarRemover(nf));
+        Goal g = new VisitorGoal(job, new AssignmentDesugarVisitor(nf));
         try {
             g.addPrerequisiteGoal(LoopNormalizer(job), this);
         }
@@ -75,7 +58,7 @@ public class PolyLLVMScheduler extends JLScheduler {
         NodeFactory nf = extInfo.nodeFactory();
         Goal g = new VisitorGoal(job, new TypeChecker(job, ts, nf));
         try {
-            g.addPrerequisiteGoal(SugarRemoved(job), this);
+            g.addPrerequisiteGoal(AssignmentsDesugared(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
@@ -96,13 +79,31 @@ public class PolyLLVMScheduler extends JLScheduler {
         return internGoal(g);
     }
 
+    public Goal StringConverter(Job job) {
+        ExtensionInfo extInfo = job.extensionInfo();
+        TypeSystem ts = extInfo.typeSystem();
+        NodeFactory nf = extInfo.nodeFactory();
+        Goal g = new VisitorGoal(job, new StringConversionVisitor(job, ts, nf));
+        Goal reTypeCheck = new VisitorGoal(job, new TypeChecker(job, ts, nf));
+        try {
+            g.addPrerequisiteGoal(AssignmentsDesugared(job), this);
+            g.addPrerequisiteGoal(TypeChecked(job), this);
+            reTypeCheck.addPrerequisiteGoal(g, this);
+            MakeCastsExplicit(job).addPrerequisiteGoal(reTypeCheck, this);
+        }
+        catch (CyclicDependencyException e) {
+            throw new InternalCompilerError(e);
+        }
+        return internGoal(g);
+    }
+
     public Goal MakeCastsExplicit(Job job) {
         ExtensionInfo extInfo = job.extensionInfo();
         PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
         TypeSystem ts = extInfo.typeSystem();
         Goal g = new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf));
         try {
-            g.addPrerequisiteGoal(Serialized(job), this);
+            g.addPrerequisiteGoal(StringConverter(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
