@@ -80,6 +80,19 @@ public class LLVMUtils {
         } else throw new InternalCompilerError("Invalid type");
     }
 
+    public static LLVMValueRef defaultValue(Type t, PseudoLLVMTranslator v) {
+        if (t.isBoolean()) {
+            return LLVMConstInt(LLVMInt1Type(), 0, 0);
+        } else if (t.isLongOrLess()) {
+            return LLVMConstInt(typeRef(t, v), 0, 0);
+        } else if (t.isFloat()) {
+            return LLVMConstReal(LLVMFloatType(), 0);
+        } else if (t.isDouble()) {
+            return LLVMConstReal(LLVMDoubleType(), 0);
+        } else if (t.isClass() || t.isNull()) {
+            return LLVMConstNull(typeRef(t,v));
+        } else throw new InternalCompilerError("Invalid type");
+    }
 
     public static LLVMTypeRef functionType(LLVMTypeRef ret, LLVMTypeRef ...args) {
         return LLVMFunctionType(ret, new PointerPointer<>(args), args.length, /* isVarArgs */ 0);

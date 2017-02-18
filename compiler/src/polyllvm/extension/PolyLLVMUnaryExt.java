@@ -55,8 +55,8 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
             Binary.Operator binop = inc ? Binary.ADD : Binary.SUB;
             Position pos = Position.COMPILER_GENERATED;
             Expr delta = expr.type().isLongOrLess()
-                    ? nf.IntLit(pos, IntLit.LONG, 1)
-                    : nf.FloatLit(pos, FloatLit.DOUBLE, 1.);
+                    ? nf.IntLit(pos, IntLit.LONG, 1).type(v.typeSystem().Long())
+                    : nf.FloatLit(pos, FloatLit.DOUBLE, 1.).type(v.typeSystem().Double());
             TypeNode exprTypeNode = nf.CanonicalTypeNode(pos, expr.type());
             Expr castDelta = nf.Cast(pos, exprTypeNode, delta).type(expr.type());
             Expr newValue = nf.Binary(pos, expr, binop, castDelta).type(expr.type());

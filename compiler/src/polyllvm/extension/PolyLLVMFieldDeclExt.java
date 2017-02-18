@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.FieldDecl;
 import polyglot.ast.Node;
 import polyglot.types.ReferenceType;
@@ -24,13 +25,14 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
         if (n.flags().isStatic()) {
             ReferenceType classType = v.getCurrentClass().type().toReference();
             String mangledName = PolyLLVMMangler.mangleStaticFieldName(classType, n);
-            LLVMGlobalVarDeclaration globalDecl = nf.LLVMGlobalVarDeclaration(
-                    mangledName,
-                    /* isExtern */ false,
-                    LLVMGlobalVarDeclaration.GLOBAL,
-                    LLVMUtils.polyLLVMTypeNode(nf, n.declType()),
-                    (LLVMOperand) v.getTranslation(n.init()));
-            v.addTranslation(n, globalDecl);
+            LLVMValueRef global = LLVMUtils.getGlobal(v.mod,
+                    mangledName, LLVMUtils.typeRef(n.type().type(), v));
+            if(n.init() == null){
+                LLVMSetInitializer(global, LLVMUtils.defaultValue(n.type().type(), v));
+            } else {
+                LLVMSetInitializer(global, v.getTranslation(n.init()));
+            }
+            v.addTranslation(n, global);
         }
 
         return super.translatePseudoLLVM(v);
