@@ -30,7 +30,6 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
         }
 
         LLVMValueRef init = v.getTranslation(n.init());
-        init = LLVMBuildBitCast(v.builder, init, LLVMUtils.typeRef(n.type().type(), v), "local_decl_cast");
         v.addTranslation(n, LLVMBuildStore(v.builder, init, alloc));
         return super.translatePseudoLLVM(v);
     }

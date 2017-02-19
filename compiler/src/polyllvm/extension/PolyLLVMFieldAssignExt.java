@@ -51,7 +51,6 @@ public class PolyLLVMFieldAssignExt extends PolyLLVMAssignExt {
             LLVMValueRef gep = LLVMUtils.buildGEP(v.builder,objectTranslation,
                     LLVMConstInt(LLVMInt32Type(), 0, /*sign extend*/ 0),
                     LLVMConstInt(LLVMInt32Type(), fieldIndex, /*sign extend*/ 0));
-            expr = LLVMBuildBitCast(v.builder, expr, LLVMUtils.typeRef(n.type(), v), "assign_cast");
             v.addTranslation(n, LLVMBuildStore(v.builder, expr, gep));
 
 
