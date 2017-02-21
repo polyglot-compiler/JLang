@@ -146,10 +146,14 @@ public class PolyLLVMScheduler extends JLScheduler {
             LLVMDisposeMessage(error);
             error.setNull();
 
-            //Run Passes
+            // TODO: This data layout is likely only accurate for x86_64, Mac OS X.
+            LLVMSetDataLayout(mod, "e-m:o-i64:64-f80:128-n8:16:32:64-S128");
+
+            // Run passes.
             LLVMPassManagerRef pass = LLVMCreatePassManager();
             LLVMAddStripDeadPrototypesPass(pass);
             LLVMRunPassManager(pass, mod);
+            LLVMDisposePassManager(pass);
 
             // TODO: Make this more robust.
             // Emit.
@@ -160,6 +164,7 @@ public class PolyLLVMScheduler extends JLScheduler {
             LLVMPrintModuleToFile(mod, outName, error);
             LLVMDisposeMessage(error);
             error.setNull();
+
             LLVMDisposeBuilder(builder);
             LLVMDisposeModule(mod);
 
