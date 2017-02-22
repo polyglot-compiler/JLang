@@ -138,7 +138,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         MethodInstance mi = n.methodInstance();
         LLVMValueRef thisTranslation = v.getTranslation(n.target());
 
-        LLVMTypeRef methodType = LLVMUtils.methodType(rt, mi.returnType(), mi.formalTypes(), v);
+        LLVMTypeRef methodType = LLVMUtils.ptrTypeRef(LLVMUtils.methodType(rt, mi.returnType(), mi.formalTypes(), v));
 
         int methodIndex = v.getMethodIndex(rt, mi);
 

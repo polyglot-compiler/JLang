@@ -3,11 +3,24 @@ package polyllvm.extension;
 import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Node;
+import polyglot.types.ReferenceType;
 import polyglot.types.Type;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMCStringLiteral;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
+import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMGetElementPtr;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMStore;
 import polyllvm.util.LLVMUtils;
+import polyllvm.util.PolyLLVMFreshGen;
+import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import java.util.List;
 
 public class PolyLLVMClassDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -37,10 +50,47 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
 
 
         //Set the DV for this class.
+        List<? extends ReferenceType> interfaces = v.allInterfaces(n.type());
+        LLVMValueRef[] dvMethods;
+        if(interfaces.size() > 0){
+            LLVMValueRef itGlobal =  LLVMConstBitCast(LLVMUtils.getItGlobal(v, interfaces.get(0), n.type()),
+                    LLVMUtils.ptrTypeRef(LLVMInt8Type()));
+            dvMethods = LLVMUtils.dvMethods(v, n.type(), itGlobal);
+
+        } else {
+            dvMethods = LLVMUtils.dvMethods(v, n.type());
+        }
+
         LLVMValueRef dvGlobal = LLVMUtils.getDvGlobal(v, n.type());
-        LLVMValueRef[] dvMethods = LLVMUtils.dvMethods(v, n.type());
         LLVMValueRef initStruct = LLVMUtils.buildConstStruct(dvMethods);
         LLVMSetInitializer(dvGlobal, initStruct);
+
+        //Setup the Interface Tables for this class
+        for (int i=0; i< interfaces.size(); i++){
+            ReferenceType it = interfaces.get(i);
+            String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(n.type(), it);
+            LLVMTypeRef interfaceTableType = LLVMUtils.dvTypeRef(it, v);
+            LLVMValueRef itGlobal = LLVMUtils.getGlobal(v.mod, interfaceTableVar, interfaceTableType);
+
+            LLVMValueRef next;
+            if(i == interfaces.size()-1){ // Last Interface next pointer points to null
+                next = LLVMConstNull(LLVMUtils.ptrTypeRef(LLVMInt8Type()));
+            } else {
+                next = LLVMConstBitCast(LLVMUtils.getItGlobal(v, interfaces.get(i+1), n.type()), LLVMUtils.ptrTypeRef(LLVMInt8Type()));
+            }
+            LLVMValueRef[] itMethods = LLVMUtils.itMethods(v, it, n.type(), next);
+
+            String s = it.toString();
+            LLVMTypeRef stringType = LLVMArrayType(LLVMInt8Type(), s.length() + 1);
+            LLVMValueRef interfaceName = LLVMUtils.getGlobal(v.mod,
+                    PolyLLVMMangler.interfaceStringVariable(it), stringType);
+            LLVMSetInitializer(interfaceName, LLVMConstString(s, s.length(), /*Don't null terminate*/ 0));
+
+            itMethods[1] = LLVMUtils.constGEP(interfaceName,0,0);
+            LLVMValueRef itStruct = LLVMUtils.buildConstStruct(itMethods);
+            LLVMSetInitializer(itGlobal, itStruct);
+
+        }
 
         v.leaveClass();
         return super.translatePseudoLLVM(v);

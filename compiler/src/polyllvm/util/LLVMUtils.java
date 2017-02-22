@@ -5,12 +5,16 @@ import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
+import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMArrayType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
 import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
+import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.extension.ClassObjects;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
@@ -55,9 +59,6 @@ public class LLVMUtils {
         }
         return dvType;
     }
-
-
-
 
 
     public static LLVMTypeRef typeRef(Type t, PseudoLLVMTranslator v) {
@@ -169,6 +170,30 @@ public class LLVMUtils {
         return LLVMBuildGEP(builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
 
+    /**
+     * Build a GEP using i32 indices from indices
+     */
+    public static LLVMValueRef buildGEP(LLVMBuilderRef builder,
+                                        LLVMValueRef ptr,
+                                        int ...indices) {
+        LLVMValueRef[] llvmIndices = Arrays.stream(indices)
+                .mapToObj(i -> LLVMConstInt(LLVMInt32Type(), i, /*sign-extend*/ 0))
+                .toArray(LLVMValueRef[]::new);
+        return buildGEP(builder, ptr, llvmIndices);
+    }
+
+    /**
+     * Create a constant GEP using i32 indices from indices
+     */
+    public static LLVMValueRef constGEP(LLVMValueRef ptr,
+                                        int ...indices) {
+        LLVMValueRef[] llvmIndices = Arrays.stream(indices)
+                .mapToObj(i -> LLVMConstInt(LLVMInt32Type(), i, /*sign-extend*/ 0))
+                .toArray(LLVMValueRef[]::new);
+        return LLVMConstGEP(ptr, new PointerPointer<>(llvmIndices), llvmIndices.length);
+    }
+
+
     public static LLVMValueRef buildStructGEP(LLVMBuilderRef builder,
                                               LLVMValueRef ptr,
                                               long ...longIndices) {
@@ -217,12 +242,17 @@ public class LLVMUtils {
         return LLVMUtils.getGlobal(v.mod, PolyLLVMMangler.dispatchVectorVariable(classtype), LLVMUtils.dvTypeRef(classtype,v));
     }
 
+    public static LLVMValueRef getItGlobal(PseudoLLVMTranslator v, ReferenceType it, ReferenceType usingClass){
+        String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(usingClass, it);
+        LLVMTypeRef interfaceTableType = LLVMUtils.dvTypeRef(it, v);
+        return LLVMUtils.getGlobal(v.mod, interfaceTableVar, interfaceTableType);
+    }
 
-    public static LLVMValueRef[] dvMethods(PseudoLLVMTranslator v, ReferenceType rt) {
+
+    public static LLVMValueRef[] dvMethods(PseudoLLVMTranslator v, ReferenceType rt, LLVMValueRef next) {
         List<MethodInstance> layout = v.layouts(rt).part1();
         LLVMValueRef[] methods = Stream.concat(
-                //TODO: First element is the interface table list
-                Stream.of(LLVMConstNull(ptrTypeRef(LLVMInt8Type())), ClassObjects.classObjRef(v.mod, rt)),
+                Stream.of(next, ClassObjects.classObjRef(v.mod, rt)),
                 IntStream.range(0, layout.size()).mapToObj(i -> {
                     MethodInstance mi = layout.get(i);
                     LLVMValueRef function = getFunction(v.mod, PolyLLVMMangler.mangleProcedureName(mi),
@@ -230,6 +260,32 @@ public class LLVMUtils {
                     return LLVMConstBitCast(function, ptrTypeRef(methodType(rt, mi.returnType(), mi.formalTypes(), v)));
                 })).toArray(LLVMValueRef[]::new);
         return methods;
+    }
+
+    public static LLVMValueRef[] itMethods(PseudoLLVMTranslator v, ReferenceType it, ReferenceType usingClass, LLVMValueRef next) {
+        List<MethodInstance> layout = v.layouts(it).part1();
+        for (int i=0; i< layout.size(); i++){
+            List<MethodInstance> classLayout = v.layouts(usingClass).part1();
+            MethodInstance mi = layout.get(i);
+            MethodInstance miClass = v.methodInList(mi, classLayout);
+            layout.set(i, miClass);
+
+        }
+        LLVMValueRef[] methods = Stream.concat(
+                Stream.of(next, ClassObjects.classObjRef(v.mod, it)),
+                IntStream.range(0, layout.size()).mapToObj(i -> {
+                    MethodInstance mi = layout.get(i);
+                    LLVMValueRef function = getFunction(v.mod, PolyLLVMMangler.mangleProcedureName(mi),
+                            methodType(mi.container(), mi.returnType(), mi.formalTypes(), v));
+                    return LLVMConstBitCast(function, ptrTypeRef(methodType(it, mi.returnType(), mi.formalTypes(), v)));
+                })).toArray(LLVMValueRef[]::new);
+        return methods;
+    }
+
+
+
+    public static LLVMValueRef[] dvMethods(PseudoLLVMTranslator v, ReferenceType rt) {
+        return dvMethods(v, rt, LLVMConstNull(ptrTypeRef(LLVMInt8Type())));
     }
 
     public static LLVMValueRef buildConstArray(LLVMTypeRef type, LLVMValueRef ...values) {

@@ -316,7 +316,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         return new Triple<>(dvMethods, dvOverridenMethods, fields);
     }
 
-    private List<ReferenceType> allInterfaces(ReferenceType rt){
+    public List<ReferenceType> allInterfaces(ReferenceType rt){
         List<ReferenceType> interfaces = new ArrayList<>();
         for (ReferenceType superType : rt.interfaces()) {
             interfaces.addAll(allInterfaces(superType));
@@ -719,7 +719,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
     }
 
-    private MethodInstance methodInList(MethodInstance mi,
+    public MethodInstance methodInList(MethodInstance mi,
             List<MethodInstance> methods) {
         for (MethodInstance m : methods) {
             if (m.isSameMethod(mi)) {
