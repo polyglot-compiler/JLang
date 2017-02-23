@@ -19,12 +19,4 @@ public class PolyLLVMLabeledExt extends PolyLLVMExt {
         }
         return super.enterTranslatePseudoLLVM(v);
     }
-
-    @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
-        v.addTranslation(node(),
-                         v.getTranslation(((Labeled) node()).statement()));
-        return super.translatePseudoLLVM(v);
-    }
-
 }
