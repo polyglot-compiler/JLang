@@ -1,20 +1,17 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.*;
 import polyglot.util.CollectionUtil;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-import java.util.ArrayList;
 import java.util.List;
+
+import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
 
 public class PolyLLVMArrayInitExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -37,10 +34,7 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
         LLVMValueRef array = v.getTranslation(newArray);
 
         //Create a Java local to construct ArrayAccessAssign to reuse translation
-        //TODO: Make fresh name generation more robust
-        Id arrayId = nf.Id(Position.compilerGenerated(),
-                           PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMVoidType())
-                                           .name().replace('.', '_'));
+        Id arrayId = nf.Id(Position.compilerGenerated(), PolyLLVMFreshGen.fresh());
         Local arrayLocal = nf.Local(Position.compilerGenerated(), arrayId);
         v.addTranslation(arrayLocal, array);
 

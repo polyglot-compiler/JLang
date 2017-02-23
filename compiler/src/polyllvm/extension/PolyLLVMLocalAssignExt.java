@@ -5,7 +5,8 @@ import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-import static org.bytedeco.javacpp.LLVM.*;
+import static org.bytedeco.javacpp.LLVM.LLVMBuildStore;
+import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
 
 public class PolyLLVMLocalAssignExt extends PolyLLVMAssignExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

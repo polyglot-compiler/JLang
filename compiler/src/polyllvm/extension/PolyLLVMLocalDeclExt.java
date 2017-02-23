@@ -1,13 +1,13 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
-
 import polyglot.ast.LocalDecl;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

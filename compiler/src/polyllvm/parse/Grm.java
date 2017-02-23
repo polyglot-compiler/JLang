@@ -5,17 +5,23 @@
 
 package polyllvm.parse;
 
-import java.util.*;
 import polyglot.ast.*;
-import polyglot.lex.*;
-import polyglot.util.*;
-import polyglot.types.*;
-import polyglot.ast.Assert;
+import polyglot.lex.Identifier;
+import polyglot.lex.Lexer;
+import polyglot.lex.Token;
 import polyglot.main.Options;
-import polyllvm.types.PolyLLVMTypeSystem;
-import polyllvm.ast.PolyLLVMNodeFactory;
 import polyglot.parse.Name;
 import polyglot.parse.VarDeclarator;
+import polyglot.types.Flags;
+import polyglot.types.TypeSystem;
+import polyglot.util.ErrorQueue;
+import polyglot.util.Position;
+import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.types.PolyLLVMTypeSystem;
+
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 
 /** CUP v0.11b 20150326 generated parser.
   */

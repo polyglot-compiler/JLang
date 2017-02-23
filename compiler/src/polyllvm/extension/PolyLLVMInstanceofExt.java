@@ -1,27 +1,15 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Instanceof;
 import polyglot.ast.Node;
 import polyglot.types.ReferenceType;
-import polyglot.util.Pair;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMFunctionType;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
 import polyllvm.util.LLVMUtils;
-import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-import java.util.Arrays;
-import java.util.List;
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMInstanceofExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

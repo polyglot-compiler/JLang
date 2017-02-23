@@ -1,6 +1,5 @@
 package polyllvm.extension;
 
-import com.sun.tools.javac.util.List;
 import polyglot.ast.*;
 import polyglot.ast.Unary.*;
 import polyglot.types.Type;

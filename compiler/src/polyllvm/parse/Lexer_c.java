@@ -6,12 +6,12 @@
 
 package polyllvm.parse;
 
-import polyglot.lex.Lexer;
-import polyglot.lex.*;
-import polyglot.util.Position;
-import polyglot.util.ErrorQueue;
-import polyglot.util.ErrorInfo;
 import polyglot.frontend.Source;
+import polyglot.lex.*;
+import polyglot.util.ErrorInfo;
+import polyglot.util.ErrorQueue;
+import polyglot.util.Position;
+
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.HashMap;

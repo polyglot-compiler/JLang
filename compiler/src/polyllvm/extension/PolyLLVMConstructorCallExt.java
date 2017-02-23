@@ -1,28 +1,17 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.ConstructorCall;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
-import polyglot.util.Pair;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
 import polyllvm.util.LLVMUtils;
-import polyllvm.util.Constants;
-import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.stream.Stream;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

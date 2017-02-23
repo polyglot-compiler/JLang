@@ -1,29 +1,16 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Field;
 import polyglot.ast.FieldAssign;
 import polyglot.ast.Node;
 import polyglot.ast.Receiver;
 import polyglot.types.ReferenceType;
-import polyglot.util.CollectionUtil;
-import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMTypedOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMStore;
 import polyllvm.util.LLVMUtils;
-import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-import java.util.List;
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMFieldAssignExt extends PolyLLVMAssignExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

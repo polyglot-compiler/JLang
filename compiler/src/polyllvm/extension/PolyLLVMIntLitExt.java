@@ -7,7 +7,8 @@ import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-import static org.bytedeco.javacpp.LLVM.*;
+import static org.bytedeco.javacpp.LLVM.LLVMConstInt;
+import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
 
 public class PolyLLVMIntLitExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();

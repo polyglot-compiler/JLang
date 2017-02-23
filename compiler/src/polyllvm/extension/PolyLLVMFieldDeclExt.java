@@ -1,17 +1,17 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.FieldDecl;
 import polyglot.ast.Node;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
 import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import static org.bytedeco.javacpp.LLVM.LLVMSetInitializer;
+import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
 
 public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
