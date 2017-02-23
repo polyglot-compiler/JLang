@@ -21,7 +21,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         NewArray n = (NewArray) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
-        
+
         if (n.init() != null) {
             LLVMValueRef initializer = v.getTranslation(n.init());
             v.addTranslation(n, initializer);
@@ -77,9 +77,10 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
 
         // TODO: Allocate the right size for packed arrays.
 
+        LLVMValueRef arrLen64 = LLVMBuildSExt(v.builder, arrayLength, LLVMInt64Type(), "arrLen");
         LLVMValueRef mul = LLVMBuildMul(v.builder,
                 LLVMConstInt(LLVMInt64Type(), sizeOfType, /*sign-extend*/ 0),
-                LLVMConstSExt(arrayLength, LLVMInt64Type()), "mul");
+                arrLen64, "mul");
         LLVMValueRef size = LLVMBuildAdd(v.builder,
                 LLVMConstInt(LLVMInt64Type(), LLVMUtils.llvmPtrSize()*2 /*2 header words*/, /*sign-extend*/0),
                 mul, "size");
