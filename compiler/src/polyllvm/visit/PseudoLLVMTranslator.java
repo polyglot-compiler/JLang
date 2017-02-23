@@ -27,8 +27,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     private Map<Node, Object> translations = new LinkedHashMap<>();
     private Deque<ClassDecl> classes = new ArrayDeque<>();
 
-    private List<ClassDecl> classesVisited = new ArrayList<>();
-
     public final LLVMModuleRef mod;
     public final LLVMBuilderRef builder;
 
@@ -54,7 +52,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         this.builder = builder;
         this.nf = nf;
         this.ts = ts;
-        classesVisited = new ArrayList<>();
     }
 
     @Override
@@ -121,7 +118,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
      */
     public void enterClass(ClassDecl n) {
         classes.push(n);
-        classesVisited.add(n);
     }
 
     /**
@@ -304,31 +300,6 @@ public class PseudoLLVMTranslator extends NodeVisitor {
             }
         }
         return null;
-    }
-
-
-
-    private HashSet<ReferenceType> classesUsed = new HashSet<>();
-
-    private HashSet<ReferenceType> typesDependedOn = new HashSet<>();
-
-    public void addClassType(ReferenceType rt) {
-        classesUsed.add(rt);
-        for(MethodInstance mem : layouts(rt).part1()){
-            mem.formalTypes().stream()
-                    .forEach(ft -> {
-                        if (ft instanceof ReferenceType) {
-                            typesDependedOn.add((ReferenceType) ft);}
-                    });
-            if(mem.returnType() instanceof  ReferenceType) {
-                typesDependedOn.add((ReferenceType) mem.returnType());
-            }
-        }
-        for (FieldInstance f : layouts(rt).part2()){
-            if(f.type() instanceof ReferenceType){
-                typesDependedOn.add((ReferenceType) f.type());
-            }
-        }
     }
 
     /*
