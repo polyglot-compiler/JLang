@@ -4,6 +4,7 @@ import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
 import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
+import polyglot.ast.SourceFile;
 import polyglot.frontend.*;
 import polyglot.frontend.ExtensionInfo;
 import polyglot.frontend.goals.CodeGenerated;
@@ -21,6 +22,8 @@ import polyllvm.visit.AssignmentDesugarVisitor;
 import polyllvm.visit.MakeCastsExplicitVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringConversionVisitor;
+
+import javax.tools.JavaFileObject;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -101,13 +104,13 @@ public class PolyLLVMScheduler extends JLScheduler {
             LLVMRunPassManager(pass, mod);
             LLVMDisposePassManager(pass);
 
-            // TODO: Make this more robust.
             // Emit.
-            String srcName = goal.job().source().name();
-            String srcExt = extInfo.defaultFileExtension();
-            String outExt = extInfo.getOptions().output_ext;
-            String outName = srcName.substring(0, srcName.length() - srcExt.length()) + outExt;
-            LLVMPrintModuleToFile(mod, outName, error);
+            if (!(ast instanceof SourceFile))
+                throw new InternalCompilerError("AST root should be a SourceFile");
+            SourceFile sf = (SourceFile) ast;
+            JavaFileObject jfo = extInfo.targetFactory().outputFileObject("", sf.source());
+            String outPath = jfo.getName();
+            LLVMPrintModuleToFile(mod, outPath, error);
             LLVMDisposeMessage(error);
             error.setNull();
 

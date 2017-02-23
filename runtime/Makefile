@@ -27,3 +27,7 @@ polyllvmc:
 
 linkall: jni java
 	llvm-link -o runtime.ll $(shell find $(LLFOLDER) -name "*.ll") -S
+
+.PHONY: clean
+clean:
+	rm -rf ll runtime.ll classes
