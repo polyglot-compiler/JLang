@@ -81,12 +81,12 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         } else if (resType.isFloat() || resType.isDouble()) {
             // Floating point binop.
             res = LLVMBuildBinOp(v.builder, llvmFloatBinopCode(op), left, right, "binop");
-        } else if (resType.isBoolean() && elemType.isLongOrLess()) {
-            // Integer comparison.
-            res = LLVMBuildICmp(v.builder, llvmICmpBinopCode(op, elemType), left, right, "cmp");
         } else if (resType.isBoolean() && (elemType.isFloat() || elemType.isDouble())) {
             // Floating point comparison.
             res = LLVMBuildFCmp(v.builder, llvmFCmpBinopCode(op), left, right, "cmp");
+        } else if (resType.isBoolean()) {
+            // Integer comparison.
+            res = LLVMBuildICmp(v.builder, llvmICmpBinopCode(op, elemType), left, right, "cmp");
         } else {
             throw new InternalCompilerError("Invalid binary operation result type");
         }
