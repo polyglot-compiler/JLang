@@ -3,5 +3,5 @@
 *.iml
 /lib/polyllvm.jar
 /lib/polyllvm-rt.jar
-
+/out/
 *.DS_STORE
