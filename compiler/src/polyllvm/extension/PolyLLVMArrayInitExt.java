@@ -65,7 +65,6 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
                                           .type(n.type().toArray().base());
 
             v.lang().translatePseudoLLVM(intLitIndex, v);
-            v.lang().translatePseudoLLVM(arrayAccess, v);
             v.lang().translatePseudoLLVM(assign, v);
         }
 

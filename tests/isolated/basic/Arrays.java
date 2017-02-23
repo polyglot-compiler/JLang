@@ -21,6 +21,8 @@ public class Arrays {
         }
 
         int[][] b = new int[5][5];
+        Print.println(b.length);
+        Print.println(b[1].length);
         b[1][4] = 42;
         b[4][1] = 42;
 
