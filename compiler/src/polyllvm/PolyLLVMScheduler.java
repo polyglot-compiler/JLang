@@ -2,7 +2,6 @@ package polyllvm;
 
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
-import polyglot.ast.NewArray;
 import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
 import polyglot.frontend.*;
@@ -12,15 +11,15 @@ import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
 import polyglot.types.TypeSystem;
-import polyglot.util.CollectionUtil;
 import polyglot.util.InternalCompilerError;
-import polyglot.util.Position;
 import polyglot.visit.LoopNormalizer;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.util.LLVMUtils;
-import polyllvm.util.PolyLLVMMangler;
-import polyllvm.visit.*;
+import polyllvm.visit.AssignmentDesugarVisitor;
+import polyllvm.visit.MakeCastsExplicitVisitor;
+import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.StringConversionVisitor;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -88,7 +87,7 @@ public class PolyLLVMScheduler extends JLScheduler {
         ExtensionInfo extInfo = job.extensionInfo();
         TypeSystem ts = extInfo.typeSystem();
         NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new StringConversionVisitor(job, ts, nf));
+        Goal g = new VisitorGoal(job, new StringConversionVisitor(ts, nf));
         try {
             g.addPrerequisiteGoal(AssignmentsDesugared(job), this);
             g.addPrerequisiteGoal(TypeChecked(job), this);
@@ -193,11 +192,10 @@ public class PolyLLVMScheduler extends JLScheduler {
 
     @Override
     public Goal CodeGenerated(Job job) {
-        NodeFactory nf = extInfo.nodeFactory();
         Goal translate = new LLVMOutputGoal(job);
         try {
             translate.addPrerequisiteGoal(MakeCastsExplicit(job), this);
-
+            translate.addPrerequisiteGoal(StringConverter(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);

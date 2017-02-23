@@ -1,12 +1,9 @@
 package polyllvm.visit;
 
 import polyglot.ast.*;
-import polyglot.frontend.Job;
-import polyglot.lex.StringLiteral;
 import polyglot.types.Type;
 import polyglot.types.TypeSystem;
 import polyglot.util.Position;
-import polyglot.visit.ContextVisitor;
 import polyglot.visit.NodeVisitor;
 
 import java.util.ArrayList;
@@ -17,16 +14,20 @@ import java.util.List;
  * Converts string literals to constructor calls, makes string concatenation explicit,
  * and promotes the corresponding concatenation arguments to strings.
  */
-public class StringConversionVisitor extends ContextVisitor {
+public class StringConversionVisitor extends NodeVisitor {
+    private TypeSystem ts;
+    private NodeFactory nf;
 
-    public StringConversionVisitor(Job job, TypeSystem ts, NodeFactory nf) {
-        super(job, ts, nf);
+    public StringConversionVisitor(TypeSystem ts, NodeFactory nf) {
+        super(nf.lang());
+        this.ts = ts;
+        this.nf = nf;
     }
 
     @Override
     public Node leave(Node old, Node n, NodeVisitor v) {
         Position pos = Position.COMPILER_GENERATED;
-        if (n instanceof StringLiteral) {
+        if (n instanceof StringLit) {
             // TODO: Optimize by pre-creating byte array.
             StringLit str = (StringLit) n;
             List<Expr> byteExprs = new ArrayList<>();

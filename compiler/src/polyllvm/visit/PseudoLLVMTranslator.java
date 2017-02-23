@@ -116,11 +116,14 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     }
 
     /**
-     * Return the translation for {@code n}, if none exists return null
+     * Return the translation for {@code n}.
      */
     @SuppressWarnings("unchecked")
     public <T> T getTranslation(Node n) {
-        return (T) translations.get(n);
+        T res = (T) translations.get(n);
+        if (res == null)
+            throw new InternalCompilerError("Null translation of " + n.getClass() + ": " + n);
+        return res;
     }
 
     /**
