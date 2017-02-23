@@ -68,11 +68,6 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
-    protected Ext extTypeNodeImpl() {
-        return new PolyLLVMTypeNodeExt();
-    }
-
-    @Override
     protected Ext extCanonicalTypeNodeImpl() {
         return new PolyLLVMCanonicalTypeNodeExt();
     }
