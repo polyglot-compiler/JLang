@@ -2,6 +2,7 @@ package polyllvm;
 
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
+import polyglot.ast.NewArray;
 import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
 import polyglot.frontend.*;
@@ -11,10 +12,14 @@ import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
 import polyglot.types.TypeSystem;
+import polyglot.util.CollectionUtil;
 import polyglot.util.InternalCompilerError;
+import polyglot.util.Position;
 import polyglot.visit.LoopNormalizer;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.util.LLVMUtils;
+import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.*;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -136,6 +141,9 @@ public class PolyLLVMScheduler extends JLScheduler {
             LLVMModuleRef mod = LLVMModuleCreateWithName(goal.job().source().name());
             LLVMBuilderRef builder = LLVMCreateBuilder();
             PseudoLLVMTranslator translator = new PseudoLLVMTranslator(mod, builder, nf, ts);
+
+            //Setup class and dv types for arrays
+            LLVMUtils.setupArrayType(translator);
 
             Node ast = goal.job().ast();
             ast.visit(translator);

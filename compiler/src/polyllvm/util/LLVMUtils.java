@@ -73,6 +73,7 @@ public class LLVMUtils {
         } else if (t.isDouble()) {
             return LLVMDoubleType();
         } else if (t.isArray()) {
+            structTypeRef(v.getArrayType(), v);
             return ptrTypeRef(structTypeRefOpaque(Constants.ARR_CLASS, v.mod));
         } else if (t.isClass()) {
             return structTypeRef(t.toReference(), v);
@@ -171,18 +172,6 @@ public class LLVMUtils {
     }
 
     /**
-     * Build a GEP using i32 indices from indices
-     */
-    public static LLVMValueRef buildGEP(LLVMBuilderRef builder,
-                                        LLVMValueRef ptr,
-                                        int ...indices) {
-        LLVMValueRef[] llvmIndices = Arrays.stream(indices)
-                .mapToObj(i -> LLVMConstInt(LLVMInt32Type(), i, /*sign-extend*/ 0))
-                .toArray(LLVMValueRef[]::new);
-        return buildGEP(builder, ptr, llvmIndices);
-    }
-
-    /**
      * Create a constant GEP using i32 indices from indices
      */
     public static LLVMValueRef constGEP(LLVMValueRef ptr,
@@ -216,6 +205,17 @@ public class LLVMUtils {
                 Stream.of(dvPtrType),
                 layouts.part2().stream().map(fi -> typeRef(fi.type(), v))
         ).toArray(LLVMTypeRef[]::new);
+    }
+
+    public static void setupArrayType(PseudoLLVMTranslator v){
+        LLVMTypeRef[] fieldTypes = objectFieldTypes(v, v.getArrayType());
+        fieldTypes = Arrays.copyOf(fieldTypes, fieldTypes.length + 1);
+        fieldTypes[fieldTypes.length-1] = ptrTypeRef(LLVMInt8Type());
+
+        String mangledName = PolyLLVMMangler.classTypeName(v.getArrayType());
+        LLVMTypeRef structType = structTypeRefOpaque(mangledName, v.mod);
+        setStructBody(structType, fieldTypes);
+        dvTypeRef(v.getArrayType(),v);
     }
 
     private static LLVMTypeRef[] dvMethodTypes(PseudoLLVMTranslator v, ReferenceType rt) {
