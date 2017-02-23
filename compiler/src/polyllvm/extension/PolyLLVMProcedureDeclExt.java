@@ -18,6 +18,10 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
+    private static boolean containsCode(ProcedureInstance pi) {
+        return !pi.flags().contains(Flags.NATIVE) && !pi.flags().contains(Flags.ABSTRACT);
+    }
+
     @Override
     public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         ProcedureDecl n = (ProcedureDecl) node();
@@ -36,7 +40,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         // Add function to module.
         LLVMValueRef funcRef = LLVMUtils.funcRef(v.mod, pi, funcType);
-        if (!pi.flags().contains(Flags.NATIVE) && !pi.flags().contains(Flags.ABSTRACT)) {
+        if (containsCode(pi)) {
             // TODO: Add alloca instructions for local variables here.
             LLVMBasicBlockRef entry = LLVMAppendBasicBlock(funcRef, "allocs_entry");
             LLVMBasicBlockRef body_entry = LLVMAppendBasicBlock(funcRef, "body_entry");
@@ -71,10 +75,15 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+        ProcedureDecl n = (ProcedureDecl) node();
+        ProcedureInstance pi = n.procedureInstance();
+
         // Add void return if necessary.
-        LLVMBasicBlockRef block = LLVMGetInsertBlock(v.builder);
-        if (LLVMGetBasicBlockTerminator(block) == null) {
-            LLVMBuildRetVoid(v.builder);
+        if (containsCode(pi)) {
+            LLVMBasicBlockRef block = LLVMGetInsertBlock(v.builder);
+            if (LLVMGetBasicBlockTerminator(block) == null) {
+                LLVMBuildRetVoid(v.builder);
+            }
         }
 
         v.clearAllocations();
