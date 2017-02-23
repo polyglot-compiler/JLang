@@ -5,55 +5,38 @@ import polyglot.ast.While;
 import polyglot.util.Pair;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.ast.PseudoLLVM.LLVMBlock;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
-import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-import java.util.ArrayList;
-import java.util.List;
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMWhileExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public PseudoLLVMTranslator enterTranslatePseudoLLVM(
-            PseudoLLVMTranslator v) {
-        v.enterLoop((While) node());
-        return super.enterTranslatePseudoLLVM(v);
-    }
-
-    @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         While n = (While) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
+        v.enterLoop(n);
 
-        Pair<String, String> labels = v.leaveLoop();
+        Pair<LLVMBasicBlockRef, LLVMBasicBlockRef> labels = v.peekLoop();
 
-        LLVMLabel head = nf.LLVMLabel(labels.part1());
-        LLVMLabel end = nf.LLVMLabel(labels.part2());
-        LLVMLabel l1 = PolyLLVMFreshGen.freshLabel(nf);
+        LLVMBasicBlockRef head = labels.part1();
+        LLVMBasicBlockRef end = labels.part2();
+        LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
 
-        List<LLVMInstruction> instrs = new ArrayList<>();
-        instrs.add(nf.LLVMBr(head));
-        instrs.add(nf.LLVMSeqLabel(head));
-        instrs.add((LLVMInstruction) lang().translatePseudoLLVMConditional(n.cond(),
-                                                                           v,
-                                                                           l1,
-                                                                           end));
-        instrs.add(nf.LLVMSeqLabel(l1));
-        LLVMBlock bodyTranslation = (LLVMBlock) v.getTranslation(n.body());
-        instrs.add(bodyTranslation.instructions(nf));
-        instrs.add(nf.LLVMBr(head));
-        instrs.add(nf.LLVMSeqLabel(end));
+        LLVMPositionBuilderAtEnd(v.builder, LLVMGetInsertBlock(v.builder));
+        LLVMBuildBr(v.builder, head);
 
-        LLVMSeq seq = nf.LLVMSeq(instrs);
+        LLVMPositionBuilderAtEnd(v.builder, head);
+        lang().translateLLVMConditional(n.cond(), v, l1, end);
 
-        v.addTranslation(n, seq);
-
-        return super.translatePseudoLLVM(v);
+        LLVMPositionBuilderAtEnd(v.builder, l1);
+        v.visitEdge(n, n.body());
+        LLVMBasicBlockRef blockEnd = LLVMGetInsertBlock(v.builder);
+        if (LLVMGetBasicBlockTerminator(blockEnd) == null) {
+            LLVMBuildBr(v.builder, head);
+        }
+        LLVMPositionBuilderAtEnd(v.builder, end);
+        v.leaveLoop();
+        return n;
     }
 }

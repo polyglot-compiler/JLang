@@ -4,10 +4,9 @@ import polyglot.ast.CharLit;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMIntLiteral;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMCharLitExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -15,12 +14,8 @@ public class PolyLLVMCharLitExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         CharLit n = (CharLit) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        LLVMTypeNode type = nf.LLVMIntType(16);
-        LLVMIntLiteral translation =
-                nf.LLVMIntLiteral(type,
-                                  n.value());
-        v.addTranslation(n, translation);
+        LLVMValueRef val = LLVMConstInt(LLVMInt16Type(), n.value(), /* sign-extend */ 0);
+        v.addTranslation(n, val);
         return super.translatePseudoLLVM(v);
     }
 }

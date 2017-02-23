@@ -2,24 +2,25 @@
 #include <stdio.h>
 #include "types.h"
 
-static void printJavaStringWithFormat(const char* format, jstring* s) {
-    intptr_t* data = &s->chars->data;
+static void printJavaStringWithFormat(jstring* s, bool newline) {
+    uint16_t* data = (uint16_t*) &s->chars->data;
     jint len = s->chars->len;
-    wchar_t chars[len+1];
-    chars[len] = 0;
-    for (jint i = 0; i < len; ++i)
-        chars[i] = (wchar_t) data[i];
-    printf(format, chars);
+    for (jint i = 0; i < len; ++i) {
+        printf("%lc", data[i]);
+    }
+    if (newline) {
+        printf("\n");
+    }
 }
 
 extern "C" {
 
 void Java_placeholder_Print_print__Ljava_lang_String_2(jstring* s) {
-    printJavaStringWithFormat("%ls", s);
+    printJavaStringWithFormat(s, /* newline */ false);
 }
 
 void Java_placeholder_Print_println__Ljava_lang_String_2(jstring* s) {
-    printJavaStringWithFormat("%ls\n", s);
+    printJavaStringWithFormat(s, /* newline */ true);
 }
 
 void Java_placeholder_Print_print__Z(jbool n) {

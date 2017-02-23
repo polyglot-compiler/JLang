@@ -2,51 +2,44 @@ package polyllvm.extension;
 
 import polyglot.ast.If;
 import polyglot.ast.Node;
+import polyglot.ast.Stmt;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.ast.PseudoLLVM.LLVMBlock;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMSeq;
-import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.function.BiConsumer;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMIfExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         If n = (If) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
+        LLVMBasicBlockRef ifEnd = LLVMAppendBasicBlock(v.currFn(), "if_end");
+        LLVMBasicBlockRef ifTrue = LLVMAppendBasicBlock(v.currFn(), "if_true");
+        LLVMBasicBlockRef ifFalse = n.alternative() != null
+                ? LLVMAppendBasicBlock(v.currFn(), "if_false")
+                : ifEnd;
 
-        LLVMLabel trueLabel = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
-        LLVMLabel falseLabel = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
-        LLVMLabel endLabel = PolyLLVMFreshGen.freshLabel(v.nodeFactory());
-        LLVMInstruction cond =
-                (LLVMInstruction) lang().translatePseudoLLVMConditional(n.cond(),
-                                                                        v,
-                                                                        trueLabel,
-                                                                        falseLabel);
-        List<LLVMInstruction> instructions = new ArrayList<>();
-        instructions.add(cond);
-        instructions.add(nf.LLVMSeqLabel(trueLabel));
-        instructions.add(((LLVMBlock) v.getTranslation(n.consequent())).instructions(nf));
-        instructions.add(nf.LLVMBr(endLabel));
-        instructions.add(nf.LLVMSeqLabel(falseLabel));
+        lang().translateLLVMConditional(n.cond(), v, ifTrue, ifFalse);
+
+        BiConsumer<LLVMBasicBlockRef, Stmt> emitBlock = (block, stmt) -> {
+            LLVMPositionBuilderAtEnd(v.builder, block);
+            v.visitEdge(n, stmt);
+            LLVMBasicBlockRef blockEnd = LLVMGetInsertBlock(v.builder);
+            if (LLVMGetBasicBlockTerminator(blockEnd) == null) {
+                LLVMBuildBr(v.builder, ifEnd);
+            }
+        };
+
+        emitBlock.accept(ifTrue, n.consequent());
         if (n.alternative() != null) {
-            instructions.add(((LLVMBlock) v.getTranslation(n.alternative())).instructions(nf));
+            emitBlock.accept(ifFalse, n.alternative());
         }
-        instructions.add(nf.LLVMBr(endLabel));
-        instructions.add(nf.LLVMSeqLabel(endLabel));
 
-        LLVMSeq translation = nf.LLVMSeq(instructions);
-
-        v.addTranslation(n, translation);
-        return super.translatePseudoLLVM(v);
+        LLVMPositionBuilderAtEnd(v.builder, ifEnd);
+        return n;
     }
-
 }

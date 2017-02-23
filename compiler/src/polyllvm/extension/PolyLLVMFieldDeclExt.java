@@ -6,11 +6,12 @@ import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.LLVMGlobalVarDeclaration;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import static org.bytedeco.javacpp.LLVM.LLVMSetInitializer;
+import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
 
 public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -24,13 +25,14 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
         if (n.flags().isStatic()) {
             ReferenceType classType = v.getCurrentClass().type().toReference();
             String mangledName = PolyLLVMMangler.mangleStaticFieldName(classType, n);
-            LLVMGlobalVarDeclaration globalDecl = nf.LLVMGlobalVarDeclaration(
-                    mangledName,
-                    /* isExtern */ false,
-                    LLVMGlobalVarDeclaration.GLOBAL,
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.declType()),
-                    (LLVMOperand) v.getTranslation(n.init()));
-            v.addTranslation(n, globalDecl);
+            LLVMValueRef global = LLVMUtils.getGlobal(v.mod,
+                    mangledName, LLVMUtils.typeRef(n.type().type(), v));
+            if(n.init() == null){
+                LLVMSetInitializer(global, LLVMUtils.defaultValue(n.type().type(), v));
+            } else {
+                LLVMSetInitializer(global, v.getTranslation(n.init()));
+            }
+            v.addTranslation(n, global);
         }
 
         return super.translatePseudoLLVM(v);

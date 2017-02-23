@@ -2,23 +2,21 @@ package support;
 
 /**
  * Constructs single- and multi-dimensional arrays, assisted by
- * native code. The constructors should never be called directly
+ * the compiler. The constructors should never be called directly
  * from Java code, since we need the compiler to allocate the
  * correct amount of memory for an array instance.
  */
 public class Array {
     private int len;
-    // Array data is only visible to native code.
-
-    private native void clearEntries();
-    private native void setObjectEntry(int i, Object val);
+    // Array data is only visible to the compiler.
 
     /**
      * Single-dimensional arrays.
      */
     private Array(int len) {
+        // Note that entries have already been cleared,
+        // since we use calloc to allocate memory.
         this.len = len;
-        clearEntries();
     }
 
     /**
@@ -34,19 +32,18 @@ public class Array {
      * Recursively initialize an array with `maxDepth` dimensions.
      */
     private static void initSubArrays(Array arr, int[] lens,
-                                     int depth, int maxDepth) {
+                                      int depth, int maxDepth) {
         if (depth == maxDepth - 1) {
-            // Note that entries have already been cleared, since
-            // the single-dimensional array constructor is called
-            // for every sub-array.
+            // Elements already initialized to zero.
             return;
         }
 
+        // These casts succeeds because Array and Object[] are
+        // equivalent from the perspective of PolyLLVM.
+        Array[] objArr = (Array[]) (Object) arr;
         for (int i = 0; i < lens[depth]; ++i) {
-            // This cast succeeds because Array and Object[] are
-            // equivalent from the perspective of PolyLLVM.
             Array subArr = (Array) (Object) new Object[lens[depth + 1]];
-            arr.setObjectEntry(i, subArr);
+            objArr[i] = subArr;
             initSubArrays(subArr, lens, depth + 1, maxDepth);
         }
     }

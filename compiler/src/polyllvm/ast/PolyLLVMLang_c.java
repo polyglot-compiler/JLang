@@ -2,8 +2,9 @@ package polyllvm.ast;
 
 import polyglot.ast.*;
 import polyglot.util.InternalCompilerError;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.visit.*;
+import polyllvm.visit.PseudoLLVMTranslator;
+
+import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
 
 public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     public static final PolyLLVMLang_c instance = new PolyLLVMLang_c();
@@ -36,11 +37,6 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     }
 
     @Override
-    public Node removeStringLiterals(Node n, StringLiteralRemover v) {
-        return PolyLLVMOps(n).removeStringLiterals(v);
-    }
-
-    @Override
     public PseudoLLVMTranslator enterTranslatePseudoLLVM(Node n,
             PseudoLLVMTranslator v) {
         return PolyLLVMOps(n).enterTranslatePseudoLLVM(v);
@@ -57,33 +53,9 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     }
 
     @Override
-    public Node addVoidReturn(Node n, AddVoidReturnVisitor v) {
-        return PolyLLVMOps(n).addVoidReturn(v);
+    public void translateLLVMConditional(Node n, PseudoLLVMTranslator v,
+                                         LLVMBasicBlockRef trueBlock,
+                                         LLVMBasicBlockRef falseBlock) {
+        PolyLLVMOps(n).translateLLVMConditional(v, trueBlock, falseBlock);
     }
-
-    @Override
-    public Node translatePseudoLLVMConditional(Node n, PseudoLLVMTranslator v,
-            LLVMLabel trueLabel, LLVMLabel falseLabel) {
-        return PolyLLVMOps(n).translatePseudoLLVMConditional(v,
-                                                             trueLabel,
-                                                             falseLabel);
-    }
-
-    @Override
-    public Node removeESeq(Node n, RemoveESeqVisitor v) {
-        return PolyLLVMOps(n).removeESeq(v);
-    }
-
-    @Override
-    public AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(
-            Node n, AddPrimitiveWideningCastsVisitor v) {
-        return PolyLLVMOps(n).enterAddPrimitiveWideningCasts(v);
-    }
-
-    @Override
-    public Node addPrimitiveWideningCasts(Node n,
-            AddPrimitiveWideningCastsVisitor v) {
-        return PolyLLVMOps(n).addPrimitiveWideningCasts(v);
-    }
-
 }

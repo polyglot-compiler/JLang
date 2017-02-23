@@ -1,13 +1,14 @@
 package polyllvm.ast;
 
+import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.Ext;
 import polyglot.ast.Ext_c;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.ast.PseudoLLVM.LLVMNode;
-import polyllvm.visit.*;
+import polyllvm.visit.PseudoLLVMTranslator;
+
+import static org.bytedeco.javacpp.LLVM.LLVMBuildCondBr;
 
 public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -19,7 +20,7 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
         }
         if (e == null) {
             throw new InternalCompilerError("No PolyLLVM extension object for node "
-                    + n + " (" + n.getClass() + ")", n.position());
+                                            + n + " (" + n.getClass() + ")", n.position());
         }
         return (PolyLLVMExt) e;
     }
@@ -30,13 +31,7 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     }
 
     @Override
-    public Node removeStringLiterals(StringLiteralRemover v) {
-        return node();
-    }
-
-    @Override
-    public PseudoLLVMTranslator enterTranslatePseudoLLVM(
-            PseudoLLVMTranslator v) {
+    public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         return v;
     }
 
@@ -51,30 +46,10 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     }
 
     @Override
-    public Node addVoidReturn(AddVoidReturnVisitor v) {
-        return node();
+    public void translateLLVMConditional(PseudoLLVMTranslator v,
+                                         LLVM.LLVMBasicBlockRef trueBlock,
+                                         LLVM.LLVMBasicBlockRef falseBlock) {
+        Node n = v.visitEdge(null, node());
+        LLVMBuildCondBr(v.builder, v.getTranslation(n), trueBlock, falseBlock);
     }
-
-    @Override
-    public Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
-            LLVMLabel trueLabel, LLVMLabel falseLabel) {
-        return node();
-    }
-
-    @Override
-    public final Node removeESeq(RemoveESeqVisitor v) {
-        return ((LLVMNode) node()).removeESeq(v);
-    }
-
-    @Override
-    public AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(
-            AddPrimitiveWideningCastsVisitor v) {
-        return v;
-    }
-
-    @Override
-    public Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v) {
-        return node();
-    }
-
 }

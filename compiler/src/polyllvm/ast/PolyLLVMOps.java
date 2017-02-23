@@ -2,15 +2,14 @@ package polyllvm.ast;
 
 import polyglot.ast.Node;
 import polyglot.ast.NodeOps;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMLabel;
-import polyllvm.visit.*;
+import polyllvm.visit.PseudoLLVMTranslator;
+
+import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
 
 /**
  * Operations any PolyLLVM compatible node must implement.
  */
 public interface PolyLLVMOps extends NodeOps {
-
-    Node removeStringLiterals(StringLiteralRemover v);
 
     PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v);
 
@@ -18,16 +17,12 @@ public interface PolyLLVMOps extends NodeOps {
 
     Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v);
 
-    Node translatePseudoLLVMConditional(PseudoLLVMTranslator v,
-            LLVMLabel trueLabel, LLVMLabel falseLabel);
-
-    Node addVoidReturn(AddVoidReturnVisitor v);
-
-    Node removeESeq(RemoveESeqVisitor v);
-
-    AddPrimitiveWideningCastsVisitor enterAddPrimitiveWideningCasts(
-            AddPrimitiveWideningCastsVisitor v);
-
-    Node addPrimitiveWideningCasts(AddPrimitiveWideningCastsVisitor v);
-
+    /**
+     * Adds the conditional translation of this node to the current block. If this node
+     * evaluates to true, jump to {@code trueBlock}, otherwise jump to
+     * {@code falseBlock}. Creates additional blocks if needed.
+     */
+    void translateLLVMConditional(PseudoLLVMTranslator v,
+                                  LLVMBasicBlockRef trueBlock,
+                                  LLVMBasicBlockRef falseBlock);
 }

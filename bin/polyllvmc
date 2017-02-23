@@ -35,7 +35,7 @@ java=java
 ext=polyllvm
 
 polyglot() {
-  eval "$java" "$vmargs" -classpath "'$classpath'" polyllvm.Main -c "$@"
+  eval "$java" -ea "$vmargs" -classpath "'$classpath'" polyllvm.Main -c "$@"
 }
 
 while true; do
@@ -77,8 +77,8 @@ done
 #  args="-ext '$ext' $args"
 #fi
 
-
-classpath="$dir/compiler/classes:$dir/runtime/classes:$dir/lib/polyglot.jar:$dir/lib/java_cup.jar"
+llvm_api_jars="$dir/lib/llvm-api.jar:$dir/lib/llvm-api-platform.jar:$dir/lib/llvm-api-macosx-x86_64.jar:$dir/lib/javacpp.jar"
+classpath="$dir/compiler/classes:$dir/runtime/classes:$dir/lib/polyglot.jar:$dir/lib/java_cup.jar:$llvm_api_jars"
 if [ -n "$ext" ]; then
   classpath="$classpath:$dir/lib/$ext.jar"
 fi

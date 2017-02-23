@@ -3,24 +3,15 @@ package polyllvm.extension;
 import polyglot.ast.ConstructorCall;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
-import polyglot.util.Pair;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMESeq;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMCall;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.util.PolyLLVMConstants;
-import polyllvm.util.PolyLLVMFreshGen;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.util.PolyLLVMTypeUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.stream.Stream;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -34,77 +25,31 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
             throw new InternalCompilerError("Qualifier on this not supported yet (Java spec 15.8.4)");
         }
 
-        LLVMOperand thisArg;
-        LLVMTypeNode thisArgType;
+        LLVMValueRef thisArg;
 
         if (n.kind() == ConstructorCall.THIS) {
-            thisArgType = PolyLLVMTypeUtils.polyLLVMTypeNode(nf,
-                                                             n.constructorInstance()
-                                                              .container());
-            thisArg = nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
-                                      thisArgType,
-                                      LLVMVariable.VarKind.LOCAL);
+            thisArg = LLVMGetParam(v.currFn(), 0);
         }
         else if (n.kind() == ConstructorCall.SUPER) {
-            LLVMTypeNode thisType =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf,
-                                                       v.getCurrentClass()
-                                                        .type());
-            LLVMTypeNode superType =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf,
-                                                       n.constructorInstance()
-                                                        .container());
-            LLVMVariable thisVariable =
-                    nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
-                                    thisType,
-                                    LLVMVariable.VarKind.LOCAL);
-            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, superType);
-            LLVMInstruction cast =
-                    nf.LLVMConversion(LLVMConversion.BITCAST,
-                                      thisType,
-                                      thisVariable,
-                                      superType)
-                      .result(result);
-            thisArg = nf.LLVMESeq(cast, result);
-            thisArgType = superType;
+            LLVMTypeRef superType = LLVMUtils.typeRef(n.constructorInstance().container(), v);
+            thisArg = LLVMBuildBitCast(v.builder, LLVMGetParam(v.currFn(), 0), superType, "cast_to_super");
         }
         else {
             throw new InternalCompilerError("Kind `" + n.kind()
                     + "` of constructor call not handled: " + n);
         }
 
-        translateStaticCall(v, thisArg, thisArgType);
-        return n;
-    }
-
-    private void translateStaticCall(PseudoLLVMTranslator v,
-            LLVMOperand thisArg, LLVMTypeNode thisArgType) {
-        ConstructorCall n = (ConstructorCall) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        List<LLVMInstruction> instructions = new ArrayList<>();
-
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
-        LLVMTypeNode tn =
-                PolyLLVMTypeUtils.polyLLVMMethodTypeNode(nf,
-                                                         n.constructorInstance()
-                                                          .container(),
-                                                         n.constructorInstance()
-                                                          .formalTypes());
-        LLVMVariable func =
-                nf.LLVMVariable(mangledFuncName, tn, LLVMVariable.VarKind.GLOBAL);
-
-        List<Pair<LLVMTypeNode, LLVMOperand>> arguments =
-                setupArguments(v, n, nf, thisArg, thisArgType);
-        Pair<LLVMCall, LLVMVariable> pair =
-                setupCall(v, n, nf, func, arguments, false);
-
-        if (thisArg instanceof LLVMESeq) {
-            instructions.add(((LLVMESeq) thisArg).instruction());
-        }
-        instructions.add(pair.part1());
-        v.addTranslation(n, nf.LLVMSeq(instructions));
-        v.addStaticCall(pair.part1());
+        LLVMTypeRef constructorFuncTypeRef = LLVMUtils.methodType(n.constructorInstance().container(),
+                v.typeSystem().Void(), n.constructorInstance().formalTypes(), v);
+        LLVMValueRef function = LLVMUtils.getFunction(v.mod, mangledFuncName, constructorFuncTypeRef);
+        LLVMValueRef[] args = Stream.concat(
+                Stream.of(thisArg),
+                n.arguments().stream().map(v::getTranslation)
+        ).toArray(LLVMValueRef[]::new);
+        LLVMValueRef procedureCall = LLVMUtils.buildProcedureCall(v.builder, function, args);
+        v.addTranslation(n, procedureCall);
+        return n;
     }
-
 }

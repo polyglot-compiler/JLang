@@ -7,15 +7,10 @@ import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMOperand;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion.Instruction;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.util.PolyLLVMFreshGen;
-import polyllvm.util.PolyLLVMTypeUtils;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMCastExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -28,49 +23,49 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
         Type exprType = n.expr().type();
-        LLVMTypeNode exprTypeNode = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, exprType);
 
         Type castType = n.castType().type();
-        LLVMTypeNode castTypeNode = PolyLLVMTypeUtils.polyLLVMTypeNode(nf, castType);
+        LLVMTypeRef castTypeRef = LLVMUtils.typeRef(castType, v);
 
-        LLVMOperand exprTranslation = (LLVMOperand) v.getTranslation(n.expr());
+        LLVMValueRef exprTranslation = v.getTranslation(n.expr());
 
         // The cast is an identity cast.
         if (exprType.typeEquals(castType)) {
-            v.addTranslation(n, v.getTranslation(n.expr()));
+            v.addTranslation(n, exprTranslation);
             return super.translatePseudoLLVM(v);
         }
 
-        Instruction instructionType;
         if (exprType.isPrimitive() && castType.isPrimitive()) {
             if (exprType.isLongOrLess() && castType.isLongOrLess()) {
                 // Integral primitives.
                 if (exprType.isChar() && !castType.isByte()) {
                     // A widening conversion of a char to an integral type T zero-extends
                     // the representation of the char value to fill the wider format.
-                    instructionType = LLVMConversion.ZEXT;
+                    v.addTranslation(n, LLVMBuildZExt(v.builder, exprTranslation, castTypeRef, "cast"));
                 }
                 else if (exprType.isImplicitCastValid(castType)) {
                     // Sign-extending widening cast.
-                    instructionType = LLVMConversion.SEXT;
+                    v.addTranslation(n, LLVMBuildSExt(v.builder, exprTranslation, castTypeRef, "cast"));
                 }
                 else if (exprType.isByte() && castType.isChar()) {
                     // Java language spec: first, the byte is converted to an int via widening
                     // primitive conversion (5.1.2), and then the resulting int is converted to a
                     // char by narrowing primitive conversion (5.1.3).
-                    instructionType = LLVMConversion.SEXT;
+                    v.addTranslation(n, LLVMBuildSExt(v.builder, exprTranslation, castTypeRef, "cast"));
                 }
                 else {
                     // Truncation.
-                    instructionType = LLVMConversion.TRUNC;
+                    v.addTranslation(n, LLVMBuildTrunc(v.builder, exprTranslation, castTypeRef, "cast"));
+
                 }
             } else if (exprType.isLongOrLess()) {
                 // Integral primitive to floating point primitive.
                 // TODO: Should sitofp know about float vs. double?
-                instructionType = LLVMConversion.SITOFP;
+                v.addTranslation(n, LLVMBuildSIToFP(v.builder, exprTranslation, castTypeRef, "cast"));
             } else if (exprType.isFloat() && castType.isDouble()) {
                 // Float to double.
-                instructionType = LLVMConversion.FPEXT;
+                v.addTranslation(n, LLVMBuildFPExt(v.builder, exprTranslation, castTypeRef, "cast"));
+
             } else {
                 // TODO: Handle casts from double to float?
                 throw new InternalCompilerError("Unhandled cast: " + n);
@@ -79,25 +74,15 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         else if (!castType.isPrimitive() && !exprType.isPrimitive()) {
             if (exprType.isImplicitCastValid(castType)) {
                 // This is an implicit reference cast.
-                instructionType = LLVMConversion.BITCAST;
+                v.addTranslation(n, LLVMBuildBitCast(v.builder, exprTranslation, castTypeRef, "cast"));
             } else {
                 // TODO: Need runtime check to catch invalid down-casts.
-                instructionType = LLVMConversion.BITCAST;
+                v.addTranslation(n, LLVMBuildBitCast(v.builder, exprTranslation, castTypeRef, "cast"));
             }
         }
         else {
             throw new InternalCompilerError("Unhandled cast: " + n);
         }
-
-        LLVMInstruction conv = nf.LLVMConversion(
-                instructionType,
-                exprTypeNode,
-                exprTranslation,
-                castTypeNode);
-        LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, castTypeNode);
-        conv = conv.result(result);
-        v.addTranslation(n, nf.LLVMESeq(conv, result));
-
         return super.translatePseudoLLVM(v);
     }
 }

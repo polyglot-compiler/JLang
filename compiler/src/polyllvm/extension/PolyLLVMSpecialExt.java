@@ -6,15 +6,10 @@ import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable;
-import polyllvm.ast.PseudoLLVM.Expressions.LLVMVariable.VarKind;
-import polyllvm.ast.PseudoLLVM.LLVMTypes.LLVMTypeNode;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMConversion;
-import polyllvm.ast.PseudoLLVM.Statements.LLVMInstruction;
-import polyllvm.util.PolyLLVMConstants;
-import polyllvm.util.PolyLLVMFreshGen;
-import polyllvm.util.PolyLLVMTypeUtils;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMSpecialExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -29,32 +24,12 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
         }
 
         if (n.kind() == Special.THIS) {
-            LLVMTypeNode thisType =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
-            v.addTranslation(n,
-                             nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
-                                             thisType,
-                                             VarKind.LOCAL));
+            v.addTranslation(n, LLVMGetParam(v.currFn(), 0));
         }
         else if (n.kind() == Special.SUPER) {
-            LLVMTypeNode thisType =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf,
-                                                       v.getCurrentClass()
-                                                        .type());
-            LLVMTypeNode superType =
-                    PolyLLVMTypeUtils.polyLLVMTypeNode(nf, n.type());
-            LLVMVariable thisVariable =
-                    nf.LLVMVariable(PolyLLVMConstants.THISSTRING,
-                                    thisType,
-                                    LLVMVariable.VarKind.LOCAL);
-            LLVMVariable result = PolyLLVMFreshGen.freshLocalVar(nf, superType);
-            LLVMInstruction cast =
-                    nf.LLVMConversion(LLVMConversion.BITCAST,
-                                      thisType,
-                                      thisVariable,
-                                      superType)
-                      .result(result);
-            v.addTranslation(n, nf.LLVMESeq(cast, result));
+            LLVMValueRef to_super = LLVMBuildBitCast(v.builder,
+                    LLVMGetParam(v.currFn(), 0), LLVMUtils.typeRef(n.type(), v), "cast_to_super");
+            v.addTranslation(n, to_super);
         }
 
         return super.translatePseudoLLVM(v);
