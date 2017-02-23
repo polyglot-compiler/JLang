@@ -25,7 +25,11 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class LLVMUtils {
 
     public static LLVMTypeRef llvmPtrSizedIntType() {
-        return LLVMInt64Type();
+        return LLVMIntType(llvmPtrSize());
+    }
+
+    public static int llvmPtrSize() {
+        return 64;
     }
 
     public static LLVMTypeRef ptrTypeRef(LLVMTypeRef elemType) {
@@ -308,6 +312,30 @@ public class LLVMUtils {
             return 64;
         throw new InternalCompilerError("Type " + t + " is not an integral type");
     }
+
+    /**
+     * Return the number of bytes needed to store type {@code t}
+     */
+    public static int sizeOfType(Type t) {
+        if (t.isBoolean()) {
+            return 1;
+        } else if (t.isLongOrLess()) {
+            assert numBitsOfIntegralType(t) % 8 == 0 : "numBitsOfIntegralType must return a multiple of 8";
+            return numBitsOfIntegralType(t)/8;
+        } else if (t.isFloat()) {
+            return 4; //Specified by java
+        } else if (t.isDouble()) {
+            return 8; //Specified by Java
+        } else if (t.isArray()) {
+            return LLVMUtils.llvmPtrSize();
+        } else if (t.isClass()) {
+            return LLVMUtils.llvmPtrSize();
+        } else if (t.isNull()) {
+            return LLVMUtils.llvmPtrSize();
+        } else throw new InternalCompilerError("Invalid type");
+
+    }
+
 
     //TODO: REMOVE These functions
 
