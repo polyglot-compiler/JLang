@@ -30,12 +30,12 @@ public class StringConversionVisitor extends NodeVisitor {
         if (n instanceof StringLit) {
             // TODO: Optimize by pre-creating byte array.
             StringLit str = (StringLit) n;
-            List<Expr> byteExprs = new ArrayList<>();
-            char bytes[] = str.value().toCharArray();
-            for (char b : bytes)
-                byteExprs.add(nf.CharLit(pos, b));
-            TypeNode byteType = nf.CanonicalTypeNode(pos, ts.Byte());
-            Expr byteArray = nf.NewArray(pos, byteType, /* dims */ 1, nf.ArrayInit(pos, byteExprs));
+            List<Expr> charExprs = new ArrayList<>();
+            char chars[] = str.value().toCharArray();
+            for (char b : chars)
+                charExprs.add(nf.CharLit(pos, b));
+            TypeNode byteType = nf.CanonicalTypeNode(pos, ts.Char());
+            Expr byteArray = nf.NewArray(pos, byteType, /* dims */ 1, nf.ArrayInit(pos, charExprs));
             TypeNode strType = nf.CanonicalTypeNode(pos, ts.String());
             return nf.New(pos, strType, Collections.singletonList(byteArray));
         }

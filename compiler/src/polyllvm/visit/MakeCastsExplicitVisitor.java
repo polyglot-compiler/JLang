@@ -26,9 +26,6 @@ public class MakeCastsExplicitVisitor extends AscriptionVisitor {
         if (parent instanceof Cast) {
             // We already have a cast; no need to add another.
             return n;
-        } else if (parent instanceof Eval) {
-            // We don't want to cast the eval sub-expression to void.
-            return n;
         } else {
             return super.leaveCall(parent, old, n, v);
         }
