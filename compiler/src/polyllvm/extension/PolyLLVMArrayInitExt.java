@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.*;
 import polyglot.util.CollectionUtil;
 import polyglot.util.Position;
@@ -24,8 +25,6 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
         List<Expr> elements = n.elements();
 
-        List<LLVMInstruction> instrs = new ArrayList<>();
-
         Expr intLit1 = nf
                          .IntLit(Position.compilerGenerated(),
                                  IntLit.INT,
@@ -35,17 +34,15 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
         List<Expr> dims = CollectionUtil.list(intLit1);
 
         New newArray = PolyLLVMNewArrayExt.translateArrayWithDims(v, nf, dims);
-        LLVMESeq createdArray = (LLVMESeq) v.getTranslation(newArray); //Will always be eseq as new objects are eseq
-        instrs.add(createdArray.instruction()); //Start with the empty array creation code
-
-        LLVMOperand arrayExpr = createdArray.expr();
+        LLVMValueRef array = v.getTranslation(newArray);
 
         //Create a Java local to construct ArrayAccessAssign to reuse translation
+        //TODO: Make fresh name generation more robust
         Id arrayId = nf.Id(Position.compilerGenerated(),
                            PolyLLVMFreshGen.freshLocalVar(nf, nf.LLVMVoidType())
-                                           .name());
+                                           .name().replace('.', '_'));
         Local arrayLocal = nf.Local(Position.compilerGenerated(), arrayId);
-        v.addTranslation(arrayLocal, arrayExpr);
+        v.addTranslation(arrayLocal, array);
 
         for (int i = 0; i < elements.size(); i++) {
             Expr expr = elements.get(i);
@@ -66,21 +63,13 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
                                                              Assign.ASSIGN,
                                                              expr)
                                           .type(n.type().toArray().base());
-            Stmt eval = nf.Eval(Position.compilerGenerated(), assign);
 
             v.lang().translatePseudoLLVM(intLitIndex, v);
             v.lang().translatePseudoLLVM(arrayAccess, v);
             v.lang().translatePseudoLLVM(assign, v);
-            v.lang().translatePseudoLLVM(eval, v);
-
-//            System.out.println("Assignment for element #" + i + " is :" + eval
-//                    + " --> " + v.getTranslation(eval));
-
-            instrs.add((LLVMInstruction) v.getTranslation(eval));
-
         }
 
-        v.addTranslation(n, nf.LLVMESeq(nf.LLVMSeq(instrs), arrayExpr));
+        v.addTranslation(n, array);
         return super.translatePseudoLLVM(v);
     }
 }

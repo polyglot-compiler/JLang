@@ -28,4 +28,16 @@ public class PolyLLVMArrayAccessAssignExt extends PolyLLVMAssignExt {
         v.addTranslation(n, store);
         return super.overrideTranslatePseudoLLVM(v);
     }
+
+    @Override
+    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+        ArrayAccessAssign n = (ArrayAccessAssign) node();
+        ArrayAccess arrAccess = n.left();
+        LLVMValueRef ptr = PolyLLVMArrayAccessExt.buildArrayElemPtr(arrAccess, v);
+        LLVMValueRef val = v.getTranslation(n.right());
+        LLVMValueRef store = LLVMBuildStore(v.builder, val, ptr);
+        v.addTranslation(n, store);
+        return super.overrideTranslatePseudoLLVM(v);
+    }
+
 }

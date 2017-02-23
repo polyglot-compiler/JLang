@@ -11,6 +11,8 @@ import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.PseudoLLVMTranslator;
 
+import java.util.stream.Stream;
+
 import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
@@ -51,9 +53,14 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
                 PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
 
 
-        LLVMTypeRef constructorType =LLVMUtils.methodType(n.constructorInstance().container(), v.typeSystem().Void(), n.constructorInstance().formalTypes(), v);
+        LLVMTypeRef constructorType = LLVMUtils.methodType(n.constructorInstance().container(),
+                v.typeSystem().Void(), n.constructorInstance().formalTypes(), v);
         LLVMValueRef constructor = LLVMUtils.getFunction(v.mod, mangledFuncName, constructorType);
-        LLVMValueRef procedureCall = LLVMUtils.buildProcedureCall(v.builder, constructor, cast);
+        LLVMValueRef[] constructorArgs = Stream.concat(
+                    Stream.of(cast),
+                    n.arguments().stream().map(v::getTranslation))
+                .toArray(LLVMValueRef[]::new);
+        LLVMUtils.buildProcedureCall(v.builder, constructor, constructorArgs);
 
         v.addTranslation(n, cast);
     }
