@@ -42,19 +42,17 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             LLVMBasicBlockRef body_entry = LLVMAppendBasicBlock(funcRef, "body_entry");
             LLVMPositionBuilderAtEnd(v.builder, entry);
 
-            for (int i=0;i<n.formals().size(); i++) {
+            for (int i = 0; i < n.formals().size(); ++i) {
                 Formal formal = n.formals().get(i);
                 LLVMTypeRef typeRef = LLVMUtils.typeRef(formal.type().type(), v);
-                LLVMValueRef alloc = LLVMBuildAlloca(v.builder, typeRef, "arg_"+formal.name());
-                LLVMValueRef cast = LLVMBuildBitCast(v.builder, LLVMGetParam(funcRef, i), typeRef, "cast");
-                LLVMBuildStore(v.builder, cast, alloc);
+                LLVMValueRef alloc = LLVMBuildAlloca(v.builder, typeRef, "arg_" + formal.name());
+                int idx = i + (pi.flags().isStatic() ? 0 : 1);
+                LLVMBuildStore(v.builder, LLVMGetParam(funcRef, idx), alloc);
                 v.addAllocation(formal.name(), alloc);
             }
 
             LLVMBuildBr(v.builder, body_entry);
             LLVMPositionBuilderAtEnd(v.builder,body_entry);
-
-
         }
 
         // Register as entry point if applicable.
