@@ -17,11 +17,12 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
 
     @Override
     public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
-        // Add a malloc declaration to the current module.
+        // Add a calloc declaration to the current module (declare i8* @calloc(i64, i64)).
         LLVMTypeRef retType = LLVMUtils.ptrTypeRef(LLVMInt8Type());
-        LLVMTypeRef argType = LLVMUtils.llvmPtrSizedIntType();
-        LLVMTypeRef funcType = LLVMUtils.functionType(retType, argType);
-        LLVMAddFunction(v.mod, Constants.MALLOC, funcType);
+        LLVMTypeRef numType = LLVMUtils.llvmPtrSizedIntType();
+        LLVMTypeRef sizeType = LLVMUtils.llvmPtrSizedIntType();
+        LLVMTypeRef funcType = LLVMUtils.functionType(retType, numType, sizeType);
+        LLVMAddFunction(v.mod, Constants.CALLOC, funcType);
         return v;
     }
 

@@ -1,6 +1,5 @@
 package polyllvm.extension;
 
-import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.New;
 import polyglot.ast.Node;
 import polyglot.types.ConstructorInstance;
@@ -37,8 +36,9 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         ReferenceType classtype = ci.container();
 
         //Allocate space for the new object - need to get the size of the object
-        LLVMValueRef mallocFunc = LLVMGetNamedFunction(v.mod, Constants.MALLOC);
-        LLVMValueRef obj = LLVMUtils.buildMethodCall(v.builder, mallocFunc, size);
+        LLVMValueRef calloc = LLVMGetNamedFunction(v.mod, Constants.CALLOC);
+        LLVMValueRef one = LLVMConstInt(LLVMUtils.llvmPtrSizedIntType(), 1, /* sign-xtend */ 0);
+        LLVMValueRef obj = LLVMUtils.buildMethodCall(v.builder, calloc, one, size);
 
         //Bitcast object
         LLVMValueRef cast = LLVMBuildBitCast(v.builder, obj, LLVMUtils.typeRef(classtype, v), "obj_cast");

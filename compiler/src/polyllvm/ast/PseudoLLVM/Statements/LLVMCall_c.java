@@ -34,7 +34,7 @@ public class LLVMCall_c extends LLVMInstruction_c implements LLVMCall {
 
     @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
-        if (function.name().equals(Constants.MALLOC)) {
+        if (function.name().equals(Constants.CALLOC)) {
             w.write("\n");
         }
 
