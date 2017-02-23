@@ -1,22 +1,21 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Conditional;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
-import polyglot.ast.Stmt;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
 import java.util.function.BiConsumer;
 
+import static org.bytedeco.javacpp.LLVM.*;
+
 public class PolyLLVMConditionalExt extends PolyLLVMExt {
 
     @Override
     public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         Conditional n = (Conditional) node();
-        LLVMValueRef condition = v.getTranslation(n.cond());
 
         LLVMBasicBlockRef currentBlock = LLVMGetInsertBlock(v.builder);
         LLVMBasicBlockRef firstBlock = LLVMGetFirstBasicBlock(v.currFn());

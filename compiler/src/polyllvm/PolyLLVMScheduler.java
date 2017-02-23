@@ -16,6 +16,7 @@ import polyglot.visit.LoopNormalizer;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.util.LLVMUtils;
+import polyllvm.util.MultiGoal;
 import polyllvm.visit.AssignmentDesugarVisitor;
 import polyllvm.visit.MakeCastsExplicitVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
@@ -27,47 +28,6 @@ public class PolyLLVMScheduler extends JLScheduler {
 
     public PolyLLVMScheduler(ExtensionInfo extInfo) {
         super(extInfo);
-    }
-
-    public Goal LoopNormalizer(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        TypeSystem ts = extInfo.typeSystem();
-        NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new LoopNormalizer(job, ts, nf));
-        try {
-            g.addPrerequisiteGoal(Disambiguated(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
-    public Goal AssignmentsDesugared(Job job) {
-        NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new AssignmentDesugarVisitor(nf));
-        try {
-            g.addPrerequisiteGoal(LoopNormalizer(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
-    @Override
-    public Goal TypeChecked(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        TypeSystem ts = extInfo.typeSystem();
-        NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new TypeChecker(job, ts, nf));
-        try {
-            g.addPrerequisiteGoal(AssignmentsDesugared(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
     }
 
     @Override
@@ -83,50 +43,29 @@ public class PolyLLVMScheduler extends JLScheduler {
         return internGoal(g);
     }
 
-    public Goal StringConverter(Job job) {
+    public Goal PrepareForLLVMOutput(Job job) {
         ExtensionInfo extInfo = job.extensionInfo();
         TypeSystem ts = extInfo.typeSystem();
         NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new StringConversionVisitor(ts, nf));
+        Goal prep = new MultiGoal(
+                job,
+                new VisitorGoal(job, new LoopNormalizer(job, ts, nf)),
+                new VisitorGoal(job, new AssignmentDesugarVisitor(nf)),
+                new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
+                new VisitorGoal(job, new StringConversionVisitor(ts, nf)),
+                new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.
+                new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf))
+        );
         try {
-            g.addPrerequisiteGoal(AssignmentsDesugared(job), this);
-            g.addPrerequisiteGoal(TypeChecked(job), this);
-        }
-        catch (CyclicDependencyException e) {
+            prep.addPrerequisiteGoal(Serialized(job), this);
+        } catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
         }
-        return internGoal(g);
-    }
-
-    public Goal ReTypeChecked(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        TypeSystem ts = extInfo.typeSystem();
-        NodeFactory nf = extInfo.nodeFactory();
-        Goal g = new VisitorGoal(job, new TypeChecker(job, ts, nf));
-        try {
-            g.addPrerequisiteGoal(StringConverter(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
-    }
-
-    public Goal MakeCastsExplicit(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
-        TypeSystem ts = extInfo.typeSystem();
-        Goal g = new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf));
-        try {
-            g.addPrerequisiteGoal(ReTypeChecked(job), this);
-        }
-        catch (CyclicDependencyException e) {
-            throw new InternalCompilerError(e);
-        }
-        return internGoal(g);
+        return internGoal(prep);
     }
 
     private static class LLVMOutputPass extends AbstractPass {
+
         LLVMOutputPass(Goal goal) {
             super(goal);
         }
@@ -194,8 +133,7 @@ public class PolyLLVMScheduler extends JLScheduler {
     public Goal CodeGenerated(Job job) {
         Goal translate = new LLVMOutputGoal(job);
         try {
-            translate.addPrerequisiteGoal(MakeCastsExplicit(job), this);
-            translate.addPrerequisiteGoal(StringConverter(job), this);
+            translate.addPrerequisiteGoal(PrepareForLLVMOutput(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
