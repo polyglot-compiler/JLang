@@ -37,7 +37,7 @@ public class PolyLLVMArrayAccessAssignExt extends PolyLLVMAssignExt {
         LLVMValueRef val = v.getTranslation(n.right());
         LLVMValueRef store = LLVMBuildStore(v.builder, val, ptr);
         v.addTranslation(n, store);
-        return super.overrideTranslatePseudoLLVM(v);
+        return super.translatePseudoLLVM(v);
     }
 
 }
