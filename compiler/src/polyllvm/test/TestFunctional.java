@@ -21,7 +21,8 @@ public class TestFunctional {
     private static final int TIMEOUT = 600; // 10 minutes
 
     @Parameter
-    public File file;
+    @SuppressWarnings("unused")
+    private File file;
 
     @Parameters(name = "{0}")
     public static Collection<File> getFiles() throws IOException {

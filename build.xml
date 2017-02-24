@@ -125,27 +125,12 @@
     <!-- ****************************************
        Configuration
        ****************************************  -->
-    <target name="configure" description="Configure the extension">
-        <antcall target="check-classpath" />
-    </target>
-
     <target name="check-classpath" description="Check the classpath contains the appropriate directories/jars">
         <available classname="polyglot.main.Main"
-	           classpathref="standard.classpath"
-	           property="cp_existence.polyglot"/>
-        <available classname="java_cup.Main"
-	           classpathref="standard.classpath"
-	           property="cp_existence.java_cup"/>
-        <available classname="jflex.Main"
-	           classpathref="standard.classpath"
-	           property="cp_existence.jflex"/>
-
+	               classpathref="standard.classpath"
+	               property="cp_existence.polyglot"/>
         <fail unless="cp_existence.polyglot"
-	      message="The polyglot classes must be on the classpath. Try adding polyglot.jar to the classpath."/>
-        <fail unless="cp_existence.java_cup"
-	      message="The java_cup classes must be on the classpath. Try adding java_cup.jar to the classpath."/>
-        <fail unless="cp_existence.jflex"
-	      message="The jflex classes must be on the classpath. Try adding jflex.jar to the classpath."/>
+	          message="The polyglot classes must be on the classpath. Try adding polyglot.jar to the classpath."/>
     </target>
 
     <!-- ****************************************
@@ -154,11 +139,14 @@
 
     <target name="compile-all" depends="compiler,runtime" description="Build the compiler and libraries"/>
 
-    <target name="compiler" depends="init,configure">
-        <antcall target="compile-ext"/>
+    <target name="compiler" depends="init,check-classpath">
+        <antcall target="compile-ext">
+            <param name="ext" value="${name}" />
+            <param name="ext.pkg" value="${package.dir}" />
+        </antcall>
     </target>
 
-    <target name="runtime" depends="init,configure" description="Compile the runtime" if="has-runtime">
+    <target name="runtime" depends="init,check-classpath" description="Compile the runtime" if="has-runtime">
         <mkdir dir="${runtime.classes}" />
         <javac source="1.7" target="1.7" srcdir="${runtime.src}" destdir="${runtime.classes}" debug="on" includes="**" includeantruntime="false">
             <classpath>
