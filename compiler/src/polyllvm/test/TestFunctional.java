@@ -1,5 +1,6 @@
 package polyllvm.test;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -23,6 +24,11 @@ public class TestFunctional {
     @SuppressWarnings("all")
     public File file;
 
+    @BeforeClass
+    public static void setup() throws IOException, InterruptedException {
+        TestUtil.make(DIR, TIMEOUT, "ir", "-k", "BATCHED=true");
+    }
+
     @Parameters(name = "{0}")
     public static Collection<File> getFiles() throws IOException {
         return TestUtil.collectFiles("java", DIR.toPath());
@@ -30,13 +36,14 @@ public class TestFunctional {
 
     @Test
     public void testFile() throws IOException, InterruptedException {
+
         File solFile = TestUtil.changeExtension(file, "java", "sol");
         String solTarget = DIR.toPath().relativize(solFile.toPath()).toString();
-        TestUtil.make(solTarget, DIR, TIMEOUT);
+        TestUtil.make(DIR, TIMEOUT, solTarget);
 
         File outFile = TestUtil.changeExtension(file, "java", "output");
         String outTarget = DIR.toPath().relativize(outFile.toPath()).toString();
-        TestUtil.make(outTarget, DIR, TIMEOUT);
+        TestUtil.make(DIR, TIMEOUT, outTarget);
 
         assertEquals("Functional test gave incorrect output",
                      TestUtil.fileToString(solFile),

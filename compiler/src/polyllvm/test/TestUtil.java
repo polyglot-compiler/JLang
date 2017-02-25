@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.fail;
 
@@ -38,9 +39,11 @@ final class TestUtil {
         return files;
     }
 
-    public static void make(String target, File dir, int timeout)
+    public static void make(File dir, int timeout, String... args)
             throws IOException, InterruptedException {
-        ProcessBuilder builder = new ProcessBuilder("make", target);
+        String description = Stream.of(args).reduce((s1, s2) -> s1 + " " + s2).orElse("[empty]");
+        String[] cmd = Stream.concat(Stream.of("make"), Stream.of(args)).toArray(String[]::new);
+        ProcessBuilder builder = new ProcessBuilder(cmd);
         builder.directory(dir);
         builder.redirectOutput(Redirect.INHERIT);
         builder.redirectError(Redirect.INHERIT);
@@ -48,10 +51,10 @@ final class TestUtil {
         if (!proc.waitFor(timeout, TimeUnit.SECONDS) || proc.exitValue() != 0) {
             if (proc.isAlive()) {
                 proc.destroyForcibly();
-                fail("Timeout occurred while making: " + target);
+                fail("Timeout occurred while making: " + description);
             }
             else {
-                fail("Nonzero exit status while making: " + target);
+                fail("Nonzero exit status while making: " + description);
             }
         }
     }

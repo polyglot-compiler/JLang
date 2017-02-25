@@ -8,7 +8,7 @@ JNI_LL = $(JNI_SRC:%.cpp=ll/%.ll)
 JAVA_LL = $(JAVA_SRC:src/%.java=ll/%.ll)
 ALL_LL = $(JNI_LL) $(JAVA_LL)
 
-all: runtime.ll
+all: runtime.o
 
 $(JNI_LL): ll/%.ll: %.cpp
 	@mkdir -p $(dir $@)
@@ -30,6 +30,12 @@ runtime.ll: $(ALL_LL)
 	@echo "Linking $(words $(ALL_LL)) IR files into $@"
 	@llvm-link -S -o $@ $(ALL_LL)
 
+runtime.s: runtime.ll
+	/usr/local/bin/llc -o $@ $<
+
+runtime.o: runtime.s
+	clang++ -c -o $@ $<
+
 .PHONY: clean
 clean:
-	rm -rf ll runtime.ll
+	rm -rf ll runtime.{ll,s,o}

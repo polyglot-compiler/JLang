@@ -1,9 +1,9 @@
 # `make all` creates solution files, llvm ir, and output files. Add the -k flag
 #            to make all targets regardless of errors.
 # `make <file>` to produce any individual generated file, such as .ll (LLVM IR),
-#               .lll (linked LLVM IR), .s (ASM), .binary (executable), etc.
+#               .s (ASM), .binary (executable), etc.
 # `make sol` to generate solution (.sol) files.
-# `make llvmir` to compile all programs down to LLVM IR (.ll) files.
+# `make ir` to compile all programs down to LLVM IR (.ll) files.
 # `make output` to compile LLVM IR to executable files and produce program
 #               output (.output) files.
 
@@ -12,9 +12,10 @@
 
 BASE_DIR = ../..
 RUNTIME = $(BASE_DIR)/runtime
+POLYLLVMC_SRC = $(shell find $(BASE_DIR)/compiler/src -name "*.java")
+RUNTIME_SRC = $(shell find $(RUNTIME) -name "*.java") $(shell find $(RUNTIME)/jni -name "*.cpp")
 
-SRCS = $(shell find . -name "*.java")
-LL = $(RUNTIME)/runtime.ll
+SRCS = $(shell find * -name "*.java")
 
 CLASSES = $(SRCS:.java=.class)
 SOL = $(SRCS:.java=.sol)
@@ -23,16 +24,13 @@ LINKED_LLVMIR = $(SRCS:.java=.lll)
 ASM = $(SRCS:.java=.s)
 BINARY = $(SRCS:.java=.binary)
 OUTPUT = $(SRCS:.java=.output)
-CHECK = $(SRCS:.java=.check)
 
 
-all: sol llvmir output
+all: sol ir output
 
 sol: $(SOL)
 
-llvmir: $(LLVMIR)
-
-linked-llvmir: $(LINKED_LLVMIR)
+ir: $(LLVMIR)
 
 asm: $(ASM)
 
@@ -40,39 +38,41 @@ binary: $(BINARY)
 
 output: $(OUTPUT)
 
-check: $(CHECK)
-
-polyllvmc:
-	ant -f "../../build.xml" jar
-
-%.class: %.java
-	javac -classpath $(RUNTIME)/classes $< || rm -f $@
+$(CLASSES): $(SRCS)
+	@echo "Compiling $(words $?) tests with javac"
+	@javac -cp $(RUNTIME)/classes -d basic $?
+	@touch $(CLASSES)
 
 %.sol: %.class
-	java -cp $(dir $@):$(RUNTIME)/classes $(notdir $*) | tee $@
+	@echo "Generating solution for $*"
+	@java -cp basic:$(RUNTIME)/classes $(notdir $*) > $@
 
-# Assume polyllvmc has changed.
-.PHONY: polyllvmc
-%.ll: %.java polyllvmc
-	$(BASE_DIR)/bin/polyllvmc -c -d $(dir $@) $<
+# Mixing Ant and Make is tricky; this rule isn't perfect,
+# but will work in almost all cases.
+ifdef BATCHED
+$(LLVMIR): $(SRCS) $(POLYLLVMC_SRC) $(RUNTIME_SRC)
+	@echo "Building polyllvmc"
+	@ant -f $(BASE_DIR)
+	@echo "Compiling $(words $(SRCS)) Java files down to IR"
+	@$(BASE_DIR)/bin/polyllvmc -c -d basic $(SRCS)
+else
+%.ll: %.java $(POLYLLVMC_SRC) $(RUNTIME_SRC)
+	@echo "Building polyllvmc"
+	@ant -f $(BASE_DIR)
+	@echo "Compiling $<"
+	@$(BASE_DIR)/bin/polyllvmc -c -d basic $<
+endif
 
-%.lll: %.ll
-	/usr/local/bin/llvm-link -o $@ -S $(LL) $<
-
-%.s: %.lll
-	/usr/local/bin/llc -o $@ $<
+%.s: %.ll
+	@/usr/local/bin/llc -o $@ $<
 
 %.binary: %.s
-	clang++ -L/usr/local/lib/ -lgc -o $@ $<
+	@clang++ -L/usr/local/lib/ -lgc -o $@ $(RUNTIME)/runtime.o $<
 
-%.loutput: %.lll
-	/usr/local/bin/lli $< | tee $@
-
-%.output: %.binary
-	$< | tee $@
-
-%.check: %.output %.sol
-	diff $^
+.PHONY: phony
+%.output: %.binary phony
+	@echo "Generating output for $*"
+	@$< | tee $@
 
 
 EXT = class sol ll lll s binary output
