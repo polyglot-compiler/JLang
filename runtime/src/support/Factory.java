@@ -1,6 +1,6 @@
-/**
- * Helps native code construct common Java objects.
- */
+package support;
+
+// Helps native code construct common Java objects.
 public class Factory {
 
     public static byte[] createByteArray(int len) {

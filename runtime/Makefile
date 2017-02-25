@@ -1,33 +1,35 @@
 BASE_DIR = ..
-RUNTIME = $(BASE_DIR)/runtime
-LLFOLDER = $(BASE_DIR)/runtime/ll
+POLYLLVMC_SRC = $(shell find $(BASE_DIR)/compiler/src -name "*.java")
 
-JAVA_SRCS = $(shell find . -name "*.java" -not -path ./src/placeholder/*)
-JNI_SRCS = $(shell find jni -name "*.cpp")
+JAVA_SRC = $(shell find src -name "*.java" -not -path src/placeholder/*)
+JNI_SRC = $(shell find jni -name "*.cpp")
 
-JNI_RES = $(JNI_SRCS:.cpp=.ll)
-JAVA_RES = $(JAVA_SRCS:.java=.ll)
+JNI_LL = $(JNI_SRC:%.cpp=ll/%.ll)
+JAVA_LL = $(JAVA_SRC:src/%.java=ll/%.ll)
+ALL_LL = $(JNI_LL) $(JAVA_LL)
 
-all: jni java linkall
+all: runtime.ll
 
-jni: $(JNI_RES)
+$(JNI_LL): ll/%.ll: %.cpp
+	@mkdir -p $(dir $@)
+	@echo "Compiling $<"
+	@clang++ -S -emit-llvm -std=c++11 -o $@ $<
 
-java: $(JAVA_RES)
+# Mixing Ant and Make is tricky; this rule isn't perfect,
+# but will work in almost all cases. Note that build.xml
+# defines PREBUILT before executing this Makefile.
+$(JAVA_LL): $(JAVA_SRC) $(POLYLLVMC_SRC)
+ifndef PREBUILT
+	@echo "Building polyllvmc"
+	@ant -S -f "$(BASE_DIR)"
+endif
+	@echo "Compiling $(words $(JAVA_SRC)) Java files down to IR"
+	@$(BASE_DIR)/bin/polyllvmc -c -d ll $(JAVA_SRC)
 
-.PHONY: polyllvmc
-polyllvmc:
-	ant -f "$(BASE_DIR)/build.xml" jar
-
-%.ll: %.cpp
-	mkdir -p $(dir $(LLFOLDER)/$@)
-	clang++ $< -S -emit-llvm -std=c++11 -o $(LLFOLDER)/$@
-
-%.ll: %.java polyllvmc
-	$(BASE_DIR)/bin/polyllvmc -c -d $(LLFOLDER)/$(dir $(subst src/,,$@)) $<
-
-linkall: jni java
-	llvm-link -o runtime.ll $(shell find $(LLFOLDER) -name "*.ll") -S
+runtime.ll: $(ALL_LL)
+	@echo "Linking $(words $(ALL_LL)) IR files into $@"
+	@llvm-link -S -o $@ $(ALL_LL)
 
 .PHONY: clean
 clean:
-	rm -rf ll runtime.ll classes
+	rm -rf ll runtime.ll

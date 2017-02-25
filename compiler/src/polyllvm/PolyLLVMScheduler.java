@@ -23,7 +23,8 @@ import polyllvm.visit.MakeCastsExplicitVisitor;
 import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringConversionVisitor;
 
-import javax.tools.JavaFileObject;
+import java.io.File;
+import java.nio.file.Paths;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -108,8 +109,13 @@ public class PolyLLVMScheduler extends JLScheduler {
             if (!(ast instanceof SourceFile))
                 throw new InternalCompilerError("AST root should be a SourceFile");
             SourceFile sf = (SourceFile) ast;
-            JavaFileObject jfo = extInfo.targetFactory().outputFileObject("", sf.source());
-            String outPath = jfo.getName();
+            String pkg = sf.package_() == null ? "" : sf.package_().toString();
+            String outPath = extInfo.targetFactory().outputFileObject(pkg, sf.source()).getName();
+            File dir = Paths.get(outPath).getParent().toFile();
+            if (!dir.exists() && !dir.mkdirs()) {
+                System.err.println("Failed to make output directory " + dir);
+                System.exit(1);
+            }
             LLVMPrintModuleToFile(mod, outPath, error);
             LLVMDisposeMessage(error);
             error.setNull();

@@ -153,6 +153,11 @@
                 <path refid="standard.classpath" />
             </classpath>
         </javac>
+        <exec executable="make">
+            <arg value="PREBUILT=true"/>
+            <arg value="-C"/>
+            <arg value="runtime"/>
+        </exec>
     </target>
 
 

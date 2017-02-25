@@ -16,13 +16,12 @@ import static org.junit.Assert.assertEquals;
 /** Run functional tests, using the JVM for reference. */
 @RunWith(Parameterized.class)
 public class TestFunctional {
-    private static final File DIR =
-            Paths.get("tests", "isolated").toFile();
+    private static final File DIR = Paths.get("tests", "isolated").toFile();
     private static final int TIMEOUT = 600; // 10 minutes
 
     @Parameter
-    @SuppressWarnings("unused")
-    private File file;
+    @SuppressWarnings("all")
+    public File file;
 
     @Parameters(name = "{0}")
     public static Collection<File> getFiles() throws IOException {
