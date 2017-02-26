@@ -54,7 +54,7 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
             boolean pre = op.equals(PRE_INC) || op.equals(PRE_DEC);
             boolean inc = op.equals(PRE_INC) || op.equals(POST_INC);
             Binary.Operator binop = inc ? Binary.ADD : Binary.SUB;
-            Position pos = Position.COMPILER_GENERATED;
+            Position pos = n.position();
             Expr delta = expr.type().isLongOrLess()
                     ? nf.IntLit(pos, IntLit.LONG, 1).type(v.typeSystem().Long())
                     : nf.FloatLit(pos, FloatLit.DOUBLE, 1.).type(v.typeSystem().Double());

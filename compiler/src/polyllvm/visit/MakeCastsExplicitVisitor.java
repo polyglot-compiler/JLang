@@ -38,7 +38,7 @@ public class MakeCastsExplicitVisitor extends AscriptionVisitor {
             return super.ascribe(e, toType);
         } else {
             NodeFactory nf = nodeFactory();
-            Position pos = Position.COMPILER_GENERATED;
+            Position pos = e.position();
             TypeNode typeNode = nf.CanonicalTypeNode(pos, toType);
             return nf.Cast(pos, typeNode, e).type(toType);
         }

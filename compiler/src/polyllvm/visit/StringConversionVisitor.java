@@ -26,7 +26,7 @@ public class StringConversionVisitor extends NodeVisitor {
 
     @Override
     public Node leave(Node old, Node n, NodeVisitor v) {
-        Position pos = Position.COMPILER_GENERATED;
+        Position pos = n.position();
         if (n instanceof StringLit) {
             // TODO: Optimize by pre-creating byte array.
             StringLit str = (StringLit) n;
@@ -53,7 +53,7 @@ public class StringConversionVisitor extends NodeVisitor {
 
     private Expr convertToString(Expr e) {
         Type t = e.type();
-        Position pos = Position.COMPILER_GENERATED;
+        Position pos = e.position();
         if (t.typeEquals(ts.String())) {
             return e;
         }

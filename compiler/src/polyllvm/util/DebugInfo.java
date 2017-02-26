@@ -84,7 +84,10 @@ public class DebugInfo {
      */
 
     public void emitLocation(Node n){
-        if(n.position().line() == Position.UNKNOWN || n.position().column() == Position.UNKNOWN) emitLocation();
+        if(n.position().line() == Position.UNKNOWN || n.position().column() == Position.UNKNOWN){
+            emitLocation();
+            return;
+        }
         emitLocation(n.position().line(), n.position().column());
     }
 
