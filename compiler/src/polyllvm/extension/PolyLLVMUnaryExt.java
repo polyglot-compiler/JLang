@@ -28,6 +28,8 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         LLVMValueRef exprRef = v.getTranslation(expr);
         LLVMTypeRef exprTypeRef = LLVMUtils.typeRef(expr.type(), v);
 
+        v.debugInfo.emitLocation(n);
+
         LLVMValueRef translation;
         if (op.equals(BIT_NOT)) {
             LLVMValueRef negOne = LLVMConstInt(exprTypeRef, -1, /* sign-extend */ 0);

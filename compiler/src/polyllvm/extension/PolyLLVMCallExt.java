@@ -21,7 +21,6 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Call n = (Call) node();
-
         if (n.target() instanceof Special
                 && ((Special) n.target()).kind() == Special.SUPER) {
             translateSuperCall(v);
@@ -52,6 +51,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                 .toArray(LLVMValueRef[]::new);
 
         LLVMValueRef func = LLVMUtils.getFunction(v.mod, mangledFuncName, tn);
+
+        v.debugInfo.emitLocation(n);
         if(n.methodInstance().returnType().isVoid()){
             v.addTranslation(n, LLVMUtils.buildProcedureCall(v.builder, func, args));
         } else{

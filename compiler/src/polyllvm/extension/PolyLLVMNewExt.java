@@ -35,6 +35,8 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         ReferenceType classtype = ci.container();
 
+        v.debugInfo.emitLocation(n);
+
         //Allocate space for the new object - need to get the size of the object
         LLVMValueRef calloc = LLVMGetNamedFunction(v.mod, Constants.CALLOC);
         LLVMValueRef obj = LLVMUtils.buildMethodCall(v.builder, calloc, size);

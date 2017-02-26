@@ -35,6 +35,8 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             return super.translatePseudoLLVM(v);
         }
 
+        v.debugInfo.emitLocation(n);
+
         if (exprType.isPrimitive() && castType.isPrimitive()) {
             if (exprType.isLongOrLess() && castType.isLongOrLess()) {
                 // Integral primitives.

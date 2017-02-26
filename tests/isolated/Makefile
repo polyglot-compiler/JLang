@@ -1,7 +1,7 @@
 # `make all` creates solution files, llvm ir, and output files. Add the -k flag
 #            to make all targets regardless of errors.
 # `make <file>` to produce any individual generated file, such as .ll (LLVM IR),
-#               .s (ASM), .binary (executable), etc.
+#               .binary (executable), etc.
 # `make sol` to generate solution (.sol) files.
 # `make ir` to compile all programs down to LLVM IR (.ll) files.
 # `make output` to compile LLVM IR to executable files and produce program
@@ -63,11 +63,8 @@ else
 	@$(BASE_DIR)/bin/polyllvmc -c -d basic $<
 endif
 
-%.s: %.ll
-	@/usr/local/bin/llc -o $@ $<
-
-%.binary: %.s
-	@clang++ -L/usr/local/lib/ -lgc -o $@ $(RUNTIME)/runtime.o $<
+%.binary: %.ll
+	@clang++ -L/usr/local/lib/ -lgc -g -o $@ $(RUNTIME)/runtime.o $<
 
 .PHONY: phony
 %.output: %.binary phony

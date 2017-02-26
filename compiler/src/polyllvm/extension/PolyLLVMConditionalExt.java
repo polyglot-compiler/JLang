@@ -17,6 +17,8 @@ public class PolyLLVMConditionalExt extends PolyLLVMExt {
     public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
         Conditional n = (Conditional) node();
 
+        v.debugInfo.emitLocation(n);
+
         LLVMBasicBlockRef currentBlock = LLVMGetInsertBlock(v.builder);
         LLVMBasicBlockRef firstBlock = LLVMGetFirstBasicBlock(v.currFn());
         LLVMPositionBuilderBefore(v.builder,LLVMGetBasicBlockTerminator(firstBlock));

@@ -25,6 +25,8 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
             throw new InternalCompilerError("Qualifier on this not supported yet (Java spec 15.8.4)");
         }
 
+        v.debugInfo.emitLocation(n);
+
         LLVMValueRef thisArg;
 
         if (n.kind() == ConstructorCall.THIS) {

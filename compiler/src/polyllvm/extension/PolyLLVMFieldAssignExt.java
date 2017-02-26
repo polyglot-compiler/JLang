@@ -23,6 +23,8 @@ public class PolyLLVMFieldAssignExt extends PolyLLVMAssignExt {
         LLVMValueRef expr = v.getTranslation(n.right());
         LLVMTypeRef fieldTypeRef = LLVMUtils.typeRef(field.type(), v);
 
+        v.debugInfo.emitLocation(n);
+
         if (field.flags().isStatic()) {
             // Static fields.
             String mangledGlobalName = PolyLLVMMangler.mangleStaticFieldName(field);
@@ -39,8 +41,6 @@ public class PolyLLVMFieldAssignExt extends PolyLLVMAssignExt {
                     LLVMConstInt(LLVMInt32Type(), 0, /*sign extend*/ 0),
                     LLVMConstInt(LLVMInt32Type(), fieldIndex, /*sign extend*/ 0));
             v.addTranslation(n, LLVMBuildStore(v.builder, expr, gep));
-
-
         }
 
         return super.translatePseudoLLVM(v);

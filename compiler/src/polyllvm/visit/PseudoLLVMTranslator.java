@@ -1,5 +1,6 @@
 package polyllvm.visit;
 
+import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Labeled;
 import polyglot.ast.Loop;
@@ -12,6 +13,7 @@ import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.util.Constants;
+import polyllvm.util.DebugInfo;
 import polyllvm.util.Triple;
 
 import java.util.*;
@@ -29,6 +31,7 @@ public class PseudoLLVMTranslator extends NodeVisitor {
 
     public final LLVMModuleRef mod;
     public final LLVMBuilderRef builder;
+    public final DebugInfo debugInfo;
 
     /**
      * A stack of all enclosing functions.
@@ -45,11 +48,11 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     public void addEntryPoint(LLVMValueRef entryPoint) { entryPoints.add(entryPoint); }
     public List<LLVMValueRef> getEntryPoints() { return ListUtil.copy(entryPoints, false); }
 
-    public PseudoLLVMTranslator(LLVMModuleRef mod, LLVMBuilderRef builder,
-                                PolyLLVMNodeFactory nf, TypeSystem ts) {
+    public PseudoLLVMTranslator(LLVMModuleRef mod, LLVMBuilderRef builder, DebugInfo debugInfo, PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());
         this.mod = mod;
         this.builder = builder;
+        this.debugInfo = debugInfo;
         this.nf = nf;
         this.ts = ts;
     }

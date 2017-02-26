@@ -21,6 +21,8 @@ public class PolyLLVMInstanceofExt extends PolyLLVMExt {
         LLVMValueRef compTypeIdVar = ClassObjects.classIdVarRef(v.mod, compareRt);
         LLVMTypeRef bytePtrType = LLVMUtils.ptrTypeRef(LLVMInt8Type());
 
+        v.debugInfo.emitLocation(n);
+
         // Cast obj to a byte pointer.
         LLVMValueRef objBitcast = LLVMBuildBitCast(v.builder, obj, bytePtrType, "cast_obj_byte_ptr");
 

@@ -16,6 +16,8 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         ArrayAccess n = (ArrayAccess) node();
+
+        v.debugInfo.emitLocation(n);
         LLVMValueRef ptr = buildArrayElemPtr(n, v);
         LLVMValueRef load = LLVMBuildLoad(v.builder, ptr, "arr_load");
         v.addTranslation(n, load);

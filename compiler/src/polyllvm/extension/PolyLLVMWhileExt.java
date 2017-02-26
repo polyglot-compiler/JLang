@@ -23,6 +23,8 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
         LLVMBasicBlockRef end = labels.part2();
         LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
 
+        v.debugInfo.emitLocation(n);
+
         LLVMPositionBuilderAtEnd(v.builder, LLVMGetInsertBlock(v.builder));
         LLVMBuildBr(v.builder, head);
 

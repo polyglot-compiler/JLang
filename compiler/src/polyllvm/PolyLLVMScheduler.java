@@ -16,6 +16,7 @@ import polyglot.util.InternalCompilerError;
 import polyglot.visit.LoopNormalizer;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.util.DebugInfo;
 import polyllvm.util.LLVMUtils;
 import polyllvm.util.MultiGoal;
 import polyllvm.visit.AssignmentDesugarVisitor;
@@ -79,16 +80,24 @@ public class PolyLLVMScheduler extends JLScheduler {
             ExtensionInfo extInfo = goal.job().extensionInfo();
             PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
             TypeSystem ts = extInfo.typeSystem();
+            Node ast = goal.job().ast();
+            if (!(ast instanceof SourceFile))
+                throw new InternalCompilerError("AST root should be a SourceFile");
+            SourceFile sf = (SourceFile) ast;
+
+
 
             LLVMModuleRef mod = LLVMModuleCreateWithName(goal.job().source().name());
             LLVMBuilderRef builder = LLVMCreateBuilder();
-            PseudoLLVMTranslator translator = new PseudoLLVMTranslator(mod, builder, nf, ts);
+            DebugInfo di = new DebugInfo(mod, builder, sf.source().path());
+            PseudoLLVMTranslator translator = new PseudoLLVMTranslator(mod, builder, di, nf, ts);
 
             //Setup class and dv types for arrays
             LLVMUtils.setupArrayType(translator);
 
-            Node ast = goal.job().ast();
             ast.visit(translator);
+
+            LLVMDIBuilderFinalize(di.diBuilder);
 
             // Verify.
             BytePointer error = new BytePointer((Pointer) null);
@@ -106,9 +115,6 @@ public class PolyLLVMScheduler extends JLScheduler {
             LLVMDisposePassManager(pass);
 
             // Emit.
-            if (!(ast instanceof SourceFile))
-                throw new InternalCompilerError("AST root should be a SourceFile");
-            SourceFile sf = (SourceFile) ast;
             String pkg = sf.package_() == null ? "" : sf.package_().toString();
             String outPath = extInfo.targetFactory().outputFileObject(pkg, sf.source()).getName();
             File dir = Paths.get(outPath).getParent().toFile();

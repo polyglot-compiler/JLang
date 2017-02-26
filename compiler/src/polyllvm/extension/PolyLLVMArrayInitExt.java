@@ -30,6 +30,8 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
         v.lang().translatePseudoLLVM(intLit1, v);
         List<Expr> dims = CollectionUtil.list(intLit1);
 
+        v.debugInfo.emitLocation(n);
+
         New newArray = PolyLLVMNewArrayExt.translateArrayWithDims(v, nf, dims, n.type().toArray().base());
         LLVMValueRef array = v.getTranslation(newArray);
 

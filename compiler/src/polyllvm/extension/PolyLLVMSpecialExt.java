@@ -23,6 +23,8 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
             throw new InternalCompilerError("Qualifier on this not supported yet (Java spec 15.8.4)");
         }
 
+        v.debugInfo.emitLocation(n);
+
         if (n.kind() == Special.THIS) {
             v.addTranslation(n, LLVMGetParam(v.currFn(), 0));
         }

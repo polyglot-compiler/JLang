@@ -17,6 +17,8 @@ public class PolyLLVMFloatLitExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         FloatLit n = (FloatLit) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
+        v.debugInfo.emitLocation(n);
+
         if (n.kind() == FloatLit.FLOAT) {
             v.addTranslation(n, LLVMConstReal(LLVMFloatType(), n.value()));
         }

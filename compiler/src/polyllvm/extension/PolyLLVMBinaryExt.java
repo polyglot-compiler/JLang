@@ -76,6 +76,8 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         assert n.left().type().typeEquals(n.right().type());
         Type elemType = n.left().type();
 
+        v.debugInfo.emitLocation(n);
+
         LLVMValueRef res;
         if (resType.isLongOrLess()) {
             // Integer binop.
@@ -103,6 +105,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
                                          LLVMBasicBlockRef falseBlock) {
         Binary n = (Binary) node();
         Operator op = n.operator();
+        v.debugInfo.emitLocation(n);
         if (op.equals(Binary.COND_AND)) {
             LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
             lang().translateLLVMConditional(n.left(), v, l1, falseBlock);

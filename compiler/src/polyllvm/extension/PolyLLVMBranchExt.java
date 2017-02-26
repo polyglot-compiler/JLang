@@ -17,6 +17,8 @@ public class PolyLLVMBranchExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Branch n = (Branch) node();
 
+        v.debugInfo.emitLocation(n);
+
         LLVMValueRef br;
         if (n.kind() == Branch.BREAK && n.label() != null) {
             br = LLVMBuildBr(v.builder, v.getLoopEnd(n.label()));

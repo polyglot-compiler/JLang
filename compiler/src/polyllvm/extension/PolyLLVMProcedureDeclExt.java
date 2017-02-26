@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.Formal;
 import polyglot.ast.MethodDecl;
 import polyglot.ast.Node;
@@ -10,6 +11,7 @@ import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
+import javax.sound.sampled.Line;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,8 +42,15 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         // Add function to module.
         LLVMValueRef funcRef = LLVMUtils.funcRef(v.mod, pi, funcType);
+
+        //Add debug info for the function
+        v.debugInfo.funcDebugInfo(v, n, funcRef);
+
+
         if (containsCode(pi)) {
             // TODO: Add alloca instructions for local variables here.
+            v.debugInfo.emitLocation();
+
             LLVMBasicBlockRef entry = LLVMAppendBasicBlock(funcRef, "allocs_entry");
             LLVMBasicBlockRef body_entry = LLVMAppendBasicBlock(funcRef, "body_entry");
             LLVMPositionBuilderAtEnd(v.builder, entry);
@@ -49,14 +58,22 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             for (int i = 0; i < n.formals().size(); ++i) {
                 Formal formal = n.formals().get(i);
                 LLVMTypeRef typeRef = LLVMUtils.typeRef(formal.type().type(), v);
+
+//                v.debugInfo.emitLocation(formal);
+
                 LLVMValueRef alloc = LLVMBuildAlloca(v.builder, typeRef, "arg_" + formal.name());
                 int idx = i + (pi.flags().isStatic() ? 0 : 1);
                 LLVMBuildStore(v.builder, LLVMGetParam(funcRef, idx), alloc);
                 v.addAllocation(formal.name(), alloc);
+
+                v.debugInfo.createParamVariable(v, formal, i, alloc);
             }
 
+            v.debugInfo.emitLocation(n);
             LLVMBuildBr(v.builder, body_entry);
             LLVMPositionBuilderAtEnd(v.builder,body_entry);
+
+
         }
 
         // Register as entry point if applicable.
@@ -73,6 +90,8 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         return super.enterTranslatePseudoLLVM(v);
     }
 
+
+
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         ProcedureDecl n = (ProcedureDecl) node();
@@ -88,6 +107,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         v.clearAllocations();
         v.popFn();
+        v.debugInfo.popScope();
         return super.translatePseudoLLVM(v);
     }
 }

@@ -17,13 +17,19 @@ public class PolyLLVMArrayAccessAssignExt extends PolyLLVMAssignExt {
         // Override in order to avoid emitting a load for the array element.
         ArrayAccessAssign n = (ArrayAccessAssign) node();
         ArrayAccess arrAccess = n.left();
+
         v.visitEdge(arrAccess, arrAccess.array());
         v.visitEdge(arrAccess, arrAccess.index());
+
+        v.debugInfo.emitLocation(n);
+
         LLVMValueRef ptr = PolyLLVMArrayAccessExt.buildArrayElemPtr(arrAccess, v);
 
         v.visitEdge(n, n.right());
         LLVMValueRef val = v.getTranslation(n.right());
 
+
+        v.debugInfo.emitLocation(n);
         LLVMValueRef store = LLVMBuildStore(v.builder, val, ptr);
         v.addTranslation(n, store);
         return super.overrideTranslatePseudoLLVM(v);
@@ -33,6 +39,9 @@ public class PolyLLVMArrayAccessAssignExt extends PolyLLVMAssignExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         ArrayAccessAssign n = (ArrayAccessAssign) node();
         ArrayAccess arrAccess = n.left();
+
+        v.debugInfo.emitLocation(n);
+
         LLVMValueRef ptr = PolyLLVMArrayAccessExt.buildArrayElemPtr(arrAccess, v);
         LLVMValueRef val = v.getTranslation(n.right());
         LLVMValueRef store = LLVMBuildStore(v.builder, val, ptr);

@@ -22,6 +22,8 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
         Receiver target = n.target();
 
+        v.debugInfo.emitLocation(n);
+
         if (n.flags().isStatic()) {
             // Static fields.
             String mangledGlobalName = PolyLLVMMangler.mangleStaticFieldName(n);
