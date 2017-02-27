@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
-import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -60,38 +59,29 @@ public class LLVMUtils {
 
 
     public static LLVMTypeRef typeRef(Type t, PseudoLLVMTranslator v) {
-        if (t.isBoolean()) {
-            return LLVMInt1Type();
-        } else if (t.isLongOrLess()) {
-            return LLVMIntType(numBitsOfIntegralType(t));
-        } else if (t.isVoid()) {
-            return LLVMVoidType();
-        } else if (t.isFloat()) {
-            return LLVMFloatType();
-        } else if (t.isDouble()) {
-            return LLVMDoubleType();
-        } else if (t.isArray()) {
+        if      (t.isBoolean())    return LLVMInt1Type();
+        else if (t.isLongOrLess()) return LLVMIntType(numBitsOfIntegralType(t));
+        else if (t.isVoid())       return LLVMVoidType();
+        else if (t.isFloat())      return LLVMFloatType();
+        else if (t.isDouble())     return LLVMDoubleType();
+        else if (t.isClass())      return structTypeRef(t.toReference(), v);
+        else if (t.isNull())       return ptrTypeRef(LLVMInt8Type());
+        else if (t.isArray()) {
             structTypeRef(v.getArrayType(), v);
             return ptrTypeRef(structTypeRefOpaque(Constants.ARR_CLASS, v.mod));
-        } else if (t.isClass()) {
-            return structTypeRef(t.toReference(), v);
-        } else if (t.isNull()) {
-            return ptrTypeRef(LLVMInt8Type());
-        } else throw new InternalCompilerError("Invalid type");
+        } else {
+            throw new InternalCompilerError("Invalid type");
+        }
     }
 
     public static LLVMValueRef defaultValue(Type t, PseudoLLVMTranslator v) {
-        if (t.isBoolean()) {
-            return LLVMConstInt(LLVMInt1Type(), 0, 0);
-        } else if (t.isLongOrLess()) {
-            return LLVMConstInt(typeRef(t, v), 0, 0);
-        } else if (t.isFloat()) {
-            return LLVMConstReal(LLVMFloatType(), 0);
-        } else if (t.isDouble()) {
-            return LLVMConstReal(LLVMDoubleType(), 0);
-        } else if (t.isClass() || t.isNull()) {
-            return LLVMConstNull(typeRef(t,v));
-        } else throw new InternalCompilerError("Invalid type");
+        if      (t.isBoolean())    return LLVMConstInt(LLVMInt1Type(), 0, 0);
+        else if (t.isLongOrLess()) return LLVMConstInt(typeRef(t, v), 0, 0);
+        else if (t.isFloat())      return LLVMConstReal(LLVMFloatType(), 0);
+        else if (t.isDouble())     return LLVMConstReal(LLVMDoubleType(), 0);
+        else if (t.isClass())      return LLVMConstNull(typeRef(t, v));
+        else if (t.isNull())       return LLVMConstNull(typeRef(t, v));
+        else throw new InternalCompilerError("Invalid type");
     }
 
     public static LLVMTypeRef functionType(LLVMTypeRef ret, LLVMTypeRef ...args) {
@@ -135,9 +125,8 @@ public class LLVMUtils {
      */
     public static LLVMValueRef getFunction(LLVMModuleRef mod, String functionName, LLVMTypeRef functionType) {
         LLVMValueRef func = LLVMGetNamedFunction(mod, functionName);
-        if (func == null) {
+        if (func == null)
             func = LLVMAddFunction(mod, functionName, functionType);
-        }
         return func;
     }
 
@@ -156,9 +145,8 @@ public class LLVMUtils {
      */
     public static LLVMValueRef getGlobal(LLVMModuleRef mod, String globalName, LLVMTypeRef globalType) {
         LLVMValueRef global = LLVMGetNamedGlobal(mod,globalName);
-        if (global == null) {
+        if (global == null)
             global = LLVMAddGlobal(mod, globalType, globalName);
-        }
         return global;
     }
 
@@ -183,9 +171,9 @@ public class LLVMUtils {
 
     public static LLVMValueRef buildStructGEP(LLVMBuilderRef builder,
                                               LLVMValueRef ptr,
-                                              long ...longIndices) {
+                                              int ...intIndices) {
         // LLVM suggests using i32 offsets for struct GEP instructions.
-        LLVMValueRef[] indices = LongStream.of(longIndices)
+        LLVMValueRef[] indices = IntStream.of(intIndices)
                 .mapToObj(i -> LLVMConstInt(LLVMInt32Type(), i, /* sign-extend */ 0))
                 .toArray(LLVMValueRef[]::new);
         return LLVMBuildGEP(builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
@@ -246,7 +234,6 @@ public class LLVMUtils {
         return LLVMUtils.getGlobal(v.mod, interfaceTableVar, interfaceTableType);
     }
 
-
     public static LLVMValueRef[] dvMethods(PseudoLLVMTranslator v, ReferenceType rt, LLVMValueRef next) {
         List<MethodInstance> layout = v.layouts(rt).part1();
         LLVMValueRef[] methods = Stream.concat(
@@ -267,7 +254,6 @@ public class LLVMUtils {
             MethodInstance mi = layout.get(i);
             MethodInstance miClass = v.methodInList(mi, classLayout);
             layout.set(i, miClass);
-
         }
         LLVMValueRef[] methods = Stream.concat(
                 Stream.of(next, ClassObjects.classObjRef(v.mod, it)),
@@ -279,8 +265,6 @@ public class LLVMUtils {
                 })).toArray(LLVMValueRef[]::new);
         return methods;
     }
-
-
 
     public static LLVMValueRef[] dvMethods(PseudoLLVMTranslator v, ReferenceType rt) {
         return dvMethods(v, rt, LLVMConstNull(ptrTypeRef(LLVMInt8Type())));
@@ -296,14 +280,11 @@ public class LLVMUtils {
 
 
     public static int numBitsOfIntegralType(Type t) {
-        if (t.isByte())
-            return 8;
-        else if (t.isShort() || t.isChar())
-            return 16;
-        else if (t.isInt())
-            return 32;
-        else if (t.isLong())
-            return 64;
+        if      (t.isByte())  return 8;
+        else if (t.isShort()) return 16;
+        else if (t.isChar())  return 16;
+        else if (t.isInt())   return 32;
+        else if (t.isLong())  return 64;
         throw new InternalCompilerError("Type " + t + " is not an integral type");
     }
 
@@ -311,23 +292,18 @@ public class LLVMUtils {
      * Return the number of bytes needed to store type {@code t}
      */
     public static int sizeOfType(Type t) {
-        if (t.isBoolean()) {
-            return 1;
-        } else if (t.isLongOrLess()) {
-            assert numBitsOfIntegralType(t) % 8 == 0 : "numBitsOfIntegralType must return a multiple of 8";
-            return numBitsOfIntegralType(t)/8;
-        } else if (t.isFloat()) {
-            return 4; //Specified by java
-        } else if (t.isDouble()) {
-            return 8; //Specified by Java
-        } else if (t.isArray()) {
-            return LLVMUtils.llvmPtrSize();
-        } else if (t.isClass()) {
-            return LLVMUtils.llvmPtrSize();
-        } else if (t.isNull()) {
-            return LLVMUtils.llvmPtrSize();
-        } else throw new InternalCompilerError("Invalid type");
-
+        if      (t.isBoolean()) return 1;
+        else if (t.isFloat())   return 4; // Specified by Java.
+        else if (t.isDouble())  return 8; // Specified by Java.
+        else if (t.isArray())   return LLVMUtils.llvmPtrSize();
+        else if (t.isClass())   return LLVMUtils.llvmPtrSize();
+        else if (t.isNull())    return LLVMUtils.llvmPtrSize();
+        else if (t.isLongOrLess()) {
+            assert numBitsOfIntegralType(t) % 8 == 0 : "integer bit count must be multiple of 8";
+            return numBitsOfIntegralType(t) / 8;
+        } else {
+            throw new InternalCompilerError("Invalid type");
+        }
     }
 
 }
