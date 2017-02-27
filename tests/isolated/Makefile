@@ -64,7 +64,8 @@ else
 endif
 
 %.binary: %.ll
-	@clang++ -L/usr/local/lib/ -lgc -g -o $@ $(RUNTIME)/runtime.o $<
+	@echo "Creating binary for $<"
+	@clang++ -Wno-override-module -L/usr/local/lib/ -lgc -g -o $@ $(RUNTIME)/runtime.o $<
 
 .PHONY: phony
 %.output: %.binary phony
@@ -72,7 +73,9 @@ endif
 	@$< | tee $@
 
 
-EXT = class sol ll lll s binary output
+EXT = sol ll binary output dSYM
 clean: $(addprefix clean-, $(EXT))
 clean-%:
 	find . -name "*.$*" -delete
+clean-dSYM:
+	rm -rf basic/*.dSYM

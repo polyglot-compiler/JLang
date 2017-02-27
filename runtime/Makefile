@@ -30,12 +30,9 @@ runtime.ll: $(ALL_LL)
 	@echo "Linking $(words $(ALL_LL)) IR files into $@"
 	@llvm-link -S -o $@ $(ALL_LL)
 
-runtime.s: runtime.ll
-	/usr/local/bin/llc -o $@ $<
-
-runtime.o: runtime.s
+runtime.o: runtime.ll
 	clang++ -c -o $@ $<
 
 .PHONY: clean
 clean:
-	rm -rf ll runtime.{ll,s,o}
+	rm -rf ll runtime.{ll,o}
