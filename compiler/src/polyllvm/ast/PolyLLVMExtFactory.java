@@ -3,9 +3,6 @@ package polyllvm.ast;
 import polyglot.ast.ExtFactory;
 
 /**
- * Extension factory for polyllvm extension.
+ * Extension factory for the PolyLLVM extension.
  */
-public interface PolyLLVMExtFactory extends ExtFactory {
-    // TODO: Declare any factory methods for new extension nodes.
-
-}
+public interface PolyLLVMExtFactory extends ExtFactory {}

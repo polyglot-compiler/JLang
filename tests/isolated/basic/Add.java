@@ -1,5 +1,11 @@
 public class Add {
+    static {
+        System.out.println("Static initializer");
+    }
+
+
     public static void main(String[] args) {
+        Add add = new Add(); // Runs static initializer.
         // String s = args[1];
         f(1);
     }

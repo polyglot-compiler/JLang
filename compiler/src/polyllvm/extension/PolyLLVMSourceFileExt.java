@@ -105,6 +105,8 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
             // are executed in textual order, per the JLS.
             LLVMValueRef priority = LLVMConstInt(LLVMInt32Type(), counter, /*sign-extend*/ 0);
             LLVMValueRef data = ctor.get(); // Calls supplier lambda to build ctor body.
+            if (data == null)
+                data = LLVMConstNull(voidPtr);
             LLVMValueRef castData = LLVMConstBitCast(data, voidPtr);
             structs[counter] = LLVMUtils.buildConstStruct(priority, func, castData);
 

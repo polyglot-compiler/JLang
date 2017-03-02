@@ -10,6 +10,7 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
         super();
     }
 
+    @SuppressWarnings("unused")
     public PolyLLVMExtFactory_c(ExtFactory nextExtFactory) {
         super(nextExtFactory);
     }
@@ -18,9 +19,6 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     protected Ext extNodeImpl() {
         return new PolyLLVMExt();
     }
-
-    // TODO: Override factory methods for new extension nodes in the current
-    // extension.
 
     @Override
     protected Ext extInstanceofImpl() {
@@ -205,6 +203,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     @Override
     protected Ext extArrayAccessImpl() {
         return new PolyLLVMArrayAccessExt();
+    }
+
+    @Override
+    protected Ext postExtInitializer(Ext ext) {
+        return new PolyLLVMInitializerExt();
     }
 
     @Override
