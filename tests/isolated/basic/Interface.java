@@ -1,5 +1,3 @@
-import placeholder.Print;
-
 /**
  * Created by Daniel on 10/30/16.
  */
@@ -7,9 +5,9 @@ public class Interface {
     public static void main(String[] args){
         I obj;
         obj = new I1();
-        Print.println(obj.method());
+        System.out.println(obj.method());
         obj = new I2();
-        Print.println(obj.method());
+        System.out.println(obj.method());
     }
 
 

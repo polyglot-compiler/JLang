@@ -1,10 +1,8 @@
-import placeholder.Print;
-
 public class Strings {
 
     public static void main(String[] args) {
-        Print.println("Hello, world! 1");
+        System.out.println("Hello, world! 1");
         String s = "Hello, world! 2";
-        Print.println(s);
+        System.out.println(s);
     }
 }

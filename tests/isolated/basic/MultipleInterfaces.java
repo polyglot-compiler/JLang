@@ -1,20 +1,18 @@
-import placeholder.Print;
-
 public class MultipleInterfaces {
     public static void main(String[] args){
         MIC obj = new MIC();
-        Print.println(obj.method1());
-        Print.println(obj.method2());
-        Print.println(obj.method3());
+        System.out.println(obj.method1());
+        System.out.println(obj.method2());
+        System.out.println(obj.method3());
 
         MI1 mi1 = obj;
-        Print.println(mi1.method1());
+        System.out.println(mi1.method1());
 
         MI2 mi2 = obj;
-        Print.println(mi2.method2());
+        System.out.println(mi2.method2());
 
         MI3 mi3 = obj;
-        Print.println(mi3.method3());
+        System.out.println(mi3.method3());
 
     }
 

@@ -21,18 +21,18 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
     @Override
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         Call n = (Call) node();
-        if (n.target() instanceof Special
-                && ((Special) n.target()).kind() == Special.SUPER) {
+
+        if (n.target() instanceof Special && ((Special) n.target()).kind().equals(Special.SUPER)) {
             translateSuperCall(v);
         }
         else if (n.target() instanceof Expr && v.isInterfaceCall(n.methodInstance())) {
             translateInterfaceMethodCall(v);
         }
-        else if (n.target() instanceof Expr) {
-            translateMethodCall(v);
+        else if (n.methodInstance().flags().isStatic()) {
+            translateStaticCall(v);
         }
         else {
-            translateStaticCall(v);
+            translateMethodCall(v);
         }
 
         return super.translatePseudoLLVM(v);

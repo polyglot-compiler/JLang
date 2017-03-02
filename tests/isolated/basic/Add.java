@@ -1,6 +1,3 @@
-import java.lang.System;
-import placeholder.Print;
-
 public class Add {
     public static void main(String[] args) {
         // String s = args[1];

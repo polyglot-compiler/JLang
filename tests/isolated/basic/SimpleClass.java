@@ -1,5 +1,3 @@
-import placeholder.Print;
-
 public class SimpleClass {
     int field;
     private char field2;
@@ -13,7 +11,7 @@ public class SimpleClass {
         SimpleClass s = new SimpleClass(0);
         s.field = 12;
         s.field2 = 'A';
-        Print.println(s.method() + s.privateMethod());
+        System.out.println(s.method() + s.privateMethod());
     }
 
     public int method() {

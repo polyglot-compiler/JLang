@@ -73,7 +73,7 @@ endif
 	@$< | tee $@
 
 
-EXT = sol ll binary output dSYM
+EXT = sol ll binary output dSYM class
 clean: $(addprefix clean-, $(EXT))
 clean-%:
 	find . -name "*.$*" -delete

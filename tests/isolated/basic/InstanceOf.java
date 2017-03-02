@@ -1,5 +1,3 @@
-import placeholder.Print;
-
 public class InstanceOf implements IA {
 
     public static void main(String[] args) {
@@ -7,11 +5,11 @@ public class InstanceOf implements IA {
     }
 
     public static void f(Object o) {
-        Print.println(o instanceof InstanceOf);
-        Print.println(o instanceof Object);
-        Print.println(o instanceof String);
-        Print.println(o instanceof IA);
-        Print.println(o instanceof IB);
+        System.out.println(o instanceof InstanceOf);
+        System.out.println(o instanceof Object);
+        System.out.println(o instanceof String);
+        System.out.println(o instanceof IA);
+        System.out.println(o instanceof IB);
     }
 }
 

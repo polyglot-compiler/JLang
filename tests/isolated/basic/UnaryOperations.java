@@ -1,34 +1,28 @@
-import placeholder.Print;
-
 public class UnaryOperations {
     public static void main(String[] args){
         int x = -10;
-        Print.println(x);
+        System.out.println(x);
         x = -x;
-        Print.println(x);
+        System.out.println(x);
 
-        Print.println((-100)+ 10);
+        System.out.println((-100)+ 10);
 
-        Print.println(+10);
-        Print.println(+(-10));
+        System.out.println(+10);
+        System.out.println(+(-10));
 
-        Print.println(~0);
-        Print.println(~10);
-        Print.println(~100);
+        System.out.println(~0);
+        System.out.println(~10);
+        System.out.println(~100);
 
 
         int y = 0;
-        Print.println((y++) + (++y));
-        Print.println(y);
-        Print.println((y--) + (--y));
-        Print.println(y);
+        System.out.println((y++) + (++y));
+        System.out.println(y);
+        System.out.println((y--) + (--y));
+        System.out.println(y);
 
-        println(!true);
-        println(!false);
+        System.out.println(!true);
+        System.out.println(!false);
 
-    }
-
-    private static void println(boolean b){
-        Print.println(b ? 1 : 0);
     }
 }
