@@ -48,6 +48,13 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     public void addEntryPoint(LLVMValueRef entryPoint) { entryPoints.add(entryPoint); }
     public List<LLVMValueRef> getEntryPoints() { return ListUtil.copy(entryPoints, false); }
 
+
+    /**
+     * Flag to determine if in Try, and landingpad to jump to if in a Try
+     */
+    private boolean inTry = false;
+    private LLVMBasicBlockRef lpad = null;
+
     public PseudoLLVMTranslator(LLVMModuleRef mod, LLVMBuilderRef builder, DebugInfo debugInfo, PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());
         this.mod = mod;
@@ -409,6 +416,10 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         return getMethodIndex(type, methodInstance, layouts(type).part1());
     }
 
+    /*
+     * Functions for accessing methods and fields
+     */
+
     public int getMethodIndex(ReferenceType type, MethodInstance methodInstance, List<MethodInstance> methodLayout) {
         for (int i = 0; i < methodLayout.size(); i++) {
             if (methodLayout.get(i).isSameMethod(methodInstance)) {
@@ -430,6 +441,33 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         throw new InternalCompilerError("The field " + fieldInstance
                 + " is not in the class " + type);
 
+    }
+
+    /*
+     * Methods for implementing exceptions
+     */
+    public void enterTry(){
+        inTry = true;
+        lpad = LLVMAppendBasicBlock(currFn(), "lpad");
+    }
+
+    public void exitTry(){
+        inTry = false;
+        lpad = null;
+    }
+
+    public boolean inTry(){
+        return inTry;
+    }
+
+    public LLVMBasicBlockRef currLpad(){
+        assert inTry;
+        return lpad;
+    }
+
+    public void setLpad(LLVMBasicBlockRef lpad){
+        assert inTry;
+        this.lpad = lpad;
     }
 
     /**

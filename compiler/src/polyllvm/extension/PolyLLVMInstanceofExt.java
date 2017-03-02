@@ -29,7 +29,7 @@ public class PolyLLVMInstanceofExt extends PolyLLVMExt {
         // Build call to native code.
         LLVMValueRef function = LLVMUtils.getFunction(v.mod, "instanceof",
                 LLVMUtils.functionType(LLVMInt1Type(), bytePtrType, bytePtrType));
-        LLVMValueRef result = LLVMUtils.buildMethodCall(v.builder, function, objBitcast, compTypeIdVar);
+        LLVMValueRef result = LLVMUtils.buildMethodCall(v, function, objBitcast, compTypeIdVar);
 
         v.addTranslation(n, result);
         return super.translatePseudoLLVM(v);

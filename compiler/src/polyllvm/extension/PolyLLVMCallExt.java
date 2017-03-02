@@ -54,9 +54,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
         v.debugInfo.emitLocation(n);
         if(n.methodInstance().returnType().isVoid()){
-            v.addTranslation(n, LLVMUtils.buildProcedureCall(v.builder, func, args));
+            v.addTranslation(n, LLVMUtils.buildProcedureCall(v, func, args));
         } else{
-            v.addTranslation(n, LLVMUtils.buildMethodCall(v.builder, func, args));
+            v.addTranslation(n, LLVMUtils.buildMethodCall(v, func, args));
         }
 
     }
@@ -90,9 +90,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                 .toArray(LLVMValueRef[]::new);
 
         if(n.methodInstance().returnType().isVoid()){
-            v.addTranslation(n, LLVMUtils.buildProcedureCall(v.builder, superBitCast, args));
+            v.addTranslation(n, LLVMUtils.buildProcedureCall(v, superBitCast, args));
         } else{
-            v.addTranslation(n, LLVMUtils.buildMethodCall(v.builder, superBitCast, args));
+            v.addTranslation(n, LLVMUtils.buildMethodCall(v, superBitCast, args));
         }
 
     }
@@ -126,9 +126,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
             ).toArray(LLVMValueRef[]::new);
 
         if(n.methodInstance().returnType().isVoid()){
-            v.addTranslation(n,LLVMUtils.buildProcedureCall(v.builder, methodPtr, args));
+            v.addTranslation(n,LLVMUtils.buildProcedureCall(v, methodPtr, args));
         } else {
-            v.addTranslation(n,LLVMUtils.buildMethodCall(v.builder, methodPtr, args));
+            v.addTranslation(n,LLVMUtils.buildMethodCall(v, methodPtr, args));
 
         }
     }
@@ -158,7 +158,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                 LLVMInt32Type()                       // int
         );
         LLVMValueRef getInterfaceMethod = LLVMUtils.getFunction(v.mod, "__getInterfaceMethod", getInterfaceMethodType);
-        LLVMValueRef interfaceMethod = LLVMUtils.buildMethodCall(v.builder, getInterfaceMethod,
+        LLVMValueRef interfaceMethod = LLVMUtils.buildMethodCall(v, getInterfaceMethod,
                 obj_bitcast, interfaceStringBytePtr, LLVMConstInt(LLVMInt32Type(), methodIndex, /* sign-extend */ 0));
 
         LLVMValueRef cast = LLVMBuildBitCast(v.builder, interfaceMethod, methodType, "cast_interface_method");
@@ -171,9 +171,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                         .toArray(LLVMValueRef[]::new);
 
         if(n.methodInstance().returnType().isVoid()){
-            v.addTranslation(n, LLVMUtils.buildProcedureCall(v.builder, cast, args));
+            v.addTranslation(n, LLVMUtils.buildProcedureCall(v, cast, args));
         } else{
-            v.addTranslation(n, LLVMUtils.buildMethodCall(v.builder, cast, args));
+            v.addTranslation(n, LLVMUtils.buildMethodCall(v, cast, args));
         }
     }
 

@@ -52,7 +52,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
 
             v.debugInfo.emitLocation();
 
-            LLVMUtils.buildProcedureCall(v.builder, javaEntryPoint, LLVMGetFirstParam(func));
+            LLVMUtils.buildProcedureCall(v, javaEntryPoint, LLVMGetFirstParam(func));
             LLVMBuildRetVoid(v.builder);
 
             v.debugInfo.popScope();
