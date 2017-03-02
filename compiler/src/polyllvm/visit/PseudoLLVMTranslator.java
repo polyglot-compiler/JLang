@@ -1,6 +1,5 @@
 package polyllvm.visit;
 
-import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Labeled;
 import polyglot.ast.Loop;
@@ -17,6 +16,7 @@ import polyllvm.util.DebugInfo;
 import polyllvm.util.Triple;
 
 import java.util.*;
+import java.util.function.Supplier;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -47,6 +47,17 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     private List<LLVMValueRef> entryPoints = new ArrayList<>();
     public void addEntryPoint(LLVMValueRef entryPoint) { entryPoints.add(entryPoint); }
     public List<LLVMValueRef> getEntryPoints() { return ListUtil.copy(entryPoints, false); }
+
+    /**
+     * A list of ctor functions to be added to the module.
+     * The ctor supplier should simply build the body of the ctor and return a pointer to the data
+     * that it initializes, or return null if not applicable. (If the associated data is never used
+     * in the resulting program, then LLVM knows to prevent the ctor from running.)
+     * Ctor functions will run in the order that they are added to this list.
+     */
+    private List<Supplier<LLVMValueRef>> ctors = new ArrayList<>();
+    public void addCtor(Supplier<LLVMValueRef> ctor) { ctors.add(ctor); }
+    public List<Supplier<LLVMValueRef>> getCtors() { return ListUtil.copy(ctors, false); }
 
     public PseudoLLVMTranslator(LLVMModuleRef mod, LLVMBuilderRef builder, DebugInfo debugInfo, PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());

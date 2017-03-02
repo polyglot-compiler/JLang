@@ -1,3 +1,6 @@
+import java.lang.System;
+import placeholder.Print;
+
 public class Add {
     public static void main(String[] args) {
         // String s = args[1];
@@ -5,6 +8,7 @@ public class Add {
     }
 
     public static int f(int i) {
+        System.out.println("Hello!");
         char c = 1;
         short s = 2;
         if (i < 2 && i > -10) {
