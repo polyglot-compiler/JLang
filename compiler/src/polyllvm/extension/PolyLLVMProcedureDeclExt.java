@@ -1,6 +1,5 @@
 package polyllvm.extension;
 
-import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.Formal;
 import polyglot.ast.MethodDecl;
 import polyglot.ast.Node;
@@ -11,7 +10,7 @@ import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.LLVMUtils;
 import polyllvm.visit.PseudoLLVMTranslator;
 
-import javax.sound.sampled.Line;
+import java.lang.Override;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,6 +28,8 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         ProcedureDecl n = (ProcedureDecl) node();
         TypeSystem ts = v.typeSystem();
         ProcedureInstance pi = n.procedureInstance();
+        if (!containsCode(pi))
+            return super.enterTranslatePseudoLLVM(v); // Ignore native methods.
 
         // Build function type.
         Type retType = n instanceof MethodDecl ? ((MethodDecl) n).returnType().type() : ts.Void();
@@ -40,41 +41,29 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 ? LLVMUtils.functionType(retType, formalTypes, v)
                 : LLVMUtils.methodType(target, retType, formalTypes, v);
 
-        // Add function to module.
         LLVMValueRef funcRef = LLVMUtils.funcRef(v.mod, pi, funcType);
-
-        //Add debug info for the function
         v.debugInfo.funcDebugInfo(v, n, funcRef);
+        v.debugInfo.emitLocation(n);
 
+        LLVMBasicBlockRef entry = LLVMAppendBasicBlock(funcRef, "allocs_entry");
+        LLVMBasicBlockRef body_entry = LLVMAppendBasicBlock(funcRef, "body_entry");
+        LLVMPositionBuilderAtEnd(v.builder, entry);
 
-        if (containsCode(pi)) {
-            // TODO: Add alloca instructions for local variables here.
-            v.debugInfo.emitLocation();
+        for (int i = 0; i < n.formals().size(); ++i) {
+            Formal formal = n.formals().get(i);
+            LLVMTypeRef typeRef = LLVMUtils.typeRef(formal.type().type(), v);
 
-            LLVMBasicBlockRef entry = LLVMAppendBasicBlock(funcRef, "allocs_entry");
-            LLVMBasicBlockRef body_entry = LLVMAppendBasicBlock(funcRef, "body_entry");
-            LLVMPositionBuilderAtEnd(v.builder, entry);
+            LLVMValueRef alloc = LLVMBuildAlloca(v.builder, typeRef, "arg_" + formal.name());
+            int idx = i + (pi.flags().isStatic() ? 0 : 1);
+            LLVMBuildStore(v.builder, LLVMGetParam(funcRef, idx), alloc);
+            v.addAllocation(formal.name(), alloc);
 
-            for (int i = 0; i < n.formals().size(); ++i) {
-                Formal formal = n.formals().get(i);
-                LLVMTypeRef typeRef = LLVMUtils.typeRef(formal.type().type(), v);
-
-//                v.debugInfo.emitLocation(formal);
-
-                LLVMValueRef alloc = LLVMBuildAlloca(v.builder, typeRef, "arg_" + formal.name());
-                int idx = i + (pi.flags().isStatic() ? 0 : 1);
-                LLVMBuildStore(v.builder, LLVMGetParam(funcRef, idx), alloc);
-                v.addAllocation(formal.name(), alloc);
-
-                v.debugInfo.createParamVariable(v, formal, i, alloc);
-            }
-
-            v.debugInfo.emitLocation(n);
-            LLVMBuildBr(v.builder, body_entry);
-            LLVMPositionBuilderAtEnd(v.builder,body_entry);
-
-
+            v.debugInfo.createParamVariable(v, formal, i, alloc);
         }
+
+        v.debugInfo.emitLocation(n);
+        LLVMBuildBr(v.builder, body_entry);
+        LLVMPositionBuilderAtEnd(v.builder,body_entry);
 
         // Register as entry point if applicable.
         boolean isEntryPoint = n.name().equals("main")
@@ -96,13 +85,13 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
         ProcedureDecl n = (ProcedureDecl) node();
         ProcedureInstance pi = n.procedureInstance();
+        if (!containsCode(pi))
+            return super.translatePseudoLLVM(v); // Ignore native methods.
 
         // Add void return if necessary.
-        if (containsCode(pi)) {
-            LLVMBasicBlockRef block = LLVMGetInsertBlock(v.builder);
-            if (LLVMGetBasicBlockTerminator(block) == null) {
-                LLVMBuildRetVoid(v.builder);
-            }
+        LLVMBasicBlockRef block = LLVMGetInsertBlock(v.builder);
+        if (LLVMGetBasicBlockTerminator(block) == null) {
+            LLVMBuildRetVoid(v.builder);
         }
 
         v.clearAllocations();
