@@ -18,6 +18,9 @@ public class Throwable implements Serializable {
     public Throwable(Throwable t) {}
     protected Throwable(String s, Throwable t, boolean b1, boolean b2) {}
 
+    public String toString(){
+        return "";
+    }
 
     public final synchronized void addSuppressed(Throwable t){}
     public synchronized Throwable fillInStackTrace() {return null;}
