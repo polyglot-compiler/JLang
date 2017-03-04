@@ -7,12 +7,10 @@ import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.*;
 import static polyglot.ast.Binary.*;
-
-import java.util.List;
 
 public class PolyLLVMBinaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -66,7 +64,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
     }
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         Binary n = (Binary) node();
         Type resType = n.type();
         LLVMValueRef left = v.getTranslation(n.left());
@@ -100,7 +98,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
     }
 
     @Override
-    public void translateLLVMConditional(PseudoLLVMTranslator v,
+    public void translateLLVMConditional(LLVMTranslator v,
                                          LLVMBasicBlockRef trueBlock,
                                          LLVMBasicBlockRef falseBlock) {
         Binary n = (Binary) node();

@@ -5,7 +5,7 @@ import polyglot.ast.Node;
 import polyglot.ast.Stmt;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import java.util.function.BiConsumer;
 
@@ -15,7 +15,7 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         If n = (If) node();
         LLVMBasicBlockRef ifEnd = LLVMAppendBasicBlock(v.currFn(), "if_end");
         LLVMBasicBlockRef ifTrue = LLVMAppendBasicBlock(v.currFn(), "if_true");

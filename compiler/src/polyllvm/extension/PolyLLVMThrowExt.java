@@ -6,21 +6,20 @@ import polyglot.ast.Node;
 import polyglot.ast.Throw;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.Constants;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 public class PolyLLVMThrowExt extends PolyLLVMExt {
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         Throw n = (Throw) node();
-        LLVMValueRef allocateExnFunc = LLVMUtils.getFunction(v.mod, Constants.ALLOCATE_EXCEPTION,
-                LLVMUtils.functionType(LLVMUtils.llvmBytePtr(), LLVMUtils.llvmBytePtr()));
-        LLVMValueRef throwExnFunc = LLVMUtils.getFunction(v.mod, Constants.THROW_EXCEPTION,
-                LLVMUtils.functionType(LLVMVoidType(), LLVMUtils.llvmBytePtr()));
-        LLVMValueRef translation = LLVMBuildBitCast(v.builder, v.getTranslation(n.expr()), LLVMUtils.llvmBytePtr(), "cast");
-        LLVMValueRef exn = LLVMUtils.buildMethodCall(v, allocateExnFunc, translation);
-        LLVMUtils.buildProcedureCall(v, throwExnFunc, exn);
+        LLVMValueRef allocateExnFunc = v.utils.getFunction(v.mod, Constants.ALLOCATE_EXCEPTION,
+                v.utils.functionType(v.utils.llvmBytePtr(), v.utils.llvmBytePtr()));
+        LLVMValueRef throwExnFunc = v.utils.getFunction(v.mod, Constants.THROW_EXCEPTION,
+                v.utils.functionType(LLVMVoidType(), v.utils.llvmBytePtr()));
+        LLVMValueRef translation = LLVMBuildBitCast(v.builder, v.getTranslation(n.expr()), v.utils.llvmBytePtr(), "cast");
+        LLVMValueRef exn = v.utils.buildMethodCall(allocateExnFunc, translation);
+        v.utils.buildProcedureCall(throwExnFunc, exn);
         LLVMBuildUnreachable(v.builder);
         return super.translatePseudoLLVM(v);
     }

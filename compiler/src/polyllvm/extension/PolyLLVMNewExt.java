@@ -6,9 +6,8 @@ import polyglot.types.ConstructorInstance;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.util.Constants;
-import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import java.util.stream.Stream;
 
@@ -18,7 +17,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         New n = (New) node();
 
         ConstructorInstance ci = n.constructorInstance();
@@ -29,7 +28,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         return super.translatePseudoLLVM(v);
     }
 
-    public void translateWithSize(PseudoLLVMTranslator v, LLVMValueRef size) {
+    public void translateWithSize(LLVMTranslator v, LLVMValueRef size) {
         New n = (New) node();
         ConstructorInstance ci = n.constructorInstance();
 
@@ -39,16 +38,16 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         //Allocate space for the new object - need to get the size of the object
         LLVMValueRef calloc = LLVMGetNamedFunction(v.mod, Constants.CALLOC);
-        LLVMValueRef obj = LLVMUtils.buildMethodCall(v, calloc, size);
+        LLVMValueRef obj = v.utils.buildMethodCall(calloc, size);
 
         v.debugInfo.emitLocation(n);
 
         //Bitcast object
-        LLVMValueRef cast = LLVMBuildBitCast(v.builder, obj, LLVMUtils.typeRef(classtype, v), "obj_cast");
+        LLVMValueRef cast = LLVMBuildBitCast(v.builder, obj, v.utils.typeRef(classtype), "obj_cast");
         //Set the Dispatch vector
-        LLVMValueRef gep = LLVMUtils.buildGEP(v.builder, cast, 
+        LLVMValueRef gep = v.utils.buildGEP(v.builder, cast,
                 LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 0, 0));
-        LLVMValueRef dvGlobal = LLVMUtils.getDvGlobal(v, classtype);
+        LLVMValueRef dvGlobal = v.utils.getDvGlobal(classtype);
         LLVMBuildStore(v.builder, dvGlobal, gep);
 
         //Call the constructor function
@@ -56,14 +55,14 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
                 PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
 
 
-        LLVMTypeRef constructorType = LLVMUtils.methodType(n.constructorInstance().container(),
-                v.typeSystem().Void(), n.constructorInstance().formalTypes(), v);
-        LLVMValueRef constructor = LLVMUtils.getFunction(v.mod, mangledFuncName, constructorType);
+        LLVMTypeRef constructorType = v.utils.methodType(n.constructorInstance().container(),
+                v.typeSystem().Void(), n.constructorInstance().formalTypes());
+        LLVMValueRef constructor = v.utils.getFunction(v.mod, mangledFuncName, constructorType);
         LLVMValueRef[] constructorArgs = Stream.concat(
                     Stream.of(cast),
                     n.arguments().stream().map(v::getTranslation))
                 .toArray(LLVMValueRef[]::new);
-        LLVMUtils.buildProcedureCall(v, constructor, constructorArgs);
+        v.utils.buildProcedureCall(constructor, constructorArgs);
 
         v.addTranslation(n, cast);
     }

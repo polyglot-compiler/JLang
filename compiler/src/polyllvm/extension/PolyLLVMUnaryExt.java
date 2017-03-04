@@ -7,8 +7,7 @@ import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import java.util.Arrays;
 
@@ -19,14 +18,14 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         Unary n = (Unary) node();
         Type t = n.type();
         NodeFactory nf = v.nodeFactory();
         Operator op = n.operator();
         Expr expr = n.expr();
         LLVMValueRef exprRef = v.getTranslation(expr);
-        LLVMTypeRef exprTypeRef = LLVMUtils.typeRef(expr.type(), v);
+        LLVMTypeRef exprTypeRef = v.utils.typeRef(expr.type());
 
         v.debugInfo.emitLocation(n);
 

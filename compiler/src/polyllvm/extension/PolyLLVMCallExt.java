@@ -7,9 +7,8 @@ import polyglot.ast.Special;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
-import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import java.util.stream.Stream;
 
@@ -19,7 +18,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         Call n = (Call) node();
 
         if (n.target() instanceof Special && ((Special) n.target()).kind().equals(Special.SUPER)) {
@@ -38,43 +37,43 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         return super.translatePseudoLLVM(v);
     }
 
-    private void translateStaticCall(PseudoLLVMTranslator v) {
+    private void translateStaticCall(LLVMTranslator v) {
         Call n = (Call) node();
 
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.methodInstance());
 
-        LLVMTypeRef tn = LLVMUtils.functionType(n.methodInstance().returnType(), n.methodInstance().formalTypes(), v);
+        LLVMTypeRef tn = v.utils.functionType(n.methodInstance().returnType(), n.methodInstance().formalTypes());
 
         LLVMValueRef[] args = n.arguments().stream()
                 .map(v::getTranslation)
                 .toArray(LLVMValueRef[]::new);
 
-        LLVMValueRef func = LLVMUtils.getFunction(v.mod, mangledFuncName, tn);
+        LLVMValueRef func = v.utils.getFunction(v.mod, mangledFuncName, tn);
 
         v.debugInfo.emitLocation(n);
         if(n.methodInstance().returnType().isVoid()){
-            v.addTranslation(n, LLVMUtils.buildProcedureCall(v, func, args));
+            v.addTranslation(n, v.utils.buildProcedureCall(func, args));
         } else{
-            v.addTranslation(n, LLVMUtils.buildMethodCall(v, func, args));
+            v.addTranslation(n, v.utils.buildMethodCall(func, args));
         }
 
     }
 
-    private void translateSuperCall(PseudoLLVMTranslator v) {
+    private void translateSuperCall(LLVMTranslator v) {
         Call n = (Call) node();
         MethodInstance superMethod = n.methodInstance().overrides().get(0);
 
-        LLVMTypeRef toType = LLVMUtils.methodType(v.getCurrentClass().type(),
-                n.methodInstance().returnType(), n.methodInstance().formalTypes(),
-                v);
+        LLVMTypeRef toType = v.utils.methodType(v.getCurrentClass().type(),
+                n.methodInstance().returnType(), n.methodInstance().formalTypes()
+        );
 
-        LLVMTypeRef superMethodType = LLVMUtils.methodType(
+        LLVMTypeRef superMethodType = v.utils.methodType(
                 superMethod.container(),
-                superMethod.returnType(), superMethod.formalTypes(),
-                v);
+                superMethod.returnType(), superMethod.formalTypes()
+        );
 
-        LLVMValueRef superFunc = LLVMUtils.getFunction(v.mod,
+        LLVMValueRef superFunc = v.utils.getFunction(v.mod,
                 PolyLLVMMangler.mangleProcedureName(superMethod),
                 superMethodType);
 
@@ -90,20 +89,20 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                 .toArray(LLVMValueRef[]::new);
 
         if(n.methodInstance().returnType().isVoid()){
-            v.addTranslation(n, LLVMUtils.buildProcedureCall(v, superBitCast, args));
+            v.addTranslation(n, v.utils.buildProcedureCall(superBitCast, args));
         } else{
-            v.addTranslation(n, LLVMUtils.buildMethodCall(v, superBitCast, args));
+            v.addTranslation(n, v.utils.buildMethodCall(superBitCast, args));
         }
 
     }
 
-    private void translateMethodCall(PseudoLLVMTranslator v) {
+    private void translateMethodCall(LLVMTranslator v) {
         Call n = (Call) node();
 
         ReferenceType referenceType = (ReferenceType) n.target().type();
         LLVMValueRef thisTranslation = v.getTranslation(n.target());
 
-        LLVMValueRef dvDoublePtr = LLVMUtils.buildGEP(v.builder, thisTranslation,
+        LLVMValueRef dvDoublePtr = v.utils.buildGEP(v.builder, thisTranslation,
                 LLVMConstInt(LLVMInt32Type(), 0, /* sign-extend */ 0),
                 LLVMConstInt(LLVMInt32Type(), 0, /* sign-extend */ 0));
 
@@ -114,7 +113,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMTypeRef res = LLVMGetTypeByName(v.mod, PolyLLVMMangler.dispatchVectorTypeName(referenceType));
         LLVMTypeRef methodType = LLVMStructGetTypeAtIndex(res, methodIndex);
         int i = LLVMGetPointerAddressSpace(LLVMTypeOf(dvPtr));
-        LLVMValueRef funcDoublePtr = LLVMUtils.buildGEP(v.builder, dvPtr,
+        LLVMValueRef funcDoublePtr = v.utils.buildGEP(v.builder, dvPtr,
                 LLVMConstInt(LLVMInt32Type(), 0, /* sign-extend */ 0),
                 LLVMConstInt(LLVMInt32Type(), methodIndex, /* sign-extend */ 0));
 
@@ -126,39 +125,39 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
             ).toArray(LLVMValueRef[]::new);
 
         if(n.methodInstance().returnType().isVoid()){
-            v.addTranslation(n,LLVMUtils.buildProcedureCall(v, methodPtr, args));
+            v.addTranslation(n,v.utils.buildProcedureCall(methodPtr, args));
         } else {
-            v.addTranslation(n,LLVMUtils.buildMethodCall(v, methodPtr, args));
+            v.addTranslation(n,v.utils.buildMethodCall(methodPtr, args));
 
         }
     }
 
-    private void translateInterfaceMethodCall(PseudoLLVMTranslator v) {
+    private void translateInterfaceMethodCall(LLVMTranslator v) {
         Call n = (Call) node();
         ReferenceType rt = (ReferenceType) n.target().type();
         MethodInstance mi = n.methodInstance();
         LLVMValueRef thisTranslation = v.getTranslation(n.target());
 
-        LLVMTypeRef methodType = LLVMUtils.ptrTypeRef(LLVMUtils.methodType(rt, mi.returnType(), mi.formalTypes(), v));
+        LLVMTypeRef methodType = v.utils.ptrTypeRef(v.utils.methodType(rt, mi.returnType(), mi.formalTypes()));
 
         int methodIndex = v.getMethodIndex(rt, mi);
 
-        LLVMValueRef interfaceStringPtr = LLVMUtils.getGlobal(v.mod, PolyLLVMMangler.interfaceStringVariable(rt),
+        LLVMValueRef interfaceStringPtr = v.utils.getGlobal(v.mod, PolyLLVMMangler.interfaceStringVariable(rt),
                 LLVMArrayType(LLVMInt8Type(), rt.toString().length() + 1));
-        LLVMValueRef interfaceStringBytePtr = LLVMUtils.buildGEP(v.builder, interfaceStringPtr,
+        LLVMValueRef interfaceStringBytePtr = v.utils.buildGEP(v.builder, interfaceStringPtr,
                 LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 0, 0));
 
         LLVMValueRef obj_bitcast = LLVMBuildBitCast(v.builder, thisTranslation,
-                LLVMUtils.ptrTypeRef(LLVMInt8Type()), "cast_for_interface_call");
+                v.utils.ptrTypeRef(LLVMInt8Type()), "cast_for_interface_call");
 
-        LLVMTypeRef getInterfaceMethodType = LLVMUtils.functionType(
-                LLVMUtils.ptrTypeRef(LLVMInt8Type()), // void* return type
-                LLVMUtils.ptrTypeRef(LLVMInt8Type()), // jobject*
-                LLVMUtils.ptrTypeRef(LLVMInt8Type()), // char*
+        LLVMTypeRef getInterfaceMethodType = v.utils.functionType(
+                v.utils.ptrTypeRef(LLVMInt8Type()), // void* return type
+                v.utils.ptrTypeRef(LLVMInt8Type()), // jobject*
+                v.utils.ptrTypeRef(LLVMInt8Type()), // char*
                 LLVMInt32Type()                       // int
         );
-        LLVMValueRef getInterfaceMethod = LLVMUtils.getFunction(v.mod, "__getInterfaceMethod", getInterfaceMethodType);
-        LLVMValueRef interfaceMethod = LLVMUtils.buildMethodCall(v, getInterfaceMethod,
+        LLVMValueRef getInterfaceMethod = v.utils.getFunction(v.mod, "__getInterfaceMethod", getInterfaceMethodType);
+        LLVMValueRef interfaceMethod = v.utils.buildMethodCall(getInterfaceMethod,
                 obj_bitcast, interfaceStringBytePtr, LLVMConstInt(LLVMInt32Type(), methodIndex, /* sign-extend */ 0));
 
         LLVMValueRef cast = LLVMBuildBitCast(v.builder, interfaceMethod, methodType, "cast_interface_method");
@@ -171,9 +170,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                         .toArray(LLVMValueRef[]::new);
 
         if(n.methodInstance().returnType().isVoid()){
-            v.addTranslation(n, LLVMUtils.buildProcedureCall(v, cast, args));
+            v.addTranslation(n, v.utils.buildProcedureCall(cast, args));
         } else{
-            v.addTranslation(n, LLVMUtils.buildMethodCall(v, cast, args));
+            v.addTranslation(n, v.utils.buildMethodCall(cast, args));
         }
     }
 

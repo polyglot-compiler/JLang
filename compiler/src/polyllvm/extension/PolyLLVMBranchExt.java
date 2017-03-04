@@ -5,7 +5,7 @@ import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.LLVMBuildBr;
 import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
@@ -14,7 +14,7 @@ public class PolyLLVMBranchExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         Branch n = (Branch) node();
 
         v.debugInfo.emitLocation(n);

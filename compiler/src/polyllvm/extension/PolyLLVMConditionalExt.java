@@ -4,8 +4,7 @@ import polyglot.ast.Conditional;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import java.util.function.BiConsumer;
 
@@ -14,7 +13,7 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMConditionalExt extends PolyLLVMExt {
 
     @Override
-    public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         Conditional n = (Conditional) node();
 
         v.debugInfo.emitLocation(n);
@@ -22,7 +21,7 @@ public class PolyLLVMConditionalExt extends PolyLLVMExt {
         LLVMBasicBlockRef currentBlock = LLVMGetInsertBlock(v.builder);
         LLVMBasicBlockRef firstBlock = LLVMGetFirstBasicBlock(v.currFn());
         LLVMPositionBuilderBefore(v.builder,LLVMGetBasicBlockTerminator(firstBlock));
-        LLVMValueRef conditionalTemp = LLVMBuildAlloca(v.builder, LLVMUtils.typeRef(n.type(),v), "conditional_temp");
+        LLVMValueRef conditionalTemp = LLVMBuildAlloca(v.builder, v.utils.typeRef(n.type()), "conditional_temp");
         LLVMPositionBuilderAtEnd(v.builder, currentBlock);
 
         LLVMBasicBlockRef ifEnd = LLVMAppendBasicBlock(v.currFn(), "conditional_end");

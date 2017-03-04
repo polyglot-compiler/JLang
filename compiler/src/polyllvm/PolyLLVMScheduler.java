@@ -16,15 +16,14 @@ import polyglot.util.InternalCompilerError;
 import polyglot.visit.LoopNormalizer;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.util.DebugInfo;
-import polyllvm.util.LLVMUtils;
 import polyllvm.util.MultiGoal;
 import polyllvm.visit.AssignmentDesugarVisitor;
+import polyllvm.visit.LLVMTranslator;
 import polyllvm.visit.MakeCastsExplicitVisitor;
-import polyllvm.visit.PseudoLLVMTranslator;
 import polyllvm.visit.StringConversionVisitor;
 
 import java.io.File;
+import java.lang.Override;
 import java.nio.file.Paths;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -85,19 +84,13 @@ public class PolyLLVMScheduler extends JLScheduler {
                 throw new InternalCompilerError("AST root should be a SourceFile");
             SourceFile sf = (SourceFile) ast;
 
-
-
-            LLVMModuleRef mod = LLVMModuleCreateWithName(goal.job().source().name());
+            LLVMModuleRef mod = LLVMModuleCreateWithName(sf.source().name());
             LLVMBuilderRef builder = LLVMCreateBuilder();
-            DebugInfo di = new DebugInfo(mod, builder, sf.source().path());
-            PseudoLLVMTranslator translator = new PseudoLLVMTranslator(mod, builder, di, nf, ts);
-
-            //Setup class and dv types for arrays
-            LLVMUtils.setupArrayType(translator);
+            LLVMTranslator translator = new LLVMTranslator(sf.source().path(), mod, builder, nf, ts);
 
             ast.visit(translator);
 
-            LLVMDIBuilderFinalize(di.diBuilder);
+            LLVMDIBuilderFinalize(translator.debugInfo.diBuilder);
 
             // Verify.
             BytePointer error = new BytePointer((Pointer) null);

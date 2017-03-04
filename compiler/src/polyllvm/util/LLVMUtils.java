@@ -4,8 +4,7 @@ import org.bytedeco.javacpp.PointerPointer;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
-import polyllvm.extension.ClassObjects;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,96 +15,104 @@ import java.util.stream.Stream;
 import static org.bytedeco.javacpp.LLVM.*;
 
 public class LLVMUtils {
+    private final LLVMTranslator v;
 
-    public static LLVMTypeRef llvmPtrSizedIntType() {
+    public LLVMUtils(LLVMTranslator v) {
+        this.v = v;
+    }
+
+    public ReferenceType getArrayType() {
+        try {
+            return (ReferenceType) v.typeSystem().typeForName("support.Array");
+        } catch (SemanticException|ClassCastException e) {
+            throw new InternalCompilerError("Could not load array type");
+        }
+    }
+
+    public LLVMTypeRef llvmPtrSizedIntType() {
         return LLVMIntType(llvmPtrSize());
     }
 
-    public static int llvmPtrSize() {
+    public int llvmPtrSize() {
         return 64;
     }
 
-    public static LLVMTypeRef llvmBytePtr() {
+    public LLVMTypeRef llvmBytePtr() {
         return ptrTypeRef(LLVMInt8Type());
     }
 
-
-    public static LLVMTypeRef ptrTypeRef(LLVMTypeRef elemType) {
+    public LLVMTypeRef ptrTypeRef(LLVMTypeRef elemType) {
         return LLVMPointerType(elemType, Constants.LLVM_ADDR_SPACE);
     }
 
-    private static LLVMTypeRef structTypeRefOpaque(String mangledName, LLVMModuleRef mod) {
-        LLVMTypeRef res = LLVMGetTypeByName(mod, mangledName);
+    private LLVMTypeRef structTypeRefOpaque(String mangledName) {
+        LLVMTypeRef res = LLVMGetTypeByName(v.mod, mangledName);
         if (res == null)
             res = LLVMStructCreateNamed(LLVMGetGlobalContext(), mangledName);
         return res;
     }
 
-    private static LLVMTypeRef structTypeRef(ReferenceType rt, PseudoLLVMTranslator v) {
+    private LLVMTypeRef structTypeRef(ReferenceType rt) {
         String mangledName = PolyLLVMMangler.classTypeName(rt);
-        LLVMTypeRef structType = structTypeRefOpaque(mangledName, v.mod);
+        LLVMTypeRef structType = structTypeRefOpaque(mangledName);
         if(LLVMIsOpaqueStruct(structType) != 0){
             setStructBody(structType); // Set the struct to be empty, so it is not opaque
-            setStructBody(structType, objectFieldTypes(v, rt));
+            setStructBody(structType, objectFieldTypes(rt));
         }
-        dvTypeRef(rt,v); //Make sure DV is added to module if class is being used
+        dvTypeRef(rt); //Make sure DV is added to module if class is being used
         return ptrTypeRef(structType);
     }
 
-    public static LLVMTypeRef dvTypeRef(ReferenceType rt, PseudoLLVMTranslator v) {
+    public LLVMTypeRef dvTypeRef(ReferenceType rt) {
         String mangledDVName = PolyLLVMMangler.dispatchVectorTypeName(rt);
-        LLVMTypeRef dvType = structTypeRefOpaque(mangledDVName, v.mod);
+        LLVMTypeRef dvType = structTypeRefOpaque(mangledDVName);
         if(LLVMIsOpaqueStruct(dvType) != 0){
             setStructBody(dvType); // Set the struct to be empty, so it is not opaque
-            setStructBody(dvType, dvMethodTypes(v, rt));
+            setStructBody(dvType, dvMethodTypes(rt));
         }
         return dvType;
     }
 
 
-    public static LLVMTypeRef typeRef(Type t, PseudoLLVMTranslator v) {
+    public LLVMTypeRef typeRef(Type t) {
         if      (t.isBoolean())    return LLVMInt1Type();
         else if (t.isLongOrLess()) return LLVMIntType(numBitsOfIntegralType(t));
         else if (t.isVoid())       return LLVMVoidType();
         else if (t.isFloat())      return LLVMFloatType();
         else if (t.isDouble())     return LLVMDoubleType();
-        else if (t.isClass())      return structTypeRef(t.toReference(), v);
+        else if (t.isClass())      return structTypeRef(t.toReference());
         else if (t.isNull())       return ptrTypeRef(LLVMInt8Type());
         else if (t.isArray()) {
-            structTypeRef(v.getArrayType(), v);
-            return ptrTypeRef(structTypeRefOpaque(Constants.ARR_CLASS, v.mod));
+            structTypeRef(getArrayType());
+            return ptrTypeRef(structTypeRefOpaque(Constants.ARR_CLASS));
         } else {
             throw new InternalCompilerError("Invalid type");
         }
     }
 
-    public static LLVMTypeRef functionType(LLVMTypeRef ret, LLVMTypeRef ...args) {
+    public LLVMTypeRef functionType(LLVMTypeRef ret, LLVMTypeRef ...args) {
         return LLVMFunctionType(ret, new PointerPointer<>(args), args.length, /* isVarArgs */ 0);
     }
 
     // TODO: Just make one that takes in a procedure decl.
-    public static LLVMTypeRef functionType(Type returnType, List<? extends Type> formalTypes,
-                                           PseudoLLVMTranslator v) {
+    public LLVMTypeRef functionType(Type returnType, List<? extends Type> formalTypes) {
         LLVMTypeRef[] args = formalTypes.stream()
-                .map(t -> typeRef(t, v))
+                .map(t -> typeRef(t))
                 .toArray(LLVMTypeRef[]::new);
-        return functionType(typeRef(returnType, v), args);
+        return functionType(typeRef(returnType), args);
     }
 
-    public static LLVMTypeRef methodType(ReferenceType type,
-                                         Type returnType,
-                                         List<? extends Type> formalTypes,
-                                         PseudoLLVMTranslator v) {
+    public LLVMTypeRef methodType(ReferenceType type,
+                                  Type returnType,
+                                  List<? extends Type> formalTypes) {
         LLVMTypeRef[] args = Stream.concat(
-                    Stream.of(typeRef(type, v)),
-                    formalTypes.stream().map(t -> typeRef(t, v)))
+                    Stream.of(typeRef(type)),
+                    formalTypes.stream().map(this::typeRef))
                 .toArray(LLVMTypeRef[]::new);
-        return functionType(typeRef(returnType, v), args);
+        return functionType(typeRef(returnType), args);
     }
 
-    public static LLVMValueRef buildProcedureCall(PseudoLLVMTranslator v,
-                                                  LLVMValueRef func,
-                                                  LLVMValueRef ...args) {
+    public LLVMValueRef buildProcedureCall(LLVMValueRef func, LLVMValueRef... args) {
         if(v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())){
             LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlock(v.currFn(), "invoke.cont");
             LLVMValueRef invoke = LLVMBuildInvoke(v.builder, func, new PointerPointer<>(args), args.length, invokeCont, v.currLpad(), "");
@@ -115,10 +122,8 @@ public class LLVMUtils {
         return LLVMBuildCall(v.builder, func, new PointerPointer<>(args), args.length, "");
     }
 
-    public static LLVMValueRef buildMethodCall(PseudoLLVMTranslator v,
-                                               LLVMValueRef func,
-                                               LLVMValueRef ...args) {
-        if(v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())){
+    public LLVMValueRef buildMethodCall(LLVMValueRef func, LLVMValueRef... args) {
+        if (v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())) {
             LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlock(v.currFn(), "invoke.cont");
             LLVMValueRef invoke = LLVMBuildInvoke(v.builder, func, new PointerPointer<>(args), args.length, invokeCont, v.currLpad(), "call");
             LLVMPositionBuilderAtEnd(v.builder, invokeCont);
@@ -130,34 +135,34 @@ public class LLVMUtils {
     /**
      * If the function is already in the module, return it, otherwise add it to the module and return it.
      */
-    public static LLVMValueRef getFunction(LLVMModuleRef mod, String functionName, LLVMTypeRef functionType) {
+    public LLVMValueRef getFunction(LLVMModuleRef mod, String functionName, LLVMTypeRef functionType) {
         LLVMValueRef func = LLVMGetNamedFunction(mod, functionName);
         if (func == null)
             func = LLVMAddFunction(mod, functionName, functionType);
         return func;
     }
 
-    public static LLVMValueRef funcRef(LLVMModuleRef mod,
+    public LLVMValueRef funcRef(LLVMModuleRef mod,
                                        ProcedureInstance pi,
                                        LLVMTypeRef funcType) {
         return getFunction(mod, PolyLLVMMangler.mangleProcedureName(pi), funcType);
     }
 
-    public static LLVMTypeRef structType(LLVMTypeRef... types) {
+    public LLVMTypeRef structType(LLVMTypeRef... types) {
         return LLVMStructType(new PointerPointer<>(types), types.length, /*Packed*/ 0);
     }
 
     /**
      * If the global is already in the module, return it, otherwise add it to the module and return it.
      */
-    public static LLVMValueRef getGlobal(LLVMModuleRef mod, String globalName, LLVMTypeRef globalType) {
+    public LLVMValueRef getGlobal(LLVMModuleRef mod, String globalName, LLVMTypeRef globalType) {
         LLVMValueRef global = LLVMGetNamedGlobal(mod,globalName);
         if (global == null)
             global = LLVMAddGlobal(mod, globalType, globalName);
         return global;
     }
 
-    public static LLVMValueRef buildGEP(LLVMBuilderRef builder,
+    public LLVMValueRef buildGEP(LLVMBuilderRef builder,
                                         LLVMValueRef ptr,
                                         LLVMValueRef ...indices) {
         // TODO: If safe to do so, might be better to use LLVMBuildInBoundsGEP.
@@ -167,7 +172,7 @@ public class LLVMUtils {
     /**
      * Create a constant GEP using i32 indices from indices
      */
-    public static LLVMValueRef constGEP(LLVMValueRef ptr,
+    public LLVMValueRef constGEP(LLVMValueRef ptr,
                                         int ...indices) {
         LLVMValueRef[] llvmIndices = Arrays.stream(indices)
                 .mapToObj(i -> LLVMConstInt(LLVMInt32Type(), i, /*sign-extend*/ 0))
@@ -176,7 +181,7 @@ public class LLVMUtils {
     }
 
 
-    public static LLVMValueRef buildStructGEP(LLVMBuilderRef builder,
+    public LLVMValueRef buildStructGEP(LLVMBuilderRef builder,
                                               LLVMValueRef ptr,
                                               int ...intIndices) {
         // LLVM suggests using i32 offsets for struct GEP instructions.
@@ -186,32 +191,32 @@ public class LLVMUtils {
         return LLVMBuildGEP(builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
 
-    private static void setStructBody(LLVMTypeRef struct, LLVMTypeRef... types) {
+    private void setStructBody(LLVMTypeRef struct, LLVMTypeRef... types) {
         LLVMStructSetBody(struct, new PointerPointer<>(types), types.length, /* packed */ 0);
     }
 
-    private static LLVMTypeRef[] objectFieldTypes(PseudoLLVMTranslator v, ReferenceType rt) {
+    private LLVMTypeRef[] objectFieldTypes(ReferenceType rt) {
         Pair<List<MethodInstance>, List<FieldInstance>> layouts = v.layouts(rt);
-        LLVMTypeRef dvType = structTypeRefOpaque(PolyLLVMMangler.dispatchVectorTypeName(rt), v.mod);
+        LLVMTypeRef dvType = structTypeRefOpaque(PolyLLVMMangler.dispatchVectorTypeName(rt));
         LLVMTypeRef dvPtrType = LLVMPointerType(dvType, Constants.LLVM_ADDR_SPACE);
         return Stream.concat(
                 Stream.of(dvPtrType),
-                layouts.part2().stream().map(fi -> typeRef(fi.type(), v))
+                layouts.part2().stream().map(fi -> typeRef(fi.type()))
         ).toArray(LLVMTypeRef[]::new);
     }
 
-    public static void setupArrayType(PseudoLLVMTranslator v){
-        LLVMTypeRef[] fieldTypes = objectFieldTypes(v, v.getArrayType());
+    public void setupArrayType() {
+        LLVMTypeRef[] fieldTypes = objectFieldTypes(getArrayType());
         fieldTypes = Arrays.copyOf(fieldTypes, fieldTypes.length + 1);
         fieldTypes[fieldTypes.length-1] = ptrTypeRef(LLVMInt8Type());
 
-        String mangledName = PolyLLVMMangler.classTypeName(v.getArrayType());
-        LLVMTypeRef structType = structTypeRefOpaque(mangledName, v.mod);
+        String mangledName = PolyLLVMMangler.classTypeName(getArrayType());
+        LLVMTypeRef structType = structTypeRefOpaque(mangledName);
         setStructBody(structType, fieldTypes);
-        dvTypeRef(v.getArrayType(),v);
+        dvTypeRef(getArrayType());
     }
 
-    private static LLVMTypeRef[] dvMethodTypes(PseudoLLVMTranslator v, ReferenceType rt) {
+    private LLVMTypeRef[] dvMethodTypes(ReferenceType rt) {
         List<MethodInstance> layout = v.layouts(rt).part1();
         List<LLVMTypeRef> typeList = new ArrayList<>();
         typeList.add(ptrTypeRef(LLVMInt8Type()));
@@ -220,10 +225,10 @@ public class LLVMUtils {
         if (v.isInterface(rt)) {
             typeList.add(ptrTypeRef(LLVMInt8Type()));
         } else {
-            typeList.add(ptrTypeRef(ClassObjects.classObjTypeRef(rt)));
+            typeList.add(ptrTypeRef(v.classObjs.classObjTypeRef(rt)));
         }
 
-        layout.stream().map(mi -> ptrTypeRef(LLVMUtils.methodType(rt, mi.returnType(), mi.formalTypes(), v)))
+        layout.stream().map(mi -> ptrTypeRef(methodType(rt, mi.returnType(), mi.formalTypes())))
                 .forEach(typeList::add);
 
         LLVMTypeRef[] types = new LLVMTypeRef[typeList.size()];
@@ -231,30 +236,30 @@ public class LLVMUtils {
 
     }
 
-    public static LLVMValueRef getDvGlobal(PseudoLLVMTranslator v, ReferenceType classtype) {
-        return LLVMUtils.getGlobal(v.mod, PolyLLVMMangler.dispatchVectorVariable(classtype), LLVMUtils.dvTypeRef(classtype,v));
+    public LLVMValueRef getDvGlobal(ReferenceType classtype) {
+        return getGlobal(v.mod, PolyLLVMMangler.dispatchVectorVariable(classtype), dvTypeRef(classtype));
     }
 
-    public static LLVMValueRef getItGlobal(PseudoLLVMTranslator v, ReferenceType it, ReferenceType usingClass){
+    public LLVMValueRef getItGlobal(ReferenceType it, ReferenceType usingClass){
         String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(usingClass, it);
-        LLVMTypeRef interfaceTableType = LLVMUtils.dvTypeRef(it, v);
-        return LLVMUtils.getGlobal(v.mod, interfaceTableVar, interfaceTableType);
+        LLVMTypeRef interfaceTableType = dvTypeRef(it);
+        return getGlobal(v.mod, interfaceTableVar, interfaceTableType);
     }
 
-    public static LLVMValueRef[] dvMethods(PseudoLLVMTranslator v, ReferenceType rt, LLVMValueRef next) {
+    public LLVMValueRef[] dvMethods(ReferenceType rt, LLVMValueRef next) {
         List<MethodInstance> layout = v.layouts(rt).part1();
         LLVMValueRef[] methods = Stream.concat(
-                Stream.of(next, ClassObjects.classObjRef(v.mod, rt)),
+                Stream.of(next, v.classObjs.classObjRef(v.mod, rt)),
                 IntStream.range(0, layout.size()).mapToObj(i -> {
                     MethodInstance mi = layout.get(i);
                     LLVMValueRef function = getFunction(v.mod, PolyLLVMMangler.mangleProcedureName(mi),
-                            methodType(mi.container(), mi.returnType(), mi.formalTypes(), v));
-                    return LLVMConstBitCast(function, ptrTypeRef(methodType(rt, mi.returnType(), mi.formalTypes(), v)));
+                            methodType(mi.container(), mi.returnType(), mi.formalTypes()));
+                    return LLVMConstBitCast(function, ptrTypeRef(methodType(rt, mi.returnType(), mi.formalTypes())));
                 })).toArray(LLVMValueRef[]::new);
         return methods;
     }
 
-    public static LLVMValueRef[] itMethods(PseudoLLVMTranslator v, ReferenceType it, ReferenceType usingClass, LLVMValueRef next) {
+    public LLVMValueRef[] itMethods(ReferenceType it, ReferenceType usingClass, LLVMValueRef next) {
         List<MethodInstance> layout = v.layouts(it).part1();
         for (int i=0; i< layout.size(); i++){
             List<MethodInstance> classLayout = v.layouts(usingClass).part1();
@@ -263,30 +268,30 @@ public class LLVMUtils {
             layout.set(i, miClass);
         }
         LLVMValueRef[] methods = Stream.concat(
-                Stream.of(next, ClassObjects.classObjRef(v.mod, it)),
+                Stream.of(next, v.classObjs.classObjRef(v.mod, it)),
                 IntStream.range(0, layout.size()).mapToObj(i -> {
                     MethodInstance mi = layout.get(i);
                     LLVMValueRef function = getFunction(v.mod, PolyLLVMMangler.mangleProcedureName(mi),
-                            methodType(mi.container(), mi.returnType(), mi.formalTypes(), v));
-                    return LLVMConstBitCast(function, ptrTypeRef(methodType(it, mi.returnType(), mi.formalTypes(), v)));
+                            methodType(mi.container(), mi.returnType(), mi.formalTypes()));
+                    return LLVMConstBitCast(function, ptrTypeRef(methodType(it, mi.returnType(), mi.formalTypes())));
                 })).toArray(LLVMValueRef[]::new);
         return methods;
     }
 
-    public static LLVMValueRef[] dvMethods(PseudoLLVMTranslator v, ReferenceType rt) {
-        return dvMethods(v, rt, LLVMConstNull(ptrTypeRef(LLVMInt8Type())));
+    public LLVMValueRef[] dvMethods(ReferenceType rt) {
+        return dvMethods(rt, LLVMConstNull(ptrTypeRef(LLVMInt8Type())));
     }
 
-    public static LLVMValueRef buildConstArray(LLVMTypeRef type, LLVMValueRef ...values) {
+    public LLVMValueRef buildConstArray(LLVMTypeRef type, LLVMValueRef ...values) {
         return LLVMConstArray(type, new PointerPointer<>(values), values.length);
     }
 
-    public static LLVMValueRef buildConstStruct(LLVMValueRef ...values) {
+    public LLVMValueRef buildConstStruct(LLVMValueRef ...values) {
         return LLVMConstStruct(new PointerPointer<>(values), values.length, /*Unpacked struct*/0);
     }
 
 
-    public static int numBitsOfIntegralType(Type t) {
+    private int numBitsOfIntegralType(Type t) {
         if      (t.isByte())  return 8;
         else if (t.isShort()) return 16;
         else if (t.isChar())  return 16;
@@ -298,13 +303,13 @@ public class LLVMUtils {
     /**
      * Return the number of bytes needed to store type {@code t}
      */
-    public static int sizeOfType(Type t) {
+    public int sizeOfType(Type t) {
         if      (t.isBoolean()) return 1;
         else if (t.isFloat())   return 4; // Specified by Java.
         else if (t.isDouble())  return 8; // Specified by Java.
-        else if (t.isArray())   return LLVMUtils.llvmPtrSize();
-        else if (t.isClass())   return LLVMUtils.llvmPtrSize();
-        else if (t.isNull())    return LLVMUtils.llvmPtrSize();
+        else if (t.isArray())   return llvmPtrSize();
+        else if (t.isClass())   return llvmPtrSize();
+        else if (t.isNull())    return llvmPtrSize();
         else if (t.isLongOrLess()) {
             assert numBitsOfIntegralType(t) % 8 == 0 : "integer bit count must be multiple of 8";
             return numBitsOfIntegralType(t) / 8;

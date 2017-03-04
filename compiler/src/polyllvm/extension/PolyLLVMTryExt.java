@@ -2,31 +2,25 @@ package polyllvm.extension;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
-import org.bytedeco.javacpp.annotation.Const;
 import polyglot.ast.Catch;
 import polyglot.ast.Node;
-import polyglot.ast.Stmt;
 import polyglot.ast.Try;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.Constants;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.BiConsumer;
 
 public class PolyLLVMTryExt extends PolyLLVMExt {
 
     @Override
-    public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         Try n = (Try) node();
         v.enterTry();
 
         Serializable s;
 
-        LLVMTypeRef exnType = LLVMUtils.structType(LLVMUtils.ptrTypeRef(LLVMInt8Type()), LLVMInt32Type());
+        LLVMTypeRef exnType = v.utils.structType(v.utils.ptrTypeRef(LLVMInt8Type()), LLVMInt32Type());
 
         LLVMBasicBlockRef tryBlock = LLVMAppendBasicBlock(v.currFn(), "try_block");
         LLVMBasicBlockRef tryEnd = LLVMAppendBasicBlock(v.currFn(), "try_end");
@@ -46,16 +40,16 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         }
 
         LLVMPositionBuilderAtEnd(v.builder, v.currLpad());
-        LLVMValueRef personalityFunc = LLVMUtils.getFunction(v.mod, Constants.PERSONALITY_FUNC,
-                LLVMUtils.functionType(LLVMInt32Type()));
+        LLVMValueRef personalityFunc = v.utils.getFunction(v.mod, Constants.PERSONALITY_FUNC,
+                v.utils.functionType(LLVMInt32Type()));
         LLVMValueRef lpad = LLVMBuildLandingPad(v.builder,
-                exnType, LLVMConstBitCast(personalityFunc, LLVMUtils.ptrTypeRef(LLVMInt8Type())),
+                exnType, LLVMConstBitCast(personalityFunc, v.utils.ptrTypeRef(LLVMInt8Type())),
                 n.catchBlocks().size(), "lpad");
         n.catchBlocks().stream().forEach(cb ->
-                LLVMAddClause(lpad, ClassObjects.classIdVarRef(v.mod, cb.catchType().toReference())));
+                LLVMAddClause(lpad, v.classObjs.classIdVarRef(v.mod, cb.catchType().toReference())));
 
         v.debugInfo.emitLocation();
-        LLVMValueRef exn_slot = PolyLLVMLocalDeclExt.createLocal(v, "exn_slot", LLVMUtils.ptrTypeRef(LLVMInt8Type()));
+        LLVMValueRef exn_slot = PolyLLVMLocalDeclExt.createLocal(v, "exn_slot", v.utils.ptrTypeRef(LLVMInt8Type()));
         v.debugInfo.emitLocation(n);
         LLVMValueRef exn = LLVMBuildExtractValue(v.builder, lpad, 0, "exn");
         LLVMBuildStore(v.builder, exn, exn_slot);
@@ -66,8 +60,8 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         LLVMValueRef ehselector = LLVMBuildExtractValue(v.builder, lpad, 1, "ehselector");
         LLVMBuildStore(v.builder, ehselector, ehselector_slot);
 
-        LLVMValueRef typeidFunc = LLVMUtils.getFunction(v.mod, Constants.TYPEID_INTRINSIC,
-                LLVMUtils.functionType(LLVMInt32Type(), LLVMUtils.llvmBytePtr()));
+        LLVMValueRef typeidFunc = v.utils.getFunction(v.mod, Constants.TYPEID_INTRINSIC,
+                v.utils.functionType(LLVMInt32Type(), v.utils.llvmBytePtr()));
 
         LLVMBasicBlockRef ehResume = LLVMAppendBasicBlock(v.currFn(), "eh_resume");
         LLVMPositionBuilderAtEnd(v.builder, ehResume);
@@ -86,7 +80,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         v.setLpad(LLVMAppendBasicBlock(v.currFn(), "cleanup_lpad"));
         LLVMPositionBuilderAtEnd(v.builder, v.currLpad());
         LLVMValueRef cleanup_lpad = LLVMBuildLandingPad(v.builder,
-                exnType, LLVMConstBitCast(personalityFunc, LLVMUtils.ptrTypeRef(LLVMInt8Type())),
+                exnType, LLVMConstBitCast(personalityFunc, v.utils.ptrTypeRef(LLVMInt8Type())),
                 0, "cleanup_lpad");
         LLVMSetCleanup(cleanup_lpad,/*true*/1);
         LLVMValueRef exn_clean = LLVMBuildExtractValue(v.builder, cleanup_lpad, 0, "exn");
@@ -116,8 +110,8 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
 
             LLVMPositionBuilderAtEnd(v.builder, dispatch);
             LLVMValueRef sel = LLVMBuildLoad(v.builder, ehselector_slot, "sel");
-            LLVMValueRef typeid = LLVMUtils.buildMethodCall(v, typeidFunc,
-                    ClassObjects.classIdVarRef(v.mod, cb.catchType().toReference()));
+            LLVMValueRef typeid = v.utils.buildMethodCall(typeidFunc,
+                    v.classObjs.classIdVarRef(v.mod, cb.catchType().toReference()));
             LLVMValueRef matches = LLVMBuildICmp(v.builder, LLVMIntEQ, sel, typeid, "matches");
             if(i==n.catchBlocks().size() - 1){
                 //Need to resume Exception handling if last catch does not match exception type

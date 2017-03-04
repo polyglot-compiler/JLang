@@ -5,8 +5,7 @@ import polyglot.ast.Node;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -14,12 +13,12 @@ public class PolyLLVMInstanceofExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         Instanceof n = (Instanceof) node();
         LLVMValueRef obj =  v.getTranslation(n.expr());
         ReferenceType compareRt = n.compareType().type().toReference();
-        LLVMValueRef compTypeIdVar = ClassObjects.classIdVarRef(v.mod, compareRt);
-        LLVMTypeRef bytePtrType = LLVMUtils.ptrTypeRef(LLVMInt8Type());
+        LLVMValueRef compTypeIdVar = v.classObjs.classIdVarRef(v.mod, compareRt);
+        LLVMTypeRef bytePtrType = v.utils.ptrTypeRef(LLVMInt8Type());
 
         v.debugInfo.emitLocation(n);
 
@@ -27,9 +26,9 @@ public class PolyLLVMInstanceofExt extends PolyLLVMExt {
         LLVMValueRef objBitcast = LLVMBuildBitCast(v.builder, obj, bytePtrType, "cast_obj_byte_ptr");
 
         // Build call to native code.
-        LLVMValueRef function = LLVMUtils.getFunction(v.mod, "instanceof",
-                LLVMUtils.functionType(LLVMInt1Type(), bytePtrType, bytePtrType));
-        LLVMValueRef result = LLVMUtils.buildMethodCall(v, function, objBitcast, compTypeIdVar);
+        LLVMValueRef function = v.utils.getFunction(v.mod, "instanceof",
+                v.utils.functionType(LLVMInt1Type(), bytePtrType, bytePtrType));
+        LLVMValueRef result = v.utils.buildMethodCall(function, objBitcast, compTypeIdVar);
 
         v.addTranslation(n, result);
         return super.translatePseudoLLVM(v);

@@ -5,9 +5,8 @@ import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import java.util.stream.Stream;
 
@@ -17,7 +16,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         ConstructorCall n = (ConstructorCall) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
@@ -33,7 +32,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
             thisArg = LLVMGetParam(v.currFn(), 0);
         }
         else if (n.kind() == ConstructorCall.SUPER) {
-            LLVMTypeRef superType = LLVMUtils.typeRef(n.constructorInstance().container(), v);
+            LLVMTypeRef superType = v.utils.typeRef(n.constructorInstance().container());
             thisArg = LLVMBuildBitCast(v.builder, LLVMGetParam(v.currFn(), 0), superType, "cast_to_super");
         }
         else {
@@ -43,14 +42,14 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
 
         String mangledFuncName =
                 PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
-        LLVMTypeRef constructorFuncTypeRef = LLVMUtils.methodType(n.constructorInstance().container(),
-                v.typeSystem().Void(), n.constructorInstance().formalTypes(), v);
-        LLVMValueRef function = LLVMUtils.getFunction(v.mod, mangledFuncName, constructorFuncTypeRef);
+        LLVMTypeRef constructorFuncTypeRef = v.utils.methodType(n.constructorInstance().container(),
+                v.typeSystem().Void(), n.constructorInstance().formalTypes());
+        LLVMValueRef function = v.utils.getFunction(v.mod, mangledFuncName, constructorFuncTypeRef);
         LLVMValueRef[] args = Stream.concat(
                 Stream.of(thisArg),
                 n.arguments().stream().map(v::getTranslation)
         ).toArray(LLVMValueRef[]::new);
-        LLVMValueRef procedureCall = LLVMUtils.buildProcedureCall(v, function, args);
+        LLVMValueRef procedureCall = v.utils.buildProcedureCall(function, args);
         v.addTranslation(n, procedureCall);
         return n;
     }

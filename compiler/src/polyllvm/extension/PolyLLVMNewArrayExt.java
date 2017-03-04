@@ -6,8 +6,7 @@ import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +17,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         NewArray n = (NewArray) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
@@ -37,10 +36,10 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         return super.translatePseudoLLVM(v);
     }
 
-    public static New translateArrayWithDims(PseudoLLVMTranslator v,
+    public static New translateArrayWithDims(LLVMTranslator v,
             PolyLLVMNodeFactory nf, List<Expr> dims, Type baseType) {
         New newArray;
-        ReferenceType arrayType = v.getArrayType();
+        ReferenceType arrayType = v.utils.getArrayType();
         List<Expr> args = new ArrayList<>();
         CanonicalTypeNode newTypeNode =
                 nf.CanonicalTypeNode(Position.compilerGenerated(), arrayType);
@@ -51,7 +50,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
                     getArrayConstructor(arrayType,
                                         ArrayConstructorType.ONEDIMENSIONAL);
             args.add(dims.get(0));
-            sizeOfType = LLVMUtils.sizeOfType(baseType);
+            sizeOfType = v.utils.sizeOfType(baseType);
         }
         else {
             ArrayInit arrayDims =
@@ -62,7 +61,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
                     getArrayConstructor(arrayType,
                                         ArrayConstructorType.MULTIDIMENSIONAL);
             args.add(arrayDims);
-            sizeOfType = LLVMUtils.llvmPtrSize();
+            sizeOfType = v.utils.llvmPtrSize();
 
         }
 
@@ -85,7 +84,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
                 LLVMConstInt(LLVMInt64Type(), sizeOfType, /*sign-extend*/ 0),
                 arrLen64, "mul");
         LLVMValueRef size = LLVMBuildAdd(v.builder,
-                LLVMConstInt(LLVMInt64Type(), LLVMUtils.llvmPtrSize()*2 /*2 header words*/, /*sign-extend*/0),
+                LLVMConstInt(LLVMInt64Type(), v.utils.llvmPtrSize()*2 /*2 header words*/, /*sign-extend*/0),
                 mul, "size");
 
         PolyLLVMNewExt extension = (PolyLLVMNewExt) PolyLLVMExt.ext(newArray);

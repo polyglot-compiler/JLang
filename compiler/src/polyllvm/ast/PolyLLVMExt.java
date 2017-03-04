@@ -6,7 +6,7 @@ import polyglot.ast.Ext_c;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.LLVMBuildCondBr;
 
@@ -31,22 +31,22 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     }
 
     @Override
-    public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+    public LLVMTranslator enterTranslatePseudoLLVM(LLVMTranslator v) {
         return v;
     }
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         return node();
     }
 
     @Override
-    public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         return null;
     }
 
     @Override
-    public void translateLLVMConditional(PseudoLLVMTranslator v,
+    public void translateLLVMConditional(LLVMTranslator v,
                                          LLVM.LLVMBasicBlockRef trueBlock,
                                          LLVM.LLVMBasicBlockRef falseBlock) {
         Node n = v.visitEdge(null, node());

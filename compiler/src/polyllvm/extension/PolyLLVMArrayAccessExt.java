@@ -5,8 +5,9 @@ import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.Constants;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
+
+import java.lang.Override;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -14,7 +15,7 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         ArrayAccess n = (ArrayAccess) node();
 
         v.debugInfo.emitLocation(n);
@@ -25,12 +26,12 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
     }
 
     // Assumes n.array() and n.index() have already been translated.
-    static LLVMValueRef buildArrayElemPtr(ArrayAccess n, PseudoLLVMTranslator v) {
+    static LLVMValueRef buildArrayElemPtr(ArrayAccess n, LLVMTranslator v) {
         LLVMValueRef arr = v.getTranslation(n.array());
-        LLVMValueRef baseRaw = LLVMUtils.buildStructGEP(v.builder, arr, 0, Constants.ARR_ELEM_OFFSET);
-        LLVMTypeRef ptrType = LLVMUtils.ptrTypeRef(LLVMUtils.typeRef(n.type(), v));
+        LLVMValueRef baseRaw = v.utils.buildStructGEP(v.builder, arr, 0, Constants.ARR_ELEM_OFFSET);
+        LLVMTypeRef ptrType = v.utils.ptrTypeRef(v.utils.typeRef(n.type()));
         LLVMValueRef base = LLVMBuildCast(v.builder, LLVMBitCast, baseRaw, ptrType, "ptr_cast");
         LLVMValueRef offset = v.getTranslation(n.index());
-        return LLVMUtils.buildGEP(v.builder, base, offset);
+        return v.utils.buildGEP(v.builder, base, offset);
     }
 }

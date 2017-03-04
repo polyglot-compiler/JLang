@@ -4,6 +4,7 @@ import polyglot.types.ReferenceType;
 import polyglot.types.Type;
 import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
+import polyllvm.visit.LLVMTranslator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,32 +15,35 @@ import static org.bytedeco.javacpp.LLVM.*;
  * Creates LLVM IR for class objects.
  */
 public final class ClassObjects {
+    private final LLVMTranslator v;
 
-    public ClassObjects() {}
+    public ClassObjects(LLVMTranslator v) {
+        this.v = v;
+    }
 
-    public static LLVMTypeRef classIdVarTypeRef() {
+    public LLVMTypeRef classIdVarTypeRef() {
         return LLVMInt8Type();
     }
 
-    public static LLVMTypeRef classIdVarPtrTypeRef() {
-        return  LLVMUtils.ptrTypeRef(classIdVarTypeRef());
+    public LLVMTypeRef classIdVarPtrTypeRef() {
+        return  v.utils.ptrTypeRef(classIdVarTypeRef());
     }
 
-    public static LLVMValueRef classIdDeclRef(LLVMModuleRef mod,
+    public LLVMValueRef classIdDeclRef(LLVMModuleRef mod,
                                                        ReferenceType rt,
                                                        boolean extern) {
-        LLVMValueRef global = LLVMUtils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarTypeRef());
+        LLVMValueRef global = v.utils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarTypeRef());
         if(!extern){
             LLVMSetInitializer(global, LLVMConstInt(LLVMInt8Type(), 0, /*sign-extend*/ 0));
         }
         return global;
     }
 
-    public static LLVMValueRef classIdVarRef(LLVMModuleRef mod, ReferenceType rt) {
-        return LLVMUtils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarTypeRef());
+    public LLVMValueRef classIdVarRef(LLVMModuleRef mod, ReferenceType rt) {
+        return v.utils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarTypeRef());
     }
 
-    public static LLVMValueRef classObjRef(LLVMModuleRef mod, ReferenceType rt) {
+    public LLVMValueRef classObjRef(LLVMModuleRef mod, ReferenceType rt) {
         List<LLVMValueRef> classObjPtrOperands = new ArrayList<>();
 
         Type superType = rt;
@@ -51,11 +55,11 @@ public final class ClassObjects {
         rt.interfaces().stream().map(it -> classIdVarRef(mod, it))
                 .forEach(classObjPtrOperands::add);
 
-        LLVMValueRef classObjPtrs = LLVMUtils.buildConstArray(classIdVarPtrTypeRef(), classObjPtrOperands.toArray(new LLVMValueRef[1]));
+        LLVMValueRef classObjPtrs = v.utils.buildConstArray(classIdVarPtrTypeRef(), classObjPtrOperands.toArray(new LLVMValueRef[1]));
         LLVMValueRef numSupertypes = LLVMConstInt(LLVMInt32Type(), countSupertypes(rt), /*sign-extend*/ 0);
-        LLVMValueRef classObjStruct = LLVMUtils.buildConstStruct(numSupertypes, classObjPtrs);
+        LLVMValueRef classObjStruct = v.utils.buildConstStruct(numSupertypes, classObjPtrs);
 
-        LLVMValueRef global = LLVMUtils.getGlobal(mod, PolyLLVMMangler.classObjName(rt), LLVMTypeOf(classObjStruct));
+        LLVMValueRef global = v.utils.getGlobal(mod, PolyLLVMMangler.classObjName(rt), LLVMTypeOf(classObjStruct));
         LLVMSetExternallyInitialized(global, 0);
         LLVMSetInitializer(global, classObjStruct);
 
@@ -63,7 +67,7 @@ public final class ClassObjects {
     }
 
     /** Counts the supertypes for this reference type, including itself. */
-    public static int countSupertypes(ReferenceType rt) {
+    public int countSupertypes(ReferenceType rt) {
         int ret = 0;
         for (Type s = rt; s != null; s = s.toReference().superType())
             ++ret;
@@ -71,11 +75,11 @@ public final class ClassObjects {
         return ret;
     }
 
-    public static LLVMTypeRef classObjArrTypeRef(ReferenceType rt) {
+    public LLVMTypeRef classObjArrTypeRef(ReferenceType rt) {
         return LLVMArrayType(classIdVarPtrTypeRef(), countSupertypes(rt));
     }
 
-    public static LLVMTypeRef classObjTypeRef(ReferenceType rt) {
-        return LLVMUtils.structType(LLVMInt32Type(), classObjArrTypeRef(rt));
+    public LLVMTypeRef classObjTypeRef(ReferenceType rt) {
+        return v.utils.structType(LLVMInt32Type(), classObjArrTypeRef(rt));
     }
 }

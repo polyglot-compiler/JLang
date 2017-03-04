@@ -6,9 +6,8 @@ import polyglot.ast.Node;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
 
@@ -18,15 +17,15 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         FieldDecl n = (FieldDecl) node();
 
         // Only static field declarations need a translation.
         if (n.flags().isStatic()) {
             ReferenceType classType = v.getCurrentClass().type().toReference();
             String mangledName = PolyLLVMMangler.mangleStaticFieldName(classType, n);
-            LLVMTypeRef type = LLVMUtils.typeRef(n.type().type(), v);
-            LLVMValueRef global = LLVMUtils.getGlobal(v.mod, mangledName, type);
+            LLVMTypeRef type = v.utils.typeRef(n.type().type());
+            LLVMValueRef global = v.utils.getGlobal(v.mod, mangledName, type);
             if (n.init() == null) {
                 // LLVMConstNull will give zero for any type, including numeric and pointer types.
                 LLVMSetInitializer(global, LLVMConstNull(type));

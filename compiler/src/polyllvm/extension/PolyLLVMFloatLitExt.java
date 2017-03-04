@@ -6,7 +6,7 @@ import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -14,7 +14,7 @@ public class PolyLLVMFloatLitExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         FloatLit n = (FloatLit) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
         v.debugInfo.emitLocation(n);

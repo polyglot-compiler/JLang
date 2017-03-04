@@ -7,8 +7,7 @@ import polyglot.ast.ProcedureDecl;
 import polyglot.types.*;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
 import java.util.List;
@@ -24,7 +23,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
     }
 
     @Override
-    public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+    public LLVMTranslator enterTranslatePseudoLLVM(LLVMTranslator v) {
         ProcedureDecl n = (ProcedureDecl) node();
         TypeSystem ts = v.typeSystem();
         ProcedureInstance pi = n.procedureInstance();
@@ -38,10 +37,10 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 .collect(Collectors.toList());
         ReferenceType target = v.getCurrentClass().type().toReference();
         LLVMTypeRef funcType = pi.flags().isStatic()
-                ? LLVMUtils.functionType(retType, formalTypes, v)
-                : LLVMUtils.methodType(target, retType, formalTypes, v);
+                ? v.utils.functionType(retType, formalTypes)
+                : v.utils.methodType(target, retType, formalTypes);
 
-        LLVMValueRef funcRef = LLVMUtils.funcRef(v.mod, pi, funcType);
+        LLVMValueRef funcRef = v.utils.funcRef(v.mod, pi, funcType);
         v.debugInfo.funcDebugInfo(v, n, funcRef);
         v.debugInfo.emitLocation(n);
 
@@ -51,7 +50,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         for (int i = 0; i < n.formals().size(); ++i) {
             Formal formal = n.formals().get(i);
-            LLVMTypeRef typeRef = LLVMUtils.typeRef(formal.type().type(), v);
+            LLVMTypeRef typeRef = v.utils.typeRef(formal.type().type());
 
             LLVMValueRef alloc = LLVMBuildAlloca(v.builder, typeRef, "arg_" + formal.name());
             int idx = i + (pi.flags().isStatic() ? 0 : 1);
@@ -82,7 +81,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         ProcedureDecl n = (ProcedureDecl) node();
         ProcedureInstance pi = n.procedureInstance();
         if (!containsCode(pi))

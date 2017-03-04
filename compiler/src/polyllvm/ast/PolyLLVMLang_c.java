@@ -2,7 +2,7 @@ package polyllvm.ast;
 
 import polyglot.ast.*;
 import polyglot.util.InternalCompilerError;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
 
@@ -37,23 +37,23 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     }
 
     @Override
-    public PseudoLLVMTranslator enterTranslatePseudoLLVM(Node n,
-            PseudoLLVMTranslator v) {
+    public LLVMTranslator enterTranslatePseudoLLVM(Node n,
+                                                   LLVMTranslator v) {
         return PolyLLVMOps(n).enterTranslatePseudoLLVM(v);
     }
 
     @Override
-    public Node translatePseudoLLVM(Node n, PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(Node n, LLVMTranslator v) {
         return PolyLLVMOps(n).translatePseudoLLVM(v);
     }
 
     @Override
-    public Node overrideTranslatePseudoLLVM(Node n, PseudoLLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(Node n, LLVMTranslator v) {
         return PolyLLVMOps(n).overrideTranslatePseudoLLVM(v);
     }
 
     @Override
-    public void translateLLVMConditional(Node n, PseudoLLVMTranslator v,
+    public void translateLLVMConditional(Node n, LLVMTranslator v,
                                          LLVMBasicBlockRef trueBlock,
                                          LLVMBasicBlockRef falseBlock) {
         PolyLLVMOps(n).translateLLVMConditional(v, trueBlock, falseBlock);

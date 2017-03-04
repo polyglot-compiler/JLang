@@ -11,17 +11,20 @@ import polyglot.util.Pair;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.extension.ClassObjects;
 import polyllvm.util.Constants;
 import polyllvm.util.DebugInfo;
+import polyllvm.util.LLVMUtils;
 import polyllvm.util.Triple;
 
+import java.lang.Override;
 import java.util.*;
 import java.util.function.Supplier;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
 // TODO: Can simplify things by extending ContextVisitor.
-public class PseudoLLVMTranslator extends NodeVisitor {
+public class LLVMTranslator extends NodeVisitor {
 
     private PolyLLVMNodeFactory nf;
     private TypeSystem ts;
@@ -32,6 +35,8 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     public final LLVMModuleRef mod;
     public final LLVMBuilderRef builder;
     public final DebugInfo debugInfo;
+    public final LLVMUtils utils;
+    public final ClassObjects classObjs;
 
     /**
      * A stack of all enclosing functions.
@@ -65,11 +70,14 @@ public class PseudoLLVMTranslator extends NodeVisitor {
     private boolean inTry = false;
     private LLVMBasicBlockRef lpad = null;
 
-    public PseudoLLVMTranslator(LLVMModuleRef mod, LLVMBuilderRef builder, DebugInfo debugInfo, PolyLLVMNodeFactory nf, TypeSystem ts) {
+    public LLVMTranslator(String filePath, LLVMModuleRef mod, LLVMBuilderRef builder,
+                          PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());
         this.mod = mod;
         this.builder = builder;
-        this.debugInfo = debugInfo;
+        this.debugInfo = new DebugInfo(this, mod, builder, filePath);
+        this.utils = new LLVMUtils(this);
+        this.classObjs = new ClassObjects(this);
         this.nf = nf;
         this.ts = ts;
     }
@@ -479,23 +487,4 @@ public class PseudoLLVMTranslator extends NodeVisitor {
         assert inTry;
         this.lpad = lpad;
     }
-
-    /**
-     * Get the reference type of the runtime class {@code Array}
-     */
-    public ReferenceType getArrayType() {
-        ReferenceType arrayType;
-        try {
-            arrayType = (ReferenceType) typeSystem().typeForName("support.Array");
-        }
-        catch (SemanticException e) {
-            throw new InternalCompilerError("Could not load array type");
-        }
-        catch (ClassCastException e) {
-            throw new InternalCompilerError("Could not load array type");
-        }
-        return arrayType;
-    }
-
-
 }

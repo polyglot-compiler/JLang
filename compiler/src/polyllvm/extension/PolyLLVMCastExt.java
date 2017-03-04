@@ -7,8 +7,7 @@ import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -16,7 +15,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         // TODO: Double-check semantics with http://docs.oracle.com/javase/specs/jls/se7/html/jls-5.html
 
         Cast n = (Cast) node();
@@ -25,7 +24,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         Type exprType = n.expr().type();
 
         Type castType = n.castType().type();
-        LLVMTypeRef castTypeRef = LLVMUtils.typeRef(castType, v);
+        LLVMTypeRef castTypeRef = v.utils.typeRef(castType);
 
         LLVMValueRef exprTranslation = v.getTranslation(n.expr());
 

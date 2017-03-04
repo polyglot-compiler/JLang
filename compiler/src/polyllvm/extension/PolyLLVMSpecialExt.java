@@ -6,8 +6,7 @@ import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -15,7 +14,7 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         Special n = (Special) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
@@ -30,7 +29,7 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
         }
         else if (n.kind() == Special.SUPER) {
             LLVMValueRef to_super = LLVMBuildBitCast(v.builder,
-                    LLVMGetParam(v.currFn(), 0), LLVMUtils.typeRef(n.type(), v), "cast_to_super");
+                    LLVMGetParam(v.currFn(), 0), v.utils.typeRef(n.type()), "cast_to_super");
             v.addTranslation(n, to_super);
         }
 

@@ -4,8 +4,7 @@ import polyglot.ast.LocalDecl;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -13,7 +12,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
         LocalDecl n = (LocalDecl) node();
 
         LLVMBasicBlockRef currentBlock = LLVMGetInsertBlock(v.builder);
@@ -21,7 +20,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
         LLVMBasicBlockRef firstBlock = LLVMGetFirstBasicBlock(v.currFn());
         LLVMPositionBuilderBefore(v.builder,LLVMGetBasicBlockTerminator(firstBlock));
         v.debugInfo.emitLocation(n);
-        LLVMValueRef alloc = LLVMBuildAlloca(v.builder, LLVMUtils.typeRef(n.type().type(),v), n.name());
+        LLVMValueRef alloc = LLVMBuildAlloca(v.builder, v.utils.typeRef(n.type().type()), n.name());
         v.addAllocation(n.name(), alloc);
 
         v.debugInfo.createLocalVariable(v, n ,alloc);
@@ -42,7 +41,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
     /**
      * Create a new local without debug symbols, which is not added to the map of locals
      */
-    public static LLVMValueRef createLocal(PseudoLLVMTranslator v, String name, LLVMTypeRef type){
+    public static LLVMValueRef createLocal(LLVMTranslator v, String name, LLVMTypeRef type){
         LLVMBasicBlockRef currentBlock = LLVMGetInsertBlock(v.builder);
         LLVMBasicBlockRef firstBlock = LLVMGetFirstBasicBlock(v.currFn());
         LLVMPositionBuilderBefore(v.builder,LLVMGetBasicBlockTerminator(firstBlock));

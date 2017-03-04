@@ -6,9 +6,9 @@ import polyglot.types.TypeSystem;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.Constants;
-import polyllvm.util.LLVMUtils;
-import polyllvm.visit.PseudoLLVMTranslator;
+import polyllvm.visit.LLVMTranslator;
 
+import java.lang.Override;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -19,17 +19,21 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public PseudoLLVMTranslator enterTranslatePseudoLLVM(PseudoLLVMTranslator v) {
+    public LLVMTranslator enterTranslatePseudoLLVM(LLVMTranslator v) {
         // Add a calloc declaration to the current module (declare i8* @GC_malloc(i64)).
-        LLVMTypeRef retType = LLVMUtils.ptrTypeRef(LLVMInt8Type());
-        LLVMTypeRef sizeType = LLVMUtils.llvmPtrSizedIntType();
-        LLVMTypeRef funcType = LLVMUtils.functionType(retType, sizeType);
+        LLVMTypeRef retType = v.utils.ptrTypeRef(LLVMInt8Type());
+        LLVMTypeRef sizeType = v.utils.llvmPtrSizedIntType();
+        LLVMTypeRef funcType = v.utils.functionType(retType, sizeType);
         LLVMAddFunction(v.mod, Constants.CALLOC, funcType);
+
+        // Add array type to the current module.
+        v.utils.setupArrayType();
+
         return v;
     }
 
     @Override
-    public Node translatePseudoLLVM(PseudoLLVMTranslator v) {
+    public Node translatePseudoLLVM(LLVMTranslator v) {
 
         // Call an entry point within the current module if possible.
         List<LLVMValueRef> entryPoints = v.getEntryPoints();
@@ -46,10 +50,10 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     /**
      * Build a trampoline between the LLVM entry point and the Java entry point.
      */
-    private static void buidEntryPoint(PseudoLLVMTranslator v, LLVMValueRef javaEntryPoint) {
+    private static void buidEntryPoint(LLVMTranslator v, LLVMValueRef javaEntryPoint) {
         TypeSystem ts = v.typeSystem();
-        LLVMTypeRef argType = LLVMUtils.typeRef(ts.arrayOf(ts.String()), v);
-        LLVMTypeRef funcType = LLVMUtils.functionType(LLVMVoidType(), argType);
+        LLVMTypeRef argType = v.utils.typeRef(ts.arrayOf(ts.String()));
+        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidType(), argType);
 
         LLVMValueRef func = LLVMAddFunction(v.mod, Constants.ENTRY_TRAMPOLINE, funcType);
 
@@ -62,7 +66,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         LLVMPositionBuilderAtEnd(v.builder, block);
         v.debugInfo.emitLocation();
 
-        LLVMUtils.buildProcedureCall(v, javaEntryPoint, LLVMGetFirstParam(func));
+        v.utils.buildProcedureCall(javaEntryPoint, LLVMGetFirstParam(func));
         LLVMBuildRetVoid(v.builder);
         v.debugInfo.popScope();
     }
@@ -70,19 +74,19 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     /**
      * Build ctor functions using the ctor suppliers added to the visitor during translation.
      */
-    private static void buildCtors(PseudoLLVMTranslator v) {
+    private static void buildCtors(LLVMTranslator v) {
         List<Supplier<LLVMValueRef>> ctors = v.getCtors();
         if (ctors.isEmpty())
             return;
 
         // Create the ctor global array as specified in the LLVM Language Reference Manual.
-        LLVMTypeRef funcType = LLVMUtils.functionType(LLVMVoidType());
-        LLVMTypeRef funcPtrType = LLVMUtils.ptrTypeRef(funcType);
-        LLVMTypeRef voidPtr = LLVMUtils.ptrTypeRef(LLVMInt8Type());
-        LLVMTypeRef structType = LLVMUtils.structType(LLVMInt32Type(), funcPtrType, voidPtr);
+        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidType());
+        LLVMTypeRef funcPtrType = v.utils.ptrTypeRef(funcType);
+        LLVMTypeRef voidPtr = v.utils.ptrTypeRef(LLVMInt8Type());
+        LLVMTypeRef structType = v.utils.structType(LLVMInt32Type(), funcPtrType, voidPtr);
         LLVMTypeRef ctorVarType = LLVMArrayType(structType, /*size*/ ctors.size());
         String ctorVarName = "llvm.global_ctors";
-        LLVMValueRef ctorGlobal = LLVMUtils.getGlobal(v.mod, ctorVarName, ctorVarType);
+        LLVMValueRef ctorGlobal = v.utils.getGlobal(v.mod, ctorVarName, ctorVarType);
         LLVMSetLinkage(ctorGlobal, LLVMAppendingLinkage);
 
         // For each ctor function, create a struct containing a priority, a pointer to the
@@ -90,7 +94,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         LLVMValueRef[] structs = new LLVMValueRef[ctors.size()];
         int counter = 0;
         for (Supplier<LLVMValueRef> ctor : ctors) {
-            LLVMValueRef func = LLVMUtils.getFunction(v.mod, "ctor" + counter, funcType);
+            LLVMValueRef func = v.utils.getFunction(v.mod, "ctor" + counter, funcType);
             LLVMSetLinkage(func, LLVMPrivateLinkage);
             LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
                     v.debugInfo.diBuilder, new PointerPointer<>(), /*length*/ 0);
@@ -108,7 +112,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
             if (data == null)
                 data = LLVMConstNull(voidPtr);
             LLVMValueRef castData = LLVMConstBitCast(data, voidPtr);
-            structs[counter] = LLVMUtils.buildConstStruct(priority, func, castData);
+            structs[counter] = v.utils.buildConstStruct(priority, func, castData);
 
             LLVMBuildRetVoid(v.builder);
             v.debugInfo.popScope();
@@ -116,7 +120,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
             ++counter;
         }
 
-        LLVMValueRef arr = LLVMUtils.buildConstArray(structType, structs);
+        LLVMValueRef arr = v.utils.buildConstArray(structType, structs);
         LLVMSetInitializer(ctorGlobal, arr);
     }
 }
