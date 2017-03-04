@@ -39,7 +39,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         //Allocate space for the new object - need to get the size of the object
         LLVMValueRef calloc = LLVMGetNamedFunction(v.mod, Constants.CALLOC);
-        LLVMValueRef obj = LLVMUtils.buildMethodCall(v.builder, calloc, size);
+        LLVMValueRef obj = LLVMUtils.buildMethodCall(v, calloc, size);
 
         v.debugInfo.emitLocation(n);
 
@@ -63,7 +63,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
                     Stream.of(cast),
                     n.arguments().stream().map(v::getTranslation))
                 .toArray(LLVMValueRef[]::new);
-        LLVMUtils.buildProcedureCall(v.builder, constructor, constructorArgs);
+        LLVMUtils.buildProcedureCall(v, constructor, constructorArgs);
 
         v.addTranslation(n, cast);
     }

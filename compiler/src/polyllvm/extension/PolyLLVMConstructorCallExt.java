@@ -50,7 +50,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
                 Stream.of(thisArg),
                 n.arguments().stream().map(v::getTranslation)
         ).toArray(LLVMValueRef[]::new);
-        LLVMValueRef procedureCall = LLVMUtils.buildProcedureCall(v.builder, function, args);
+        LLVMValueRef procedureCall = LLVMUtils.buildProcedureCall(v, function, args);
         v.addTranslation(n, procedureCall);
         return n;
     }

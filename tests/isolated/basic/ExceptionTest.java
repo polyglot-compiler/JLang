@@ -1,28 +1,30 @@
 public class ExceptionTest {
     public static void main(String[] args) {
         try {
-            Exception exception = new Exception();
+            Throwable exception = new Throwable();
             throw exception;
         } catch (Throwable e) {
-            System.out.println("e");
+            System.out.println("Correctly Catch");
         } finally {
-            System.out.println("f");
+            System.out.println("Correctly Finalize");
+        }
+
+        try {
+            f();
+        } catch (Throwable e){
+            System.out.println("Correctly Catch");
         }
     }
 
-
-    public static void tryBlock() throws Exception {
-        Exception exception = new Exception();
-        throw exception;
+    public static void f(){
+        try {
+            Error exception = new Error();
+            Exception e = new Exception();
+            throw exception;
+        } catch (Exception e) {
+            System.out.println("DO NOT CATCH THIS");
+        } finally {
+            System.out.println("Correctly Finalize");
+        }
     }
-
-    public static void catchBlock() {
-        System.out.println("e");
-    }
-
-    public static void finallyBlock() throws Exception {
-        System.out.println("f");
-    }
-
-
 }

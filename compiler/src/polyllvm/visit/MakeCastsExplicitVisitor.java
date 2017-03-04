@@ -26,6 +26,9 @@ public class MakeCastsExplicitVisitor extends AscriptionVisitor {
         if (parent instanceof Cast) {
             // We already have a cast; no need to add another.
             return n;
+        } else if (n instanceof ArrayInit && parent instanceof NewArray) {
+            // Tries to cast ArrayInit to Cast, need to propagate type
+            return ((ArrayInit) n).type(((NewArray) parent).type());
         } else {
             return super.leaveCall(parent, old, n, v);
         }

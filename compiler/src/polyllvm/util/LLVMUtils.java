@@ -25,6 +25,11 @@ public class LLVMUtils {
         return 64;
     }
 
+    public static LLVMTypeRef llvmBytePtr() {
+        return ptrTypeRef(LLVMInt8Type());
+    }
+
+
     public static LLVMTypeRef ptrTypeRef(LLVMTypeRef elemType) {
         return LLVMPointerType(elemType, Constants.LLVM_ADDR_SPACE);
     }
@@ -98,16 +103,28 @@ public class LLVMUtils {
         return functionType(typeRef(returnType, v), args);
     }
 
-    public static LLVMValueRef buildProcedureCall(LLVMBuilderRef builder,
+    public static LLVMValueRef buildProcedureCall(PseudoLLVMTranslator v,
                                                   LLVMValueRef func,
                                                   LLVMValueRef ...args) {
-        return LLVMBuildCall(builder, func, new PointerPointer<>(args), args.length, "");
+        if(v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())){
+            LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlock(v.currFn(), "invoke.cont");
+            LLVMValueRef invoke = LLVMBuildInvoke(v.builder, func, new PointerPointer<>(args), args.length, invokeCont, v.currLpad(), "");
+            LLVMPositionBuilderAtEnd(v.builder, invokeCont);
+            return invoke;
+        }
+        return LLVMBuildCall(v.builder, func, new PointerPointer<>(args), args.length, "");
     }
 
-    public static LLVMValueRef buildMethodCall(LLVMBuilderRef builder,
+    public static LLVMValueRef buildMethodCall(PseudoLLVMTranslator v,
                                                LLVMValueRef func,
                                                LLVMValueRef ...args) {
-        return LLVMBuildCall(builder, func, new PointerPointer<>(args), args.length, "call");
+        if(v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())){
+            LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlock(v.currFn(), "invoke.cont");
+            LLVMValueRef invoke = LLVMBuildInvoke(v.builder, func, new PointerPointer<>(args), args.length, invokeCont, v.currLpad(), "call");
+            LLVMPositionBuilderAtEnd(v.builder, invokeCont);
+            return invoke;
+        }
+        return LLVMBuildCall(v.builder, func, new PointerPointer<>(args), args.length, "call");
     }
 
     /**
