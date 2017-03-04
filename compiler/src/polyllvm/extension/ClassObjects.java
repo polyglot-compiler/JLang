@@ -2,7 +2,6 @@ package polyllvm.extension;
 
 import polyglot.types.ReferenceType;
 import polyglot.types.Type;
-import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.LLVMTranslator;
 
@@ -22,7 +21,7 @@ public final class ClassObjects {
     }
 
     public LLVMTypeRef classIdVarTypeRef() {
-        return LLVMInt8Type();
+        return LLVMInt8TypeInContext(v.context);
     }
 
     public LLVMTypeRef classIdVarPtrTypeRef() {
@@ -34,7 +33,7 @@ public final class ClassObjects {
                                                        boolean extern) {
         LLVMValueRef global = v.utils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarTypeRef());
         if(!extern){
-            LLVMSetInitializer(global, LLVMConstInt(LLVMInt8Type(), 0, /*sign-extend*/ 0));
+            LLVMSetInitializer(global, LLVMConstInt(LLVMInt8TypeInContext(v.context), 0, /*sign-extend*/ 0));
         }
         return global;
     }
@@ -56,7 +55,7 @@ public final class ClassObjects {
                 .forEach(classObjPtrOperands::add);
 
         LLVMValueRef classObjPtrs = v.utils.buildConstArray(classIdVarPtrTypeRef(), classObjPtrOperands.toArray(new LLVMValueRef[1]));
-        LLVMValueRef numSupertypes = LLVMConstInt(LLVMInt32Type(), countSupertypes(rt), /*sign-extend*/ 0);
+        LLVMValueRef numSupertypes = LLVMConstInt(LLVMInt32TypeInContext(v.context), countSupertypes(rt), /*sign-extend*/ 0);
         LLVMValueRef classObjStruct = v.utils.buildConstStruct(numSupertypes, classObjPtrs);
 
         LLVMValueRef global = v.utils.getGlobal(mod, PolyLLVMMangler.classObjName(rt), LLVMTypeOf(classObjStruct));
@@ -80,6 +79,6 @@ public final class ClassObjects {
     }
 
     public LLVMTypeRef classObjTypeRef(ReferenceType rt) {
-        return v.utils.structType(LLVMInt32Type(), classObjArrTypeRef(rt));
+        return v.utils.structType(LLVMInt32TypeInContext(v.context), classObjArrTypeRef(rt));
     }
 }

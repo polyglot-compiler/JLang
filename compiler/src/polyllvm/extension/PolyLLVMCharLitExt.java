@@ -15,7 +15,7 @@ public class PolyLLVMCharLitExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(LLVMTranslator v) {
         CharLit n = (CharLit) node();
         v.debugInfo.emitLocation(n);
-        LLVMValueRef val = LLVMConstInt(LLVMInt16Type(), n.value(), /* sign-extend */ 0);
+        LLVMValueRef val = LLVMConstInt(LLVMInt16TypeInContext(v.context), n.value(), /* sign-extend */ 0);
         v.addTranslation(n, val);
         return super.translatePseudoLLVM(v);
     }

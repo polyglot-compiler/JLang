@@ -21,7 +21,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     @Override
     public LLVMTranslator enterTranslatePseudoLLVM(LLVMTranslator v) {
         // Add a calloc declaration to the current module (declare i8* @GC_malloc(i64)).
-        LLVMTypeRef retType = v.utils.ptrTypeRef(LLVMInt8Type());
+        LLVMTypeRef retType = v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context));
         LLVMTypeRef sizeType = v.utils.llvmPtrSizedIntType();
         LLVMTypeRef funcType = v.utils.functionType(retType, sizeType);
         LLVMAddFunction(v.mod, Constants.CALLOC, funcType);
@@ -53,7 +53,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     private static void buidEntryPoint(LLVMTranslator v, LLVMValueRef javaEntryPoint) {
         TypeSystem ts = v.typeSystem();
         LLVMTypeRef argType = v.utils.typeRef(ts.arrayOf(ts.String()));
-        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidType(), argType);
+        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context), argType);
 
         LLVMValueRef func = LLVMAddFunction(v.mod, Constants.ENTRY_TRAMPOLINE, funcType);
 
@@ -62,7 +62,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(v.debugInfo.diBuilder, v.debugInfo.createFile(), typeArray);
         v.debugInfo.funcDebugInfo(v, 0, Constants.ENTRY_TRAMPOLINE, Constants.ENTRY_TRAMPOLINE, funcDiType, func);
 
-        LLVMBasicBlockRef block = LLVMAppendBasicBlock(func, "body");
+        LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(v.context, func, "body");
         LLVMPositionBuilderAtEnd(v.builder, block);
         v.debugInfo.emitLocation();
 
@@ -80,10 +80,10 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
             return;
 
         // Create the ctor global array as specified in the LLVM Language Reference Manual.
-        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidType());
+        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context));
         LLVMTypeRef funcPtrType = v.utils.ptrTypeRef(funcType);
-        LLVMTypeRef voidPtr = v.utils.ptrTypeRef(LLVMInt8Type());
-        LLVMTypeRef structType = v.utils.structType(LLVMInt32Type(), funcPtrType, voidPtr);
+        LLVMTypeRef voidPtr = v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context));
+        LLVMTypeRef structType = v.utils.structType(LLVMInt32TypeInContext(v.context), funcPtrType, voidPtr);
         LLVMTypeRef ctorVarType = LLVMArrayType(structType, /*size*/ ctors.size());
         String ctorVarName = "llvm.global_ctors";
         LLVMValueRef ctorGlobal = v.utils.getGlobal(v.mod, ctorVarName, ctorVarType);
@@ -102,12 +102,12 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
                     v.debugInfo.diBuilder, v.debugInfo.createFile(), typeArray);
             v.debugInfo.funcDebugInfo(v, 0, ctorVarName, ctorVarName, funcDiType, func);
 
-            LLVMBasicBlockRef body = LLVMAppendBasicBlock(func, "body");
+            LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func, "body");
             LLVMPositionBuilderAtEnd(v.builder, body);
 
             // We use `counter` as the ctor priority to help ensure that static initializers
             // are executed in textual order, per the JLS.
-            LLVMValueRef priority = LLVMConstInt(LLVMInt32Type(), counter, /*sign-extend*/ 0);
+            LLVMValueRef priority = LLVMConstInt(LLVMInt32TypeInContext(v.context), counter, /*sign-extend*/ 0);
             LLVMValueRef data = ctor.get(); // Calls supplier lambda to build ctor body.
             if (data == null)
                 data = LLVMConstNull(voidPtr);

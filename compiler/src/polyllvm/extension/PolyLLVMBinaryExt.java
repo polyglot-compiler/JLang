@@ -105,13 +105,13 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         Operator op = n.operator();
         v.debugInfo.emitLocation(n);
         if (op.equals(Binary.COND_AND)) {
-            LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
+            LLVMBasicBlockRef l1 = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "l1");
             lang().translateLLVMConditional(n.left(), v, l1, falseBlock);
             LLVMPositionBuilderAtEnd(v.builder, l1);
             lang().translateLLVMConditional(n.right(), v, trueBlock, falseBlock);
         }
         else if (op.equals(Binary.COND_OR)) {
-            LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
+            LLVMBasicBlockRef l1 = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "l1");
             lang().translateLLVMConditional(n.left(), v, trueBlock, l1);
             LLVMPositionBuilderAtEnd(v.builder, l1);
             lang().translateLLVMConditional(n.right(), v, trueBlock, falseBlock);

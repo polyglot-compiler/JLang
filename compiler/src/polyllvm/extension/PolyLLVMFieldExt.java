@@ -34,7 +34,7 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
             LLVMValueRef thisTranslation = v.getTranslation(target);
             int fieldIndex = v.getFieldIndex((ReferenceType) n.target().type(), n.fieldInstance());
             LLVMValueRef gep = v.utils.buildGEP(v.builder, thisTranslation,
-                    LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), fieldIndex, 0));
+                    LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, 0), LLVMConstInt(LLVMInt32TypeInContext(v.context), fieldIndex, 0));
             v.addTranslation(n, LLVMBuildLoad(v.builder, gep, "load_field"));
 
         }

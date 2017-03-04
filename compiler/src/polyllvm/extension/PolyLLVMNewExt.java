@@ -24,7 +24,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         ReferenceType classtype = ci.container();
         int mallocSize =
                 (v.layouts(classtype).part2().size() + /*Allocate space for DV ptr*/ 1) * 8;
-        translateWithSize(v, LLVMConstInt(LLVMInt64Type(), mallocSize, 0));
+        translateWithSize(v, LLVMConstInt(LLVMInt64TypeInContext(v.context), mallocSize, 0));
         return super.translatePseudoLLVM(v);
     }
 
@@ -46,7 +46,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         LLVMValueRef cast = LLVMBuildBitCast(v.builder, obj, v.utils.typeRef(classtype), "obj_cast");
         //Set the Dispatch vector
         LLVMValueRef gep = v.utils.buildGEP(v.builder, cast,
-                LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 0, 0));
+                LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, 0), LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, 0));
         LLVMValueRef dvGlobal = v.utils.getDvGlobal(classtype);
         LLVMBuildStore(v.builder, dvGlobal, gep);
 

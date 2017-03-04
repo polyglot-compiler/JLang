@@ -45,7 +45,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         LLVMValueRef[] dvMethods;
         if(interfaces.size() > 0){
             LLVMValueRef itGlobal =  LLVMConstBitCast(v.utils.getItGlobal(interfaces.get(0), n.type()),
-                    v.utils.ptrTypeRef(LLVMInt8Type()));
+                    v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
             dvMethods = v.utils.dvMethods(n.type(), itGlobal);
         } else {
             dvMethods = v.utils.dvMethods(n.type());
@@ -64,14 +64,14 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
 
             LLVMValueRef next;
             if(i == interfaces.size()-1){ // Last Interface next pointer points to null
-                next = LLVMConstNull(v.utils.ptrTypeRef(LLVMInt8Type()));
+                next = LLVMConstNull(v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
             } else {
-                next = LLVMConstBitCast(v.utils.getItGlobal(interfaces.get(i+1), n.type()), v.utils.ptrTypeRef(LLVMInt8Type()));
+                next = LLVMConstBitCast(v.utils.getItGlobal(interfaces.get(i+1), n.type()), v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
             }
             LLVMValueRef[] itMethods = v.utils.itMethods(it, n.type(), next);
 
             String s = it.toString();
-            LLVMTypeRef stringType = LLVMArrayType(LLVMInt8Type(), s.length() + 1);
+            LLVMTypeRef stringType = LLVMArrayType(LLVMInt8TypeInContext(v.context), s.length() + 1);
             LLVMValueRef interfaceName = v.utils.getGlobal(v.mod,
                     PolyLLVMMangler.interfaceStringVariable(it), stringType);
             LLVMSetInitializer(interfaceName, LLVMConstString(s, s.length(), /*Don't null terminate*/ 0));

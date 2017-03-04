@@ -30,7 +30,7 @@ public class LLVMUtils {
     }
 
     public LLVMTypeRef llvmPtrSizedIntType() {
-        return LLVMIntType(llvmPtrSize());
+        return LLVMIntTypeInContext(v.context, llvmPtrSize());
     }
 
     public int llvmPtrSize() {
@@ -38,7 +38,7 @@ public class LLVMUtils {
     }
 
     public LLVMTypeRef llvmBytePtr() {
-        return ptrTypeRef(LLVMInt8Type());
+        return ptrTypeRef(LLVMInt8TypeInContext(v.context));
     }
 
     public LLVMTypeRef ptrTypeRef(LLVMTypeRef elemType) {
@@ -48,7 +48,7 @@ public class LLVMUtils {
     private LLVMTypeRef structTypeRefOpaque(String mangledName) {
         LLVMTypeRef res = LLVMGetTypeByName(v.mod, mangledName);
         if (res == null)
-            res = LLVMStructCreateNamed(LLVMGetGlobalContext(), mangledName);
+            res = LLVMStructCreateNamed(v.context, mangledName);
         return res;
     }
 
@@ -75,13 +75,13 @@ public class LLVMUtils {
 
 
     public LLVMTypeRef typeRef(Type t) {
-        if      (t.isBoolean())    return LLVMInt1Type();
-        else if (t.isLongOrLess()) return LLVMIntType(numBitsOfIntegralType(t));
-        else if (t.isVoid())       return LLVMVoidType();
+        if      (t.isBoolean())    return LLVMInt1TypeInContext(v.context);
+        else if (t.isLongOrLess()) return LLVMIntTypeInContext(v.context, numBitsOfIntegralType(t));
+        else if (t.isVoid())       return LLVMVoidTypeInContext(v.context);
         else if (t.isFloat())      return LLVMFloatType();
         else if (t.isDouble())     return LLVMDoubleType();
         else if (t.isClass())      return structTypeRef(t.toReference());
-        else if (t.isNull())       return ptrTypeRef(LLVMInt8Type());
+        else if (t.isNull())       return ptrTypeRef(LLVMInt8TypeInContext(v.context));
         else if (t.isArray()) {
             structTypeRef(getArrayType());
             return ptrTypeRef(structTypeRefOpaque(Constants.ARR_CLASS));
@@ -114,7 +114,7 @@ public class LLVMUtils {
 
     public LLVMValueRef buildProcedureCall(LLVMValueRef func, LLVMValueRef... args) {
         if(v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())){
-            LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlock(v.currFn(), "invoke.cont");
+            LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "invoke.cont");
             LLVMValueRef invoke = LLVMBuildInvoke(v.builder, func, new PointerPointer<>(args), args.length, invokeCont, v.currLpad(), "");
             LLVMPositionBuilderAtEnd(v.builder, invokeCont);
             return invoke;
@@ -124,7 +124,7 @@ public class LLVMUtils {
 
     public LLVMValueRef buildMethodCall(LLVMValueRef func, LLVMValueRef... args) {
         if (v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())) {
-            LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlock(v.currFn(), "invoke.cont");
+            LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "invoke.cont");
             LLVMValueRef invoke = LLVMBuildInvoke(v.builder, func, new PointerPointer<>(args), args.length, invokeCont, v.currLpad(), "call");
             LLVMPositionBuilderAtEnd(v.builder, invokeCont);
             return invoke;
@@ -175,7 +175,7 @@ public class LLVMUtils {
     public LLVMValueRef constGEP(LLVMValueRef ptr,
                                         int ...indices) {
         LLVMValueRef[] llvmIndices = Arrays.stream(indices)
-                .mapToObj(i -> LLVMConstInt(LLVMInt32Type(), i, /*sign-extend*/ 0))
+                .mapToObj(i -> LLVMConstInt(LLVMInt32TypeInContext(v.context), i, /*sign-extend*/ 0))
                 .toArray(LLVMValueRef[]::new);
         return LLVMConstGEP(ptr, new PointerPointer<>(llvmIndices), llvmIndices.length);
     }
@@ -186,7 +186,7 @@ public class LLVMUtils {
                                               int ...intIndices) {
         // LLVM suggests using i32 offsets for struct GEP instructions.
         LLVMValueRef[] indices = IntStream.of(intIndices)
-                .mapToObj(i -> LLVMConstInt(LLVMInt32Type(), i, /* sign-extend */ 0))
+                .mapToObj(i -> LLVMConstInt(LLVMInt32TypeInContext(v.context), i, /* sign-extend */ 0))
                 .toArray(LLVMValueRef[]::new);
         return LLVMBuildGEP(builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
@@ -208,7 +208,7 @@ public class LLVMUtils {
     public void setupArrayType() {
         LLVMTypeRef[] fieldTypes = objectFieldTypes(getArrayType());
         fieldTypes = Arrays.copyOf(fieldTypes, fieldTypes.length + 1);
-        fieldTypes[fieldTypes.length-1] = ptrTypeRef(LLVMInt8Type());
+        fieldTypes[fieldTypes.length-1] = ptrTypeRef(LLVMInt8TypeInContext(v.context));
 
         String mangledName = PolyLLVMMangler.classTypeName(getArrayType());
         LLVMTypeRef structType = structTypeRefOpaque(mangledName);
@@ -219,11 +219,11 @@ public class LLVMUtils {
     private LLVMTypeRef[] dvMethodTypes(ReferenceType rt) {
         List<MethodInstance> layout = v.layouts(rt).part1();
         List<LLVMTypeRef> typeList = new ArrayList<>();
-        typeList.add(ptrTypeRef(LLVMInt8Type()));
+        typeList.add(ptrTypeRef(LLVMInt8TypeInContext(v.context)));
 
         // Class dispatch vectors and interface tables currently differ in their second entry.
         if (v.isInterface(rt)) {
-            typeList.add(ptrTypeRef(LLVMInt8Type()));
+            typeList.add(ptrTypeRef(LLVMInt8TypeInContext(v.context)));
         } else {
             typeList.add(ptrTypeRef(v.classObjs.classObjTypeRef(rt)));
         }
@@ -279,7 +279,7 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef[] dvMethods(ReferenceType rt) {
-        return dvMethods(rt, LLVMConstNull(ptrTypeRef(LLVMInt8Type())));
+        return dvMethods(rt, LLVMConstNull(ptrTypeRef(LLVMInt8TypeInContext(v.context))));
     }
 
     public LLVMValueRef buildConstArray(LLVMTypeRef type, LLVMValueRef ...values) {
@@ -287,7 +287,8 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef buildConstStruct(LLVMValueRef ...values) {
-        return LLVMConstStruct(new PointerPointer<>(values), values.length, /*Unpacked struct*/0);
+        PointerPointer<LLVMValueRef> valArr = new PointerPointer<>(values);
+        return LLVMConstStructInContext(v.context, valArr, values.length, /*packed*/ 0);
     }
 
 

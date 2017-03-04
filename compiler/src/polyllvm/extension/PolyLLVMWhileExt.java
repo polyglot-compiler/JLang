@@ -21,7 +21,7 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
 
         LLVMBasicBlockRef head = labels.part1();
         LLVMBasicBlockRef end = labels.part2();
-        LLVMBasicBlockRef l1 = LLVMAppendBasicBlock(v.currFn(), "l1");
+        LLVMBasicBlockRef l1 = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "l1");
 
         v.debugInfo.emitLocation(n);
 

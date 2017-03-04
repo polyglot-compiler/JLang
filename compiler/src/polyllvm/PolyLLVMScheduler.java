@@ -84,9 +84,10 @@ public class PolyLLVMScheduler extends JLScheduler {
                 throw new InternalCompilerError("AST root should be a SourceFile");
             SourceFile sf = (SourceFile) ast;
 
-            LLVMModuleRef mod = LLVMModuleCreateWithName(sf.source().name());
-            LLVMBuilderRef builder = LLVMCreateBuilder();
-            LLVMTranslator translator = new LLVMTranslator(sf.source().path(), mod, builder, nf, ts);
+            LLVMContextRef context = LLVMContextCreate();
+            LLVMModuleRef mod = LLVMModuleCreateWithNameInContext(sf.source().name(), context);
+            LLVMBuilderRef builder = LLVMCreateBuilderInContext(context);
+            LLVMTranslator translator = new LLVMTranslator(sf.source().path(), context, mod, builder, nf, ts);
 
             ast.visit(translator);
 
@@ -119,8 +120,10 @@ public class PolyLLVMScheduler extends JLScheduler {
             LLVMDisposeMessage(error);
             error.setNull();
 
+            LLVMDIBuilderDestroy(translator.debugInfo.diBuilder);
             LLVMDisposeBuilder(builder);
             LLVMDisposeModule(mod);
+            LLVMContextDispose(context);
 
             return true;
         }

@@ -37,8 +37,8 @@ public class PolyLLVMFieldAssignExt extends PolyLLVMAssignExt {
             int fieldIndex = v.getFieldIndex((ReferenceType) objectTarget.type(),
                     field.fieldInstance());
             LLVMValueRef gep = v.utils.buildGEP(v.builder,objectTranslation,
-                    LLVMConstInt(LLVMInt32Type(), 0, /*sign extend*/ 0),
-                    LLVMConstInt(LLVMInt32Type(), fieldIndex, /*sign extend*/ 0));
+                    LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, /*sign extend*/ 0),
+                    LLVMConstInt(LLVMInt32TypeInContext(v.context), fieldIndex, /*sign extend*/ 0));
             v.addTranslation(n, LLVMBuildStore(v.builder, expr, gep));
         }
 

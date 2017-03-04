@@ -79,12 +79,12 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
 
         // TODO: Allocate the right size for packed arrays.
 
-        LLVMValueRef arrLen64 = LLVMBuildSExt(v.builder, arrayLength, LLVMInt64Type(), "arrLen");
+        LLVMValueRef arrLen64 = LLVMBuildSExt(v.builder, arrayLength, LLVMInt64TypeInContext(v.context), "arrLen");
         LLVMValueRef mul = LLVMBuildMul(v.builder,
-                LLVMConstInt(LLVMInt64Type(), sizeOfType, /*sign-extend*/ 0),
+                LLVMConstInt(LLVMInt64TypeInContext(v.context), sizeOfType, /*sign-extend*/ 0),
                 arrLen64, "mul");
         LLVMValueRef size = LLVMBuildAdd(v.builder,
-                LLVMConstInt(LLVMInt64Type(), v.utils.llvmPtrSize()*2 /*2 header words*/, /*sign-extend*/0),
+                LLVMConstInt(LLVMInt64TypeInContext(v.context), v.utils.llvmPtrSize()*2 /*2 header words*/, /*sign-extend*/0),
                 mul, "size");
 
         PolyLLVMNewExt extension = (PolyLLVMNewExt) PolyLLVMExt.ext(newArray);

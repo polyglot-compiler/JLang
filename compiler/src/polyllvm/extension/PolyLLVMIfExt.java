@@ -17,10 +17,10 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
     @Override
     public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         If n = (If) node();
-        LLVMBasicBlockRef ifEnd = LLVMAppendBasicBlock(v.currFn(), "if_end");
-        LLVMBasicBlockRef ifTrue = LLVMAppendBasicBlock(v.currFn(), "if_true");
+        LLVMBasicBlockRef ifEnd = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "if_end");
+        LLVMBasicBlockRef ifTrue = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "if_true");
         LLVMBasicBlockRef ifFalse = n.alternative() != null
-                ? LLVMAppendBasicBlock(v.currFn(), "if_false")
+                ? LLVMAppendBasicBlockInContext(v.context, v.currFn(), "if_false")
                 : ifEnd;
 
         lang().translateLLVMConditional(n.cond(), v, ifTrue, ifFalse);

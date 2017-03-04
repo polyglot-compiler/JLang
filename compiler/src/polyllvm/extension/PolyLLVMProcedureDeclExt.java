@@ -44,8 +44,8 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         v.debugInfo.funcDebugInfo(v, n, funcRef);
         v.debugInfo.emitLocation(n);
 
-        LLVMBasicBlockRef entry = LLVMAppendBasicBlock(funcRef, "allocs_entry");
-        LLVMBasicBlockRef body_entry = LLVMAppendBasicBlock(funcRef, "body_entry");
+        LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, funcRef, "allocs_entry");
+        LLVMBasicBlockRef body_entry = LLVMAppendBasicBlockInContext(v.context, funcRef, "body_entry");
         LLVMPositionBuilderAtEnd(v.builder, entry);
 
         for (int i = 0; i < n.formals().size(); ++i) {

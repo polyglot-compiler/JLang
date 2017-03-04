@@ -103,8 +103,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMValueRef thisTranslation = v.getTranslation(n.target());
 
         LLVMValueRef dvDoublePtr = v.utils.buildGEP(v.builder, thisTranslation,
-                LLVMConstInt(LLVMInt32Type(), 0, /* sign-extend */ 0),
-                LLVMConstInt(LLVMInt32Type(), 0, /* sign-extend */ 0));
+                LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, /* sign-extend */ 0),
+                LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, /* sign-extend */ 0));
 
         LLVMValueRef dvPtr = LLVMBuildLoad(v.builder, dvDoublePtr, "dv_ptr");
 
@@ -114,8 +114,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMTypeRef methodType = LLVMStructGetTypeAtIndex(res, methodIndex);
         int i = LLVMGetPointerAddressSpace(LLVMTypeOf(dvPtr));
         LLVMValueRef funcDoublePtr = v.utils.buildGEP(v.builder, dvPtr,
-                LLVMConstInt(LLVMInt32Type(), 0, /* sign-extend */ 0),
-                LLVMConstInt(LLVMInt32Type(), methodIndex, /* sign-extend */ 0));
+                LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, /* sign-extend */ 0),
+                LLVMConstInt(LLVMInt32TypeInContext(v.context), methodIndex, /* sign-extend */ 0));
 
         LLVMValueRef methodPtr = LLVMBuildLoad(v.builder, funcDoublePtr, "load_method_ptr");
 
@@ -143,22 +143,22 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         int methodIndex = v.getMethodIndex(rt, mi);
 
         LLVMValueRef interfaceStringPtr = v.utils.getGlobal(v.mod, PolyLLVMMangler.interfaceStringVariable(rt),
-                LLVMArrayType(LLVMInt8Type(), rt.toString().length() + 1));
+                LLVMArrayType(LLVMInt8TypeInContext(v.context), rt.toString().length() + 1));
         LLVMValueRef interfaceStringBytePtr = v.utils.buildGEP(v.builder, interfaceStringPtr,
-                LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 0, 0));
+                LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, 0), LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, 0));
 
         LLVMValueRef obj_bitcast = LLVMBuildBitCast(v.builder, thisTranslation,
-                v.utils.ptrTypeRef(LLVMInt8Type()), "cast_for_interface_call");
+                v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)), "cast_for_interface_call");
 
         LLVMTypeRef getInterfaceMethodType = v.utils.functionType(
-                v.utils.ptrTypeRef(LLVMInt8Type()), // void* return type
-                v.utils.ptrTypeRef(LLVMInt8Type()), // jobject*
-                v.utils.ptrTypeRef(LLVMInt8Type()), // char*
-                LLVMInt32Type()                       // int
+                v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)), // void* return type
+                v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)), // jobject*
+                v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)), // char*
+                LLVMInt32TypeInContext(v.context)                       // int
         );
         LLVMValueRef getInterfaceMethod = v.utils.getFunction(v.mod, "__getInterfaceMethod", getInterfaceMethodType);
         LLVMValueRef interfaceMethod = v.utils.buildMethodCall(getInterfaceMethod,
-                obj_bitcast, interfaceStringBytePtr, LLVMConstInt(LLVMInt32Type(), methodIndex, /* sign-extend */ 0));
+                obj_bitcast, interfaceStringBytePtr, LLVMConstInt(LLVMInt32TypeInContext(v.context), methodIndex, /* sign-extend */ 0));
 
         LLVMValueRef cast = LLVMBuildBitCast(v.builder, interfaceMethod, methodType, "cast_interface_method");
 

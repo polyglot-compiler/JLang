@@ -32,6 +32,7 @@ public class LLVMTranslator extends NodeVisitor {
     private Map<Node, Object> translations = new LinkedHashMap<>();
     private Deque<ClassDecl> classes = new ArrayDeque<>();
 
+    public final LLVMContextRef context;
     public final LLVMModuleRef mod;
     public final LLVMBuilderRef builder;
     public final DebugInfo debugInfo;
@@ -70,9 +71,10 @@ public class LLVMTranslator extends NodeVisitor {
     private boolean inTry = false;
     private LLVMBasicBlockRef lpad = null;
 
-    public LLVMTranslator(String filePath, LLVMModuleRef mod, LLVMBuilderRef builder,
+    public LLVMTranslator(String filePath, LLVMContextRef context, LLVMModuleRef mod, LLVMBuilderRef builder,
                           PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());
+        this.context = context;
         this.mod = mod;
         this.builder = builder;
         this.debugInfo = new DebugInfo(this, mod, builder, filePath);
@@ -371,8 +373,8 @@ public class LLVMTranslator extends NodeVisitor {
         }
         //Else the loop is unlabled to generate a fresh label
         else {
-            LLVMBasicBlockRef head = LLVMAppendBasicBlock(currFn(), "loop_head");
-            LLVMBasicBlockRef end = LLVMAppendBasicBlock(currFn(), "loop_end");
+            LLVMBasicBlockRef head = LLVMAppendBasicBlockInContext(context, currFn(), "loop_head");
+            LLVMBasicBlockRef end = LLVMAppendBasicBlockInContext(context, currFn(), "loop_end");
 
             Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>> pair =
                     new Pair<>("", new Pair<>(head, end));
@@ -395,8 +397,8 @@ public class LLVMTranslator extends NodeVisitor {
 
     public void enterLabeled(Labeled n) {
         label = n;
-        labelhead = LLVMAppendBasicBlock(currFn(), n.label() + "_head");
-        labelend = LLVMAppendBasicBlock(currFn(), n.label() + "_end");
+        labelhead = LLVMAppendBasicBlockInContext(context, currFn(), n.label() + "_head");
+        labelend = LLVMAppendBasicBlockInContext(context, currFn(), n.label() + "_end");
     }
 
     public LLVMBasicBlockRef getLoopEnd(String label) {
@@ -466,7 +468,7 @@ public class LLVMTranslator extends NodeVisitor {
      */
     public void enterTry(){
         inTry = true;
-        lpad = LLVMAppendBasicBlock(currFn(), "lpad");
+        lpad = LLVMAppendBasicBlockInContext(context, currFn(), "lpad");
     }
 
     public void exitTry(){

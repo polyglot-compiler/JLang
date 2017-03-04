@@ -24,9 +24,9 @@ public class PolyLLVMConditionalExt extends PolyLLVMExt {
         LLVMValueRef conditionalTemp = LLVMBuildAlloca(v.builder, v.utils.typeRef(n.type()), "conditional_temp");
         LLVMPositionBuilderAtEnd(v.builder, currentBlock);
 
-        LLVMBasicBlockRef ifEnd = LLVMAppendBasicBlock(v.currFn(), "conditional_end");
-        LLVMBasicBlockRef ifTrue = LLVMAppendBasicBlock(v.currFn(), "conditional_true");
-        LLVMBasicBlockRef ifFalse = LLVMAppendBasicBlock(v.currFn(), "conditional_false");
+        LLVMBasicBlockRef ifEnd = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "conditional_end");
+        LLVMBasicBlockRef ifTrue = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "conditional_true");
+        LLVMBasicBlockRef ifFalse = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "conditional_false");
 
         lang().translateLLVMConditional(n.cond(), v, ifTrue, ifFalse);
 
