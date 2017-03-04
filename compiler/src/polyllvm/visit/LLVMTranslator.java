@@ -12,6 +12,8 @@ import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.extension.ClassObjects;
+import polyllvm.extension.PolyLLVMLocalDeclExt;
+import polyllvm.extension.PolyLLVMProcedureDeclExt;
 import polyllvm.util.Constants;
 import polyllvm.util.DebugInfo;
 import polyllvm.util.LLVMUtils;
@@ -70,6 +72,11 @@ public class LLVMTranslator extends NodeVisitor {
      */
     private boolean inTry = false;
     private LLVMBasicBlockRef lpad = null;
+    private LLVMBasicBlockRef tryFinally = null;
+    private LLVMValueRef retFlag = null;
+    private LLVMValueRef ret = null;
+    private boolean retIsVoid = false;
+    private boolean isRet = false;
 
     public LLVMTranslator(String filePath, LLVMContextRef context, LLVMModuleRef mod, LLVMBuilderRef builder,
                           PolyLLVMNodeFactory nf, TypeSystem ts) {
@@ -469,6 +476,7 @@ public class LLVMTranslator extends NodeVisitor {
     public void enterTry(){
         inTry = true;
         lpad = LLVMAppendBasicBlockInContext(context, currFn(), "lpad");
+        tryFinally = LLVMAppendBasicBlockInContext(context, currFn(), "try_finally");
     }
 
     public void exitTry(){
@@ -488,5 +496,66 @@ public class LLVMTranslator extends NodeVisitor {
     public void setLpad(LLVMBasicBlockRef lpad){
         assert inTry;
         this.lpad = lpad;
+    }
+
+    public LLVMBasicBlockRef currFinally(){
+        assert inTry;
+        return tryFinally;
+    }
+
+    public void setTryFinally(LLVMBasicBlockRef tryFinally){
+        assert inTry;
+        this.tryFinally = tryFinally;
+    }
+
+
+    public void setTryRet(){
+        isRet = true;
+        retIsVoid = true;
+        if(retFlag == null){
+            retFlag = PolyLLVMLocalDeclExt.createLocal(this, "ret_flag", LLVMInt1TypeInContext(context));
+        }
+        LLVMBuildStore(builder, LLVMConstInt(LLVMInt1TypeInContext(context), 1, /*sign-extend*/ 0), retFlag);
+    }
+
+    public void setTryRet(LLVMValueRef v){
+        isRet = true;
+        retIsVoid = false;
+        if(ret == null){
+            ret = PolyLLVMLocalDeclExt.createLocal(this, "ret", LLVMTypeOf(v));
+        }
+        if(retFlag == null){
+            retFlag = PolyLLVMLocalDeclExt.createLocal(this, "ret_flag", LLVMInt1TypeInContext(context));
+        }
+        LLVMBuildStore(builder, LLVMConstInt(LLVMInt1TypeInContext(context), 1, /*sign-extend*/ 0), retFlag);
+        LLVMBuildStore(builder, v, ret);
+    }
+
+    public void emitTryRet(){
+        if(isRet) {
+            LLVMBasicBlockRef doRet = LLVMAppendBasicBlockInContext(context, currFn(), "do_ret");
+            LLVMBasicBlockRef noRet = LLVMAppendBasicBlockInContext(context, currFn(), "no_ret");
+
+            LLVMBuildCondBr(builder, LLVMBuildLoad(builder, retFlag, "ret_flag_load"), doRet, noRet);
+
+            LLVMPositionBuilderAtEnd(builder, doRet);
+            if(retIsVoid){
+                LLVMBuildRetVoid(builder);
+            } else {
+                LLVMBuildRet(builder, LLVMBuildLoad(builder, ret, "ret_load"));
+            }
+
+            LLVMPositionBuilderAtEnd(builder, noRet);
+        }
+
+
+        tryFinally = null;
+        retFlag = null;
+        ret = null;
+        retIsVoid = false;
+        isRet = false;
+        inTry = false;
+        lpad = null;
+
     }
 }

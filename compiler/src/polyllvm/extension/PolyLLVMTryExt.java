@@ -18,13 +18,11 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         Try n = (Try) node();
         v.enterTry();
 
-        Serializable s;
-
         LLVMTypeRef exnType = v.utils.structType(v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)), LLVMInt32TypeInContext(v.context));
 
         LLVMBasicBlockRef tryBlock = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "try_block");
         LLVMBasicBlockRef tryEnd = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "try_end");
-        LLVMBasicBlockRef tryFinally = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "try_finally");
+        LLVMBasicBlockRef tryFinally = v.currFinally();
 
         LLVMValueRef finally_flag = PolyLLVMLocalDeclExt.createLocal(v, "finally_flag", LLVMInt1TypeInContext(v.context));
 
@@ -132,6 +130,8 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         LLVMBuildCondBr(v.builder, LLVMBuildLoad(v.builder, finally_flag, "flag"), ehResume, tryEnd);
 
         LLVMPositionBuilderAtEnd(v.builder, tryEnd);
+
+        v.emitTryRet();
 
         return n;
     }

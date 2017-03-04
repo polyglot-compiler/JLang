@@ -16,10 +16,18 @@ public class PolyLLVMReturnExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(LLVMTranslator v) {
         Return n = (Return) node();
         Expr e = n.expr();
-        LLVMValueRef res = e == null
-                ? LLVMBuildRetVoid(v.builder)
-                : LLVMBuildRet(v.builder, v.getTranslation(e));
-        v.addTranslation(n, res);
+        if(v.inTry()){
+            if(e==null){
+                v.setTryRet();
+            } else {
+                v.setTryRet(v.getTranslation(e));
+            }
+        } else {
+            LLVMValueRef res = e == null
+                    ? LLVMBuildRetVoid(v.builder)
+                    : LLVMBuildRet(v.builder, v.getTranslation(e));
+            v.addTranslation(n, res);
+        }
         return super.translatePseudoLLVM(v);
     }
 }

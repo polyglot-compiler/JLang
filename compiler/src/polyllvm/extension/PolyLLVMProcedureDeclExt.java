@@ -90,7 +90,12 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         // Add void return if necessary.
         LLVMBasicBlockRef block = LLVMGetInsertBlock(v.builder);
         if (LLVMGetBasicBlockTerminator(block) == null) {
-            LLVMBuildRetVoid(v.builder);
+            Type retType = n instanceof MethodDecl ? ((MethodDecl) n).returnType().type() : v.typeSystem().Void();
+
+            if(retType.isVoid())
+                LLVMBuildRetVoid(v.builder);
+            else
+                LLVMBuildUnreachable(v.builder);
         }
 
         v.clearAllocations();
