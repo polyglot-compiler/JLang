@@ -64,9 +64,10 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 		Call n = (Call) node();
 		MethodInstance superMethod = n.methodInstance().overrides().get(0);
 
-		LLVMTypeRef toType = v.utils.methodType(v.getCurrentClass().type(),
-				n.methodInstance().returnType(),
-				n.methodInstance().formalTypes());
+		LLVMTypeRef toType = v.utils.ptrTypeRef(
+				v.utils.methodType(v.getCurrentClass().type(),
+					n.methodInstance().returnType(),
+					n.methodInstance().formalTypes()));
 
 		LLVMTypeRef superMethodType = v.utils.methodType(
 				superMethod.container(), superMethod.returnType(),

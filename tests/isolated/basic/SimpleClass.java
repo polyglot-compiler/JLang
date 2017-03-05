@@ -12,6 +12,10 @@ public class SimpleClass {
         s.field = 12;
         s.field2 = 'A';
         System.out.println(s.method() + s.privateMethod());
+
+        SimpleClassE se = new SimpleClassE(21);
+        System.out.println(se.finalMethod() + se.method());
+
     }
 
     public int method() {
@@ -22,5 +26,21 @@ public class SimpleClass {
     private int privateMethod() {
         field2 = 'A';
         return 23;
+    }
+
+    final int finalMethod() {
+        field2 = 'B';
+        return 74;
+    }
+
+    public static class SimpleClassE extends SimpleClass {
+
+        public SimpleClassE(int i) {
+            super(i);
+        }
+
+        public int method() {
+            return super.method() + 1;
+        }
     }
 }
