@@ -28,6 +28,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 			translateInterfaceMethodCall(v);
 		} else if (n.methodInstance().flags().isStatic()) {
 			translateStaticCall(v);
+		} else if (n.methodInstance().flags().isPrivate()) {
+			translatePrivateMethodCall(v);
 		} else {
 			translateMethodCall(v);
 		}
@@ -134,6 +136,36 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
 		}
 	}
+
+	private void translatePrivateMethodCall(LLVMTranslator v) {
+		Call n = (Call) node();
+
+		String mangledFuncName = PolyLLVMMangler
+				.mangleProcedureName(n.methodInstance());
+
+		ReferenceType referenceType = (ReferenceType) n.target().type();
+		LLVMTypeRef tn = v.utils.methodType(referenceType,
+				n.methodInstance().returnType(),
+				n.methodInstance().formalTypes());
+
+		LLVMValueRef thisTranslation = v.getTranslation(n.target());
+		LLVMValueRef[] args = Stream
+				.concat(Stream.of(thisTranslation),
+						n.arguments().stream()
+								.map(v::getTranslation))
+				.toArray(LLVMValueRef[]::new);
+
+		LLVMValueRef func = v.utils.getFunction(v.mod, mangledFuncName, tn);
+
+		v.debugInfo.emitLocation(n);
+		if (n.methodInstance().returnType().isVoid()) {
+			v.addTranslation(n, v.utils.buildProcedureCall(func, args));
+		} else {
+			v.addTranslation(n, v.utils.buildMethodCall(func, args));
+		}
+
+	}
+
 
 	private void translateInterfaceMethodCall(LLVMTranslator v) {
 		Call n = (Call) node();
