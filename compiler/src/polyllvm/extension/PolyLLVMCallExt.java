@@ -19,17 +19,17 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
 	@Override public Node translatePseudoLLVM(LLVMTranslator v) {
 		Call n = (Call) node();
+		MethodInstance mi = n.methodInstance();
 
 		if (n.target() instanceof Special
 				&& ((Special) n.target()).kind().equals(Special.SUPER)) {
 			translateSuperCall(v);
-		} else if (n.target() instanceof Expr
-				&& v.isInterfaceCall(n.methodInstance())) {
+		} else if (n.target() instanceof Expr && v.isInterfaceCall(mi)) {
 			translateInterfaceMethodCall(v);
-		} else if (n.methodInstance().flags().isStatic()) {
+		} else if (mi.flags().isStatic()) {
 			translateStaticCall(v);
-		} else if (n.methodInstance().flags().isPrivate()) {
-			translatePrivateMethodCall(v);
+		} else if (mi.flags().isPrivate() || mi.flags().isFinal()) {
+			translateFinalMethodCall(v);
 		} else {
 			translateMethodCall(v);
 		}
@@ -137,7 +137,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 		}
 	}
 
-	private void translatePrivateMethodCall(LLVMTranslator v) {
+	private void translateFinalMethodCall(LLVMTranslator v) {
 		Call n = (Call) node();
 
 		String mangledFuncName = PolyLLVMMangler
