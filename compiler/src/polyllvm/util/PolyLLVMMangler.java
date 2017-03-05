@@ -110,8 +110,8 @@ public class PolyLLVMMangler {
     }
 
     public static String InterfaceTableVariable(ReferenceType rt, ReferenceType i ) {
-        if(i.isArray() || !(i instanceof ParsedClassType)
-                || !((ParsedClassType) i).flags().isInterface()){
+        if (i.isArray() || !(i instanceof ParsedClassType)
+                || !((ParsedClassType) i).flags().isInterface()) {
             throw new InternalCompilerError("Reference type " + rt + "is not an interface");
         }
         String interfaceName =  i.toString();
@@ -134,7 +134,7 @@ public class PolyLLVMMangler {
 
     public static String dispatchVectorTypeName(ReferenceType rt) {
         String className = mangleQualifiedName(rt);
-        if (rt instanceof ParsedClassType && ((ParsedClassType) rt).flags().isInterface()){
+        if (rt instanceof ParsedClassType && ((ParsedClassType) rt).flags().isInterface()) {
             return IT_DV_TYPE_STR + "." + className;
         } else {
             return DV_TYPE_STR + "." + className;

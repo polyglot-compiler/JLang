@@ -27,7 +27,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
 
         LLVMPositionBuilderAtEnd(v.builder, currentBlock);
 
-        if(n.init() == null){
+        if (n.init() == null) {
             return super.translatePseudoLLVM(v);
         }
 
@@ -41,7 +41,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
     /**
      * Create a new local without debug symbols, which is not added to the map of locals
      */
-    public static LLVMValueRef createLocal(LLVMTranslator v, String name, LLVMTypeRef type){
+    public static LLVMValueRef createLocal(LLVMTranslator v, String name, LLVMTypeRef type) {
         LLVMBasicBlockRef currentBlock = LLVMGetInsertBlock(v.builder);
         LLVMBasicBlockRef firstBlock = LLVMGetFirstBasicBlock(v.currFn());
         LLVMPositionBuilderBefore(v.builder,LLVMGetBasicBlockTerminator(firstBlock));

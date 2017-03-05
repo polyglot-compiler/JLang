@@ -32,7 +32,7 @@ public final class ClassObjects {
                                                        ReferenceType rt,
                                                        boolean extern) {
         LLVMValueRef global = v.utils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarTypeRef());
-        if(!extern){
+        if (!extern) {
             LLVMSetInitializer(global, LLVMConstInt(LLVMInt8TypeInContext(v.context), 0, /*sign-extend*/ 0));
         }
         return global;

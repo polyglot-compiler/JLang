@@ -164,7 +164,7 @@ public class LLVMTranslator extends NodeVisitor {
         return classes.peek();
     }
 
-    public ReferenceType declaringType(MethodInstance methodInstance){
+    public ReferenceType declaringType(MethodInstance methodInstance) {
         List<MethodInstance> overrides = methodInstance.overrides();
         Optional<ReferenceType> highestSuperType = overrides.stream()
                 .map(MemberInstance::container)
@@ -179,7 +179,7 @@ public class LLVMTranslator extends NodeVisitor {
     /**
      * Return true if {@code m} was declared in an interface Interface, false otherwise.
      */
-    public boolean isInterfaceCall(MethodInstance m){
+    public boolean isInterfaceCall(MethodInstance m) {
         ReferenceType declaringType = declaringType(m);
         return isInterface(declaringType);
     }
@@ -187,7 +187,7 @@ public class LLVMTranslator extends NodeVisitor {
     /**
      * Return true if {@code rt} is a Interface, false otherwise.
      */
-    public boolean isInterface(ReferenceType rt){
+    public boolean isInterface(ReferenceType rt) {
         return rt instanceof ParsedClassType && ((ParsedClassType) rt).flags().isInterface();
     }
 
@@ -318,7 +318,7 @@ public class LLVMTranslator extends NodeVisitor {
         return new Triple<>(dvMethods, dvOverridenMethods, fields);
     }
 
-    public List<ReferenceType> allInterfaces(ReferenceType rt){
+    public List<ReferenceType> allInterfaces(ReferenceType rt) {
         List<ReferenceType> interfaces = new ArrayList<>();
         for (ReferenceType superType : rt.interfaces()) {
             interfaces.addAll(allInterfaces(superType));
@@ -348,7 +348,7 @@ public class LLVMTranslator extends NodeVisitor {
         allocations.put(var, v);
     }
 
-    public LLVMValueRef getLocalVariable(String var){
+    public LLVMValueRef getLocalVariable(String var) {
         return allocations.get(var);
     }
 
@@ -473,73 +473,73 @@ public class LLVMTranslator extends NodeVisitor {
     /*
      * Methods for implementing exceptions
      */
-    public void enterTry(){
+    public void enterTry() {
         inTry = true;
         lpad = LLVMAppendBasicBlockInContext(context, currFn(), "lpad");
         tryFinally = LLVMAppendBasicBlockInContext(context, currFn(), "try_finally");
     }
 
-    public void exitTry(){
+    public void exitTry() {
         inTry = false;
         lpad = null;
     }
 
-    public boolean inTry(){
+    public boolean inTry() {
         return inTry;
     }
 
-    public LLVMBasicBlockRef currLpad(){
+    public LLVMBasicBlockRef currLpad() {
         assert inTry;
         return lpad;
     }
 
-    public void setLpad(LLVMBasicBlockRef lpad){
+    public void setLpad(LLVMBasicBlockRef lpad) {
         assert inTry;
         this.lpad = lpad;
     }
 
-    public LLVMBasicBlockRef currFinally(){
+    public LLVMBasicBlockRef currFinally() {
         assert inTry;
         return tryFinally;
     }
 
-    public void setTryFinally(LLVMBasicBlockRef tryFinally){
+    public void setTryFinally(LLVMBasicBlockRef tryFinally) {
         assert inTry;
         this.tryFinally = tryFinally;
     }
 
 
-    public void setTryRet(){
+    public void setTryRet() {
         isRet = true;
         retIsVoid = true;
-        if(retFlag == null){
+        if (retFlag == null) {
             retFlag = PolyLLVMLocalDeclExt.createLocal(this, "ret_flag", LLVMInt1TypeInContext(context));
         }
         LLVMBuildStore(builder, LLVMConstInt(LLVMInt1TypeInContext(context), 1, /*sign-extend*/ 0), retFlag);
     }
 
-    public void setTryRet(LLVMValueRef v){
+    public void setTryRet(LLVMValueRef v) {
         isRet = true;
         retIsVoid = false;
-        if(ret == null){
+        if (ret == null) {
             ret = PolyLLVMLocalDeclExt.createLocal(this, "ret", LLVMTypeOf(v));
         }
-        if(retFlag == null){
+        if (retFlag == null) {
             retFlag = PolyLLVMLocalDeclExt.createLocal(this, "ret_flag", LLVMInt1TypeInContext(context));
         }
         LLVMBuildStore(builder, LLVMConstInt(LLVMInt1TypeInContext(context), 1, /*sign-extend*/ 0), retFlag);
         LLVMBuildStore(builder, v, ret);
     }
 
-    public void emitTryRet(){
-        if(isRet) {
+    public void emitTryRet() {
+        if (isRet) {
             LLVMBasicBlockRef doRet = LLVMAppendBasicBlockInContext(context, currFn(), "do_ret");
             LLVMBasicBlockRef noRet = LLVMAppendBasicBlockInContext(context, currFn(), "no_ret");
 
             LLVMBuildCondBr(builder, LLVMBuildLoad(builder, retFlag, "ret_flag_load"), doRet, noRet);
 
             LLVMPositionBuilderAtEnd(builder, doRet);
-            if(retIsVoid){
+            if (retIsVoid) {
                 LLVMBuildRetVoid(builder);
             } else {
                 LLVMBuildRet(builder, LLVMBuildLoad(builder, ret, "ret_load"));

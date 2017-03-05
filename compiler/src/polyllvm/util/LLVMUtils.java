@@ -55,7 +55,7 @@ public class LLVMUtils {
     private LLVMTypeRef structTypeRef(ReferenceType rt) {
         String mangledName = PolyLLVMMangler.classTypeName(rt);
         LLVMTypeRef structType = structTypeRefOpaque(mangledName);
-        if(LLVMIsOpaqueStruct(structType) != 0){
+        if (LLVMIsOpaqueStruct(structType) != 0) {
             setStructBody(structType); // Set the struct to be empty, so it is not opaque
             setStructBody(structType, objectFieldTypes(rt));
         }
@@ -66,7 +66,7 @@ public class LLVMUtils {
     public LLVMTypeRef dvTypeRef(ReferenceType rt) {
         String mangledDVName = PolyLLVMMangler.dispatchVectorTypeName(rt);
         LLVMTypeRef dvType = structTypeRefOpaque(mangledDVName);
-        if(LLVMIsOpaqueStruct(dvType) != 0){
+        if (LLVMIsOpaqueStruct(dvType) != 0) {
             setStructBody(dvType); // Set the struct to be empty, so it is not opaque
             setStructBody(dvType, dvMethodTypes(rt));
         }
@@ -113,7 +113,7 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef buildProcedureCall(LLVMValueRef func, LLVMValueRef... args) {
-        if(v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())){
+        if (v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())) {
             LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "invoke.cont");
             LLVMValueRef invoke = LLVMBuildInvoke(v.builder, func, new PointerPointer<>(args), args.length, invokeCont, v.currLpad(), "");
             LLVMPositionBuilderAtEnd(v.builder, invokeCont);
@@ -240,7 +240,7 @@ public class LLVMUtils {
         return getGlobal(v.mod, PolyLLVMMangler.dispatchVectorVariable(classtype), dvTypeRef(classtype));
     }
 
-    public LLVMValueRef getItGlobal(ReferenceType it, ReferenceType usingClass){
+    public LLVMValueRef getItGlobal(ReferenceType it, ReferenceType usingClass) {
         String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(usingClass, it);
         LLVMTypeRef interfaceTableType = dvTypeRef(it);
         return getGlobal(v.mod, interfaceTableVar, interfaceTableType);
@@ -261,7 +261,7 @@ public class LLVMUtils {
 
     public LLVMValueRef[] itMethods(ReferenceType it, ReferenceType usingClass, LLVMValueRef next) {
         List<MethodInstance> layout = v.layouts(it).part1();
-        for (int i=0; i< layout.size(); i++){
+        for (int i=0; i< layout.size(); i++) {
             List<MethodInstance> classLayout = v.layouts(usingClass).part1();
             MethodInstance mi = layout.get(i);
             MethodInstance miClass = v.methodInList(mi, classLayout);

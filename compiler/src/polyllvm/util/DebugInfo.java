@@ -48,7 +48,7 @@ public class DebugInfo {
 
         BytePointer defaultTargetTriple = LLVMGetDefaultTargetTriple();
         //TODO: Make darwin check more robust : Triple(sys::getProcessTriple()).isOSDarwin()
-        if(defaultTargetTriple.getString().contains("darwin")){
+        if (defaultTargetTriple.getString().contains("darwin")) {
             LLVMAddModuleFlag(mod, Warning, "Dwarf Version", 2);
         }
         LLVMDisposeMessage(defaultTargetTriple);
@@ -56,17 +56,17 @@ public class DebugInfo {
 
     }
 
-    public void pushScope(LLVMMetadataRef scope){
+    public void pushScope(LLVMMetadataRef scope) {
         scopes.push(scope);
     }
 
-    public void popScope(){
+    public void popScope() {
         scopes.pop();
     }
 
     public LLVMMetadataRef currentScope() {
         LLVMMetadataRef scope;
-        if(scopes.isEmpty()){
+        if (scopes.isEmpty()) {
             scope = compileUnit;
         } else {
             scope = scopes.peek();
@@ -75,7 +75,7 @@ public class DebugInfo {
         return scope;
     }
 
-    public LLVMMetadataRef createFile(){
+    public LLVMMetadataRef createFile() {
         return LLVMDIBuilderCreateFile(diBuilder, fileName, filePath);
     }
 
@@ -84,19 +84,19 @@ public class DebugInfo {
      * Helper functions for emitting locations
      */
 
-    public void emitLocation(Node n){
-        if(n.position().line() == Position.UNKNOWN || n.position().column() == Position.UNKNOWN){
+    public void emitLocation(Node n) {
+        if (n.position().line() == Position.UNKNOWN || n.position().column() == Position.UNKNOWN) {
             emitLocation();
             return;
         }
         emitLocation(n.position().line(), n.position().column());
     }
 
-    public void emitLocation(){
+    public void emitLocation() {
         emitLocation(0,0);
     }
 
-    private void emitLocation(int line, int column){
+    private void emitLocation(int line, int column) {
         LLVMMetadataRef scope = currentScope();
         assert scope !=null && !scope.isNull();
         LLVMSetCurrentDebugLocation2(builder, line, column, scope, null);
@@ -106,12 +106,12 @@ public class DebugInfo {
      * Helper functions for creating debug information for variables and parameters
      */
 
-    private LLVMMetadataRef createExpression(){
+    private LLVMMetadataRef createExpression() {
         long[] longs = new long[0];
         return LLVMDIBuilderCreateExpression(diBuilder, longs, 0);
     }
 
-    private void insertDeclareAtEnd(LLVMTranslator v, LLVMValueRef alloc, LLVMMetadataRef varMetadata, Position p){
+    private void insertDeclareAtEnd(LLVMTranslator v, LLVMValueRef alloc, LLVMMetadataRef varMetadata, Position p) {
         LLVMDIBuilderInsertDeclareAtEnd(diBuilder, alloc, varMetadata,
                 createExpression(),
                 p.line(), p.column(), currentScope(), null,
@@ -165,23 +165,23 @@ public class DebugInfo {
      * Helper functions for creating debug types
      */
 
-    public LLVMMetadataRef debugType(Type t){
-        if(typeMap.containsKey(t)){
+    public LLVMMetadataRef debugType(Type t) {
+        if (typeMap.containsKey(t)) {
             return typeMap.get(t);
         }
 
         LLVMMetadataRef debugType;
-        if(t.isBoolean() || t.isLongOrLess() || t.isFloat() || t.isDouble()){
+        if (t.isBoolean() || t.isLongOrLess() || t.isFloat() || t.isDouble()) {
             debugType = debugBasicType(t);
         } else if (t.isArray()) {
             debugType = LLVMDIBuilderCreateArrayType(diBuilder, v.utils.sizeOfType(t), v.utils.sizeOfType(t), debugType(t.toArray().base()), null);
             //debugType = LLVMDIBuilderCreatePointerType(diBuilder, debugType(t.toArray().base()), v.utils.sizeOfType(t), v.utils.sizeOfType(t), "array");
-        } else if (t.isClass() ) {
+        } else if (t.isClass()) {
             int line = t.position().line() == -1 ? 0 : t.position().line() ;
             debugType = LLVMDIBuilderCreateClassType(diBuilder, currentScope(), t.toString(), createFile(),
                     line, 0,0, /*Flags*/0 , t.toClass().superType() == null ? null : debugType(t.toClass().superType()), null);
 
-        } else if (t.isNull()){
+        } else if (t.isNull()) {
             debugType = LLVMDIBuilderCreatePointerType(diBuilder, LLVMDIBuilderCreateBasicType(diBuilder, t.toString(), 64, 64, DW_ATE_signed), v.utils.sizeOfType(t)*8, v.utils.sizeOfType(t)*8, "class");
         } else throw new InternalCompilerError("Invalid type");
         typeMap.put(t, debugType);
@@ -203,7 +203,7 @@ public class DebugInfo {
         return LLVMDIBuilderCreateBasicType(diBuilder, t.toString(), numBits, numBits, encoding);
     }
 
-    public LLVMMetadataRef createFunctionType(ProcedureInstance pi, LLVMMetadataRef unit){
+    public LLVMMetadataRef createFunctionType(ProcedureInstance pi, LLVMMetadataRef unit) {
         LLVMMetadataRef[] formals = pi.formalTypes().stream().map(this::debugType).toArray(LLVMMetadataRef[]::new);
         LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(diBuilder, new PointerPointer<>(formals), formals.length);
         return LLVMDIBuilderCreateSubroutineType(diBuilder, unit, typeArray);
