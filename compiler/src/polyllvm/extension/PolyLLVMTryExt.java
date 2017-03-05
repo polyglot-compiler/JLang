@@ -127,7 +127,11 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             v.debugInfo.emitLocation(n.finallyBlock());
             v.visitEdge(n, n.finallyBlock());
         }
-        LLVMBuildCondBr(v.builder, LLVMBuildLoad(v.builder, finally_flag, "flag"), ehResume, tryEnd);
+
+        // Add branch to exception resumption or after try if necessary.
+        if (LLVMGetBasicBlockTerminator(tryFinally) == null) {
+            LLVMBuildCondBr(v.builder, LLVMBuildLoad(v.builder, finally_flag, "flag"), ehResume, tryEnd);
+        }
 
         LLVMPositionBuilderAtEnd(v.builder, tryEnd);
 

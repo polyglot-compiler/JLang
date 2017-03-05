@@ -4,6 +4,7 @@ public class ExceptionReturnTest {
         System.out.println(retCatch());
         System.out.println(retFinally());
         System.out.println(retAfter());
+        retCatchVoid();
     }
 
     public static String retBoth(){
@@ -50,5 +51,18 @@ public class ExceptionReturnTest {
             System.out.println("retAfter -- F");
         }
         return "RETURN retAfter";
+    }
+
+    public static void retCatchVoid(){
+        try {
+            throw new Exception();
+        } catch (Exception e) {
+            System.out.println("retCatchVoid -- C");
+            if(true)
+                return;
+        } finally {
+            System.out.println("retCatchVoid -- F");
+        }
+        System.out.println("DO NOT PRINT THIS");
     }
 }
