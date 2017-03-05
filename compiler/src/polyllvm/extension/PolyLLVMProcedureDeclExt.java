@@ -92,7 +92,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         if (LLVMGetBasicBlockTerminator(block) == null) {
             Type retType = n instanceof MethodDecl ? ((MethodDecl) n).returnType().type() : v.typeSystem().Void();
 
-            if(retType.isVoid())
+            if (retType.isVoid())
                 LLVMBuildRetVoid(v.builder);
             else
                 LLVMBuildUnreachable(v.builder);

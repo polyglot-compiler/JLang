@@ -111,7 +111,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             LLVMValueRef typeid = v.utils.buildMethodCall(typeidFunc,
                     v.classObjs.classIdVarRef(v.mod, cb.catchType().toReference()));
             LLVMValueRef matches = LLVMBuildICmp(v.builder, LLVMIntEQ, sel, typeid, "matches");
-            if(i==n.catchBlocks().size() - 1){
+            if (i ==n.catchBlocks().size() - 1) {
                 //Need to resume Exception handling if last catch does not match exception type
                 LLVMBuildCondBr(v.builder, matches, catchBlock, setFinallyFlag);
             } else {
@@ -123,7 +123,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         v.exitTry();
 
         LLVMPositionBuilderAtEnd(v.builder, tryFinally);
-        if(n.finallyBlock() != null){
+        if (n.finallyBlock() != null) {
             v.debugInfo.emitLocation(n.finallyBlock());
             v.visitEdge(n, n.finallyBlock());
         }

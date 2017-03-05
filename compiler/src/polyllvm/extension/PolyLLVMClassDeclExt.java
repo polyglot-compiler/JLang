@@ -43,7 +43,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         //Set the DV for this class.
         List<? extends ReferenceType> interfaces = v.allInterfaces(n.type());
         LLVMValueRef[] dvMethods;
-        if(interfaces.size() > 0){
+        if (interfaces.size() > 0) {
             LLVMValueRef itGlobal =  LLVMConstBitCast(v.utils.getItGlobal(interfaces.get(0), n.type()),
                     v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
             dvMethods = v.utils.dvMethods(n.type(), itGlobal);
@@ -56,14 +56,14 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         LLVMSetInitializer(dvGlobal, initStruct);
 
         //Setup the Interface Tables for this class
-        for (int i=0; i< interfaces.size(); i++){
+        for (int i=0; i< interfaces.size(); i++) {
             ReferenceType it = interfaces.get(i);
             String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(n.type(), it);
             LLVMTypeRef interfaceTableType = v.utils.dvTypeRef(it);
             LLVMValueRef itGlobal = v.utils.getGlobal(v.mod, interfaceTableVar, interfaceTableType);
 
             LLVMValueRef next;
-            if(i == interfaces.size()-1){ // Last Interface next pointer points to null
+            if (i == interfaces.size()-1) { // Last Interface next pointer points to null
                 next = LLVMConstNull(v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
             } else {
                 next = LLVMConstBitCast(v.utils.getItGlobal(interfaces.get(i+1), n.type()), v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
