@@ -245,4 +245,8 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
         return new PolyLLVMSynchronizedExt();
     }
 
+    @Override
+    protected Ext extStringLitImpl() {
+        return new PolyLLVMStringLitExt();
+    }
 }
