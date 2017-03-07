@@ -1,3 +1,5 @@
+#include "exception.h"
+
 #include <stdexcept>
 #include <cstring>
 
