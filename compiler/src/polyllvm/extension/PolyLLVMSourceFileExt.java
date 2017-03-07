@@ -60,7 +60,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         LLVMMetadataRef[] formals = Stream.of(ts.arrayOf(ts.String())).map(v.debugInfo::debugType).toArray(LLVMMetadataRef[]::new);
         LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(v.debugInfo.diBuilder, new PointerPointer<>(formals), formals.length);
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(v.debugInfo.diBuilder, v.debugInfo.createFile(), typeArray);
-        v.debugInfo.funcDebugInfo(v, 0, Constants.ENTRY_TRAMPOLINE, Constants.ENTRY_TRAMPOLINE, funcDiType, func);
+        v.debugInfo.funcDebugInfo(0, Constants.ENTRY_TRAMPOLINE, Constants.ENTRY_TRAMPOLINE, funcDiType, func);
 
         LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(v.context, func, "body");
         LLVMPositionBuilderAtEnd(v.builder, block);
@@ -100,7 +100,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
                     v.debugInfo.diBuilder, new PointerPointer<>(), /*length*/ 0);
             LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
                     v.debugInfo.diBuilder, v.debugInfo.createFile(), typeArray);
-            v.debugInfo.funcDebugInfo(v, 0, ctorVarName, ctorVarName, funcDiType, func);
+            v.debugInfo.funcDebugInfo(0, ctorVarName, ctorVarName, funcDiType, func);
 
             LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func, "body");
             LLVMPositionBuilderAtEnd(v.builder, body);

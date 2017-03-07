@@ -92,6 +92,15 @@ public class DebugInfo {
         emitLocation(n.position().line(), n.position().column());
     }
 
+    public void emitLocationEnd(Node n) {
+        if (n.position().line() == Position.UNKNOWN || n.position().column() == Position.UNKNOWN) {
+            emitLocation();
+            return;
+        }
+        emitLocation(n.position().endLine(), n.position().endColumn());
+    }
+
+
     public void emitLocation() {
         emitLocation(0,0);
     }
@@ -140,7 +149,7 @@ public class DebugInfo {
         insertDeclareAtEnd(v, alloc, localVar, p);
     }
 
-    public void funcDebugInfo(LLVMTranslator v, ProcedureDecl n, LLVMValueRef funcRef) {
+    public void funcDebugInfo(ProcedureDecl n, LLVMValueRef funcRef) {
         ProcedureInstance pi = n.procedureInstance();
         LLVMMetadataRef Unit = createFile();
         int LineNo = n.position().line();
@@ -151,7 +160,7 @@ public class DebugInfo {
         pushScope(sp);
     }
 
-    public void funcDebugInfo(LLVMTranslator v, int LineNo, String name, String linkageName, LLVMMetadataRef funcType, LLVMValueRef funcRef) {
+    public void funcDebugInfo(int LineNo, String name, String linkageName, LLVMMetadataRef funcType, LLVMValueRef funcRef) {
         LLVMMetadataRef Unit = createFile();
         LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(diBuilder, Unit, name, linkageName, Unit, LineNo,
                 funcType, /* internal linkage */ 0, /* definition */ 1,
