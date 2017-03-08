@@ -5,6 +5,7 @@ import org.bytedeco.javacpp.Pointer;
 import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
 import polyglot.ast.SourceFile;
+import polyglot.ext.jl7.JL7Scheduler;
 import polyglot.frontend.*;
 import polyglot.frontend.ExtensionInfo;
 import polyglot.frontend.goals.CodeGenerated;
@@ -25,9 +26,9 @@ import java.nio.file.Paths;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
-public class PolyLLVMScheduler extends JLScheduler {
+public class PolyLLVMScheduler extends JL7Scheduler {
 
-    public PolyLLVMScheduler(ExtensionInfo extInfo) {
+    public PolyLLVMScheduler(JLExtensionInfo extInfo) {
         super(extInfo);
     }
 
