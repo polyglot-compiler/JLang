@@ -1,12 +1,13 @@
 package polyllvm.ast;
 
 import polyglot.ast.*;
+import polyglot.ext.jl7.ast.J7Lang_c;
 import polyglot.util.InternalCompilerError;
 import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
 
-public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
+public class PolyLLVMLang_c extends J7Lang_c implements PolyLLVMLang {
     public static final PolyLLVMLang_c instance = new PolyLLVMLang_c();
 
     public static PolyLLVMLang lang(NodeOps n) {

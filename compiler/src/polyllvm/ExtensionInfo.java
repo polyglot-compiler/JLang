@@ -1,6 +1,9 @@
 package polyllvm;
 
 import polyglot.ast.NodeFactory;
+import polyglot.ext.jl5.ast.JL5ExtFactory_c;
+import polyglot.ext.jl7.JL7ExtensionInfo;
+import polyglot.ext.jl7.ast.JL7ExtFactory_c;
 import polyglot.frontend.Scheduler;
 import polyglot.main.Options;
 import polyllvm.ast.PolyLLVMExtFactory_c;
@@ -10,7 +13,7 @@ import polyllvm.ast.PolyLLVMNodeFactory_c;
 /**
  * Extension information for polyllvm extension.
  */
-public class ExtensionInfo extends polyglot.frontend.JLExtensionInfo {
+public class ExtensionInfo extends JL7ExtensionInfo {
     static {
         // force Topics to load
         @SuppressWarnings("unused")
@@ -29,11 +32,14 @@ public class ExtensionInfo extends polyglot.frontend.JLExtensionInfo {
 
     @Override
     protected NodeFactory createNodeFactory() {
-        return new PolyLLVMNodeFactory_c(PolyLLVMLang_c.instance, new PolyLLVMExtFactory_c());
+        return new PolyLLVMNodeFactory_c(PolyLLVMLang_c.instance,
+                new PolyLLVMExtFactory_c(
+                        new JL7ExtFactory_c(
+                                new JL5ExtFactory_c())));
     }
 
     @Override
-    protected Scheduler createScheduler() {
+    public Scheduler createScheduler() {
         return new PolyLLVMScheduler(this);
     }
 
