@@ -31,6 +31,6 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
         LLVMValueRef arr = v.getTranslation(n.array());
         LLVMValueRef base = v.utils.buildJavaArrayBase(arr, n.type());
         LLVMValueRef offset = v.getTranslation(n.index());
-        return v.utils.buildGEP(v.builder, base, offset);
+        return v.utils.buildGEP(base, offset);
     }
 }

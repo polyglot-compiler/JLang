@@ -101,11 +101,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 		ReferenceType referenceType = (ReferenceType) n.target().type();
 		LLVMValueRef thisTranslation = v.getTranslation(n.target());
 
-		LLVMValueRef dvDoublePtr = v.utils.buildGEP(v.builder, thisTranslation,
-				LLVMConstInt(LLVMInt32TypeInContext(v.context), 0,
-						/* sign-extend */ 0),
-				LLVMConstInt(LLVMInt32TypeInContext(v.context), 0,
-						/* sign-extend */ 0));
+		LLVMValueRef dvDoublePtr = v.utils.buildStructGEP(thisTranslation, 0, 0);
 
 		LLVMValueRef dvPtr = LLVMBuildLoad(v.builder, dvDoublePtr, "dv_ptr");
 
@@ -115,11 +111,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 				PolyLLVMMangler.dispatchVectorTypeName(referenceType));
 		LLVMTypeRef methodType = LLVMStructGetTypeAtIndex(res, methodIndex);
 		int i = LLVMGetPointerAddressSpace(LLVMTypeOf(dvPtr));
-		LLVMValueRef funcDoublePtr = v.utils.buildGEP(v.builder, dvPtr,
-				LLVMConstInt(LLVMInt32TypeInContext(v.context), 0,
-						/* sign-extend */ 0),
-				LLVMConstInt(LLVMInt32TypeInContext(v.context), methodIndex,
-						/* sign-extend */ 0));
+
+		LLVMValueRef funcDoublePtr = v.utils.buildStructGEP(dvPtr, 0, methodIndex);
 
 		LLVMValueRef methodPtr = LLVMBuildLoad(v.builder, funcDoublePtr,
 				"load_method_ptr");
@@ -127,7 +120,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 		LLVMValueRef[] args = Stream
 				.concat(Stream.of(thisTranslation),
 						n.arguments().stream()
-								.map(arg -> v.getTranslation(arg)))
+								.map(v::getTranslation))
 				.toArray(LLVMValueRef[]::new);
 
 		if (n.methodInstance().returnType().isVoid()) {
@@ -183,10 +176,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 				PolyLLVMMangler.interfaceStringVariable(rt),
 				LLVMArrayType(LLVMInt8TypeInContext(v.context),
 						rt.toString().length() + 1));
-		LLVMValueRef interfaceStringBytePtr = v.utils.buildGEP(v.builder,
-				interfaceStringPtr,
-				LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, 0),
-				LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, 0));
+		LLVMValueRef interfaceStringBytePtr
+				= v.utils.buildStructGEP(interfaceStringPtr, 0, 0);
 
 		LLVMValueRef obj_bitcast = LLVMBuildBitCast(v.builder, thisTranslation,
 				v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)),

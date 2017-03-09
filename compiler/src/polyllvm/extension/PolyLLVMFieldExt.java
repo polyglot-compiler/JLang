@@ -41,7 +41,7 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
             // Instance fields.
             LLVMValueRef thisTranslation = v.getTranslation(target);
             int fieldIndex = v.getFieldIndex((ReferenceType) n.target().type(), n.fieldInstance());
-            return v.utils.buildStructGEP(v.builder, thisTranslation, 0, fieldIndex);
+            return v.utils.buildStructGEP(thisTranslation, 0, fieldIndex);
         }
     }
 }
