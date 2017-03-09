@@ -15,6 +15,66 @@ import static polyglot.ast.Binary.*;
 public class PolyLLVMBinaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
+    @Override
+    public Node translatePseudoLLVM(LLVMTranslator v) {
+        Binary n = (Binary) node();
+        Type resType = n.type();
+        LLVMValueRef left = v.getTranslation(n.left());
+        LLVMValueRef right = v.getTranslation(n.right());
+        Operator op = n.operator();
+        assert n.left().type().typeEquals(n.right().type());
+        Type elemType = n.left().type();
+
+        v.debugInfo.emitLocation(n);
+        LLVMValueRef res = computeBinop(v.builder, op, left, right, resType, elemType);
+        v.addTranslation(n, res);
+        return super.translatePseudoLLVM(v);
+    }
+
+    @Override
+    public void translateLLVMConditional(LLVMTranslator v,
+                                         LLVMBasicBlockRef trueBlock,
+                                         LLVMBasicBlockRef falseBlock) {
+        Binary n = (Binary) node();
+        Operator op = n.operator();
+        v.debugInfo.emitLocation(n);
+        if (op.equals(Binary.COND_AND)) {
+            LLVMBasicBlockRef l1 = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "l1");
+            lang().translateLLVMConditional(n.left(), v, l1, falseBlock);
+            LLVMPositionBuilderAtEnd(v.builder, l1);
+            lang().translateLLVMConditional(n.right(), v, trueBlock, falseBlock);
+        }
+        else if (op.equals(Binary.COND_OR)) {
+            LLVMBasicBlockRef l1 = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "l1");
+            lang().translateLLVMConditional(n.left(), v, trueBlock, l1);
+            LLVMPositionBuilderAtEnd(v.builder, l1);
+            lang().translateLLVMConditional(n.right(), v, trueBlock, falseBlock);
+        }
+        else {
+            super.translateLLVMConditional(v, trueBlock, falseBlock);
+        }
+    }
+
+    static LLVMValueRef computeBinop(LLVMBuilderRef builder,
+                                     Operator op, LLVMValueRef left, LLVMValueRef right,
+                                     Type resType, Type elemType) {
+        if (resType.isLongOrLess()) {
+            // Integer binop.
+            return LLVMBuildBinOp(builder, llvmIntBinopCode(op, elemType), left, right, "ibinop");
+        } else if (resType.isFloat() || resType.isDouble()) {
+            // Floating point binop.
+            return LLVMBuildBinOp(builder, llvmFloatBinopCode(op), left, right, "fbinop");
+        } else if (resType.isBoolean() && (elemType.isFloat() || elemType.isDouble())) {
+            // Floating point comparison.
+            return LLVMBuildFCmp(builder, llvmFCmpBinopCode(op), left, right, "fcmp");
+        } else if (resType.isBoolean()) {
+            // Integer comparison.
+            return LLVMBuildICmp(builder, llvmICmpBinopCode(op, elemType), left, right, "icmp");
+        } else {
+            throw new InternalCompilerError("Invalid binary operation result type");
+        }
+    }
+
     private static boolean isUnsigned(Type t) {
         return t.isChar();
     }
@@ -61,63 +121,5 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         else if (op == GE) return LLVMRealOGE;
         else if (op == GT) return LLVMRealOGT;
         else throw new InternalCompilerError("This operation is not a comparison");
-    }
-
-    @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
-        Binary n = (Binary) node();
-        Type resType = n.type();
-        LLVMValueRef left = v.getTranslation(n.left());
-        LLVMValueRef right = v.getTranslation(n.right());
-        Operator op = n.operator();
-
-        assert n.left().type().typeEquals(n.right().type());
-        Type elemType = n.left().type();
-
-        v.debugInfo.emitLocation(n);
-
-        LLVMValueRef res;
-        if (resType.isLongOrLess()) {
-            // Integer binop.
-            res = LLVMBuildBinOp(v.builder, llvmIntBinopCode(op, elemType), left, right, "binop");
-        } else if (resType.isFloat() || resType.isDouble()) {
-            // Floating point binop.
-            res = LLVMBuildBinOp(v.builder, llvmFloatBinopCode(op), left, right, "binop");
-        } else if (resType.isBoolean() && (elemType.isFloat() || elemType.isDouble())) {
-            // Floating point comparison.
-            res = LLVMBuildFCmp(v.builder, llvmFCmpBinopCode(op), left, right, "cmp");
-        } else if (resType.isBoolean()) {
-            // Integer comparison.
-            res = LLVMBuildICmp(v.builder, llvmICmpBinopCode(op, elemType), left, right, "cmp");
-        } else {
-            throw new InternalCompilerError("Invalid binary operation result type");
-        }
-
-        v.addTranslation(n, res);
-        return super.translatePseudoLLVM(v);
-    }
-
-    @Override
-    public void translateLLVMConditional(LLVMTranslator v,
-                                         LLVMBasicBlockRef trueBlock,
-                                         LLVMBasicBlockRef falseBlock) {
-        Binary n = (Binary) node();
-        Operator op = n.operator();
-        v.debugInfo.emitLocation(n);
-        if (op.equals(Binary.COND_AND)) {
-            LLVMBasicBlockRef l1 = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "l1");
-            lang().translateLLVMConditional(n.left(), v, l1, falseBlock);
-            LLVMPositionBuilderAtEnd(v.builder, l1);
-            lang().translateLLVMConditional(n.right(), v, trueBlock, falseBlock);
-        }
-        else if (op.equals(Binary.COND_OR)) {
-            LLVMBasicBlockRef l1 = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "l1");
-            lang().translateLLVMConditional(n.left(), v, trueBlock, l1);
-            LLVMPositionBuilderAtEnd(v.builder, l1);
-            lang().translateLLVMConditional(n.right(), v, trueBlock, falseBlock);
-        }
-        else {
-            super.translateLLVMConditional(v, trueBlock, falseBlock);
-        }
     }
 }
