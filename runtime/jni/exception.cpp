@@ -62,7 +62,7 @@ void deleteJavaException(_Unwind_Reason_Code reason, UnwindException *expToDelet
 
 UnwindException *allocateJavaException(void* jexception) {
   size_t size = sizeof(JavaException_t);
-  JavaException_t *ret = (JavaException_t*) memset(GC_malloc(size), 0, size);
+  JavaException_t *ret = (JavaException_t*) GC_malloc(size);
   (ret->jexception) = jexception;
   (ret->unwindException).exception_class = genClass(polyLLVMExceptionClassChars, 8);
   (ret->unwindException).exception_cleanup = deleteJavaException;
