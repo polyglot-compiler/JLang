@@ -49,8 +49,7 @@ public class StringConversionVisitor extends NodeVisitor {
             return nf.StringLit(pos, "null");
         }
         else if (t.isPrimitive()) {
-            ClassLit stringClass = nf.ClassLit(pos, nf.CanonicalTypeNode(pos, ts.String()));
-            return nf.Call(pos, stringClass, nf.Id(pos, "valueOf"), e);
+            return nf.Call(pos, nf.CanonicalTypeNode(pos, ts.String()), nf.Id(pos, "valueOf"), e);
         }
         else {
             // TODO: According to the JLS, technically want "null" if toString() returns null.

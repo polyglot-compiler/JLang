@@ -1,13 +1,18 @@
 package polyllvm.extension;
 
-import polyglot.ast.Cast;
-import polyglot.ast.Node;
+import polyglot.ast.*;
+import polyglot.types.ConstructorInstance;
+import polyglot.types.SemanticException;
 import polyglot.types.Type;
+import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
+import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.visit.LLVMTranslator;
+
+import java.util.ArrayList;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -77,7 +82,30 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
                 // This is an implicit reference cast.
                 v.addTranslation(n, LLVMBuildBitCast(v.builder, exprTranslation, castTypeRef, "cast"));
             } else {
-                // TODO: Need runtime check to catch invalid down-casts.
+                Position pos = n.position();
+
+                TypeSystem ts = v.typeSystem();
+
+                //TODO: Fix this as well
+//                Expr instanceOfCheck = nf.Instanceof(pos, n.expr(), n.castType()).type(ts.Boolean());
+//                Expr notInstanceOfCheck = nf.Unary(pos, Unary.NOT, instanceOfCheck).type(ts.Boolean());
+//
+//                CanonicalTypeNode castExceptionType = nf.CanonicalTypeNode(pos, ts.ClassCastException());
+//
+//                ConstructorInstance constructor;
+//                try {
+//                    constructor = ts.findConstructor(ts.ClassCastException(), new ArrayList<Type>(), v.getCurrentClass().type(), true);
+//                } catch (SemanticException e){
+//                    throw new InternalCompilerError(e);
+//                }
+//                Expr classCastException = nf.New(pos, castExceptionType, new ArrayList<>())
+//                        .constructorInstance(constructor)
+//                        .type(ts.ClassCastException());
+//                Throw throwClassCast = nf.Throw(pos, classCastException);
+//                If anIf = nf.If(pos, notInstanceOfCheck, throwClassCast);
+//
+//                anIf.visit(v);
+
                 v.addTranslation(n, LLVMBuildBitCast(v.builder, exprTranslation, castTypeRef, "cast"));
             }
         }

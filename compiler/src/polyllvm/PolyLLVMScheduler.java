@@ -54,8 +54,6 @@ public class PolyLLVMScheduler extends JLScheduler {
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
                 new VisitorGoal(job, new StringConversionVisitor(ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.
-                new VisitorGoal(job, new RuntimeCastsCheckVisitor(ts, nf)),
-                new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check Runtime casts.
                 new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf))
         );
         try {

@@ -29,10 +29,4 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     // TODO:  Override factory methods for overridden AST nodes.
     // TODO:  Override factory methods for AST nodes with new extension nodes.
 
-    @Override
-    public ESeq ESeq(Stmt s, Expr e) {
-        ESeq n = new ESeq_c(Position.compilerGenerated(), s, e, null);
-        return ext(n, extFactory().extESeq());
-    }
-
 }

@@ -234,9 +234,4 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     protected Ext extStringLitImpl() {
         return new PolyLLVMStringLitExt();
     }
-
-    @Override
-    protected Ext extESeqImpl() {
-        return new PolyLLVMESeqExt();
-    }
 }

@@ -14,6 +14,4 @@ public interface PolyLLVMNodeFactory extends NodeFactory {
     PolyLLVMExtFactory PolyLLVMExtFactory();
 
     // TODO: Declare any factory methods for new AST nodes.
-
-    public ESeq ESeq(Stmt s, Expr e);
 }

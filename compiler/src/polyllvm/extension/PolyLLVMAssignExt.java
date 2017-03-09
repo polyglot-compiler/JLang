@@ -29,6 +29,7 @@ public class PolyLLVMAssignExt extends PolyLLVMExt {
         if (op.equals(Assign.ASSIGN)) {
             // Simple assignment.
             LLVMBuildStore(v.builder, expr, ptr);
+            v.addTranslation(n,expr);
         } else {
             // Update assignment.
             LLVMValueRef prevVal = LLVMBuildLoad(v.builder, ptr, "load");
@@ -36,6 +37,7 @@ public class PolyLLVMAssignExt extends PolyLLVMExt {
             LLVMValueRef newVal
                     = PolyLLVMBinaryExt.computeBinop(v.builder, binop, prevVal, expr, type, type);
             LLVMBuildStore(v.builder, newVal, ptr);
+            v.addTranslation(n,newVal);
         }
 
         return n;
