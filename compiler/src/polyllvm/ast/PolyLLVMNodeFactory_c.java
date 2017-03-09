@@ -1,6 +1,9 @@
 package polyllvm.ast;
 
+import polyglot.ast.Expr;
 import polyglot.ast.NodeFactory_c;
+import polyglot.ast.Stmt;
+import polyglot.util.Position;
 
 /**
  * NodeFactory for polyllvm extension.
@@ -25,5 +28,11 @@ public class PolyLLVMNodeFactory_c extends NodeFactory_c
     // TODO:  Implement factory methods for new AST nodes.
     // TODO:  Override factory methods for overridden AST nodes.
     // TODO:  Override factory methods for AST nodes with new extension nodes.
+
+    @Override
+    public ESeq ESeq(Stmt s, Expr e) {
+        ESeq n = new ESeq_c(Position.compilerGenerated(), s, e, null);
+        return ext(n, extFactory().extESeq());
+    }
 
 }

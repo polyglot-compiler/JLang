@@ -17,10 +17,7 @@ import polyglot.visit.LoopNormalizer;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.util.MultiGoal;
-import polyllvm.visit.AssignmentDesugarVisitor;
-import polyllvm.visit.LLVMTranslator;
-import polyllvm.visit.MakeCastsExplicitVisitor;
-import polyllvm.visit.StringConversionVisitor;
+import polyllvm.visit.*;
 
 import java.io.File;
 import java.lang.Override;
@@ -50,7 +47,7 @@ public class PolyLLVMScheduler extends JLScheduler {
     public Goal PrepareForLLVMOutput(Job job) {
         ExtensionInfo extInfo = job.extensionInfo();
         TypeSystem ts = extInfo.typeSystem();
-        NodeFactory nf = extInfo.nodeFactory();
+        PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
         Goal prep = new MultiGoal(
                 job,
                 new VisitorGoal(job, new LoopNormalizer(job, ts, nf)),
@@ -58,6 +55,8 @@ public class PolyLLVMScheduler extends JLScheduler {
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
                 new VisitorGoal(job, new StringConversionVisitor(ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.
+                new VisitorGoal(job, new RuntimeCastsCheckVisitor(ts, nf)),
+                new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check Runtime casts.
                 new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf))
         );
         try {
