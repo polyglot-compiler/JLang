@@ -51,7 +51,6 @@ public class PolyLLVMScheduler extends JLScheduler {
         Goal prep = new MultiGoal(
                 job,
                 new VisitorGoal(job, new LoopNormalizer(job, ts, nf)),
-                new VisitorGoal(job, new AssignmentDesugarVisitor(nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
                 new VisitorGoal(job, new StringConversionVisitor(ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.

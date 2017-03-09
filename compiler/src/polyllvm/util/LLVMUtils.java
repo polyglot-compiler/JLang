@@ -162,18 +162,15 @@ public class LLVMUtils {
         return global;
     }
 
-    public LLVMValueRef buildGEP(LLVMBuilderRef builder,
-                                        LLVMValueRef ptr,
-                                        LLVMValueRef ...indices) {
+    public LLVMValueRef buildGEP(LLVMValueRef ptr, LLVMValueRef... indices) {
         // TODO: If safe to do so, might be better to use LLVMBuildInBoundsGEP.
-        return LLVMBuildGEP(builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
+        return LLVMBuildGEP(v.builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
 
     /**
      * Create a constant GEP using i32 indices from indices
      */
-    public LLVMValueRef constGEP(LLVMValueRef ptr,
-                                        int ...indices) {
+    public LLVMValueRef constGEP(LLVMValueRef ptr, int ...indices) {
         LLVMValueRef[] llvmIndices = Arrays.stream(indices)
                 .mapToObj(i -> LLVMConstInt(LLVMInt32TypeInContext(v.context), i, /*sign-extend*/ 0))
                 .toArray(LLVMValueRef[]::new);
@@ -181,14 +178,21 @@ public class LLVMUtils {
     }
 
 
-    public LLVMValueRef buildStructGEP(LLVMBuilderRef builder,
-                                              LLVMValueRef ptr,
-                                              int ...intIndices) {
+    public LLVMValueRef buildStructGEP(LLVMValueRef ptr, int... intIndices) {
         // LLVM suggests using i32 offsets for struct GEP instructions.
         LLVMValueRef[] indices = IntStream.of(intIndices)
                 .mapToObj(i -> LLVMConstInt(LLVMInt32TypeInContext(v.context), i, /* sign-extend */ 0))
                 .toArray(LLVMValueRef[]::new);
-        return LLVMBuildGEP(builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
+        return LLVMBuildGEP(v.builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
+    }
+
+    /**
+     * Return a pointer to the first element in a Java array.
+     */
+    public LLVMValueRef buildJavaArrayBase(LLVMValueRef arr, Type elemType) {
+        LLVMValueRef baseRaw = v.utils.buildStructGEP(arr, 0, Constants.ARR_ELEM_OFFSET);
+        LLVMTypeRef ptrType = v.utils.ptrTypeRef(v.utils.typeRef(elemType));
+        return LLVMBuildCast(v.builder, LLVMBitCast, baseRaw, ptrType, "arr_cast");
     }
 
     private void setStructBody(LLVMTypeRef struct, LLVMTypeRef... types) {

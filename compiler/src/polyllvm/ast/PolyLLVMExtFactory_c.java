@@ -171,16 +171,6 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
-    protected Ext extFieldAssignImpl() {
-        return new PolyLLVMFieldAssignExt();
-    }
-
-    @Override
-    protected Ext extLocalAssignImpl() {
-        return new PolyLLVMLocalAssignExt();
-    }
-
-    @Override
     protected Ext extNewArrayImpl() {
         return new PolyLLVMNewArrayExt();
     }
@@ -208,11 +198,6 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     @Override
     protected Ext postExtInitializer(Ext ext) {
         return new PolyLLVMInitializerExt();
-    }
-
-    @Override
-    protected Ext extArrayAccessAssignImpl() {
-        return new PolyLLVMArrayAccessAssignExt();
     }
 
     @Override

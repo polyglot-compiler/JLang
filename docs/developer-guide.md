@@ -227,3 +227,15 @@ The LLVM C API requires that code be emitted as a collection of basic blocks. Th
 > After traversing an AST subtree, all paths through the corresponding CFG end at a common block, and the instruction builder is positioned at the end of this block.
 
 For example, an if-statement will (1) build the conditional branch, (2) position the builder at the `true` block, (3) recurse into the `consequent` child, (4) position the builder at the `false` block, and (5) recurse into the `alternative` child. After each recursion it adds a branch to the end block (unless there is already a terminating instruction). Finally, it positions the builder at the end block.
+
+
+Unneeded AST Nodes
+------------------
+
+Some AST extensions are unneeded, either because they do not require a translation, or because they can reuse the translation of another extension. Examples are listed below.
+
+- ArrayAccessAssign (uses AssignExt)
+- LocalAssign (uses AssignExt)
+- FieldAssign (uses AssignExt)
+- MethodDecl (uses ProcedureDeclExt)
+- Eval (the child translation suffices)

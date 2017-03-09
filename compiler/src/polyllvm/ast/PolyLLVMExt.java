@@ -8,7 +8,7 @@ import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.visit.LLVMTranslator;
 
-import static org.bytedeco.javacpp.LLVM.LLVMBuildCondBr;
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -52,5 +52,10 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
         Node n = v.visitEdge(null, node());
         v.debugInfo.emitLocation(node());
         LLVMBuildCondBr(v.builder, v.getTranslation(n), trueBlock, falseBlock);
+    }
+
+    @Override
+    public LLVMValueRef translateAsLValue(LLVMTranslator v) {
+        throw new InternalCompilerError("Unable to translate to lvalue: " + node());
     }
 }

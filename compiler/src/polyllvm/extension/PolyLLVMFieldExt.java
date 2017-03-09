@@ -6,9 +6,10 @@ import polyglot.ast.Receiver;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.LLVMTranslator;
+
+import java.lang.Override;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -16,29 +17,31 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         Field n = (Field) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
-        Receiver target = n.target();
+        LLVMValueRef ptr = translateAsLValue(v); // Emits debug info.
+        LLVMValueRef load = LLVMBuildLoad(v.builder, ptr, "load_field");
+        v.addTranslation(n, load);
+        return super.translatePseudoLLVM(v);
+    }
 
+    @Override
+    public LLVMValueRef translateAsLValue(LLVMTranslator v) {
+        Field n = (Field) node();
+        Receiver target = n.target();
+        target.visit(v);
         v.debugInfo.emitLocation(n);
 
         if (n.flags().isStatic()) {
             // Static fields.
             String mangledGlobalName = PolyLLVMMangler.mangleStaticFieldName(n);
-            LLVMValueRef global = v.utils.getGlobal(v.mod, mangledGlobalName, v.utils.ptrTypeRef(v.utils.typeRef(n.type())));
-            v.addTranslation(n, LLVMBuildLoad(v.builder, global, "static_field_access"));
-        }
-        else {
+            LLVMTypeRef type = v.utils.ptrTypeRef(v.utils.typeRef(n.type()));
+            return v.utils.getGlobal(v.mod, mangledGlobalName, type);
+        } else {
             // Instance fields.
             LLVMValueRef thisTranslation = v.getTranslation(target);
             int fieldIndex = v.getFieldIndex((ReferenceType) n.target().type(), n.fieldInstance());
-            LLVMValueRef gep = v.utils.buildGEP(v.builder, thisTranslation,
-                    LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, 0), LLVMConstInt(LLVMInt32TypeInContext(v.context), fieldIndex, 0));
-            v.addTranslation(n, LLVMBuildLoad(v.builder, gep, "load_field"));
-
+            return v.utils.buildStructGEP(thisTranslation, 0, fieldIndex);
         }
-
-        return super.translatePseudoLLVM(v);
     }
 }

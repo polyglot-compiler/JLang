@@ -45,8 +45,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         //Bitcast object
         LLVMValueRef cast = LLVMBuildBitCast(v.builder, obj, v.utils.typeRef(classtype), "obj_cast");
         //Set the Dispatch vector
-        LLVMValueRef gep = v.utils.buildGEP(v.builder, cast,
-                LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, 0), LLVMConstInt(LLVMInt32TypeInContext(v.context), 0, 0));
+        LLVMValueRef gep = v.utils.buildStructGEP(cast, 0, 0);
         LLVMValueRef dvGlobal = v.utils.getDvGlobal(classtype);
         LLVMBuildStore(v.builder, dvGlobal, gep);
 

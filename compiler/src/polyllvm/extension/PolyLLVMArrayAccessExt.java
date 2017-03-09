@@ -4,34 +4,33 @@ import polyglot.ast.ArrayAccess;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
-import java.lang.Override;
-
-import static org.bytedeco.javacpp.LLVM.*;
+import static org.bytedeco.javacpp.LLVM.LLVMBuildLoad;
+import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
 
 public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         ArrayAccess n = (ArrayAccess) node();
-
-        v.debugInfo.emitLocation(n);
-        LLVMValueRef ptr = buildArrayElemPtr(n, v);
+        LLVMValueRef ptr = translateAsLValue(v); // Emits debug location.
         LLVMValueRef load = LLVMBuildLoad(v.builder, ptr, "arr_load");
         v.addTranslation(n, load);
-        return super.translatePseudoLLVM(v);
+        return n;
     }
 
-    // Assumes n.array() and n.index() have already been translated.
-    static LLVMValueRef buildArrayElemPtr(ArrayAccess n, LLVMTranslator v) {
+    @Override
+    public LLVMValueRef translateAsLValue(LLVMTranslator v) {
+        // Return a pointer to the appropriate element in the array.
+        ArrayAccess n = (ArrayAccess) node();
+        n.array().visit(v);
+        n.index().visit(v);
+        v.debugInfo.emitLocation(n);
         LLVMValueRef arr = v.getTranslation(n.array());
-        LLVMValueRef baseRaw = v.utils.buildStructGEP(v.builder, arr, 0, Constants.ARR_ELEM_OFFSET);
-        LLVMTypeRef ptrType = v.utils.ptrTypeRef(v.utils.typeRef(n.type()));
-        LLVMValueRef base = LLVMBuildCast(v.builder, LLVMBitCast, baseRaw, ptrType, "ptr_cast");
+        LLVMValueRef base = v.utils.buildJavaArrayBase(arr, n.type());
         LLVMValueRef offset = v.getTranslation(n.index());
-        return v.utils.buildGEP(v.builder, base, offset);
+        return v.utils.buildGEP(base, offset);
     }
 }
