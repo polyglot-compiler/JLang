@@ -5,6 +5,7 @@ import polyglot.util.InternalCompilerError;
 import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
+import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
 
 public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
     public static final PolyLLVMLang_c instance = new PolyLLVMLang_c();
@@ -57,5 +58,10 @@ public class PolyLLVMLang_c extends JLang_c implements PolyLLVMLang {
                                          LLVMBasicBlockRef trueBlock,
                                          LLVMBasicBlockRef falseBlock) {
         PolyLLVMOps(n).translateLLVMConditional(v, trueBlock, falseBlock);
+    }
+
+    @Override
+    public LLVMValueRef translateAsLValue(Node n, LLVMTranslator v) {
+        return PolyLLVMOps(n).translateAsLValue(v);
     }
 }

@@ -4,7 +4,7 @@ import polyglot.ast.Node;
 import polyglot.ast.NodeOps;
 import polyllvm.visit.LLVMTranslator;
 
-import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
+import static org.bytedeco.javacpp.LLVM.*;
 
 /**
  * Operations any PolyLLVM compatible node must implement.
@@ -25,4 +25,6 @@ public interface PolyLLVMOps extends NodeOps {
     void translateLLVMConditional(LLVMTranslator v,
                                   LLVMBasicBlockRef trueBlock,
                                   LLVMBasicBlockRef falseBlock);
+
+    LLVMValueRef translateAsLValue(LLVMTranslator v);
 }

@@ -36,7 +36,6 @@ public class TestFunctional {
 
     @Test
     public void testFile() throws IOException, InterruptedException {
-
         File solFile = TestUtil.changeExtension(file, "java", "sol");
         String solTarget = DIR.toPath().relativize(solFile.toPath()).toString();
         TestUtil.make(DIR, TIMEOUT, solTarget);

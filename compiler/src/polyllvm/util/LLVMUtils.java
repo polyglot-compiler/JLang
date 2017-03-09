@@ -191,6 +191,15 @@ public class LLVMUtils {
         return LLVMBuildGEP(builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
 
+    /**
+     * Return a pointer to the first element in a Java array.
+     */
+    public LLVMValueRef buildJavaArrayBase(LLVMValueRef arr, Type elemType) {
+        LLVMValueRef baseRaw = v.utils.buildStructGEP(v.builder, arr, 0, Constants.ARR_ELEM_OFFSET);
+        LLVMTypeRef ptrType = v.utils.ptrTypeRef(v.utils.typeRef(elemType));
+        return LLVMBuildCast(v.builder, LLVMBitCast, baseRaw, ptrType, "arr_cast");
+    }
+
     private void setStructBody(LLVMTypeRef struct, LLVMTypeRef... types) {
         LLVMStructSetBody(struct, new PointerPointer<>(types), types.length, /* packed */ 0);
     }

@@ -5,8 +5,9 @@ import polyglot.ast.JLang;
 import polyglot.ast.Node;
 import polyllvm.visit.LLVMTranslator;
 
+import static org.bytedeco.javacpp.LLVM.*;
+
 public interface PolyLLVMLang extends JLang {
-    // TODO: Declare any dispatch methods for new AST operations
 
     LLVMTranslator enterTranslatePseudoLLVM(Node n,
                                             LLVMTranslator v);
@@ -18,4 +19,6 @@ public interface PolyLLVMLang extends JLang {
     void translateLLVMConditional(Node n, LLVMTranslator v,
                                   LLVM.LLVMBasicBlockRef trueBlock,
                                   LLVM.LLVMBasicBlockRef falseBlock);
+
+    LLVMValueRef translateAsLValue(Node n, LLVMTranslator v);
 }
