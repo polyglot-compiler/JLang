@@ -97,6 +97,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
 	private void translateMethodCall(LLVMTranslator v) {
 		Call n = (Call) node();
+		v.utils.typeRef(n.target().type()); // Ensure the target type body and dv type body are set before GEP
 
 		ReferenceType referenceType = (ReferenceType) n.target().type();
 		LLVMValueRef thisTranslation = v.getTranslation(n.target());

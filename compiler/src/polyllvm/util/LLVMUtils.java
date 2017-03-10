@@ -53,9 +53,14 @@ public class LLVMUtils {
     }
 
     private LLVMTypeRef structTypeRef(ReferenceType rt) {
+        return structTypeRef(rt, true);
+    }
+
+
+    private LLVMTypeRef structTypeRef(ReferenceType rt, boolean fillInStruct) {
         String mangledName = PolyLLVMMangler.classTypeName(rt);
         LLVMTypeRef structType = structTypeRefOpaque(mangledName);
-        if (LLVMIsOpaqueStruct(structType) != 0) {
+        if (LLVMIsOpaqueStruct(structType) != 0 && fillInStruct) {
             setStructBody(structType); // Set the struct to be empty, so it is not opaque
             setStructBody(structType, objectFieldTypes(rt));
         }
@@ -75,20 +80,25 @@ public class LLVMUtils {
 
 
     public LLVMTypeRef typeRef(Type t) {
+        return typeRef(t, true);
+    }
+
+    private LLVMTypeRef typeRef(Type t, boolean fillInStruct) {
         if      (t.isBoolean())    return LLVMInt1TypeInContext(v.context);
         else if (t.isLongOrLess()) return LLVMIntTypeInContext(v.context, numBitsOfIntegralType(t));
         else if (t.isVoid())       return LLVMVoidTypeInContext(v.context);
         else if (t.isFloat())      return LLVMFloatType();
         else if (t.isDouble())     return LLVMDoubleType();
-        else if (t.isClass())      return structTypeRef(t.toReference());
+        else if (t.isClass())      return structTypeRef(t.toReference(), fillInStruct);
         else if (t.isNull())       return ptrTypeRef(LLVMInt8TypeInContext(v.context));
         else if (t.isArray()) {
-            structTypeRef(getArrayType());
+            structTypeRef(getArrayType(), fillInStruct);
             return ptrTypeRef(structTypeRefOpaque(Constants.ARR_CLASS));
         } else {
             throw new InternalCompilerError("Invalid type");
         }
     }
+
 
     public LLVMTypeRef functionType(LLVMTypeRef ret, LLVMTypeRef ...args) {
         return LLVMFunctionType(ret, new PointerPointer<>(args), args.length, /* isVarArgs */ 0);
@@ -97,20 +107,22 @@ public class LLVMUtils {
     // TODO: Just make one that takes in a procedure decl.
     public LLVMTypeRef functionType(Type returnType, List<? extends Type> formalTypes) {
         LLVMTypeRef[] args = formalTypes.stream()
-                .map(t -> typeRef(t))
+                .map(t -> typeRef(t, false))
                 .toArray(LLVMTypeRef[]::new);
-        return functionType(typeRef(returnType), args);
+        return functionType(typeRef(returnType, false), args);
     }
 
     public LLVMTypeRef methodType(ReferenceType type,
                                   Type returnType,
                                   List<? extends Type> formalTypes) {
         LLVMTypeRef[] args = Stream.concat(
-                    Stream.of(typeRef(type)),
-                    formalTypes.stream().map(this::typeRef))
+                    Stream.of(typeRef(type, false)),
+                    formalTypes.stream().map(t -> typeRef(t, false)))
                 .toArray(LLVMTypeRef[]::new);
-        return functionType(typeRef(returnType), args);
+        return functionType(typeRef(returnType, false), args);
     }
+
+
 
     public LLVMValueRef buildProcedureCall(LLVMValueRef func, LLVMValueRef... args) {
         if (v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())) {
@@ -191,7 +203,7 @@ public class LLVMUtils {
      */
     public LLVMValueRef buildJavaArrayBase(LLVMValueRef arr, Type elemType) {
         LLVMValueRef baseRaw = v.utils.buildStructGEP(arr, 0, Constants.ARR_ELEM_OFFSET);
-        LLVMTypeRef ptrType = v.utils.ptrTypeRef(v.utils.typeRef(elemType));
+        LLVMTypeRef ptrType = v.utils.ptrTypeRef(v.utils.typeRef(elemType, false));
         return LLVMBuildCast(v.builder, LLVMBitCast, baseRaw, ptrType, "arr_cast");
     }
 
@@ -205,7 +217,7 @@ public class LLVMUtils {
         LLVMTypeRef dvPtrType = LLVMPointerType(dvType, Constants.LLVM_ADDR_SPACE);
         return Stream.concat(
                 Stream.of(dvPtrType),
-                layouts.part2().stream().map(fi -> typeRef(fi.type()))
+                layouts.part2().stream().map(fi -> typeRef(fi.type(), false))
         ).toArray(LLVMTypeRef[]::new);
     }
 
