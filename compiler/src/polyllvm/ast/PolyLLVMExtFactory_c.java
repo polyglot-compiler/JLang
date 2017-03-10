@@ -196,7 +196,7 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
-    protected Ext postExtInitializer(Ext ext) {
+    protected Ext extInitializerImpl() {
         return new PolyLLVMInitializerExt();
     }
 
