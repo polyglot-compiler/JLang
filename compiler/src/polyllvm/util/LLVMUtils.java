@@ -295,7 +295,6 @@ public class LLVMUtils {
         return LLVMConstStructInContext(v.context, valArr, values.length, /*packed*/ 0);
     }
 
-
     private int numBitsOfIntegralType(Type t) {
         if      (t.isByte())  return 8;
         else if (t.isShort()) return 16;

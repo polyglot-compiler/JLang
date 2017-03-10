@@ -31,11 +31,11 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         Type castType = n.castType().type();
         LLVMTypeRef castTypeRef = v.utils.typeRef(castType);
 
-        LLVMValueRef exprTranslation = v.getTranslation(n.expr());
+        LLVMValueRef exprRef = v.getTranslation(n.expr());
 
         // The cast is an identity cast.
         if (exprType.typeEquals(castType)) {
-            v.addTranslation(n, exprTranslation);
+            v.addTranslation(n, exprRef);
             return super.translatePseudoLLVM(v);
         }
 
@@ -47,30 +47,30 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
                 if (exprType.isChar() && !castType.isByte()) {
                     // A widening conversion of a char to an integral type T zero-extends
                     // the representation of the char value to fill the wider format.
-                    v.addTranslation(n, LLVMBuildZExt(v.builder, exprTranslation, castTypeRef, "cast"));
+                    v.addTranslation(n, LLVMBuildZExt(v.builder, exprRef, castTypeRef, "cast"));
                 }
                 else if (exprType.isImplicitCastValid(castType)) {
                     // Sign-extending widening cast.
-                    v.addTranslation(n, LLVMBuildSExt(v.builder, exprTranslation, castTypeRef, "cast"));
+                    v.addTranslation(n, LLVMBuildSExt(v.builder, exprRef, castTypeRef, "cast"));
                 }
                 else if (exprType.isByte() && castType.isChar()) {
                     // Java language spec: first, the byte is converted to an int via widening
                     // primitive conversion (5.1.2), and then the resulting int is converted to a
                     // char by narrowing primitive conversion (5.1.3).
-                    v.addTranslation(n, LLVMBuildSExt(v.builder, exprTranslation, castTypeRef, "cast"));
+                    v.addTranslation(n, LLVMBuildSExt(v.builder, exprRef, castTypeRef, "cast"));
                 }
                 else {
                     // Truncation.
-                    v.addTranslation(n, LLVMBuildTrunc(v.builder, exprTranslation, castTypeRef, "cast"));
+                    v.addTranslation(n, LLVMBuildTrunc(v.builder, exprRef, castTypeRef, "cast"));
 
                 }
             } else if (exprType.isLongOrLess()) {
                 // Integral primitive to floating point primitive.
                 // TODO: Should sitofp know about float vs. double?
-                v.addTranslation(n, LLVMBuildSIToFP(v.builder, exprTranslation, castTypeRef, "cast"));
+                v.addTranslation(n, LLVMBuildSIToFP(v.builder, exprRef, castTypeRef, "cast"));
             } else if (exprType.isFloat() && castType.isDouble()) {
                 // Float to double.
-                v.addTranslation(n, LLVMBuildFPExt(v.builder, exprTranslation, castTypeRef, "cast"));
+                v.addTranslation(n, LLVMBuildFPExt(v.builder, exprRef, castTypeRef, "cast"));
 
             } else {
                 // TODO: Handle casts from double to float?
@@ -80,33 +80,37 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         else if (!castType.isPrimitive() && !exprType.isPrimitive()) {
             if (exprType.isImplicitCastValid(castType)) {
                 // This is an implicit reference cast.
-                v.addTranslation(n, LLVMBuildBitCast(v.builder, exprTranslation, castTypeRef, "cast"));
+                v.addTranslation(n, LLVMBuildBitCast(v.builder, exprRef, castTypeRef, "cast"));
             } else {
                 Position pos = n.position();
-
                 TypeSystem ts = v.typeSystem();
 
-                //TODO: Fix this as well
-//                Expr instanceOfCheck = nf.Instanceof(pos, n.expr(), n.castType()).type(ts.Boolean());
-//                Expr notInstanceOfCheck = nf.Unary(pos, Unary.NOT, instanceOfCheck).type(ts.Boolean());
-//
-//                CanonicalTypeNode castExceptionType = nf.CanonicalTypeNode(pos, ts.ClassCastException());
-//
-//                ConstructorInstance constructor;
-//                try {
-//                    constructor = ts.findConstructor(ts.ClassCastException(), new ArrayList<Type>(), v.getCurrentClass().type(), true);
-//                } catch (SemanticException e){
-//                    throw new InternalCompilerError(e);
-//                }
-//                Expr classCastException = nf.New(pos, castExceptionType, new ArrayList<>())
-//                        .constructorInstance(constructor)
-//                        .type(ts.ClassCastException());
-//                Throw throwClassCast = nf.Throw(pos, classCastException);
-//                If anIf = nf.If(pos, notInstanceOfCheck, throwClassCast);
-//
-//                anIf.visit(v);
+                LLVMValueRef instanceOf
+                        = PolyLLVMInstanceofExt.buildInstanceOf(v, exprRef, castType.toReference());
+                LLVMValueRef notInstanceOf = LLVMBuildNot(v.builder, instanceOf, "not_instance_of");
 
-                v.addTranslation(n, LLVMBuildBitCast(v.builder, exprTranslation, castTypeRef, "cast"));
+                PolyLLVMIfExt.buildIf(v, notInstanceOf, () -> {
+                    CanonicalTypeNode exceptionType = nf.CanonicalTypeNode(pos, ts.ClassCastException());
+                    ConstructorInstance constructor;
+                    try {
+                        constructor = ts.findConstructor(
+                                ts.ClassCastException(),
+                                new ArrayList<>(),
+                                v.getCurrentClass().type(),
+                                /*fromClient*/ true
+                        );
+                    } catch (SemanticException e){
+                        throw new InternalCompilerError(e);
+                    }
+                    Expr classCastException = nf.New(pos, exceptionType, new ArrayList<>())
+                            .constructorInstance(constructor)
+                            .type(ts.ClassCastException());
+                    Throw throwClassCast = nf.Throw(pos, classCastException);
+                    throwClassCast.visit(v);
+                });
+
+                LLVMValueRef res = LLVMBuildBitCast(v.builder, exprRef, castTypeRef, "cast");
+                v.addTranslation(n, res);
             }
         }
         else {
