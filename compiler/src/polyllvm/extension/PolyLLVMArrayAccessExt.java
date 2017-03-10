@@ -6,13 +6,14 @@ import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
+import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.lang.Override;
+import java.util.Collections;
+import java.util.List;
 
-import static org.bytedeco.javacpp.LLVM.LLVMBuildLoad;
-import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -28,7 +29,7 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
 
     @Override
     public LLVMValueRef translateAsLValue(LLVMTranslator v) {
-        // Return a pointer to the appropriate element in the array.
+        // Return a pointer to the appropriate element in the array, and emit a bounds check.
         ArrayAccess n = (ArrayAccess) node();
         NodeFactory nf = v.nodeFactory();
         TypeSystem ts = v.typeSystem();
@@ -38,47 +39,43 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
         n.index().visit(v);
         v.debugInfo.emitLocation(n);
 
-        //TODO: implement this logic in LLVM so index isn't translated multiple times
-//        FieldInstance lengthFi;
-//        try {
-//            lengthFi = ts.findField(n.array().type().toReference(), "length", v.getCurrentClass().type(), true);
-//        } catch (SemanticException se){
-//            throw new InternalCompilerError(se);
-//        }
-//        Expr length = nf.Field(pos, n.array(), nf.Id(pos, "length")).fieldInstance(lengthFi).type(ts.Int());
-//        Expr right = nf.Binary(pos, n.index(), Binary.GE, length).type(ts.Boolean());
-//        Expr left = nf.Binary(pos, n.index(), Binary.LT, nf.IntLit(pos, IntLit.INT, 0).type(ts.Int())).type(ts.Boolean());
-//        Expr condition = nf.Binary(pos, left, Binary.COND_OR, right).type(ts.Boolean());
-//
-//        ClassType arrayIndexOutOfBoundsExceptionType = getArrayIndexOutOfBoundsExceptionType(ts);
-//
-//        ConstructorInstance constructor;
-//        try {
-//            constructor = ts.findConstructor(arrayIndexOutOfBoundsExceptionType, Arrays.asList(ts.Int()), v.getCurrentClass().type(), true);
-//        } catch (SemanticException e){
-//            throw new InternalCompilerError(e);
-//        }
-//        Expr outOfBounds = nf.New(pos, nf.CanonicalTypeNode(pos, arrayIndexOutOfBoundsExceptionType), Arrays.asList(index()))
-//                .constructorInstance(constructor)
-//                .type(arrayIndexOutOfBoundsExceptionType);
-//        Throw throwOutOfBounds = nf.Throw(pos, outOfBounds);
-//
-//        If anIf = nf.If(pos, condition, throwOutOfBounds);
-//        anIf.visit(v);
-
         LLVMValueRef arr = v.getTranslation(n.array());
         LLVMValueRef base = v.utils.buildJavaArrayBase(arr, n.type());
         LLVMValueRef offset = v.getTranslation(n.index());
-        return v.utils.buildGEP(base, offset);
-    }
 
-    private ClassType getArrayIndexOutOfBoundsExceptionType(TypeSystem ts) {
-        ClassType type;
-        try {
-            type = (ClassType) ts.typeForName("java.lang.ArrayIndexOutOfBoundsException");
-        } catch (SemanticException se){
-            throw new InternalCompilerError(se);
-        }
-        return type;
+        LLVMValueRef lenPtr = v.utils.buildStructGEP(arr, 0, Constants.ARR_LEN_OFFSET);
+        LLVMValueRef len = LLVMBuildLoad(v.builder, lenPtr, "len");
+        LLVMValueRef zero = LLVMConstNull(v.utils.typeRef(n.index().type()));
+        LLVMValueRef boundsCheck = LLVMBuildOr(
+                v.builder,
+                LLVMBuildICmp(v.builder, LLVMIntSLT, offset, zero, "lt_zero"),
+                LLVMBuildICmp(v.builder, LLVMIntSGE, offset, len, "ge_len"),
+                "bounds_check"
+        );
+
+        PolyLLVMIfExt.buildIf(v, boundsCheck, () -> {
+            try {
+                String exceptionName = "java.lang.ArrayIndexOutOfBoundsException";
+                ClassType exceptionType = (ClassType) ts.typeForName(exceptionName);
+                List<? extends Type> formalParams = Collections.singletonList(ts.Int());
+                ConstructorInstance constructor = ts.findConstructor(
+                        exceptionType,
+                        formalParams,
+                        v.getCurrentClass().type(),
+                        /*fromClient*/ true);
+                // TODO: Technically duplicates side-effects in n.index() if an exception is thrown.
+                //       Need to find a cleaner  way to generate exceptions from the compiler.
+                List<Expr> args = Collections.singletonList(n.index());
+                Expr newInstance = nf.New(pos, nf.CanonicalTypeNode(pos, exceptionType), args)
+                        .constructorInstance(constructor)
+                        .type(exceptionType);
+                Throw throwOutOfBounds = nf.Throw(pos, newInstance);
+                throwOutOfBounds.visit(v);
+            } catch (SemanticException e){
+                throw new InternalCompilerError(e);
+            }
+        });
+
+        return v.utils.buildGEP(base, offset);
     }
 }
