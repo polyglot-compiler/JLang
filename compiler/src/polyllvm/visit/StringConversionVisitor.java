@@ -33,7 +33,7 @@ public class StringConversionVisitor extends NodeVisitor {
             Type lt = l.type(), rt = r.type();
             if (lt.typeEquals(ts.String()) || rt.typeEquals(ts.String())) {
                 assert binary.operator().equals(Binary.ADD);
-                return nf.Call(pos, convertToString(l), nf.Id(pos, "concat"), convertToString(r));
+                return nf.Call(pos, convertToString(l), nf.Id(pos, "concat"), convertToString(r)).type(ts.String());
             }
         }
         return super.leave(old, n, v);
@@ -46,15 +46,15 @@ public class StringConversionVisitor extends NodeVisitor {
             return e;
         }
         else if (t.isNull()) {
-            return nf.StringLit(pos, "null");
+            return nf.StringLit(pos, "null").type(ts.String());
         }
         else if (t.isPrimitive()) {
-            return nf.Call(pos, nf.CanonicalTypeNode(pos, ts.String()), nf.Id(pos, "valueOf"), e);
+            return nf.Call(pos, nf.CanonicalTypeNode(pos, ts.String()), nf.Id(pos, "valueOf"), e).type(ts.String());
         }
         else {
             // TODO: According to the JLS, technically want "null" if toString() returns null.
             assert t.isReference();
-            return nf.Call(pos, e, nf.Id(pos, "toString"));
+            return nf.Call(pos, e, nf.Id(pos, "toString")).type(ts.String());
         }
     }
 }
