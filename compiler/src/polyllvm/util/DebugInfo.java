@@ -153,7 +153,7 @@ public class DebugInfo {
         ProcedureInstance pi = n.procedureInstance();
         LLVMMetadataRef Unit = createFile();
         int LineNo = n.position().line();
-        LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(diBuilder, Unit, n.name(), PolyLLVMMangler.mangleProcedureName(pi), Unit, LineNo,
+        LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(diBuilder, Unit, n.name(), v.mangler.mangleProcedureName(pi), Unit, LineNo,
                 createFunctionType(pi, Unit), /* internal linkage */ 0, /* definition */ 1,
                 LineNo, /*DINode::FlagPrototyped*/ 1 << 8, /*is optimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);
@@ -178,6 +178,7 @@ public class DebugInfo {
         if (typeMap.containsKey(t)) {
             return typeMap.get(t);
         }
+        t = v.utils.translateType(t);
 
         LLVMMetadataRef debugType;
         if (t.isBoolean() || t.isLongOrLess() || t.isFloat() || t.isDouble()) {
@@ -185,13 +186,13 @@ public class DebugInfo {
         } else if (t.isArray()) {
             debugType = LLVMDIBuilderCreateArrayType(diBuilder, v.utils.sizeOfType(t), v.utils.sizeOfType(t), debugType(t.toArray().base()), null);
             //debugType = LLVMDIBuilderCreatePointerType(diBuilder, debugType(t.toArray().base()), v.utils.sizeOfType(t), v.utils.sizeOfType(t), "array");
-        } else if (t.isClass()) {
+        } else if (t.isNull()) {
+            debugType = LLVMDIBuilderCreatePointerType(diBuilder, LLVMDIBuilderCreateBasicType(diBuilder, t.toString(), 64, 64, DW_ATE_signed), v.utils.sizeOfType(t)*8, v.utils.sizeOfType(t)*8, "class");
+        } else if (t.isReference()) {
             int line = t.position().line() == -1 ? 0 : t.position().line() ;
             debugType = LLVMDIBuilderCreateClassType(diBuilder, currentScope(), t.toString(), createFile(),
                     line, 0,0, /*Flags*/0 , t.toClass().superType() == null ? null : debugType(t.toClass().superType()), null);
 
-        } else if (t.isNull()) {
-            debugType = LLVMDIBuilderCreatePointerType(diBuilder, LLVMDIBuilderCreateBasicType(diBuilder, t.toString(), 64, 64, DW_ATE_signed), v.utils.sizeOfType(t)*8, v.utils.sizeOfType(t)*8, "class");
         } else throw new InternalCompilerError("Invalid type");
         typeMap.put(t, debugType);
         return debugType;

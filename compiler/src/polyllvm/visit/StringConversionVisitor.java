@@ -33,7 +33,7 @@ public class StringConversionVisitor extends NodeVisitor {
             Type lt = l.type(), rt = r.type();
             if (lt.typeEquals(ts.String()) || rt.typeEquals(ts.String())) {
                 assert binary.operator().equals(Binary.ADD);
-                return nf.Call(pos, convertToString(l), nf.Id(pos, "concat"), convertToString(r));
+                return nf.Call(pos, convertToString(l), nf.Id(pos, "concat"), convertToString(r)).type(ts.String());
             }
         }
         return super.leave(old, n, v);

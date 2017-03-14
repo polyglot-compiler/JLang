@@ -3,7 +3,6 @@ package polyllvm;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
 import polyglot.ast.Node;
-import polyglot.ast.NodeFactory;
 import polyglot.ast.SourceFile;
 import polyglot.ext.jl7.JL7Scheduler;
 import polyglot.frontend.*;
@@ -55,7 +54,11 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
                 new VisitorGoal(job, new StringConversionVisitor(ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.
+                new VisitorGoal(job, new RemoveJava5isms(ts, nf)),
+                new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check
                 new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf))
+//                new VisitorGoal(job, new PrintVisitor())
+
         );
         try {
             prep.addPrerequisiteGoal(Serialized(job), this);

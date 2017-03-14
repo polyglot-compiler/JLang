@@ -31,7 +31,6 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
     public void translateWithSize(LLVMTranslator v, LLVMValueRef size) {
         New n = (New) node();
         ConstructorInstance ci = n.constructorInstance();
-
         ReferenceType classtype = ci.container();
 
         v.debugInfo.emitLocation();
@@ -51,7 +50,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         //Call the constructor function
         String mangledFuncName =
-                PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
+                v.mangler.mangleProcedureName(n.constructorInstance());
 
 
         LLVMTypeRef constructorType = v.utils.methodType(n.constructorInstance().container(),

@@ -23,7 +23,7 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
         // Only static field declarations need a translation.
         if (n.flags().isStatic()) {
             ReferenceType classType = v.getCurrentClass().type().toReference();
-            String mangledName = PolyLLVMMangler.mangleStaticFieldName(classType, n);
+            String mangledName = v.mangler.mangleStaticFieldName(classType, n);
             LLVMTypeRef type = v.utils.typeRef(n.type().type());
             LLVMValueRef global = v.utils.getGlobal(v.mod, mangledName, type);
             if (n.init() == null) {

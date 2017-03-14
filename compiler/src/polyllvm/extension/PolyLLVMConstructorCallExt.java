@@ -41,7 +41,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
         }
 
         String mangledFuncName =
-                PolyLLVMMangler.mangleProcedureName(n.constructorInstance());
+                v.mangler.mangleProcedureName(n.constructorInstance());
         LLVMTypeRef constructorFuncTypeRef = v.utils.methodType(n.constructorInstance().container(),
                 v.typeSystem().Void(), n.constructorInstance().formalTypes());
         LLVMValueRef function = v.utils.getFunction(v.mod, mangledFuncName, constructorFuncTypeRef);

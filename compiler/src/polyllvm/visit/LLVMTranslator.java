@@ -4,6 +4,11 @@ import polyglot.ast.ClassDecl;
 import polyglot.ast.Labeled;
 import polyglot.ast.Loop;
 import polyglot.ast.Node;
+import polyglot.ext.jl5.types.JL5ProcedureInstance;
+import polyglot.ext.jl5.types.JL5Subst;
+import polyglot.ext.jl5.types.JL5SubstClassType;
+import polyglot.ext.jl5.types.JL5TypeSystem;
+import polyglot.ext.jl5.types.inference.LubType;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.ListUtil;
@@ -14,14 +19,12 @@ import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.extension.ClassObjects;
 import polyllvm.extension.PolyLLVMLocalDeclExt;
 import polyllvm.extension.PolyLLVMProcedureDeclExt;
-import polyllvm.util.Constants;
-import polyllvm.util.DebugInfo;
-import polyllvm.util.LLVMUtils;
-import polyllvm.util.Triple;
+import polyllvm.util.*;
 
 import java.lang.Override;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -40,6 +43,7 @@ public class LLVMTranslator extends NodeVisitor {
     public final DebugInfo debugInfo;
     public final LLVMUtils utils;
     public final ClassObjects classObjs;
+    public final PolyLLVMMangler mangler;
 
     /**
      * A stack of all enclosing functions.
@@ -87,6 +91,7 @@ public class LLVMTranslator extends NodeVisitor {
         this.debugInfo = new DebugInfo(this, mod, builder, filePath);
         this.utils = new LLVMUtils(this);
         this.classObjs = new ClassObjects(this);
+        this.mangler = new PolyLLVMMangler(this);
         this.nf = nf;
         this.ts = ts;
     }
@@ -254,6 +259,8 @@ public class LLVMTranslator extends NodeVisitor {
 
     private Triple<List<MethodInstance>, List<MethodInstance>, List<FieldInstance>> classMembers(
             ReferenceType rt) {
+        rt = utils.translateType(rt);
+
         List<? extends MemberInstance> classMembers = rt.members();
         List<MethodInstance> dvMethods = new ArrayList<>();
         List<MethodInstance> dvOverridenMethods = new ArrayList<>();
@@ -264,6 +271,7 @@ public class LLVMTranslator extends NodeVisitor {
                 continue;
             }
             if (mi instanceof MethodInstance) {
+                mi = utils.translateMemberInstance(mi);
                 if (isOverridden((MethodInstance) mi)) {
                     dvOverridenMethods.add((MethodInstance) mi);
                 }
@@ -272,6 +280,7 @@ public class LLVMTranslator extends NodeVisitor {
                 }
             }
             else if (mi instanceof FieldInstance) {
+                mi = utils.translateMemberInstance(mi);
                 fields.add((FieldInstance) mi);
             }
         }
@@ -459,6 +468,8 @@ public class LLVMTranslator extends NodeVisitor {
 
 
     public int getFieldIndex(ReferenceType type, FieldInstance fieldInstance) {
+        type = utils.translateType(type);
+        fieldInstance = (FieldInstance) utils.translateMemberInstance(fieldInstance);
         List<FieldInstance> objectLayout = layouts(type).part2();
         for (int i = 0; i < objectLayout.size(); i++) {
             if (objectLayout.get(i).equals(fieldInstance)) {

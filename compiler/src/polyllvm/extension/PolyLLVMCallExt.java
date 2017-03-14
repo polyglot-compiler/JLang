@@ -40,7 +40,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 	private void translateStaticCall(LLVMTranslator v) {
 		Call n = (Call) node();
 
-		String mangledFuncName = PolyLLVMMangler
+		String mangledFuncName = v.mangler
 				.mangleProcedureName(n.methodInstance());
 
 		LLVMTypeRef tn = v.utils.functionType(n.methodInstance().returnType(),
@@ -74,7 +74,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 				superMethod.formalTypes());
 
 		LLVMValueRef superFunc = v.utils.getFunction(v.mod,
-				PolyLLVMMangler.mangleProcedureName(superMethod),
+				v.mangler.mangleProcedureName(superMethod),
 				superMethodType);
 
 		LLVMValueRef superBitCast = LLVMBuildBitCast(v.builder, superFunc,
@@ -97,9 +97,10 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
 	private void translateMethodCall(LLVMTranslator v) {
 		Call n = (Call) node();
-		v.utils.typeRef(n.target().type()); // Ensure the target type body and dv type body are set before GEP
 
-		ReferenceType referenceType = (ReferenceType) n.target().type();
+		ReferenceType referenceType = (ReferenceType) v.utils.translateType(n.target().type());
+		v.utils.typeRef(referenceType); // Ensure the target type body and dv type body (with generics stripped) are set before GEP
+
 		LLVMValueRef thisTranslation = v.getTranslation(n.target());
 
 		LLVMValueRef dvDoublePtr = v.utils.buildStructGEP(thisTranslation, 0, 0);
@@ -109,9 +110,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 		int methodIndex = v.getMethodIndex(referenceType, n.methodInstance());
 
 		LLVMTypeRef res = LLVMGetTypeByName(v.mod,
-				PolyLLVMMangler.dispatchVectorTypeName(referenceType));
-		LLVMTypeRef methodType = LLVMStructGetTypeAtIndex(res, methodIndex);
-		int i = LLVMGetPointerAddressSpace(LLVMTypeOf(dvPtr));
+				v.mangler.dispatchVectorTypeName(referenceType));
 
 		LLVMValueRef funcDoublePtr = v.utils.buildStructGEP(dvPtr, 0, methodIndex);
 
@@ -135,7 +134,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 	private void translateFinalMethodCall(LLVMTranslator v) {
 		Call n = (Call) node();
 
-		String mangledFuncName = PolyLLVMMangler
+		String mangledFuncName = v.mangler
 				.mangleProcedureName(n.methodInstance());
 
 		ReferenceType referenceType = (ReferenceType) n.target().type();
@@ -174,7 +173,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 		int methodIndex = v.getMethodIndex(rt, mi);
 
 		LLVMValueRef interfaceStringPtr = v.utils.getGlobal(v.mod,
-				PolyLLVMMangler.interfaceStringVariable(rt),
+				v.mangler.interfaceStringVariable(rt),
 				LLVMArrayType(LLVMInt8TypeInContext(v.context),
 						rt.toString().length() + 1));
 		LLVMValueRef interfaceStringBytePtr

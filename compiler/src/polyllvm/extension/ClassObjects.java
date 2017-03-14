@@ -31,7 +31,8 @@ public final class ClassObjects {
     public LLVMValueRef classIdDeclRef(LLVMModuleRef mod,
                                                        ReferenceType rt,
                                                        boolean extern) {
-        LLVMValueRef global = v.utils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarTypeRef());
+        rt = v.utils.translateType(rt);
+        LLVMValueRef global = v.utils.getGlobal(mod, v.mangler.classIdName(rt), classIdVarTypeRef());
         if (!extern) {
             LLVMSetInitializer(global, LLVMConstInt(LLVMInt8TypeInContext(v.context), 0, /*sign-extend*/ 0));
         }
@@ -39,10 +40,12 @@ public final class ClassObjects {
     }
 
     public LLVMValueRef classIdVarRef(LLVMModuleRef mod, ReferenceType rt) {
-        return v.utils.getGlobal(mod, PolyLLVMMangler.classIdName(rt), classIdVarTypeRef());
+        rt = v.utils.translateType(rt);
+        return v.utils.getGlobal(mod, v.mangler.classIdName(rt), classIdVarTypeRef());
     }
 
     public LLVMValueRef classObjRef(LLVMModuleRef mod, ReferenceType rt) {
+        rt = v.utils.translateType(rt);
         List<LLVMValueRef> classObjPtrOperands = new ArrayList<>();
 
         Type superType = rt;
@@ -58,7 +61,7 @@ public final class ClassObjects {
         LLVMValueRef numSupertypes = LLVMConstInt(LLVMInt32TypeInContext(v.context), countSupertypes(rt), /*sign-extend*/ 0);
         LLVMValueRef classObjStruct = v.utils.buildConstStruct(numSupertypes, classObjPtrs);
 
-        LLVMValueRef global = v.utils.getGlobal(mod, PolyLLVMMangler.classObjName(rt), LLVMTypeOf(classObjStruct));
+        LLVMValueRef global = v.utils.getGlobal(mod, v.mangler.classObjName(rt), LLVMTypeOf(classObjStruct));
         LLVMSetExternallyInitialized(global, 0);
         LLVMSetInitializer(global, classObjStruct);
 
@@ -67,6 +70,8 @@ public final class ClassObjects {
 
     /** Counts the supertypes for this reference type, including itself. */
     public int countSupertypes(ReferenceType rt) {
+        rt = v.utils.translateType(rt);
+
         int ret = 0;
         for (Type s = rt; s != null; s = s.toReference().superType())
             ++ret;
@@ -75,10 +80,12 @@ public final class ClassObjects {
     }
 
     public LLVMTypeRef classObjArrTypeRef(ReferenceType rt) {
+        rt = v.utils.translateType(rt);
         return LLVMArrayType(classIdVarPtrTypeRef(), countSupertypes(rt));
     }
 
     public LLVMTypeRef classObjTypeRef(ReferenceType rt) {
+        rt = v.utils.translateType(rt);
         return v.utils.structType(LLVMInt32TypeInContext(v.context), classObjArrTypeRef(rt));
     }
 }

@@ -1,6 +1,11 @@
 package polyllvm.util;
 
 import org.bytedeco.javacpp.PointerPointer;
+import polyglot.ext.jl5.types.JL5ParsedClassType;
+import polyglot.ext.jl5.types.JL5Subst;
+import polyglot.ext.jl5.types.JL5SubstClassType;
+import polyglot.ext.jl5.types.JL5TypeSystem;
+import polyglot.ext.jl5.types.inference.LubType;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
@@ -58,7 +63,8 @@ public class LLVMUtils {
 
 
     private LLVMTypeRef structTypeRef(ReferenceType rt, boolean fillInStruct) {
-        String mangledName = PolyLLVMMangler.classTypeName(rt);
+        rt = translateType(rt);
+        String mangledName = v.mangler.classTypeName(rt);
         LLVMTypeRef structType = structTypeRefOpaque(mangledName);
         if (LLVMIsOpaqueStruct(structType) != 0 && fillInStruct) {
             setStructBody(structType); // Set the struct to be empty, so it is not opaque
@@ -69,7 +75,8 @@ public class LLVMUtils {
     }
 
     public LLVMTypeRef dvTypeRef(ReferenceType rt) {
-        String mangledDVName = PolyLLVMMangler.dispatchVectorTypeName(rt);
+        rt = translateType(rt);
+        String mangledDVName = v.mangler.dispatchVectorTypeName(rt);
         LLVMTypeRef dvType = structTypeRefOpaque(mangledDVName);
         if (LLVMIsOpaqueStruct(dvType) != 0) {
             setStructBody(dvType); // Set the struct to be empty, so it is not opaque
@@ -84,6 +91,8 @@ public class LLVMUtils {
     }
 
     private LLVMTypeRef typeRef(Type t, boolean fillInStruct) {
+        t = translateType(t);
+
         if      (t.isBoolean())    return LLVMInt1TypeInContext(v.context);
         else if (t.isLongOrLess()) return LLVMIntTypeInContext(v.context, numBitsOfIntegralType(t));
         else if (t.isVoid())       return LLVMVoidTypeInContext(v.context);
@@ -94,7 +103,9 @@ public class LLVMUtils {
         else if (t.isArray()) {
             structTypeRef(getArrayType(), fillInStruct);
             return ptrTypeRef(structTypeRefOpaque(Constants.ARR_CLASS));
-        } else {
+        }
+        else if (t.isReference())  return structTypeRef(t.toReference(), fillInStruct);
+        else {
             throw new InternalCompilerError("Invalid type");
         }
     }
@@ -157,7 +168,7 @@ public class LLVMUtils {
     public LLVMValueRef funcRef(LLVMModuleRef mod,
                                        ProcedureInstance pi,
                                        LLVMTypeRef funcType) {
-        return getFunction(mod, PolyLLVMMangler.mangleProcedureName(pi), funcType);
+        return getFunction(mod, v.mangler.mangleProcedureName(pi), funcType);
     }
 
     public LLVMTypeRef structType(LLVMTypeRef... types) {
@@ -213,7 +224,7 @@ public class LLVMUtils {
 
     private LLVMTypeRef[] objectFieldTypes(ReferenceType rt) {
         Pair<List<MethodInstance>, List<FieldInstance>> layouts = v.layouts(rt);
-        LLVMTypeRef dvType = structTypeRefOpaque(PolyLLVMMangler.dispatchVectorTypeName(rt));
+        LLVMTypeRef dvType = structTypeRefOpaque(v.mangler.dispatchVectorTypeName(rt));
         LLVMTypeRef dvPtrType = LLVMPointerType(dvType, Constants.LLVM_ADDR_SPACE);
         return Stream.concat(
                 Stream.of(dvPtrType),
@@ -226,7 +237,7 @@ public class LLVMUtils {
         fieldTypes = Arrays.copyOf(fieldTypes, fieldTypes.length + 1);
         fieldTypes[fieldTypes.length-1] = ptrTypeRef(LLVMInt8TypeInContext(v.context));
 
-        String mangledName = PolyLLVMMangler.classTypeName(getArrayType());
+        String mangledName = v.mangler.classTypeName(getArrayType());
         LLVMTypeRef structType = structTypeRefOpaque(mangledName);
         setStructBody(structType, fieldTypes);
         dvTypeRef(getArrayType());
@@ -253,29 +264,39 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef getDvGlobal(ReferenceType classtype) {
-        return getGlobal(v.mod, PolyLLVMMangler.dispatchVectorVariable(classtype), dvTypeRef(classtype));
+        classtype = translateType(classtype);
+        return getGlobal(v.mod, v.mangler.dispatchVectorVariable(classtype), dvTypeRef(classtype));
     }
 
     public LLVMValueRef getItGlobal(ReferenceType it, ReferenceType usingClass) {
-        String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(usingClass, it);
+        it = translateType(it);
+        usingClass = translateType(usingClass);
+
+        String interfaceTableVar = v.mangler.InterfaceTableVariable(usingClass, it);
         LLVMTypeRef interfaceTableType = dvTypeRef(it);
         return getGlobal(v.mod, interfaceTableVar, interfaceTableType);
     }
 
     public LLVMValueRef[] dvMethods(ReferenceType rt, LLVMValueRef next) {
+        rt = translateType(rt);
+
         List<MethodInstance> layout = v.layouts(rt).part1();
+        ReferenceType finalRt = rt;
         LLVMValueRef[] methods = Stream.concat(
                 Stream.of(next, v.classObjs.classObjRef(v.mod, rt)),
                 IntStream.range(0, layout.size()).mapToObj(i -> {
                     MethodInstance mi = layout.get(i);
-                    LLVMValueRef function = getFunction(v.mod, PolyLLVMMangler.mangleProcedureName(mi),
+                    LLVMValueRef function = getFunction(v.mod, v.mangler.mangleProcedureName(mi),
                             methodType(mi.container(), mi.returnType(), mi.formalTypes()));
-                    return LLVMConstBitCast(function, ptrTypeRef(methodType(rt, mi.returnType(), mi.formalTypes())));
+                    return LLVMConstBitCast(function, ptrTypeRef(methodType(finalRt, mi.returnType(), mi.formalTypes())));
                 })).toArray(LLVMValueRef[]::new);
         return methods;
     }
 
     public LLVMValueRef[] itMethods(ReferenceType it, ReferenceType usingClass, LLVMValueRef next) {
+        it = translateType(it);
+        usingClass = translateType(usingClass);
+
         List<MethodInstance> layout = v.layouts(it).part1();
         for (int i=0; i< layout.size(); i++) {
             List<MethodInstance> classLayout = v.layouts(usingClass).part1();
@@ -283,18 +304,21 @@ public class LLVMUtils {
             MethodInstance miClass = v.methodInList(mi, classLayout);
             layout.set(i, miClass);
         }
+        ReferenceType finalIt = it;
         LLVMValueRef[] methods = Stream.concat(
                 Stream.of(next, v.classObjs.classObjRef(v.mod, it)),
                 IntStream.range(0, layout.size()).mapToObj(i -> {
                     MethodInstance mi = layout.get(i);
-                    LLVMValueRef function = getFunction(v.mod, PolyLLVMMangler.mangleProcedureName(mi),
+                    LLVMValueRef function = getFunction(v.mod, v.mangler.mangleProcedureName(mi),
                             methodType(mi.container(), mi.returnType(), mi.formalTypes()));
-                    return LLVMConstBitCast(function, ptrTypeRef(methodType(it, mi.returnType(), mi.formalTypes())));
+                    return LLVMConstBitCast(function, ptrTypeRef(methodType(finalIt, mi.returnType(), mi.formalTypes())));
                 })).toArray(LLVMValueRef[]::new);
         return methods;
     }
 
     public LLVMValueRef[] dvMethods(ReferenceType rt) {
+        rt = translateType(rt);
+
         return dvMethods(rt, LLVMConstNull(ptrTypeRef(LLVMInt8TypeInContext(v.context))));
     }
 
@@ -334,4 +358,60 @@ public class LLVMUtils {
         }
     }
 
+    /*
+     * Helper Methods for dealing with Generic types
+     */
+
+    @SuppressWarnings("unchecked")
+    public <T extends Type> T translateType(T t) {
+        TypeSystem ts = v.typeSystem();
+        t = (T) ((JL5TypeSystem) ts).erasureType(t);
+        if (t instanceof LubType) {
+            t = (T) ((LubType) t).calculateLub();
+            t = (T) ((JL5TypeSystem) ts).erasureType(t);
+        }
+
+        if (t instanceof JL5SubstClassType) {
+            // For C<T1,...,Tn>, just print C.
+            JL5SubstClassType jct = (JL5SubstClassType) t;
+            System.out.println("OUTER: " + jct.outer());
+            return (T) translateType(jct.base());
+        }
+        else if (t instanceof ArrayType) {
+            ArrayType at = (ArrayType) t;
+            return (T) ts.arrayOf(translateType(at.base()));
+        } else if (t instanceof ParsedClassType){
+            ParsedClassType parsedClassType = (ParsedClassType) t;
+            if (parsedClassType.outer() != null) {
+                parsedClassType.outer(translateType(parsedClassType.outer()));
+                return (T) parsedClassType;
+            }
+        }
+        return t;
+
+    }
+
+    public MemberInstance translateMemberInstance(MemberInstance mi){
+        if(mi.container() instanceof JL5ParsedClassType){
+            JL5TypeSystem ts = (JL5TypeSystem) v.typeSystem();
+            JL5Subst subst = ts.erasureSubst((JL5ParsedClassType) mi.container());
+            if(subst != null) {
+                if (mi instanceof MethodInstance) {
+                    return subst.substMethod((MethodInstance) mi);
+                } else if (mi instanceof ConstructorInstance) {
+                    System.out.println("subst ci: " + mi);
+                    return subst.substConstructor((ConstructorInstance) mi);
+                } else if (mi instanceof FieldInstance) {
+                    return subst.substField((FieldInstance) mi);
+                } else if (mi instanceof ClassType) {
+                    return translateType((ClassType) mi);
+                } else if (mi instanceof InitializerInstance) {
+                    return mi;
+                } else {
+                    throw new InternalCompilerError("Cannot translate Member Instance: " + mi + " (" + mi.getClass() + ")");
+                }
+            }
+        }
+        return mi;
+    }
 }

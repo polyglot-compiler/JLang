@@ -58,7 +58,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         //Setup the Interface Tables for this class
         for (int i=0; i< interfaces.size(); i++) {
             ReferenceType it = interfaces.get(i);
-            String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(n.type(), it);
+            String interfaceTableVar = v.mangler.InterfaceTableVariable(n.type(), it);
             LLVMTypeRef interfaceTableType = v.utils.dvTypeRef(it);
             LLVMValueRef itGlobal = v.utils.getGlobal(v.mod, interfaceTableVar, interfaceTableType);
 
@@ -73,7 +73,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
             String s = it.toString();
             LLVMTypeRef stringType = LLVMArrayType(LLVMInt8TypeInContext(v.context), s.length() + 1);
             LLVMValueRef interfaceName = v.utils.getGlobal(v.mod,
-                    PolyLLVMMangler.interfaceStringVariable(it), stringType);
+                    v.mangler.interfaceStringVariable(it), stringType);
             LLVMSetInitializer(interfaceName, LLVMConstString(s, s.length(), /*Don't null terminate*/ 0));
 
             itMethods[1] = v.utils.constGEP(interfaceName,0,0);
