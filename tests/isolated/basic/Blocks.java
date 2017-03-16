@@ -1,6 +1,5 @@
-/**
- * Created by Daniel on 2/11/17.
- */
+package basic;
+
 public class Blocks {
     public static void main(String[] args) {
         {

@@ -1,3 +1,5 @@
+package basic;
+
 public class Inc {
     private static int f() {
         System.out.println("Function called");
