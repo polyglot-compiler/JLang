@@ -5,6 +5,7 @@ public class System {
     public static PrintStream out;
 
     public static class PrintStream {
+        public static native void println();
         public static native void println(String s);
         public static native void print(String s);
         public static native void println(boolean n);

@@ -12,6 +12,10 @@ static void printJavaString(jstring* s) {
 
 extern "C" {
 
+void Java_java_lang_System_PrintStream_println__() {
+    printf("\n");
+}
+
 void Java_java_lang_System_PrintStream_print__Ljava_lang_String_2(jstring* s) {
     printJavaString(s);
 }
