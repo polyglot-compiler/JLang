@@ -3,7 +3,6 @@ package polyllvm.extension;
 import polyglot.ast.*;
 import polyglot.types.Type;
 import polyglot.util.CollectionUtil;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -24,10 +23,10 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
         List<Expr> elements = n.elements();
         Type elemType = n.type().toArray().base();
 
-        Expr intLit1 = nf.IntLit(Position.compilerGenerated(), IntLit.INT, elements.size())
+        Expr one = nf.IntLit(n.position(), IntLit.INT, elements.size())
                          .type(v.typeSystem().Int());
-        v.lang().translatePseudoLLVM(intLit1, v);
-        List<Expr> dims = CollectionUtil.list(intLit1);
+        one.visit(v);
+        List<Expr> dims = CollectionUtil.list(one);
 
         v.debugInfo.emitLocation(n);
 
