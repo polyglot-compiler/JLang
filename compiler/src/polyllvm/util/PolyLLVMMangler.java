@@ -1,5 +1,6 @@
 package polyllvm.util;
 
+import org.bytedeco.javacpp.annotation.Const;
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Field;
 import polyglot.ast.FieldDecl;
@@ -39,7 +40,7 @@ public class PolyLLVMMangler {
      * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names
      */
     private String typeSignature(Type type) {
-        type = v.utils.translateType(type);
+        type = v.jl5Utils.translateType(type);
 
         if      (type.isBoolean()) return "Z";
         else if (type.isByte())    return "B";
@@ -73,7 +74,7 @@ public class PolyLLVMMangler {
     }
 
     private String mangleQualifiedName(ReferenceType classType) {
-        classType = v.utils.translateType(classType);
+        classType = v.jl5Utils.translateType(classType);
         String base = classType.isArray() ? "support.Array" : classType.toString();
         return mangleName(base).replace(".", "_");
     }
@@ -88,10 +89,12 @@ public class PolyLLVMMangler {
     public String mangleProcedureName(ProcedureInstance pi) {
         if (pi instanceof MethodInstance) {
             MethodInstance mi = (MethodInstance) pi;
+            mi = (MethodInstance) v.jl5Utils.translateMemberInstance(mi);
             return mangleProcedureName(mi, mi.container(), mi.name());
         }
         else if (pi instanceof ConstructorInstance) {
             ConstructorInstance ci = (ConstructorInstance) pi;
+            ci = (ConstructorInstance) v.jl5Utils.translateMemberInstance(ci);
             return mangleProcedureName(ci, ci.container(), ci.container().toClass().name());
         }
         else {
@@ -100,7 +103,7 @@ public class PolyLLVMMangler {
     }
 
     private String mangleStaticFieldName(ReferenceType classType, String fieldName) {
-        classType = v.utils.translateType(classType);
+        classType = v.jl5Utils.translateType(classType);
         return JAVA_PREFIX + "_" + mangleQualifiedName(classType) + "_" + mangleName(fieldName);
     }
 
@@ -125,8 +128,8 @@ public class PolyLLVMMangler {
                 || !((ParsedClassType) i).flags().isInterface()) {
             throw new InternalCompilerError("Reference type " + rt + "is not an interface");
         }
-        rt = v.utils.translateType(rt);
-        i = v.utils.translateType(i);
+        rt = v.jl5Utils.translateType(rt);
+        i = v.jl5Utils.translateType(i);
 
         String interfaceName =  i.toString();
         String className =  rt.toString();

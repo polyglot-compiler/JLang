@@ -4,11 +4,15 @@ import polyglot.ast.New;
 import polyglot.ast.Node;
 import polyglot.types.ConstructorInstance;
 import polyglot.types.ReferenceType;
+import polyglot.types.Type;
 import polyglot.util.SerialVersionUID;
 import polyllvm.util.Constants;
 import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.LLVMTranslator;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -30,8 +34,11 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
     public void translateWithSize(LLVMTranslator v, LLVMValueRef size) {
         New n = (New) node();
-        ConstructorInstance ci = n.constructorInstance();
+        ConstructorInstance origCi = n.constructorInstance();
+        ConstructorInstance ci = (ConstructorInstance) v.jl5Utils.translateMemberInstance(origCi);
+
         ReferenceType classtype = ci.container();
+
 
         v.debugInfo.emitLocation();
 
@@ -50,15 +57,15 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         //Call the constructor function
         String mangledFuncName =
-                v.mangler.mangleProcedureName(n.constructorInstance());
+                v.mangler.mangleProcedureName(ci);
 
 
-        LLVMTypeRef constructorType = v.utils.methodType(n.constructorInstance().container(),
-                v.typeSystem().Void(), n.constructorInstance().formalTypes());
+        LLVMTypeRef constructorType = v.utils.methodType(classtype,
+                v.typeSystem().Void(), ci.formalTypes());
         LLVMValueRef constructor = v.utils.getFunction(v.mod, mangledFuncName, constructorType);
+
         LLVMValueRef[] constructorArgs = Stream.concat(
-                    Stream.of(cast),
-                    n.arguments().stream().map(v::getTranslation))
+                Stream.of(cast), n.arguments().stream().map(v::getTranslation))
                 .toArray(LLVMValueRef[]::new);
         v.utils.buildProcedureCall(constructor, constructorArgs);
 

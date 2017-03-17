@@ -178,7 +178,7 @@ public class DebugInfo {
         if (typeMap.containsKey(t)) {
             return typeMap.get(t);
         }
-        t = v.utils.translateType(t);
+        t = v.jl5Utils.translateType(t);
 
         LLVMMetadataRef debugType;
         if (t.isBoolean() || t.isLongOrLess() || t.isFloat() || t.isDouble()) {

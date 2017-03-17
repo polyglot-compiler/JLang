@@ -31,7 +31,7 @@ public final class ClassObjects {
     public LLVMValueRef classIdDeclRef(LLVMModuleRef mod,
                                                        ReferenceType rt,
                                                        boolean extern) {
-        rt = v.utils.translateType(rt);
+        rt = v.jl5Utils.translateType(rt);
         LLVMValueRef global = v.utils.getGlobal(mod, v.mangler.classIdName(rt), classIdVarTypeRef());
         if (!extern) {
             LLVMSetInitializer(global, LLVMConstInt(LLVMInt8TypeInContext(v.context), 0, /*sign-extend*/ 0));
@@ -40,12 +40,12 @@ public final class ClassObjects {
     }
 
     public LLVMValueRef classIdVarRef(LLVMModuleRef mod, ReferenceType rt) {
-        rt = v.utils.translateType(rt);
+        rt = v.jl5Utils.translateType(rt);
         return v.utils.getGlobal(mod, v.mangler.classIdName(rt), classIdVarTypeRef());
     }
 
     public LLVMValueRef classObjRef(LLVMModuleRef mod, ReferenceType rt) {
-        rt = v.utils.translateType(rt);
+        rt = v.jl5Utils.translateType(rt);
         List<LLVMValueRef> classObjPtrOperands = new ArrayList<>();
 
         Type superType = rt;
@@ -70,7 +70,7 @@ public final class ClassObjects {
 
     /** Counts the supertypes for this reference type, including itself. */
     public int countSupertypes(ReferenceType rt) {
-        rt = v.utils.translateType(rt);
+        rt = v.jl5Utils.translateType(rt);
 
         int ret = 0;
         for (Type s = rt; s != null; s = s.toReference().superType())
@@ -80,12 +80,12 @@ public final class ClassObjects {
     }
 
     public LLVMTypeRef classObjArrTypeRef(ReferenceType rt) {
-        rt = v.utils.translateType(rt);
+        rt = v.jl5Utils.translateType(rt);
         return LLVMArrayType(classIdVarPtrTypeRef(), countSupertypes(rt));
     }
 
     public LLVMTypeRef classObjTypeRef(ReferenceType rt) {
-        rt = v.utils.translateType(rt);
+        rt = v.jl5Utils.translateType(rt);
         return v.utils.structType(LLVMInt32TypeInContext(v.context), classObjArrTypeRef(rt));
     }
 }

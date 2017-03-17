@@ -1,16 +1,16 @@
 package polyllvm.util;
 
 import org.bytedeco.javacpp.PointerPointer;
-import polyglot.ext.jl5.types.JL5ParsedClassType;
-import polyglot.ext.jl5.types.JL5Subst;
-import polyglot.ext.jl5.types.JL5SubstClassType;
-import polyglot.ext.jl5.types.JL5TypeSystem;
+import polyglot.ext.jl5.types.*;
 import polyglot.ext.jl5.types.inference.LubType;
+import polyglot.ext.param.types.Subst;
 import polyglot.types.*;
+import polyglot.types.reflect.Method;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
 import polyllvm.visit.LLVMTranslator;
 
+import java.lang.reflect.Member;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -63,7 +63,7 @@ public class LLVMUtils {
 
 
     private LLVMTypeRef structTypeRef(ReferenceType rt, boolean fillInStruct) {
-        rt = translateType(rt);
+        rt = v.jl5Utils.translateType(rt);
         String mangledName = v.mangler.classTypeName(rt);
         LLVMTypeRef structType = structTypeRefOpaque(mangledName);
         if (LLVMIsOpaqueStruct(structType) != 0 && fillInStruct) {
@@ -75,7 +75,7 @@ public class LLVMUtils {
     }
 
     public LLVMTypeRef dvTypeRef(ReferenceType rt) {
-        rt = translateType(rt);
+        rt = v.jl5Utils.translateType(rt);
         String mangledDVName = v.mangler.dispatchVectorTypeName(rt);
         LLVMTypeRef dvType = structTypeRefOpaque(mangledDVName);
         if (LLVMIsOpaqueStruct(dvType) != 0) {
@@ -91,7 +91,7 @@ public class LLVMUtils {
     }
 
     private LLVMTypeRef typeRef(Type t, boolean fillInStruct) {
-        t = translateType(t);
+        t = v.jl5Utils.translateType(t);
 
         if      (t.isBoolean())    return LLVMInt1TypeInContext(v.context);
         else if (t.isLongOrLess()) return LLVMIntTypeInContext(v.context, numBitsOfIntegralType(t));
@@ -264,13 +264,13 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef getDvGlobal(ReferenceType classtype) {
-        classtype = translateType(classtype);
+        classtype = v.jl5Utils.translateType(classtype);
         return getGlobal(v.mod, v.mangler.dispatchVectorVariable(classtype), dvTypeRef(classtype));
     }
 
     public LLVMValueRef getItGlobal(ReferenceType it, ReferenceType usingClass) {
-        it = translateType(it);
-        usingClass = translateType(usingClass);
+        it = v.jl5Utils.translateType(it);
+        usingClass = v.jl5Utils.translateType(usingClass);
 
         String interfaceTableVar = v.mangler.InterfaceTableVariable(usingClass, it);
         LLVMTypeRef interfaceTableType = dvTypeRef(it);
@@ -278,7 +278,7 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef[] dvMethods(ReferenceType rt, LLVMValueRef next) {
-        rt = translateType(rt);
+        rt = v.jl5Utils.translateType(rt);
 
         List<MethodInstance> layout = v.layouts(rt).part1();
         ReferenceType finalRt = rt;
@@ -294,8 +294,8 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef[] itMethods(ReferenceType it, ReferenceType usingClass, LLVMValueRef next) {
-        it = translateType(it);
-        usingClass = translateType(usingClass);
+        it = v.jl5Utils.translateType(it);
+        usingClass = v.jl5Utils.translateType(usingClass);
 
         List<MethodInstance> layout = v.layouts(it).part1();
         for (int i=0; i< layout.size(); i++) {
@@ -317,7 +317,7 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef[] dvMethods(ReferenceType rt) {
-        rt = translateType(rt);
+        rt = v.jl5Utils.translateType(rt);
 
         return dvMethods(rt, LLVMConstNull(ptrTypeRef(LLVMInt8TypeInContext(v.context))));
     }
@@ -356,62 +356,5 @@ public class LLVMUtils {
         } else {
             throw new InternalCompilerError("Invalid type");
         }
-    }
-
-    /*
-     * Helper Methods for dealing with Generic types
-     */
-
-    @SuppressWarnings("unchecked")
-    public <T extends Type> T translateType(T t) {
-        TypeSystem ts = v.typeSystem();
-        t = (T) ((JL5TypeSystem) ts).erasureType(t);
-        if (t instanceof LubType) {
-            t = (T) ((LubType) t).calculateLub();
-            t = (T) ((JL5TypeSystem) ts).erasureType(t);
-        }
-
-        if (t instanceof JL5SubstClassType) {
-            // For C<T1,...,Tn>, just print C.
-            JL5SubstClassType jct = (JL5SubstClassType) t;
-            System.out.println("OUTER: " + jct.outer());
-            return (T) translateType(jct.base());
-        }
-        else if (t instanceof ArrayType) {
-            ArrayType at = (ArrayType) t;
-            return (T) ts.arrayOf(translateType(at.base()));
-        } else if (t instanceof ParsedClassType){
-            ParsedClassType parsedClassType = (ParsedClassType) t;
-            if (parsedClassType.outer() != null) {
-                parsedClassType.outer(translateType(parsedClassType.outer()));
-                return (T) parsedClassType;
-            }
-        }
-        return t;
-
-    }
-
-    public MemberInstance translateMemberInstance(MemberInstance mi){
-        if(mi.container() instanceof JL5ParsedClassType){
-            JL5TypeSystem ts = (JL5TypeSystem) v.typeSystem();
-            JL5Subst subst = ts.erasureSubst((JL5ParsedClassType) mi.container());
-            if(subst != null) {
-                if (mi instanceof MethodInstance) {
-                    return subst.substMethod((MethodInstance) mi);
-                } else if (mi instanceof ConstructorInstance) {
-                    System.out.println("subst ci: " + mi);
-                    return subst.substConstructor((ConstructorInstance) mi);
-                } else if (mi instanceof FieldInstance) {
-                    return subst.substField((FieldInstance) mi);
-                } else if (mi instanceof ClassType) {
-                    return translateType((ClassType) mi);
-                } else if (mi instanceof InitializerInstance) {
-                    return mi;
-                } else {
-                    throw new InternalCompilerError("Cannot translate Member Instance: " + mi + " (" + mi.getClass() + ")");
-                }
-            }
-        }
-        return mi;
     }
 }

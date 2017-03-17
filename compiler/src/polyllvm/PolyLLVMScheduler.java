@@ -4,6 +4,7 @@ import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
 import polyglot.ast.Node;
 import polyglot.ast.SourceFile;
+import polyglot.ext.jl5.visit.TVCaster;
 import polyglot.ext.jl7.JL7Scheduler;
 import polyglot.frontend.*;
 import polyglot.frontend.ExtensionInfo;
@@ -13,9 +14,12 @@ import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
 import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
+import polyglot.visit.DisambiguationDriver;
 import polyglot.visit.LoopNormalizer;
+import polyglot.visit.SignatureDisambiguator;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.util.JL5TypeUtils;
 import polyllvm.util.MultiGoal;
 import polyllvm.visit.*;
 
@@ -54,12 +58,8 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
                 new VisitorGoal(job, new StringConversionVisitor(ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.
-                new VisitorGoal(job, new RemoveJava5isms(ts, nf)),
-                new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check
-                new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf))
-//                new VisitorGoal(job, new PrintVisitor())
-
-        );
+                new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf, new JL5TypeUtils(ts)))
+                );
         try {
             prep.addPrerequisiteGoal(Serialized(job), this);
         } catch (CyclicDependencyException e) {
