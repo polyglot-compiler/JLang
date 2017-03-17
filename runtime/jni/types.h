@@ -43,6 +43,9 @@ public:
 };
 
 using jbool = bool;
+using jbyte = int8_t;
+using jshort = int16_t;
+using jchar = uint16_t;
 using jint = int32_t;
 using jlong = int64_t;
 using jfloat = float;

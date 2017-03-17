@@ -1,3 +1,5 @@
+package basic;
+
 public class InstanceOf implements IA {
 
     public static void main(String[] args) {

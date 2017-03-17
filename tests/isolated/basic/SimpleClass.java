@@ -1,3 +1,5 @@
+package basic;
+
 public class SimpleClass {
     int field;
     private char field2;

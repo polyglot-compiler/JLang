@@ -1,6 +1,5 @@
-/**
- * Created by Daniel on 11/7/16.
- */
+package basic;
+
 public class InterfaceHierarchy {
     public static void main(String[] args){
         IHC obj = new IHC();

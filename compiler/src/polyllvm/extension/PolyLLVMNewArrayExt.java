@@ -2,10 +2,13 @@ package polyllvm.extension;
 
 import polyglot.ast.*;
 import polyglot.types.*;
+import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.util.Constants;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.LLVMTranslator;
 
 import java.util.ArrayList;
@@ -22,100 +25,82 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
         if (n.init() != null) {
-            LLVMValueRef initializer = v.getTranslation(n.init());
-            v.addTranslation(n, initializer);
+            LLVMValueRef val = v.getTranslation(n.init());
+            v.addTranslation(n, val);
         }
         else {
             List<Expr> dims = n.dims();
-
             v.debugInfo.emitLocation(n);
-
-            New newArray = translateArrayWithDims(v, nf, dims, n.baseType().type());
+            New newArray = translateNewArray(v, nf, dims, n.baseType().type(), n.position());
             v.addTranslation(n, v.getTranslation(newArray));
         }
+
         return super.translatePseudoLLVM(v);
     }
 
-    public static New translateArrayWithDims(LLVMTranslator v,
-            PolyLLVMNodeFactory nf, List<Expr> dims, Type baseType) {
+    public static New translateNewArray(LLVMTranslator v,
+                                        PolyLLVMNodeFactory nf,
+                                        List<Expr> dims,
+                                        Type baseType,
+                                        Position pos) {
         New newArray;
-        ReferenceType arrayType = v.utils.getArrayType();
+        ReferenceType arrType = v.utils.getArrayType();
         List<Expr> args = new ArrayList<>();
-        CanonicalTypeNode newTypeNode =
-                nf.CanonicalTypeNode(Position.compilerGenerated(), arrayType);
         ConstructorInstance arrayConstructor;
+
         int sizeOfType;
         if (dims.size() == 1) {
-            arrayConstructor =
-                    getArrayConstructor(arrayType,
-                                        ArrayConstructorType.ONEDIMENSIONAL);
-            args.add(dims.get(0));
+            arrayConstructor = getArrayConstructor(arrType, Dimensions.SINGLE);
+            args.add(dims.iterator().next());
             sizeOfType = v.utils.sizeOfType(baseType);
         }
         else {
-            ArrayInit arrayDims =
-                    (ArrayInit) nf.ArrayInit(Position.compilerGenerated(), dims)
-                                  .type(v.typeSystem().Int().arrayOf());
-            v.lang().translatePseudoLLVM(arrayDims, v);
-            arrayConstructor =
-                    getArrayConstructor(arrayType,
-                                        ArrayConstructorType.MULTIDIMENSIONAL);
+            ArrayInit arrayDims = (ArrayInit) nf.ArrayInit(pos, dims)
+                                                .type(v.typeSystem().Int().arrayOf());
+            arrayConstructor = getArrayConstructor(arrType, Dimensions.MULTI);
             args.add(arrayDims);
-            sizeOfType = v.utils.llvmPtrSize();
-
+            sizeOfType = LLVMUtils.llvmPtrSize();
         }
 
-        newArray =
-                (New) nf.New(Position.compilerGenerated(), newTypeNode, args)
-                        .constructorInstance(arrayConstructor)
-                        .type(arrayType);
+        CanonicalTypeNode newTypeNode = nf.CanonicalTypeNode(pos, arrType);
+        newArray = (New) nf.New(pos, newTypeNode, args)
+                           .constructorInstance(arrayConstructor)
+                           .type(arrType);
 
-        v.lang().translatePseudoLLVM(newTypeNode, v);
+        LLVMValueRef arrLen =  v.getTranslation(dims.iterator().next());
+        LLVMTypeRef i64 = LLVMInt64TypeInContext(v.context);
+        LLVMValueRef arrLen64 = LLVMBuildSExt(v.builder, arrLen, i64, "arr_len");
+        LLVMValueRef elemSize = LLVMConstInt(i64, sizeOfType, /*sign-extend*/ 0);
+        LLVMValueRef contentSize = LLVMBuildMul(v.builder, elemSize, arrLen64, "mul");
+        LLVMValueRef headerSize = LLVMConstInt(i64, Constants.ARR_HEADER_SIZE, /*sign-extend*/ 0);
+        LLVMValueRef size = LLVMBuildAdd(v.builder, headerSize, contentSize, "size");
 
-        //Translate the newArray - need to set up a variable for the size
-        // Size = 16 + length*sizeOfType
-        LLVMValueRef arrayLength =  v.getTranslation(dims.get(0));
-
-
-        // TODO: Allocate the right size for packed arrays.
-
-        LLVMValueRef arrLen64 = LLVMBuildSExt(v.builder, arrayLength, LLVMInt64TypeInContext(v.context), "arrLen");
-        LLVMValueRef mul = LLVMBuildMul(v.builder,
-                LLVMConstInt(LLVMInt64TypeInContext(v.context), sizeOfType, /*sign-extend*/ 0),
-                arrLen64, "mul");
-        LLVMValueRef size = LLVMBuildAdd(v.builder,
-                LLVMConstInt(LLVMInt64TypeInContext(v.context), v.utils.llvmPtrSize()*2 /*2 header words*/, /*sign-extend*/0),
-                mul, "size");
-
-        PolyLLVMNewExt extension = (PolyLLVMNewExt) PolyLLVMExt.ext(newArray);
-        extension.translateWithSize(v, size);
+        PolyLLVMNewExt ext = (PolyLLVMNewExt) PolyLLVMExt.ext(newArray);
+        ext.translateWithSize(v, size);
         return newArray;
     }
 
-    private enum ArrayConstructorType {
-        ONEDIMENSIONAL, MULTIDIMENSIONAL
+    private enum Dimensions {
+        SINGLE, MULTI
     }
 
-    private static ConstructorInstance getArrayConstructor(
-            ReferenceType arrayType, ArrayConstructorType arrType) {
-        ConstructorInstance arrayConstructor = null;
+    private static ConstructorInstance getArrayConstructor(ReferenceType arrayType,
+                                                           Dimensions dimensions) {
+        // See the support.Array class implemented in the runtime.
+        // Both array constructors have only one formal type; int for single-dimensional arrays,
+        // and int[] for multidimensional arrays.
         for (MemberInstance member : arrayType.members()) {
             if (member instanceof ConstructorInstance) {
                 ConstructorInstance constructor = (ConstructorInstance) member;
-                Type formalType = constructor.formalTypes().get(0); // Both constructors have only one formal type
-
-                if (formalType instanceof ArrayType
-                        && arrType == ArrayConstructorType.MULTIDIMENSIONAL) {
-                    arrayConstructor = constructor;
+                Type formalType = constructor.formalTypes().iterator().next();
+                if (formalType instanceof ArrayType && dimensions == Dimensions.MULTI) {
+                    return constructor;
+                } else if (formalType instanceof PrimitiveType && dimensions == Dimensions.SINGLE) {
+                    return constructor;
                 }
-                else if (formalType instanceof PrimitiveType
-                        && arrType == ArrayConstructorType.ONEDIMENSIONAL) {
-                    arrayConstructor = constructor;
-                }
-
             }
         }
-        return arrayConstructor;
-    }
 
+        throw new InternalCompilerError("Internal array constructor not found");
+    }
 }

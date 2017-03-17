@@ -3,7 +3,7 @@
 #include "types.h"
 
 static void printJavaString(jstring* s) {
-    uint16_t* data = (uint16_t*) &s->chars->data;
+    jchar* data = (jchar*) &s->chars->data;
     jint len = s->chars->len;
     for (jint i = 0; i < len; ++i) {
         printf("%lc", data[i]);
@@ -11,6 +11,10 @@ static void printJavaString(jstring* s) {
 }
 
 extern "C" {
+
+void Java_java_lang_System_PrintStream_println__() {
+    printf("\n");
+}
 
 void Java_java_lang_System_PrintStream_print__Ljava_lang_String_2(jstring* s) {
     printJavaString(s);
@@ -27,6 +31,30 @@ void Java_java_lang_System_PrintStream_print__Z(jbool n) {
 
 void Java_java_lang_System_PrintStream_println__Z(jbool n) {
     printf("%s\n", n ? "true" : "false");
+}
+
+void Java_java_lang_System_PrintStream_print__B(jbyte n) {
+    printf("%d", n);
+}
+
+void Java_java_lang_System_PrintStream_println__B(jbyte n) {
+    printf("%d\n", n);
+}
+
+void Java_java_lang_System_PrintStream_print__S(jshort n) {
+    printf("%d", n);
+}
+
+void Java_java_lang_System_PrintStream_println__S(jshort n) {
+    printf("%d\n", n);
+}
+
+void Java_java_lang_System_PrintStream_print__C(jchar c) {
+    printf("%lc", c);
+}
+
+void Java_java_lang_System_PrintStream_println__C(jchar c) {
+    printf("%lc\n", c);
 }
 
 void Java_java_lang_System_PrintStream_print__I(jint n) {
