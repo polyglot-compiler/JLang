@@ -17,7 +17,7 @@ public class Constants {
     public static final String ALLOCATE_EXCEPTION = "allocateJavaException";
     public static final String THROW_EXCEPTION = "throwJavaException";
 
-    public static Set<String> NON_INVOKE_FUNCTIONS = new HashSet<>(CollectionUtil.list(
+    public static final Set<String> NON_INVOKE_FUNCTIONS = new HashSet<>(CollectionUtil.list(
                     TYPEID_INTRINSIC,
                     CALLOC,
                     ALLOCATE_EXCEPTION));
@@ -26,18 +26,20 @@ public class Constants {
      * Offset from start of array object to the contents
      */
     public static int ARR_HEADER_SIZE = LLVMUtils.llvmPtrSize()/8 + 4; // Type info and length.
-    public static int ARR_ELEM_OFFSET = 2;
-    public static int ARR_LEN_OFFSET = 1;
+    public static final int ARR_ELEM_OFFSET = 2;
+    public static final int ARR_LEN_OFFSET = 1;
 
     /**
      * Offset from start of dispatch vector to the 0th method
      *  * First slot used for interface dispatch
      *  * Second slot used for type information
      */
-    public static int DISPATCH_VECTOR_OFFSET = 2;
+    public static final int DISPATCH_VECTOR_OFFSET = 2;
 
     /**
      * The default size of the table for interfaces
      */
-    public static int INTERFACE_TABLE_SIZE = 10;
+    public static final int INTERFACE_TABLE_SIZE = 10;
+
+    public static final String CTOR_VAR_NAME = "llvm.global_ctors";
 }

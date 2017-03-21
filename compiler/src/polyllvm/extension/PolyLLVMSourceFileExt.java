@@ -10,7 +10,6 @@ import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -75,8 +74,8 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
      * Build ctor functions using the ctor suppliers added to the visitor during translation.
      */
     private static void buildCtors(LLVMTranslator v) {
-        List<Supplier<LLVMValueRef>> ctors = v.getCtors();
-        if (ctors.isEmpty())
+        LLVMValueRef[] ctors = v.getCtors().toArray(new LLVMValueRef[0]);
+        if (ctors.length == 0)
             return;
 
         // Create the ctor global array as specified in the LLVM Language Reference Manual.
@@ -84,43 +83,12 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         LLVMTypeRef funcPtrType = v.utils.ptrTypeRef(funcType);
         LLVMTypeRef voidPtr = v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context));
         LLVMTypeRef structType = v.utils.structType(LLVMInt32TypeInContext(v.context), funcPtrType, voidPtr);
-        LLVMTypeRef ctorVarType = LLVMArrayType(structType, /*size*/ ctors.size());
-        String ctorVarName = "llvm.global_ctors";
+        LLVMTypeRef ctorVarType = LLVMArrayType(structType, ctors.length);
+        String ctorVarName = Constants.CTOR_VAR_NAME;
         LLVMValueRef ctorGlobal = v.utils.getGlobal(v.mod, ctorVarName, ctorVarType);
         LLVMSetLinkage(ctorGlobal, LLVMAppendingLinkage);
 
-        // For each ctor function, create a struct containing a priority, a pointer to the
-        // ctor function, and a pointer to associated data if applicable.
-        LLVMValueRef[] structs = new LLVMValueRef[ctors.size()];
-        int counter = 0;
-        for (Supplier<LLVMValueRef> ctor : ctors) {
-            LLVMValueRef func = v.utils.getFunction(v.mod, "ctor" + counter, funcType);
-            LLVMSetLinkage(func, LLVMPrivateLinkage);
-            LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
-                    v.debugInfo.diBuilder, new PointerPointer<>(), /*length*/ 0);
-            LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
-                    v.debugInfo.diBuilder, v.debugInfo.createFile(), typeArray);
-            v.debugInfo.funcDebugInfo(0, ctorVarName, ctorVarName, funcDiType, func);
-
-            LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func, "body");
-            LLVMPositionBuilderAtEnd(v.builder, body);
-
-            // We use `counter` as the ctor priority to help ensure that static initializers
-            // are executed in textual order, per the JLS.
-            LLVMValueRef priority = LLVMConstInt(LLVMInt32TypeInContext(v.context), counter, /*sign-extend*/ 0);
-            LLVMValueRef data = ctor.get(); // Calls supplier lambda to build ctor body.
-            if (data == null)
-                data = LLVMConstNull(voidPtr);
-            LLVMValueRef castData = LLVMConstBitCast(data, voidPtr);
-            structs[counter] = v.utils.buildConstStruct(priority, func, castData);
-
-            LLVMBuildRetVoid(v.builder);
-            v.debugInfo.popScope();
-
-            ++counter;
-        }
-
-        LLVMValueRef arr = v.utils.buildConstArray(structType, structs);
+        LLVMValueRef arr = v.utils.buildConstArray(structType, ctors);
         LLVMSetInitializer(ctorGlobal, arr);
     }
 }

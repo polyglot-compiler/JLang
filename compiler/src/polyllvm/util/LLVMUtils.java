@@ -14,6 +14,7 @@ import java.lang.reflect.Member;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -153,6 +154,44 @@ public class LLVMUtils {
             return invoke;
         }
         return LLVMBuildCall(v.builder, func, new PointerPointer<>(args), args.length, "call");
+    }
+
+    /**
+     * The ctor supplier should build the body of the ctor and return a pointer to the data
+     * that it initializes, or return null if not applicable. (If the associated data is never used
+     * in the resulting program, then LLVM knows to prevent the ctor from running.)
+     * Ctor functions will run in the order that they are built.
+     */
+    public void buildCtor(Supplier<LLVMValueRef> ctor) {
+        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context));
+        LLVMTypeRef voidPtr = v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context));
+
+        int counter = v.incCtorCounter();
+        String name = "ctor" + counter;
+        LLVMValueRef func = v.utils.getFunction(v.mod, "ctor" + counter, funcType);
+        LLVMSetLinkage(func, LLVMPrivateLinkage);
+        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
+                v.debugInfo.diBuilder, new PointerPointer<>(), /*length*/ 0);
+        LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
+                v.debugInfo.diBuilder, v.debugInfo.createFile(), typeArray);
+        v.debugInfo.funcDebugInfo(0, name, name, funcDiType, func);
+
+        LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func, "body");
+        LLVMPositionBuilderAtEnd(v.builder, body);
+
+        // We use `counter` as the ctor priority to help ensure that static initializers
+        // are executed in textual order, per the JLS.
+        LLVMTypeRef i32 = LLVMInt32TypeInContext(v.context);
+        LLVMValueRef priority = LLVMConstInt(i32, counter, /*sign-extend*/ 0);
+        LLVMValueRef data = ctor.get(); // Calls supplier lambda to build ctor body.
+        if (data == null)
+            data = LLVMConstNull(voidPtr);
+        LLVMValueRef castData = LLVMConstBitCast(data, voidPtr);
+        LLVMValueRef res = v.utils.buildConstStruct(priority, func, castData);
+        v.addCtor(res);
+
+        LLVMBuildRetVoid(v.builder);
+        v.debugInfo.popScope();
     }
 
     /**

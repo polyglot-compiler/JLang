@@ -37,7 +37,7 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
                     LLVMSetInitializer(global, val);
                 } else {
                     LLVMSetInitializer(global, LLVMConstNull(type));
-                    v.addCtor(() -> {
+                    v.utils.buildCtor(() -> {
                         n.init().visit(v);
                         LLVMValueRef val = v.getTranslation(n.init());
                         LLVMBuildStore(v.builder, val, global);
