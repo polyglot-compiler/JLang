@@ -13,7 +13,6 @@ import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.extension.ClassObjects;
 import polyllvm.extension.PolyLLVMLocalDeclExt;
-import polyllvm.extension.PolyLLVMProcedureDeclExt;
 import polyllvm.util.Constants;
 import polyllvm.util.DebugInfo;
 import polyllvm.util.LLVMUtils;
@@ -21,7 +20,6 @@ import polyllvm.util.Triple;
 
 import java.lang.Override;
 import java.util.*;
-import java.util.function.Supplier;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -41,6 +39,11 @@ public class LLVMTranslator extends NodeVisitor {
     public final LLVMUtils utils;
     public final ClassObjects classObjs;
 
+    private int ctorCounter;
+    public int incCtorCounter() {
+        return ctorCounter++;
+    }
+
     /**
      * A stack of all enclosing functions.
      */
@@ -58,14 +61,11 @@ public class LLVMTranslator extends NodeVisitor {
 
     /**
      * A list of ctor functions to be added to the module.
-     * The ctor supplier should simply build the body of the ctor and return a pointer to the data
-     * that it initializes, or return null if not applicable. (If the associated data is never used
-     * in the resulting program, then LLVM knows to prevent the ctor from running.)
-     * Ctor functions will run in the order that they are added to this list.
+     * Each value in the list is a struct of the form {priority, ctorFunction, data}
      */
-    private List<Supplier<LLVMValueRef>> ctors = new ArrayList<>();
-    public void addCtor(Supplier<LLVMValueRef> ctor) { ctors.add(ctor); }
-    public List<Supplier<LLVMValueRef>> getCtors() { return ListUtil.copy(ctors, false); }
+    private List<LLVMValueRef> ctors = new ArrayList<>();
+    public void addCtor(LLVMValueRef ctor) { ctors.add(ctor); }
+    public List<LLVMValueRef> getCtors() { return ListUtil.copy(ctors, false); }
 
     /**
      * Flag to determine if in Try, and landingpad to jump to if in a Try
