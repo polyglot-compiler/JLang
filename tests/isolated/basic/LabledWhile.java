@@ -1,6 +1,5 @@
-/**
- * Created by Daniel on 2/23/17.
- */
+package basic;
+
 public class LabledWhile {
     public static void main(String[] args) {
         boolean x = true;

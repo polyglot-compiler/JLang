@@ -1,3 +1,5 @@
+package basic;
+
 public class Add {
     static {
         System.out.println("Static initializer");

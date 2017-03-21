@@ -40,12 +40,12 @@ output: $(OUTPUT)
 
 $(CLASSES): $(SRCS)
 	@echo "Compiling $(words $?) tests with javac"
-	@javac -cp $(RUNTIME)/classes -d basic $?
+	@javac -cp $(RUNTIME)/classes $?
 	@touch $(CLASSES)
 
 %.sol: %.class
 	@echo "Generating solution for $*"
-	@java -cp basic:$(RUNTIME)/classes $(notdir $*) > $@
+	@java -cp .:$(RUNTIME)/classes $(subst /,.,$*) > $@
 
 # Mixing Ant and Make is tricky; this rule isn't perfect,
 # but will work in almost all cases.
@@ -54,13 +54,13 @@ $(LLVMIR): $(SRCS) $(POLYLLVMC_SRC) $(RUNTIME_SRC)
 	@echo "Building polyllvmc"
 	@ant -f $(BASE_DIR)
 	@echo "Compiling $(words $(SRCS)) Java files down to IR"
-	@$(BASE_DIR)/bin/polyllvmc -c -d basic $(SRCS)
+	@$(BASE_DIR)/bin/polyllvmc -c $(SRCS)
 else
 %.ll: %.java $(POLYLLVMC_SRC) $(RUNTIME_SRC)
 	@echo "Building polyllvmc"
 	@ant -f $(BASE_DIR)
 	@echo "Compiling $<"
-	@$(BASE_DIR)/bin/polyllvmc -c -d basic $<
+	@$(BASE_DIR)/bin/polyllvmc -c $<
 endif
 
 %.binary: %.ll
@@ -78,4 +78,4 @@ clean: $(addprefix clean-, $(EXT))
 clean-%:
 	find . -name "*.$*" -delete
 clean-dSYM:
-	rm -rf basic/*.dSYM
+	rm -rf basic/*.dSYM unit/*.dSYM

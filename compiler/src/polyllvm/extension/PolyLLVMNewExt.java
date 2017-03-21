@@ -21,7 +21,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         New n = (New) node();
 
         ConstructorInstance ci = n.constructorInstance();
@@ -32,11 +32,13 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         return super.translatePseudoLLVM(v);
     }
 
+    // Visits children.
     public void translateWithSize(LLVMTranslator v, LLVMValueRef size) {
         New n = (New) node();
+        n.visitChildren(v);
+
         ConstructorInstance origCi = n.constructorInstance();
         ConstructorInstance ci = (ConstructorInstance) v.jl5Utils.translateMemberInstance(origCi);
-
         ReferenceType classtype = ci.container();
 
 

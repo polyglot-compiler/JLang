@@ -38,7 +38,7 @@ public class LLVMUtils {
         return LLVMIntTypeInContext(v.context, llvmPtrSize());
     }
 
-    public int llvmPtrSize() {
+    public static int llvmPtrSize() {
         return 64;
     }
 

@@ -27,10 +27,10 @@ public class MultiGoal extends AbstractGoal {
 
         @Override
         public boolean run() {
-            boolean res = true;
             for (Pass p : passes)
-                res &= p.run();
-            return res;
+                if (!p.run())
+                    return false;
+            return true;
         }
     }
 

@@ -1,3 +1,5 @@
+package basic;
+
 public class MultipleInterfaces {
     public static void main(String[] args){
         MIC obj = new MIC();

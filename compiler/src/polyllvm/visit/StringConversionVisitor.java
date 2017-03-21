@@ -46,15 +46,15 @@ public class StringConversionVisitor extends NodeVisitor {
             return e;
         }
         else if (t.isNull()) {
-            return nf.StringLit(pos, "null");
+            return nf.StringLit(pos, "null").type(ts.String());
         }
         else if (t.isPrimitive()) {
-            return nf.Call(pos, nf.CanonicalTypeNode(pos, ts.String()), nf.Id(pos, "valueOf"), e);
+            return nf.Call(pos, nf.CanonicalTypeNode(pos, ts.String()), nf.Id(pos, "valueOf"), e).type(ts.String());
         }
         else {
             // TODO: According to the JLS, technically want "null" if toString() returns null.
             assert t.isReference();
-            return nf.Call(pos, e, nf.Id(pos, "toString"));
+            return nf.Call(pos, e, nf.Id(pos, "toString")).type(ts.String());
         }
     }
 }

@@ -1,6 +1,5 @@
-/**
- * Created by Daniel on 3/9/17.
- */
+package basic;
+
 public class ArrayOutOfBounds {
     public static void main(String[] args) {
         int[] xs = {0,1,2,3,4};

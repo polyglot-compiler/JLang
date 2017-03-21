@@ -16,7 +16,6 @@ public final class String {
         }
     }
 
-
     public String concat(String other){
         char value[] = new char[this.value.length + other.value.length];
         for (int i = 0; i < this.value.length; ++i) {

@@ -1,6 +1,5 @@
-/**
- * Created by Daniel on 3/9/17.
- */
+package basic;
+
 public class RuntimeTypeCheck {
 
     static class A{}

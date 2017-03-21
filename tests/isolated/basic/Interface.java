@@ -1,6 +1,5 @@
-/**
- * Created by Daniel on 10/30/16.
- */
+package basic;
+
 public class Interface {
     public static void main(String[] args){
         I obj;
