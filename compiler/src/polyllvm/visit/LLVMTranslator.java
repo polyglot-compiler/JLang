@@ -44,9 +44,6 @@ public class LLVMTranslator extends NodeVisitor {
         return ctorCounter++;
     }
 
-    private int stringLitCounter;
-    public int incStringLitCounter() { return stringLitCounter++; }
-
     /**
      * A stack of all enclosing functions.
      */
