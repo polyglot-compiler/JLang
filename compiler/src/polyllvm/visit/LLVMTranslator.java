@@ -21,7 +21,9 @@ import polyllvm.util.PolyLLVMMangler;
 import polyllvm.util.JL5TypeUtils;
 
 import java.lang.Override;
+import java.lang.reflect.Member;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -92,7 +94,7 @@ public class LLVMTranslator extends NodeVisitor {
         this.utils = new LLVMUtils(this);
         this.classObjs = new ClassObjects(this);
         this.mangler = new PolyLLVMMangler(this);
-        this.jl5Utils = new JL5TypeUtils(ts);
+        this.jl5Utils = new JL5TypeUtils(ts, nf);
         this.nf = nf;
         this.ts = ts;
     }
@@ -175,7 +177,7 @@ public class LLVMTranslator extends NodeVisitor {
         Optional<ReferenceType> highestSuperType = overrides.stream()
                 .map(MemberInstance::container)
                 .max((o1, o2) -> o1.descendsFrom(o2) ? -1 : 1);
-        return highestSuperType.get();
+        return highestSuperType.orElse(methodInstance.container());
     }
 
     public boolean isOverridden(MethodInstance methodInstance) {
@@ -194,7 +196,7 @@ public class LLVMTranslator extends NodeVisitor {
      * Return true if {@code rt} is a Interface, false otherwise.
      */
     public boolean isInterface(ReferenceType rt) {
-        return rt instanceof ParsedClassType && ((ParsedClassType) rt).flags().isInterface();
+        return rt instanceof MemberInstance && ((MemberInstance) rt).flags().isInterface();
     }
 
     /**
@@ -416,6 +418,19 @@ public class LLVMTranslator extends NodeVisitor {
         label = n;
         labelhead = LLVMAppendBasicBlockInContext(context, currFn(), n.label() + "_head");
         labelend = LLVMAppendBasicBlockInContext(context, currFn(), n.label() + "_end");
+        if(!(n.statement() instanceof Loop)){
+            loops.push(new Pair<>(label.label(),
+                    new Pair<>(labelhead, labelend)));
+        }
+    }
+
+    public void exitLabeled(Labeled n) {
+        label = null;
+        labelhead = null;
+        labelend = null;
+        if(!(n.statement() instanceof Loop)){
+            loops.pop();
+        }
     }
 
     public LLVMBasicBlockRef getLoopEnd(String label) {
@@ -458,11 +473,18 @@ public class LLVMTranslator extends NodeVisitor {
      */
 
     public int getMethodIndex(ReferenceType type, MethodInstance methodInstance, List<MethodInstance> methodLayout) {
+        type = jl5Utils.translateType(type);
+        MethodInstance old = methodInstance;
+        methodInstance = (MethodInstance) jl5Utils.translateMemberInstance(methodInstance);
+        methodLayout = methodLayout.stream()
+                .map(mi -> (MethodInstance) jl5Utils.translateMemberInstance(mi))
+                .collect(Collectors.toList());
         for (int i = 0; i < methodLayout.size(); i++) {
             if (methodLayout.get(i).isSameMethod(methodInstance)) {
                 return i + Constants.DISPATCH_VECTOR_OFFSET;
             }
         }
+
         throw new InternalCompilerError("The method " + methodInstance
                 + " is not in the class " + type);
     }

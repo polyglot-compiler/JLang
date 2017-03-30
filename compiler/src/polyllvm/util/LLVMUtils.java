@@ -1,16 +1,12 @@
 package polyllvm.util;
 
 import org.bytedeco.javacpp.PointerPointer;
-import polyglot.ext.jl5.types.*;
-import polyglot.ext.jl5.types.inference.LubType;
-import polyglot.ext.param.types.Subst;
+import polyglot.ast.Node;
 import polyglot.types.*;
-import polyglot.types.reflect.Method;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
 import polyllvm.visit.LLVMTranslator;
 
-import java.lang.reflect.Member;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -162,7 +158,7 @@ public class LLVMUtils {
      * in the resulting program, then LLVM knows to prevent the ctor from running.)
      * Ctor functions will run in the order that they are built.
      */
-    public void buildCtor(Supplier<LLVMValueRef> ctor) {
+    public void buildCtor(Node n, Supplier<LLVMValueRef> ctor) {
         LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context));
         LLVMTypeRef voidPtr = v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context));
 
@@ -175,15 +171,23 @@ public class LLVMUtils {
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
                 v.debugInfo.diBuilder, v.debugInfo.createFile(), typeArray);
         v.debugInfo.funcDebugInfo(0, name, name, funcDiType, func);
+        v.debugInfo.emitLocation(n);
 
+        LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, func, "entry");
         LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func, "body");
+        LLVMPositionBuilderAtEnd(v.builder, entry);
+        LLVMBuildBr(v.builder, body);
         LLVMPositionBuilderAtEnd(v.builder, body);
 
         // We use `counter` as the ctor priority to help ensure that static initializers
         // are executed in textual order, per the JLS.
         LLVMTypeRef i32 = LLVMInt32TypeInContext(v.context);
         LLVMValueRef priority = LLVMConstInt(i32, counter, /*sign-extend*/ 0);
+
+        v.pushFn(func);
         LLVMValueRef data = ctor.get(); // Calls supplier lambda to build ctor body.
+        v.popFn();
+
         if (data == null)
             data = LLVMConstNull(voidPtr);
         LLVMValueRef castData = LLVMConstBitCast(data, voidPtr);
@@ -218,7 +222,7 @@ public class LLVMUtils {
      * If the global is already in the module, return it, otherwise add it to the module and return it.
      */
     public LLVMValueRef getGlobal(LLVMModuleRef mod, String globalName, LLVMTypeRef globalType) {
-        LLVMValueRef global = LLVMGetNamedGlobal(mod,globalName);
+        LLVMValueRef global = LLVMGetNamedGlobal(mod, globalName);
         if (global == null)
             global = LLVMAddGlobal(mod, globalType, globalName);
         return global;
@@ -337,11 +341,13 @@ public class LLVMUtils {
         usingClass = v.jl5Utils.translateType(usingClass);
 
         List<MethodInstance> layout = v.layouts(it).part1();
+        List<MethodInstance> classLayout = v.layouts(usingClass).part1();
         for (int i=0; i< layout.size(); i++) {
-            List<MethodInstance> classLayout = v.layouts(usingClass).part1();
             MethodInstance mi = layout.get(i);
-            MethodInstance miClass = v.methodInList(mi, classLayout);
-            layout.set(i, miClass);
+            MethodInstance miClass = v.methodInList(mi, classLayout); // Find the method in the class layout to generate correct mangled name
+            if(miClass != null) {
+                layout.set(i, miClass);
+            }
         }
         ReferenceType finalIt = it;
         LLVMValueRef[] methods = Stream.concat(

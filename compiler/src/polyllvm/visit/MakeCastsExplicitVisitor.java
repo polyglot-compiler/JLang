@@ -69,13 +69,13 @@ public class MakeCastsExplicitVisitor extends AscriptionVisitor {
             MethodInstance origMi = n.methodInstance();
             MethodInstance mi = (MethodInstance) jl5Utils.translateMemberInstance(origMi);
             e = (Expr) n.arguments(argumentCasts(origMi, n.arguments()));
-            if(!mi.returnType().equals(origMi.returnType())){
+            if(!mi.returnType().equals(origMi.returnType()) && !toType.isVoid()){
                 return nf.Cast(n.position(), nf.CanonicalTypeNode(n.position(),toType), n).type(toType);
             }
         } else if (e instanceof Field){
             FieldInstance origFi = ((Field) e).fieldInstance();
             FieldInstance fi = (FieldInstance) jl5Utils.translateMemberInstance(origFi);
-            if(!origFi.equals(fi)){
+            if(!origFi.equals(fi) && !toType.isVoid()){
                 return nf.Cast(e.position(), nf.CanonicalTypeNode(e.position(),toType), e).type(toType);
             }
         }

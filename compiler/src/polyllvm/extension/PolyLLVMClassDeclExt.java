@@ -75,6 +75,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
             LLVMValueRef interfaceName = v.utils.getGlobal(v.mod,
                     v.mangler.interfaceStringVariable(it), stringType);
             LLVMSetInitializer(interfaceName, LLVMConstString(s, s.length(), /*Don't null terminate*/ 0));
+            LLVMSetLinkage(interfaceName, LLVMLinkOnceODRLinkage);
 
             itMethods[1] = v.utils.constGEP(interfaceName,0,0);
             LLVMValueRef itStruct = v.utils.buildConstStruct(itMethods);

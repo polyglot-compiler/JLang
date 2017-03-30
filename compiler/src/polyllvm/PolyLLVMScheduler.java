@@ -4,6 +4,8 @@ import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
 import polyglot.ast.Node;
 import polyglot.ast.SourceFile;
+import polyglot.ext.jl5.types.JL5TypeSystem;
+import polyglot.ext.jl5.visit.AutoBoxer;
 import polyglot.ext.jl5.visit.TVCaster;
 import polyglot.ext.jl7.JL7Scheduler;
 import polyglot.frontend.*;
@@ -54,11 +56,12 @@ public class PolyLLVMScheduler extends JL7Scheduler {
         PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
         Goal prep = new MultiGoal(
                 job,
+                new VisitorGoal(job, new AutoBoxer(job, (JL5TypeSystem) ts, nf)),
                 new VisitorGoal(job, new LoopNormalizer(job, ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
                 new VisitorGoal(job, new StringConversionVisitor(ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.
-                new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf, new JL5TypeUtils(ts)))
+                new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf, new JL5TypeUtils(ts, nf)))
                 );
         try {
             prep.addPrerequisiteGoal(Serialized(job), this);

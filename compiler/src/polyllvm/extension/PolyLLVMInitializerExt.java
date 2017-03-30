@@ -14,7 +14,7 @@ public class PolyLLVMInitializerExt extends PolyLLVMExt {
     public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         Initializer n = (Initializer) node();
         if (n.flags().isStatic()) {
-            v.utils.buildCtor(() -> {
+            v.utils.buildCtor(n, () -> {
                 n.body().visit(v);
                 return null;
             });

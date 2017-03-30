@@ -124,9 +124,8 @@ public class PolyLLVMMangler {
     }
 
     public String InterfaceTableVariable(ReferenceType rt, ReferenceType i ) {
-        if (i.isArray() || !(i instanceof ParsedClassType)
-                || !((ParsedClassType) i).flags().isInterface()) {
-            throw new InternalCompilerError("Reference type " + rt + "is not an interface");
+        if (!v.isInterface(i)) {
+            throw new InternalCompilerError("Reference type " + i + "is not an interface");
         }
         rt = v.jl5Utils.translateType(rt);
         i = v.jl5Utils.translateType(i);

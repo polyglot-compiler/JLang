@@ -1,3 +1,5 @@
+package basic;
+
 public class Generic_Removed {
     public static void main(java.lang.String[] args) {
         java.lang.System.out.println(new Generic_Removed((java.lang.Object)

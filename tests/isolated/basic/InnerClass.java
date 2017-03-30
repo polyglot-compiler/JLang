@@ -1,6 +1,5 @@
-/**
- * Created by Daniel on 3/14/17.
- */
+package basic;
+
 public class InnerClass {
     public static void main(String[] args) {
         System.out.println(new Inner().toString());

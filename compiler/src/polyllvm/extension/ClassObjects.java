@@ -64,6 +64,9 @@ public final class ClassObjects {
         LLVMValueRef global = v.utils.getGlobal(mod, v.mangler.classObjName(rt), LLVMTypeOf(classObjStruct));
         LLVMSetExternallyInitialized(global, 0);
         LLVMSetInitializer(global, classObjStruct);
+        if(v.isInterface(rt)){
+          LLVMSetLinkage(global, LLVMLinkOnceODRLinkage);
+        }
 
         return global;
     }

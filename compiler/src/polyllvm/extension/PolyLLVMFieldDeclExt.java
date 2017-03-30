@@ -6,7 +6,6 @@ import polyglot.ast.Node;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
@@ -37,7 +36,7 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
                     LLVMSetInitializer(global, val);
                 } else {
                     LLVMSetInitializer(global, LLVMConstNull(type));
-                    v.utils.buildCtor(() -> {
+                    v.utils.buildCtor(n, () -> {
                         n.init().visit(v);
                         LLVMValueRef val = v.getTranslation(n.init());
                         LLVMBuildStore(v.builder, val, global);

@@ -1,10 +1,17 @@
 package polyllvm.util;
 
+import org.bytedeco.javacpp.annotation.Const;
+import polyglot.ast.NodeFactory;
+import polyglot.ext.jl5.ast.JL5NodeFactory;
 import polyglot.ext.jl5.types.*;
 import polyglot.ext.jl5.types.inference.LubType;
+import polyglot.ext.jl5.types.reflect.JL5Method;
 import polyglot.ext.param.types.Subst;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
+
+import java.util.HashMap;
+import java.util.Optional;
 
 /**
  * Created by Daniel on 3/17/17.
@@ -12,9 +19,11 @@ import polyglot.util.InternalCompilerError;
 public class JL5TypeUtils {
 
     final private TypeSystem ts;
+    final private NodeFactory nf;
 
-    public JL5TypeUtils(TypeSystem ts){
+    public JL5TypeUtils(TypeSystem ts, NodeFactory nf){
         this.ts = ts;
+        this.nf = nf;
     }
 
      /*
@@ -52,6 +61,17 @@ public class JL5TypeUtils {
 
     public MemberInstance translateMemberInstance(MemberInstance mi){
         ReferenceType container = mi.container();
+
+        if(mi instanceof JL5MethodInstance) {
+            JL5MethodInstance declaration = (JL5MethodInstance) ((JL5MethodInstance) mi).declaration();
+            JL5Subst subst = declaration.erasureSubst();
+            mi = subst == null ? mi : subst.substMethod(declaration);
+        } else if (mi instanceof JL5ConstructorInstance){
+            JL5ConstructorInstance declaration = (JL5ConstructorInstance) ((JL5ConstructorInstance) mi).declaration();
+            JL5Subst subst = declaration.erasureSubst();
+            mi = subst == null ? mi : subst.substConstructor(declaration);
+        }
+
         if(container instanceof JL5SubstClassType){
             JL5SubstClassType substClass = (JL5SubstClassType) container;
             Subst<TypeVariable, ReferenceType> subst = substClass.subst();
@@ -75,10 +95,12 @@ public class JL5TypeUtils {
                     return translateMemberInstance(origMember);
                 }
             }
+            throw new InternalCompilerError("Cannot Translate: " + mi);
         } else if(container instanceof JL5ParsedClassType){
             JL5TypeSystem ts = (JL5TypeSystem) this.ts;
             JL5Subst subst = ts.erasureSubst((JL5ParsedClassType) container);
-            if(subst != null) {
+
+            if (subst != null) {
                 if (mi instanceof MethodInstance) {
                     return subst.substMethod((MethodInstance) mi);
                 } else if (mi instanceof ConstructorInstance) {

@@ -7,6 +7,7 @@ import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
+import polyllvm.ast.PolyLLVMOps;
 import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -14,6 +15,21 @@ import static polyglot.ast.Binary.*;
 
 public class PolyLLVMBinaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
+
+    @Override
+    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+        Binary n = (Binary) node();
+        Type resType = n.type();
+        Operator op = n.operator();
+
+        if(op.equals(Binary.COND_AND) || op.equals(Binary.COND_OR)){
+            LLVMValueRef res = computeShortCircuitOp(v, resType);
+            v.addTranslation(n, res);
+            return n;
+        }
+
+        return super.overrideTranslatePseudoLLVM(v);
+    }
 
     @Override
     public Node translatePseudoLLVM(LLVMTranslator v) {
@@ -67,12 +83,33 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         } else if (resType.isBoolean() && (elemType.isFloat() || elemType.isDouble())) {
             // Floating point comparison.
             return LLVMBuildFCmp(builder, llvmFCmpBinopCode(op), left, right, "fcmp");
-        } else if (resType.isBoolean()) {
+        } else if (resType.isBoolean() && (elemType.isLongOrLess() || elemType.isReference())) {
             // Integer comparison.
             return LLVMBuildICmp(builder, llvmICmpBinopCode(op, elemType), left, right, "icmp");
         } else {
             throw new InternalCompilerError("Invalid binary operation result type");
         }
+    }
+
+    private LLVMValueRef computeShortCircuitOp(LLVMTranslator v, Type resType){
+        LLVMValueRef binop_res = PolyLLVMLocalDeclExt.createLocal(v, "binop_res", v.utils.typeRef(resType));
+        LLVMBasicBlockRef true_branch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "true_branch");
+        LLVMBasicBlockRef false_branch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "false_branch");
+        LLVMBasicBlockRef continue_branch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "continue");
+
+        translateLLVMConditional(v, true_branch, false_branch);
+
+        LLVMPositionBuilderAtEnd(v.builder, true_branch);
+        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.typeRef(resType), 1, /*sign-extend*/ 0), binop_res);
+        LLVMBuildBr(v.builder, continue_branch);
+
+        LLVMPositionBuilderAtEnd(v.builder, false_branch);
+        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.typeRef(resType), 0, /*sign-extend*/ 0), binop_res);
+        LLVMBuildBr(v.builder, continue_branch);
+
+        LLVMPositionBuilderAtEnd(v.builder, continue_branch);
+
+        return LLVMBuildLoad(v.builder, binop_res, "binop");
     }
 
     private static boolean isUnsigned(Type t) {
@@ -121,5 +158,12 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         else if (op == GE) return LLVMRealOGE;
         else if (op == GT) return LLVMRealOGT;
         else throw new InternalCompilerError("This operation is not a comparison");
+    }
+
+
+    private static int llvmLogicalCmpBinopCode(Operator op) {
+        if      (op == COND_AND) return LLVMAnd;
+        else if (op == COND_OR)  return LLVMOr;
+        else throw new InternalCompilerError("This operation is not a logical binop: " + op);
     }
 }

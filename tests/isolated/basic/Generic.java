@@ -1,10 +1,12 @@
+package basic;
+
 public class Generic<T>{
     public static void main(String[] args) {
         System.out.println(new Generic<String>("Hi There!").toString());
         System.out.println(new Generic<Object>("Hi There!").toString());
         System.out.println(new Generic<A>(new A()).toString());
 
-        Generic<String> stringGeneric = new Generic<>("Hi!");
+        Generic<String> stringGeneric = new Generic<String>("Hi!");
         System.out.println(stringGeneric.toString());
         stringGeneric.obj = "Changed!";
         System.out.println(stringGeneric.toString());
