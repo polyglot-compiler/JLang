@@ -34,9 +34,9 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
 
         if (n.flags().isStatic()) {
             // Static fields.
-            String mangledGlobalName = PolyLLVMMangler.mangleStaticFieldName(n);
-            LLVMTypeRef type = v.utils.ptrTypeRef(v.utils.typeRef(n.type()));
-            return v.utils.getGlobal(v.mod, mangledGlobalName, type);
+            String mangledGlobalName = v.mangler.mangleStaticFieldName(n);
+            LLVMTypeRef elemType = v.utils.typeRef(n.type());
+            return v.utils.getGlobal(v.mod, mangledGlobalName, elemType);
         } else {
             // Instance fields.
             v.utils.typeRef(target.type()); // Ensure the type body is set before GEP

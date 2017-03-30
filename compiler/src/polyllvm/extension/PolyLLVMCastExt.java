@@ -35,7 +35,11 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
 
         // The cast is an identity cast.
         if (exprType.typeEquals(castType)) {
-            v.addTranslation(n, exprRef);
+            if (!LLVMTypeOf(exprRef).equals(castTypeRef)){
+                v.addTranslation(n, LLVMBuildBitCast(v.builder, exprRef, castTypeRef, "generic_cast"));
+            } else {
+                v.addTranslation(n, exprRef);
+            }
             return super.translatePseudoLLVM(v);
         }
 

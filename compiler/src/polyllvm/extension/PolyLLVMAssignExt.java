@@ -18,7 +18,6 @@ public class PolyLLVMAssignExt extends PolyLLVMExt {
     public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         Assign n = (Assign) node();
         Assign.Operator op = n.operator();
-        assert n.left().type().typeEquals(n.right().type()) : "casts should already be added";
         Type type = n.right().type();
 
         LLVMValueRef ptr = lang().translateAsLValue(n.left(), v);

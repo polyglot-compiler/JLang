@@ -1,14 +1,11 @@
 package polyllvm.ast;
 
-import polyglot.ast.Expr;
-import polyglot.ast.NodeFactory;
-import polyglot.ast.Stmt;
-import polyglot.util.Position;
+import polyglot.ext.jl7.ast.JL7NodeFactory;
 
 /**
  * NodeFactory for polyllvm extension.
  */
-public interface PolyLLVMNodeFactory extends NodeFactory {
+public interface PolyLLVMNodeFactory extends JL7NodeFactory {
 
     // Factory method for Extension factory
     PolyLLVMExtFactory PolyLLVMExtFactory();

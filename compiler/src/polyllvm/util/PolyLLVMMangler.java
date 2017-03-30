@@ -1,37 +1,47 @@
 package polyllvm.util;
 
+import org.bytedeco.javacpp.annotation.Const;
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Field;
 import polyglot.ast.FieldDecl;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
+import polyllvm.visit.LLVMTranslator;
 
 public class PolyLLVMMangler {
-    private static final String JAVA_PREFIX        = "Java";
-    private static final String ENV_PREFIX         = "Env";
-    private static final String CLASS_TYPE_STR     = "class";
-    private static final String INTERFACE_TYPE_STR = "interface";
-    private static final String DV_TYPE_STR        = "dv";
-    private static final String IT_DV_TYPE_STR     = "ittable";
-    private static final String SIZE_STR           = "size";
-    private static final String DV_STR             = "dv";
-    private static final String CLASS_INIT_STR     = "init";
-    private static final String IT_INIT_STR        = "it_init";
-    private static final String IT_STR_STR         = "ittype";
-    private static final String TYPE_INFO_STR      = "type_info";
-    private static final String CLASS_ID_STR       = "class_id";
+    private final LLVMTranslator v;
+
+    public PolyLLVMMangler(LLVMTranslator v) {
+        this.v = v;
+    }
+
+    private final String JAVA_PREFIX        = "Java";
+    private final String ENV_PREFIX         = "Env";
+    private final String CLASS_TYPE_STR     = "class";
+    private final String INTERFACE_TYPE_STR = "interface";
+    private final String DV_TYPE_STR        = "dv";
+    private final String IT_DV_TYPE_STR     = "ittable";
+    private final String SIZE_STR           = "size";
+    private final String DV_STR             = "dv";
+    private final String CLASS_INIT_STR     = "init";
+    private final String IT_INIT_STR        = "it_init";
+    private final String IT_STR_STR         = "ittype";
+    private final String TYPE_INFO_STR      = "type_info";
+    private final String CLASS_ID_STR       = "class_id";
 
     // From the JNI API.
-    private static final String UNDERSCORE_ESCAPE = "_1";
-    private static final String SEMICOLON_ESCAPE  = "_2";
-    private static final String BRACKET_ESCAPE    = "_3";
+    private final String UNDERSCORE_ESCAPE = "_1";
+    private final String SEMICOLON_ESCAPE  = "_2";
+    private final String BRACKET_ESCAPE    = "_3";
 
     /**
      * To facilitate JNI support, we mangle types as specified in the JNI API.
      * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/types.html#type_signatures
      * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names
      */
-    private static String typeSignature(Type type) {
+    private String typeSignature(Type type) {
+        type = v.jl5Utils.translateType(type);
+
         if      (type.isBoolean()) return "Z";
         else if (type.isByte())    return "B";
         else if (type.isChar())    return "C";
@@ -51,7 +61,7 @@ public class PolyLLVMMangler {
         }
     }
 
-    private static String argumentSignature(ProcedureInstance pi) {
+    private String argumentSignature(ProcedureInstance pi) {
         StringBuilder sb = new StringBuilder();
         for (Type t : pi.formalTypes()) {
             sb.append(typeSignature(t));
@@ -59,29 +69,32 @@ public class PolyLLVMMangler {
         return sb.toString();
     }
 
-    private static String mangleName(String name) {
+    private String mangleName(String name) {
         return name.replace("_", UNDERSCORE_ESCAPE);
     }
 
-    private static String mangleQualifiedName(ReferenceType classType) {
+    private String mangleQualifiedName(ReferenceType classType) {
+        classType = v.jl5Utils.translateType(classType);
         String base = classType.isArray() ? "support.Array" : classType.toString();
         return mangleName(base).replace(".", "_");
     }
 
-    private static String mangleProcedureName(ProcedureInstance pi,
-                                              ReferenceType receiver,
-                                              String procedureName) {
+    private String mangleProcedureName(ProcedureInstance pi,
+                                       ReferenceType receiver,
+                                       String procedureName) {
         return JAVA_PREFIX + "_" + mangleQualifiedName(receiver) + "_"
                 + mangleName(procedureName) + "__" + argumentSignature(pi);
     }
 
-    public static String mangleProcedureName(ProcedureInstance pi) {
+    public String mangleProcedureName(ProcedureInstance pi) {
         if (pi instanceof MethodInstance) {
             MethodInstance mi = (MethodInstance) pi;
+            mi = (MethodInstance) v.jl5Utils.translateMemberInstance(mi);
             return mangleProcedureName(mi, mi.container(), mi.name());
         }
         else if (pi instanceof ConstructorInstance) {
             ConstructorInstance ci = (ConstructorInstance) pi;
+            ci = (ConstructorInstance) v.jl5Utils.translateMemberInstance(ci);
             return mangleProcedureName(ci, ci.container(), ci.container().toClass().name());
         }
         else {
@@ -89,41 +102,44 @@ public class PolyLLVMMangler {
         }
     }
 
-    private static String mangleStaticFieldName(ReferenceType classType, String fieldName) {
+    private String mangleStaticFieldName(ReferenceType classType, String fieldName) {
+        classType = v.jl5Utils.translateType(classType);
         return JAVA_PREFIX + "_" + mangleQualifiedName(classType) + "_" + mangleName(fieldName);
     }
 
-    public static String mangleStaticFieldName(Field f) {
+    public String mangleStaticFieldName(Field f) {
         return mangleStaticFieldName(f.target().type().toReference(), f.name());
     }
 
-    public static String mangleStaticFieldName(ReferenceType classType, FieldDecl f) {
+    public String mangleStaticFieldName(ReferenceType classType, FieldDecl f) {
         return mangleStaticFieldName(classType, f.name());
     }
 
-    public static String sizeVariable(ReferenceType superClass) {
+    public String sizeVariable(ReferenceType superClass) {
         return ENV_PREFIX + "_" + mangleQualifiedName(superClass) + "_" + SIZE_STR;
     }
 
-    public static String dispatchVectorVariable(ReferenceType rt) {
+    public String dispatchVectorVariable(ReferenceType rt) {
         return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + DV_STR;
     }
 
-    public static String InterfaceTableVariable(ReferenceType rt, ReferenceType i ) {
-        if (i.isArray() || !(i instanceof ParsedClassType)
-                || !((ParsedClassType) i).flags().isInterface()) {
-            throw new InternalCompilerError("Reference type " + rt + "is not an interface");
+    public String InterfaceTableVariable(ReferenceType rt, ReferenceType i ) {
+        if (!v.isInterface(i)) {
+            throw new InternalCompilerError("Reference type " + i + "is not an interface");
         }
+        rt = v.jl5Utils.translateType(rt);
+        i = v.jl5Utils.translateType(i);
+
         String interfaceName =  i.toString();
         String className =  rt.toString();
         return ENV_PREFIX + "it_" + interfaceName.length() + interfaceName + "_" + className.length() + className;
     }
 
-    public static String classTypeName(ClassDecl cd) {
+    public String classTypeName(ClassDecl cd) {
         return classTypeName(cd.type());
     }
 
-    public static String classTypeName(ReferenceType rt) {
+    public String classTypeName(ReferenceType rt) {
         String className = mangleQualifiedName(rt);
         if (rt instanceof  ParsedClassType && ((ParsedClassType) rt).flags().isInterface()) {
             return INTERFACE_TYPE_STR + "." + className;
@@ -132,7 +148,7 @@ public class PolyLLVMMangler {
         }
     }
 
-    public static String dispatchVectorTypeName(ReferenceType rt) {
+    public String dispatchVectorTypeName(ReferenceType rt) {
         String className = mangleQualifiedName(rt);
         if (rt instanceof ParsedClassType && ((ParsedClassType) rt).flags().isInterface()) {
             return IT_DV_TYPE_STR + "." + className;
@@ -141,27 +157,27 @@ public class PolyLLVMMangler {
         }
     }
 
-    public static String classInitFunction(ClassDecl n) {
+    public String classInitFunction(ClassDecl n) {
         return classInitFunction(n.type());
     }
 
-    public static String classInitFunction(ReferenceType rt) {
+    public String classInitFunction(ReferenceType rt) {
         return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + CLASS_INIT_STR;
     }
 
-    public static String interfacesInitFunction(ReferenceType rt) {
+    public String interfacesInitFunction(ReferenceType rt) {
         return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IT_INIT_STR;
     }
 
-    public static String interfaceStringVariable(ReferenceType rt) {
+    public String interfaceStringVariable(ReferenceType rt) {
         return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IT_STR_STR;
     }
 
-    public static String classObjName(ReferenceType rt) {
+    public String classObjName(ReferenceType rt) {
         return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + TYPE_INFO_STR;
     }
 
-    public static String classIdName(ReferenceType rt) {
+    public String classIdName(ReferenceType rt) {
         return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + CLASS_ID_STR;
     }
 }

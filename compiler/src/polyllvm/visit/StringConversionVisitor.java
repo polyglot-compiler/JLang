@@ -1,14 +1,13 @@
 package polyllvm.visit;
 
-import polyglot.ast.*;
+import polyglot.ast.Binary;
+import polyglot.ast.Expr;
+import polyglot.ast.Node;
+import polyglot.ast.NodeFactory;
 import polyglot.types.Type;
 import polyglot.types.TypeSystem;
 import polyglot.util.Position;
 import polyglot.visit.NodeVisitor;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Converts string literals to constructor calls, makes string concatenation explicit,
@@ -32,8 +31,11 @@ public class StringConversionVisitor extends NodeVisitor {
             Expr l = binary.left(), r = binary.right();
             Type lt = l.type(), rt = r.type();
             if (lt.typeEquals(ts.String()) || rt.typeEquals(ts.String())) {
-                assert binary.operator().equals(Binary.ADD);
-                return nf.Call(pos, convertToString(l), nf.Id(pos, "concat"), convertToString(r));
+                if (binary.operator().equals(Binary.ADD)) {
+                    l = convertToString(l);
+                    r = convertToString(r);
+                    return nf.Call(pos, l, nf.Id(pos, "concat"), r).type(ts.String());
+                }
             }
         }
         return super.leave(old, n, v);
@@ -46,15 +48,16 @@ public class StringConversionVisitor extends NodeVisitor {
             return e;
         }
         else if (t.isNull()) {
-            return nf.StringLit(pos, "null");
+            return nf.StringLit(pos, "null").type(ts.String());
         }
         else if (t.isPrimitive()) {
-            return nf.Call(pos, nf.CanonicalTypeNode(pos, ts.String()), nf.Id(pos, "valueOf"), e);
+            return nf.Call(pos, nf.CanonicalTypeNode(pos, ts.String()), nf.Id(pos, "valueOf"), e)
+                    .type(ts.String());
         }
         else {
             // TODO: According to the JLS, technically want "null" if toString() returns null.
             assert t.isReference();
-            return nf.Call(pos, e, nf.Id(pos, "toString"));
+            return nf.Call(pos, e, nf.Id(pos, "toString")).type(ts.String());
         }
     }
 }

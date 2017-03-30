@@ -1,6 +1,7 @@
 package polyllvm.util;
 
 import org.bytedeco.javacpp.PointerPointer;
+import polyglot.ast.Node;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
@@ -59,7 +60,8 @@ public class LLVMUtils {
 
 
     private LLVMTypeRef structTypeRef(ReferenceType rt, boolean fillInStruct) {
-        String mangledName = PolyLLVMMangler.classTypeName(rt);
+        rt = v.jl5Utils.translateType(rt);
+        String mangledName = v.mangler.classTypeName(rt);
         LLVMTypeRef structType = structTypeRefOpaque(mangledName);
         if (LLVMIsOpaqueStruct(structType) != 0 && fillInStruct) {
             setStructBody(structType); // Set the struct to be empty, so it is not opaque
@@ -70,7 +72,8 @@ public class LLVMUtils {
     }
 
     public LLVMTypeRef dvTypeRef(ReferenceType rt) {
-        String mangledDVName = PolyLLVMMangler.dispatchVectorTypeName(rt);
+        rt = v.jl5Utils.translateType(rt);
+        String mangledDVName = v.mangler.dispatchVectorTypeName(rt);
         LLVMTypeRef dvType = structTypeRefOpaque(mangledDVName);
         if (LLVMIsOpaqueStruct(dvType) != 0) {
             setStructBody(dvType); // Set the struct to be empty, so it is not opaque
@@ -85,6 +88,8 @@ public class LLVMUtils {
     }
 
     private LLVMTypeRef typeRef(Type t, boolean fillInStruct) {
+        t = v.jl5Utils.translateType(t);
+
         if      (t.isBoolean())    return LLVMInt1TypeInContext(v.context);
         else if (t.isLongOrLess()) return LLVMIntTypeInContext(v.context, numBitsOfIntegralType(t));
         else if (t.isVoid())       return LLVMVoidTypeInContext(v.context);
@@ -95,7 +100,9 @@ public class LLVMUtils {
         else if (t.isArray()) {
             structTypeRef(getArrayType(), fillInStruct);
             return ptrTypeRef(structTypeRefOpaque(Constants.ARR_CLASS));
-        } else {
+        }
+        else if (t.isReference())  return structTypeRef(t.toReference(), fillInStruct);
+        else {
             throw new InternalCompilerError("Invalid type");
         }
     }
@@ -123,8 +130,6 @@ public class LLVMUtils {
         return functionType(typeRef(returnType, false), args);
     }
 
-
-
     public LLVMValueRef buildProcedureCall(LLVMValueRef func, LLVMValueRef... args) {
         if (v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())) {
             LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "invoke.cont");
@@ -151,7 +156,7 @@ public class LLVMUtils {
      * in the resulting program, then LLVM knows to prevent the ctor from running.)
      * Ctor functions will run in the order that they are built.
      */
-    public void buildCtor(Supplier<LLVMValueRef> ctor) {
+    public void buildCtor(Node n, Supplier<LLVMValueRef> ctor) {
         LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context));
         LLVMTypeRef voidPtr = v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context));
 
@@ -164,15 +169,23 @@ public class LLVMUtils {
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
                 v.debugInfo.diBuilder, v.debugInfo.createFile(), typeArray);
         v.debugInfo.funcDebugInfo(0, name, name, funcDiType, func);
+        v.debugInfo.emitLocation(n);
 
+        LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, func, "entry");
         LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func, "body");
+        LLVMPositionBuilderAtEnd(v.builder, entry);
+        LLVMBuildBr(v.builder, body);
         LLVMPositionBuilderAtEnd(v.builder, body);
 
         // We use `counter` as the ctor priority to help ensure that static initializers
         // are executed in textual order, per the JLS.
         LLVMTypeRef i32 = LLVMInt32TypeInContext(v.context);
         LLVMValueRef priority = LLVMConstInt(i32, counter, /*sign-extend*/ 0);
+
+        v.pushFn(func);
         LLVMValueRef data = ctor.get(); // Calls supplier lambda to build ctor body.
+        v.popFn();
+
         if (data == null)
             data = LLVMConstNull(voidPtr);
         LLVMValueRef castData = LLVMConstBitCast(data, voidPtr);
@@ -196,7 +209,7 @@ public class LLVMUtils {
     public LLVMValueRef funcRef(LLVMModuleRef mod,
                                        ProcedureInstance pi,
                                        LLVMTypeRef funcType) {
-        return getFunction(mod, PolyLLVMMangler.mangleProcedureName(pi), funcType);
+        return getFunction(mod, v.mangler.mangleProcedureName(pi), funcType);
     }
 
     public LLVMTypeRef structType(LLVMTypeRef... types) {
@@ -207,7 +220,7 @@ public class LLVMUtils {
      * If the global is already in the module, return it, otherwise add it to the module and return it.
      */
     public LLVMValueRef getGlobal(LLVMModuleRef mod, String globalName, LLVMTypeRef globalType) {
-        LLVMValueRef global = LLVMGetNamedGlobal(mod,globalName);
+        LLVMValueRef global = LLVMGetNamedGlobal(mod, globalName);
         if (global == null)
             global = LLVMAddGlobal(mod, globalType, globalName);
         return global;
@@ -252,7 +265,7 @@ public class LLVMUtils {
 
     private LLVMTypeRef[] objectFieldTypes(ReferenceType rt) {
         Pair<List<MethodInstance>, List<FieldInstance>> layouts = v.layouts(rt);
-        LLVMTypeRef dvType = structTypeRefOpaque(PolyLLVMMangler.dispatchVectorTypeName(rt));
+        LLVMTypeRef dvType = structTypeRefOpaque(v.mangler.dispatchVectorTypeName(rt));
         LLVMTypeRef dvPtrType = LLVMPointerType(dvType, Constants.LLVM_ADDR_SPACE);
         return Stream.concat(
                 Stream.of(dvPtrType),
@@ -265,7 +278,7 @@ public class LLVMUtils {
         fieldTypes = Arrays.copyOf(fieldTypes, fieldTypes.length + 1);
         fieldTypes[fieldTypes.length-1] = ptrTypeRef(LLVMInt8TypeInContext(v.context));
 
-        String mangledName = PolyLLVMMangler.classTypeName(getArrayType());
+        String mangledName = v.mangler.classTypeName(getArrayType());
         LLVMTypeRef structType = structTypeRefOpaque(mangledName);
         setStructBody(structType, fieldTypes);
         dvTypeRef(getArrayType());
@@ -292,48 +305,63 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef getDvGlobal(ReferenceType classtype) {
-        return getGlobal(v.mod, PolyLLVMMangler.dispatchVectorVariable(classtype), dvTypeRef(classtype));
+        classtype = v.jl5Utils.translateType(classtype);
+        return getGlobal(v.mod, v.mangler.dispatchVectorVariable(classtype), dvTypeRef(classtype));
     }
 
     public LLVMValueRef getItGlobal(ReferenceType it, ReferenceType usingClass) {
-        String interfaceTableVar = PolyLLVMMangler.InterfaceTableVariable(usingClass, it);
+        it = v.jl5Utils.translateType(it);
+        usingClass = v.jl5Utils.translateType(usingClass);
+
+        String interfaceTableVar = v.mangler.InterfaceTableVariable(usingClass, it);
         LLVMTypeRef interfaceTableType = dvTypeRef(it);
         return getGlobal(v.mod, interfaceTableVar, interfaceTableType);
     }
 
     public LLVMValueRef[] dvMethods(ReferenceType rt, LLVMValueRef next) {
+        rt = v.jl5Utils.translateType(rt);
+
         List<MethodInstance> layout = v.layouts(rt).part1();
+        ReferenceType finalRt = rt;
         LLVMValueRef[] methods = Stream.concat(
                 Stream.of(next, v.classObjs.classObjRef(v.mod, rt)),
                 IntStream.range(0, layout.size()).mapToObj(i -> {
                     MethodInstance mi = layout.get(i);
-                    LLVMValueRef function = getFunction(v.mod, PolyLLVMMangler.mangleProcedureName(mi),
+                    LLVMValueRef function = getFunction(v.mod, v.mangler.mangleProcedureName(mi),
                             methodType(mi.container(), mi.returnType(), mi.formalTypes()));
-                    return LLVMConstBitCast(function, ptrTypeRef(methodType(rt, mi.returnType(), mi.formalTypes())));
+                    return LLVMConstBitCast(function, ptrTypeRef(methodType(finalRt, mi.returnType(), mi.formalTypes())));
                 })).toArray(LLVMValueRef[]::new);
         return methods;
     }
 
     public LLVMValueRef[] itMethods(ReferenceType it, ReferenceType usingClass, LLVMValueRef next) {
+        it = v.jl5Utils.translateType(it);
+        usingClass = v.jl5Utils.translateType(usingClass);
+
         List<MethodInstance> layout = v.layouts(it).part1();
+        List<MethodInstance> classLayout = v.layouts(usingClass).part1();
         for (int i=0; i< layout.size(); i++) {
-            List<MethodInstance> classLayout = v.layouts(usingClass).part1();
             MethodInstance mi = layout.get(i);
-            MethodInstance miClass = v.methodInList(mi, classLayout);
-            layout.set(i, miClass);
+            MethodInstance miClass = v.methodInList(mi, classLayout); // Find the method in the class layout to generate correct mangled name
+            if(miClass != null) {
+                layout.set(i, miClass);
+            }
         }
+        ReferenceType finalIt = it;
         LLVMValueRef[] methods = Stream.concat(
                 Stream.of(next, v.classObjs.classObjRef(v.mod, it)),
                 IntStream.range(0, layout.size()).mapToObj(i -> {
                     MethodInstance mi = layout.get(i);
-                    LLVMValueRef function = getFunction(v.mod, PolyLLVMMangler.mangleProcedureName(mi),
+                    LLVMValueRef function = getFunction(v.mod, v.mangler.mangleProcedureName(mi),
                             methodType(mi.container(), mi.returnType(), mi.formalTypes()));
-                    return LLVMConstBitCast(function, ptrTypeRef(methodType(it, mi.returnType(), mi.formalTypes())));
+                    return LLVMConstBitCast(function, ptrTypeRef(methodType(finalIt, mi.returnType(), mi.formalTypes())));
                 })).toArray(LLVMValueRef[]::new);
         return methods;
     }
 
     public LLVMValueRef[] dvMethods(ReferenceType rt) {
+        rt = v.jl5Utils.translateType(rt);
+
         return dvMethods(rt, LLVMConstNull(ptrTypeRef(LLVMInt8TypeInContext(v.context))));
     }
 
@@ -372,5 +400,4 @@ public class LLVMUtils {
             throw new InternalCompilerError("Invalid type");
         }
     }
-
 }
