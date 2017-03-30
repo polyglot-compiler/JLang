@@ -101,6 +101,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
+    protected Ext extSwitchImpl() {
+        return new PolyLLVMSwitchExt();
+    }
+
+    @Override
     protected Ext extWhileImpl() {
         return new PolyLLVMWhileExt();
     }
