@@ -1,8 +1,6 @@
 package polyllvm.visit;
 
 import polyglot.ast.ClassDecl;
-import polyglot.ast.Labeled;
-import polyglot.ast.Loop;
 import polyglot.ast.Node;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
@@ -356,96 +354,71 @@ public class LLVMTranslator extends NodeVisitor {
         allocations.clear();
     }
 
-
     /*
-     * Functions for translating loops
+     * Loops
      */
 
-    /**
-     * loops is a list of (String * (LLVMBasicBlockRef * LLVMBasicBlockRef)),
-     * where the String is a label (or null), and the pair of basic blocks is the
-     * head block and end block for that loop.
-     */
-    private LinkedList<Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>>> loops =
-            new LinkedList<>();
+    // Note that these stacks may have different sizes because switch statements
+    // only create a break-block.
+    private Deque<LLVMBasicBlockRef> continueBlocks = new ArrayDeque<>();
+    private Deque<LLVMBasicBlockRef> breakBlocks = new ArrayDeque<>();
 
-    public void enterLoop(Loop n) {
-        //If the loop is labeled, use the stored info to push to loops
-        if (label != null && labelhead != null && labelend != null) {
-            loops.push(new Pair<>(label.label(),
-                                  new Pair<>(labelhead, labelend)));
-            label = null;
-            labelhead = null;
-            labelend = null;
+    private static class Loop {
+        LLVMBasicBlockRef head;
+        LLVMBasicBlockRef end;
+        Loop(LLVMBasicBlockRef head, LLVMBasicBlockRef end) {
+            this.head = head;
+            this.end = end;
         }
-        //Else the loop is unlabled to generate a fresh label
-        else {
-            LLVMBasicBlockRef head = LLVMAppendBasicBlockInContext(context, currFn(), "loop_head");
-            LLVMBasicBlockRef end = LLVMAppendBasicBlockInContext(context, currFn(), "loop_end");
+    }
 
-            Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>> pair =
-                    new Pair<>("", new Pair<>(head, end));
-            loops.push(pair);
+    private Map<String, Loop> loopLabelMap = new HashMap<>();
+
+    private String currLoopLabel; // Null if none.
+    public void pushLoopLabel(String label) {
+        currLoopLabel = label;
+    }
+
+    public void pushLoop(LLVMBasicBlockRef head, LLVMBasicBlockRef end) {
+        continueBlocks.addLast(head);
+        breakBlocks.addLast(end);
+        if (currLoopLabel != null) {
+            loopLabelMap.put(currLoopLabel, new Loop(head, end));
+            currLoopLabel = null;
         }
-
     }
 
-    public Pair<LLVMBasicBlockRef, LLVMBasicBlockRef> leaveLoop() {
-        return loops.pop().part2();
-    }
-    public Pair<LLVMBasicBlockRef, LLVMBasicBlockRef> peekLoop() {
-        return loops.peek().part2();
+    public void pushSwitch(LLVMBasicBlockRef end) {
+        breakBlocks.addLast(end);
     }
 
-
-    private Labeled label;
-    private LLVMBasicBlockRef labelhead;
-    private LLVMBasicBlockRef labelend;
-
-    public void enterLabeled(Labeled n) {
-        label = n;
-        labelhead = LLVMAppendBasicBlockInContext(context, currFn(), n.label() + "_head");
-        labelend = LLVMAppendBasicBlockInContext(context, currFn(), n.label() + "_end");
+    public void popLoop() {
+        continueBlocks.removeLast();
+        breakBlocks.removeLast();
     }
 
-    public LLVMBasicBlockRef getLoopEnd(String label) {
-        for (Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>> pair : loops) {
-            if (pair.part1().equals(label)) {
-                return pair.part2().part2();
-            }
-        }
-        throw new InternalCompilerError("Loop labeled " + label
-                + " is not on loop stack");
+    public void popSwitch() {
+        breakBlocks.removeLast();
     }
 
-    public LLVMBasicBlockRef getLoopHead(String label) {
-        for (Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>> pair : loops) {
-            if (pair.part1().equals(label)) {
-                return pair.part2().part1();
-            }
-        }
-
-        throw new InternalCompilerError("Loop labeled " + label
-                + " is not on loop stack");
+    public LLVMBasicBlockRef getContinueBlock(String label) {
+        System.out.println(label);
+        System.out.println(continueBlocks.size());
+        System.out.println(loopLabelMap.size());
+        return label == null ? continueBlocks.getLast() : loopLabelMap.get(label).head;
     }
 
-    public LLVMBasicBlockRef getLoopHead() {
-        Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>> pair = loops.get(0);
-        return pair.part2().part1();
-    }
-
-    public LLVMBasicBlockRef getLoopEnd() {
-        Pair<String, Pair<LLVMBasicBlockRef, LLVMBasicBlockRef>> pair = loops.get(0);
-        return pair.part2().part2();
-    }
-
-    public int getMethodIndex(ReferenceType type, MethodInstance methodInstance) {
-        return getMethodIndex(type, methodInstance, layouts(type).part1());
+    public LLVMBasicBlockRef getBreakBlock(String label) {
+        return label == null ? breakBlocks.getLast() : loopLabelMap.get(label).end;
     }
 
     /*
      * Functions for accessing methods and fields
      */
+
+    public int getMethodIndex(ReferenceType type, MethodInstance methodInstance) {
+        return getMethodIndex(type, methodInstance, layouts(type).part1());
+    }
 
     public int getMethodIndex(ReferenceType type, MethodInstance methodInstance, List<MethodInstance> methodLayout) {
         for (int i = 0; i < methodLayout.size(); i++) {
