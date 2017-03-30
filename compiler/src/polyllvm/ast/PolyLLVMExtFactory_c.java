@@ -51,11 +51,6 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
-    protected Ext extBlockImpl() {
-        return new PolyLLVMBlockExt();
-    }
-
-    @Override
     protected Ext extEvalImpl() {
         return new PolyLLVMEvalExt();
     }
