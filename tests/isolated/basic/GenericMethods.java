@@ -15,6 +15,5 @@ public class GenericMethods {
 
     public <T> void print(HashMap<T,T> obj1){
         System.out.println(obj1 + " -- " );
-
     }
 }

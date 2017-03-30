@@ -1,18 +1,14 @@
 package polyllvm.visit;
 
-import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.*;
 import polyglot.frontend.Job;
 import polyglot.types.*;
-import polyglot.types.reflect.Method;
 import polyglot.util.Position;
 import polyglot.visit.AscriptionVisitor;
 import polyglot.visit.NodeVisitor;
 import polyllvm.util.JL5TypeUtils;
 
-import java.lang.reflect.Member;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -79,7 +75,6 @@ public class MakeCastsExplicitVisitor extends AscriptionVisitor {
                 return nf.Cast(e.position(), nf.CanonicalTypeNode(e.position(),toType), e).type(toType);
             }
         }
-
 
         // Avoid adding casts to void.
         if (e.type().typeEquals(toType) || toType.isVoid()) {

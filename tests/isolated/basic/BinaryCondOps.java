@@ -21,10 +21,7 @@ public class BinaryCondOps {
         assertBool(x);
         x = true || printMsgFalse();
         assertBool(x);
-
-
     }
-
 
     static void assertBool(boolean x){
         if (x){

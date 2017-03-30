@@ -130,8 +130,6 @@ public class LLVMUtils {
         return functionType(typeRef(returnType, false), args);
     }
 
-
-
     public LLVMValueRef buildProcedureCall(LLVMValueRef func, LLVMValueRef... args) {
         if (v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())) {
             LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "invoke.cont");

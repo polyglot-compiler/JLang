@@ -7,8 +7,9 @@ import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PolyLLVMOps;
 import polyllvm.visit.LLVMTranslator;
+
+import java.lang.Override;
 
 import static org.bytedeco.javacpp.LLVM.*;
 import static polyglot.ast.Binary.*;
@@ -22,7 +23,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         Type resType = n.type();
         Operator op = n.operator();
 
-        if(op.equals(Binary.COND_AND) || op.equals(Binary.COND_OR)){
+        if (op.equals(Binary.COND_AND) || op.equals(Binary.COND_OR)) {
             LLVMValueRef res = computeShortCircuitOp(v, resType);
             v.addTranslation(n, res);
             return n;
@@ -91,25 +92,25 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         }
     }
 
-    private LLVMValueRef computeShortCircuitOp(LLVMTranslator v, Type resType){
-        LLVMValueRef binop_res = PolyLLVMLocalDeclExt.createLocal(v, "binop_res", v.utils.typeRef(resType));
-        LLVMBasicBlockRef true_branch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "true_branch");
-        LLVMBasicBlockRef false_branch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "false_branch");
-        LLVMBasicBlockRef continue_branch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "continue");
+    private LLVMValueRef computeShortCircuitOp(LLVMTranslator v, Type resType) {
+        LLVMValueRef binopRes = PolyLLVMLocalDeclExt.createLocal(v, "binop_res", v.utils.typeRef(resType));
+        LLVMBasicBlockRef trueBranch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "true_branch");
+        LLVMBasicBlockRef falseBranch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "false_branch");
+        LLVMBasicBlockRef continueBranch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "continue");
 
-        translateLLVMConditional(v, true_branch, false_branch);
+        translateLLVMConditional(v, trueBranch, falseBranch);
 
-        LLVMPositionBuilderAtEnd(v.builder, true_branch);
-        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.typeRef(resType), 1, /*sign-extend*/ 0), binop_res);
-        LLVMBuildBr(v.builder, continue_branch);
+        LLVMPositionBuilderAtEnd(v.builder, trueBranch);
+        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.typeRef(resType), 1, /*sign-extend*/ 0), binopRes);
+        LLVMBuildBr(v.builder, continueBranch);
 
-        LLVMPositionBuilderAtEnd(v.builder, false_branch);
-        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.typeRef(resType), 0, /*sign-extend*/ 0), binop_res);
-        LLVMBuildBr(v.builder, continue_branch);
+        LLVMPositionBuilderAtEnd(v.builder, falseBranch);
+        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.typeRef(resType), 0, /*sign-extend*/ 0), binopRes);
+        LLVMBuildBr(v.builder, continueBranch);
 
-        LLVMPositionBuilderAtEnd(v.builder, continue_branch);
+        LLVMPositionBuilderAtEnd(v.builder, continueBranch);
 
-        return LLVMBuildLoad(v.builder, binop_res, "binop");
+        return LLVMBuildLoad(v.builder, binopRes, "binop");
     }
 
     private static boolean isUnsigned(Type t) {
