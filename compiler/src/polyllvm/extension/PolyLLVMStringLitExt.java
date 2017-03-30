@@ -1,30 +1,23 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
-
-import polyglot.ast.*;
-import polyglot.frontend.Job;
-import polyglot.types.*;
-import polyglot.util.InternalCompilerError;
-import polyglot.util.Position;
-import polyglot.visit.ContextVisitor;
-import polyglot.visit.TypeChecker;
+import polyglot.ast.Node;
+import polyglot.ast.StringLit;
+import polyglot.types.ReferenceType;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.PolyLLVMFreshGen;
 import polyllvm.visit.LLVMTranslator;
 
+import java.lang.Override;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMStringLitExt extends PolyLLVMExt {
 
     @Override
     public Node translatePseudoLLVM(LLVMTranslator v) {
         StringLit n = (StringLit) node();
-        NodeFactory nf = v.nodeFactory();
 
         char[] chars = n.value().toCharArray();
 
@@ -41,6 +34,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
 
         LLVMValueRef charArray = v.utils.buildConstStruct(structBody);
         LLVMValueRef stringLit = v.utils.getGlobal(v.mod, "char_arr_" + n.value(), LLVMTypeOf(charArray));
+        LLVMSetLinkage(stringLit, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringLit, charArray);
 
         LLVMValueRef dvString = v.utils.getDvGlobal(n.type().toReference());
@@ -48,6 +42,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
 
         LLVMValueRef string = v.utils.buildConstStruct(stringLitBody);
         LLVMValueRef stringVar = v.utils.getGlobal(v.mod, "string_lit_" + n.value(), LLVMTypeOf(string));
+        LLVMSetLinkage(stringVar, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringVar, string);
 
         v.addTranslation(n,LLVMConstBitCast(stringVar, v.utils.typeRef(n.type())));

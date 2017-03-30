@@ -2,10 +2,11 @@ package polyllvm.extension;
 
 import polyglot.ast.Node;
 import polyglot.ast.While;
-import polyglot.util.Pair;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
+
+import java.lang.Override;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -15,13 +16,11 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
     @Override
     public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         While n = (While) node();
-        v.enterLoop(n);
 
-        Pair<LLVMBasicBlockRef, LLVMBasicBlockRef> labels = v.peekLoop();
-
-        LLVMBasicBlockRef head = labels.part1();
-        LLVMBasicBlockRef end = labels.part2();
-        LLVMBasicBlockRef l1 = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "l1");
+        LLVMBasicBlockRef head = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "head");
+        LLVMBasicBlockRef end = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "end");
+        LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "body");
+        v.pushLoop(head, end);
 
         v.debugInfo.emitLocation(n);
 
@@ -29,16 +28,17 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
         LLVMBuildBr(v.builder, head);
 
         LLVMPositionBuilderAtEnd(v.builder, head);
-        lang().translateLLVMConditional(n.cond(), v, l1, end);
+        lang().translateLLVMConditional(n.cond(), v, body, end);
 
-        LLVMPositionBuilderAtEnd(v.builder, l1);
+        LLVMPositionBuilderAtEnd(v.builder, body);
         v.visitEdge(n, n.body());
         LLVMBasicBlockRef blockEnd = LLVMGetInsertBlock(v.builder);
         if (LLVMGetBasicBlockTerminator(blockEnd) == null) {
             LLVMBuildBr(v.builder, head);
         }
         LLVMPositionBuilderAtEnd(v.builder, end);
-        v.leaveLoop();
+
+        v.popLoop();
         return n;
     }
 }

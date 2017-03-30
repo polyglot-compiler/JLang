@@ -1,7 +1,6 @@
 package polyllvm.extension;
 
 import polyglot.ast.Labeled;
-import polyglot.ast.Loop;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
@@ -20,7 +19,7 @@ public class PolyLLVMLabeledExt extends PolyLLVMExt {
     public LLVMTranslator enterTranslatePseudoLLVM(
             LLVMTranslator v) {
         Labeled n = (Labeled) node();
-        v.enterLabeled(n);
+        v.pushLoopLabel(n.label());
         return super.enterTranslatePseudoLLVM(v);
     }
 

@@ -51,11 +51,6 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
-    protected Ext extBlockImpl() {
-        return new PolyLLVMBlockExt();
-    }
-
-    @Override
     protected Ext extEvalImpl() {
         return new PolyLLVMEvalExt();
     }
@@ -103,6 +98,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     @Override
     protected Ext extBooleanLitImpl() {
         return new PolyLLVMBooleanLitExt();
+    }
+
+    @Override
+    protected Ext extSwitchImpl() {
+        return new PolyLLVMSwitchExt();
     }
 
     @Override
