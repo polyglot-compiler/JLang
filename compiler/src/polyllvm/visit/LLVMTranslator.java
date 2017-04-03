@@ -19,7 +19,6 @@ import polyllvm.util.PolyLLVMMangler;
 import polyllvm.util.JL5TypeUtils;
 
 import java.lang.Override;
-import java.lang.reflect.Member;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -59,9 +58,9 @@ public class LLVMTranslator extends NodeVisitor {
     /**
      * A list of all potential entry points (i.e., Java main functions).
      */
-    private List<LLVMValueRef> entryPoints = new ArrayList<>();
-    public void addEntryPoint(LLVMValueRef entryPoint) { entryPoints.add(entryPoint); }
-    public List<LLVMValueRef> getEntryPoints() { return ListUtil.copy(entryPoints, false); }
+    private Map<String, LLVMValueRef> entryPoints = new HashMap<>();
+    public void addEntryPoint(LLVMValueRef entryPoint, String className) { entryPoints.put(className, entryPoint); }
+    public Map<String, LLVMValueRef> getEntryPoints() { return new HashMap<>(entryPoints); }
 
     /**
      * A list of ctor functions to be added to the module.

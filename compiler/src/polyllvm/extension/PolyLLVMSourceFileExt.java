@@ -2,14 +2,17 @@ package polyllvm.extension;
 
 import org.bytedeco.javacpp.PointerPointer;
 import polyglot.ast.Node;
+import polyglot.main.Options;
 import polyglot.types.TypeSystem;
+import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
+import polyllvm.PolyLLVMOptions;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
-import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -35,9 +38,17 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(LLVMTranslator v) {
 
         // Call an entry point within the current module if possible.
-        List<LLVMValueRef> entryPoints = v.getEntryPoints();
-        if (!entryPoints.isEmpty()) {
-            buidEntryPoint(v, entryPoints.iterator().next());
+        Map<String, LLVMValueRef> entryPoints = v.getEntryPoints();
+        String entryPointClass = ((PolyLLVMOptions) Options.global).entryPointClass;
+        if(entryPointClass != null){
+            if(entryPoints.containsKey(entryPointClass)){
+                buildEntryPoint(v, entryPoints.get(entryPointClass));
+            } else {
+                //TODO: Should this be a different error?
+                throw new InternalCompilerError("No entry point found for class " + entryPointClass);
+            }
+        } else if (!entryPoints.isEmpty()) {
+            buildEntryPoint(v, entryPoints.values().iterator().next());
         }
 
         // Build ctor functions, if any.
@@ -49,7 +60,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     /**
      * Build a trampoline between the LLVM entry point and the Java entry point.
      */
-    private static void buidEntryPoint(LLVMTranslator v, LLVMValueRef javaEntryPoint) {
+    private static void buildEntryPoint(LLVMTranslator v, LLVMValueRef javaEntryPoint) {
         TypeSystem ts = v.typeSystem();
         LLVMTypeRef argType = v.utils.typeRef(ts.arrayOf(ts.String()));
         LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context), argType);

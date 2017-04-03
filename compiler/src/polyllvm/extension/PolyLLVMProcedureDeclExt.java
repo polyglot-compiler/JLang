@@ -70,7 +70,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 && n.formals().size() == 1
                 && n.formals().iterator().next().declType().equals(ts.arrayOf(ts.String()));
         if (isEntryPoint) {
-            v.addEntryPoint(funcRef);
+            v.addEntryPoint(funcRef, ((MethodInstance) n.procedureInstance()).container().toString());
         }
 
         v.pushFn(funcRef);

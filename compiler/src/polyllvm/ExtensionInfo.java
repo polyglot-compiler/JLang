@@ -5,7 +5,8 @@ import polyglot.ext.jl5.ast.JL5ExtFactory_c;
 import polyglot.ext.jl7.JL7ExtensionInfo;
 import polyglot.ext.jl7.ast.JL7ExtFactory_c;
 import polyglot.frontend.Scheduler;
-import polyglot.main.Options;
+import polyglot.main.*;
+import polyglot.main.Version;
 import polyllvm.ast.PolyLLVMExtFactory_c;
 import polyllvm.ast.PolyLLVMLang_c;
 import polyllvm.ast.PolyLLVMNodeFactory_c;
@@ -23,6 +24,12 @@ public class ExtensionInfo extends JL7ExtensionInfo {
     @Override
     public String defaultFileExtension() {
         return "java";
+    }
+
+    @Override
+    public String[] defaultFileExtensions() {
+        String ext = defaultFileExtension();
+        return new String[] { ext };
     }
 
     @Override
@@ -44,9 +51,12 @@ public class ExtensionInfo extends JL7ExtensionInfo {
     }
 
     @Override
-    public Options getOptions() {
-        Options o = super.getOptions();
-        o.output_ext = "ll";
-        return o;
+    protected Options createOptions() {
+        return new PolyLLVMOptions(this);
+    }
+
+    @Override
+    public Version version() {
+        return new polyllvm.Version();
     }
 }
