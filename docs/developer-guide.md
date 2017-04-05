@@ -97,7 +97,7 @@ block, and flags to handle returns. There are methods to set a return while in a
 Object Layout
 -------------
 
-Objects are layed out with a pointer to the dispatch vector, followed by the fields, as shown below.
+Objects are laid out with a pointer to the dispatch vector, followed by the fields, as shown below.
 The fields are ordered by class first, and within a class are in lexicographical order.
 
 | Dispatch Vector Pointer |
@@ -106,7 +106,7 @@ The fields are ordered by class first, and within a class are in lexicographical
 | Field 2                 |
 |            ⋮            |
 
-The dispatch vectors are layed out with a pointer to the interface table linked list first, followed by
+The dispatch vectors are laid out with a pointer to the interface table linked list first, followed by
 a pointer to the class type info, followed by the methods. The methods are ordered by class first, and
 within a class are ordered by visibility. Public methods are first, followed by package, protected, and
 lastly private. Within a visibility, the methods are ordered by name in lexicographical order.
@@ -118,7 +118,7 @@ lastly private. Within a visibility, the methods are ordered by name in lexicogr
 | Method 2                   |
 |            ⋮               |
 
-The interface tables are layed out with a pointer to the next interface table, followed by the
+The interface tables are laid out with a pointer to the next interface table, followed by the
 interface name as a null terminated string, follwed by the methods. The methods are ordered in the same order
 as in the dispatch vector
 
