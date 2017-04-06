@@ -15,7 +15,8 @@ public class PolyLLVMBooleanLitExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(LLVMTranslator v) {
         BooleanLit n = (BooleanLit) node();
         v.debugInfo.emitLocation(n);
-        LLVMValueRef val = LLVMConstInt(LLVMInt1TypeInContext(v.context), n.value() ? 1 : 0, /* sign-extend */ 0);
+        LLVMTypeRef type = v.utils.typeRef(n.type());
+        LLVMValueRef val = LLVMConstInt(type, n.value() ? 1 : 0, /*sign-extend*/ 0);
         v.addTranslation(node(), val);
         return super.translatePseudoLLVM(v);
     }
