@@ -15,7 +15,6 @@ public class PolyLLVMNullLitExt extends PolyLLVMExt {
     public Node translatePseudoLLVM(LLVMTranslator v) {
         NullLit n = (NullLit) node();
         v.debugInfo.emitLocation(n);
-
         v.addTranslation(n, LLVMConstNull(v.utils.typeRef(n.type())));
         return super.translatePseudoLLVM(v);
     }

@@ -6,11 +6,11 @@ public class System {
 
     public static class PrintStream {
         public static void print(Object o) {
-            print(o.toString());
+            print(o == null ? "null" : o.toString());
         }
 
         public static void println(Object o) {
-            println(o.toString());
+            println(o == null ? "null" : o.toString());
         }
 
         public static native void println();
