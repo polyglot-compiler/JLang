@@ -43,6 +43,10 @@ public class LLVMUtils {
         return ptrTypeRef(LLVMInt8TypeInContext(v.context));
     }
 
+    public LLVMTypeRef intType(int numBytes) {
+        return LLVMIntTypeInContext(v.context, numBytes);
+    }
+
     public LLVMTypeRef ptrTypeRef(LLVMTypeRef elemType) {
         return LLVMPointerType(elemType, Constants.LLVM_ADDR_SPACE);
     }
@@ -57,7 +61,6 @@ public class LLVMUtils {
     private LLVMTypeRef structTypeRef(ReferenceType rt) {
         return structTypeRef(rt, true);
     }
-
 
     private LLVMTypeRef structTypeRef(ReferenceType rt, boolean fillInStruct) {
         rt = v.jl5Utils.translateType(rt);
