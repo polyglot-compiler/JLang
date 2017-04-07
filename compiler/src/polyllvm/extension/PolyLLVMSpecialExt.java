@@ -17,21 +17,22 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
         Special n = (Special) node();
 
         if (n.qualifier() != null) {
-            throw new InternalCompilerError("Qualifier on this not supported yet (Java spec 15.8.4)");
+            // TODO
+            throw new InternalCompilerError("Qualifier on this not supported yet (JLS 15.8.4)");
         }
 
         v.debugInfo.emitLocation(n);
 
+        LLVMValueRef thisPtr = LLVMGetParam(v.currFn(), 0);
         if (n.kind() == Special.THIS) {
-            v.addTranslation(n, LLVMGetParam(v.currFn(), 0));
+            v.addTranslation(n, thisPtr);
         }
         else if (n.kind() == Special.SUPER) {
-            LLVMValueRef to_super = LLVMBuildBitCast(v.builder,
-                    LLVMGetParam(v.currFn(), 0), v.utils.typeRef(n.type()), "cast_to_super");
+            LLVMTypeRef type = v.utils.typeRef(n.type());
+            LLVMValueRef to_super = LLVMBuildBitCast(v.builder, thisPtr, type, "cast_to_super");
             v.addTranslation(n, to_super);
         }
 
         return super.translatePseudoLLVM(v);
     }
-
 }
