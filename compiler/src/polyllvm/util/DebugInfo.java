@@ -52,8 +52,6 @@ public class DebugInfo {
             LLVMAddModuleFlag(mod, Warning, "Dwarf Version", 2);
         }
         LLVMDisposeMessage(defaultTargetTriple);
-
-
     }
 
     public void pushScope(LLVMMetadataRef scope) {

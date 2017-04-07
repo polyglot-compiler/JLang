@@ -4,10 +4,9 @@ import polyglot.ast.ConstructorCall;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
-import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.LLVMTranslator;
 
+import java.lang.Override;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -18,7 +17,6 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
     @Override
     public Node translatePseudoLLVM(LLVMTranslator v) {
         ConstructorCall n = (ConstructorCall) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
 
         if (n.qualifier() != null) {
             throw new InternalCompilerError("Qualifier on this not supported yet (Java spec 15.8.4)");

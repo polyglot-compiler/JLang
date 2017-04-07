@@ -21,9 +21,4 @@ public class PolyLLVMNodeFactory_c extends JL7NodeFactory_c
     public PolyLLVMExtFactory PolyLLVMExtFactory() {
         return new PolyLLVMExtFactory_c();
     }
-
-    // TODO:  Implement factory methods for new AST nodes.
-    // TODO:  Override factory methods for overridden AST nodes.
-    // TODO:  Override factory methods for AST nodes with new extension nodes.
-
 }

@@ -9,6 +9,4 @@ public interface PolyLLVMNodeFactory extends JL7NodeFactory {
 
     // Factory method for Extension factory
     PolyLLVMExtFactory PolyLLVMExtFactory();
-
-    // TODO: Declare any factory methods for new AST nodes.
 }

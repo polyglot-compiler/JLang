@@ -4,7 +4,6 @@ import polyglot.ast.*;
 import polyglot.frontend.Job;
 import polyglot.types.SemanticException;
 import polyglot.types.TypeSystem;
-import polyglot.util.Position;
 import polyglot.visit.ContextVisitor;
 import polyglot.visit.NodeVisitor;
 
@@ -12,7 +11,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
- * Builds inline class field initializers at the top of each constructor.
+ * Builds class initializers at the top of each constructor.
  */
 public class FieldInitializerVisitor extends ContextVisitor {
     private Deque<ClassDecl> classes = new ArrayDeque<>();
@@ -44,7 +43,7 @@ public class FieldInitializerVisitor extends ContextVisitor {
                 if (firstStmt instanceof ConstructorCall) {
                     ConstructorCall call = (ConstructorCall) firstStmt;
                     if (call.kind().equals(ConstructorCall.THIS)) {
-                        // Avoid duplicating field initializer side-effects; the other
+                        // Avoid duplicating initializer side-effects; the other
                         // constructor will handle initialization.
                         return super.leaveCall(n);
                     }
@@ -52,22 +51,33 @@ public class FieldInitializerVisitor extends ContextVisitor {
             }
 
             // Build initialization assignments for each initialized non-static field.
+            Block initCode = nf.Block(n.position());
             for (ClassMember member : classes.getLast().body().members()) {
                 if (!(member instanceof FieldDecl))
                     continue;
                 FieldDecl fd = (FieldDecl) member;
                 if (fd.flags().isStatic() || fd.init() == null)
                     continue;
-                Position pos = fd.position();
-                Id id = nf.Id(pos, fd.name());
-                Special receiver = nf.Special(pos, Special.THIS);
-                Field field = nf.Field(pos, receiver, id);
+                Id id = nf.Id(fd.position(), fd.name());
+                Special receiver = nf.Special(fd.position(), Special.THIS);
+                Field field = nf.Field(fd.position(), receiver, id);
                 Expr copy = (Expr) fd.init().copy();
-                Assign assign = nf.FieldAssign(pos, field, Assign.ASSIGN, copy);
-                Eval eval = nf.Eval(pos, assign);
-                cd = (ConstructorDecl) cd.body(cd.body().prepend(eval));
+                Assign assign = nf.FieldAssign(fd.position(), field, Assign.ASSIGN, copy);
+                Eval eval = nf.Eval(fd.position(), assign);
+                initCode = initCode.append(eval);
             }
-            return cd;
+
+            // Build initialization blocks.
+            for (ClassMember member : classes.getLast().body().members()) {
+                if (member instanceof Initializer) {
+                    Initializer init = (Initializer) member;
+                    if (!init.flags().isStatic()) {
+                        initCode = initCode.append(init.body());
+                    }
+                }
+            }
+
+            return cd.body(cd.body().prepend(initCode));
         }
 
         return super.leaveCall(n);
