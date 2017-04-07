@@ -11,12 +11,7 @@ import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.extension.ClassObjects;
 import polyllvm.extension.PolyLLVMLocalDeclExt;
-import polyllvm.util.Constants;
-import polyllvm.util.DebugInfo;
-import polyllvm.util.LLVMUtils;
-import polyllvm.util.Triple;
-import polyllvm.util.PolyLLVMMangler;
-import polyllvm.util.JL5TypeUtils;
+import polyllvm.util.*;
 
 import java.lang.Override;
 import java.util.*;
@@ -24,7 +19,6 @@ import java.util.stream.Collectors;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
-// TODO: Can simplify things by extending ContextVisitor.
 public class LLVMTranslator extends NodeVisitor {
 
     private PolyLLVMNodeFactory nf;

@@ -6,7 +6,6 @@ import polyglot.types.ReferenceType;
 import polyglot.types.Type;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.LLVMTranslator;
 
 import java.util.List;

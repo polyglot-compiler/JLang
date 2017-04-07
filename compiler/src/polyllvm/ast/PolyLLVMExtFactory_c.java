@@ -71,11 +71,6 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
-    protected Ext extClassBodyImpl() {
-        return new PolyLLVMClassBodyExt();
-    }
-
-    @Override
     protected Ext extSourceFileImpl() {
         return new PolyLLVMSourceFileExt();
     }
@@ -173,11 +168,6 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     @Override
     protected Ext extProcedureDeclImpl() {
         return new PolyLLVMProcedureDeclExt();
-    }
-
-    @Override
-    protected Ext extConstructorDeclImpl() {
-        return new PolyLLVMConstructorDeclExt();
     }
 
     @Override

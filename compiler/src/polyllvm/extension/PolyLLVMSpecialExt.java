@@ -5,7 +5,6 @@ import polyglot.ast.Special;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.visit.LLVMTranslator;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -16,7 +15,6 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
     @Override
     public Node translatePseudoLLVM(LLVMTranslator v) {
         Special n = (Special) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
 
         if (n.qualifier() != null) {
             throw new InternalCompilerError("Qualifier on this not supported yet (Java spec 15.8.4)");

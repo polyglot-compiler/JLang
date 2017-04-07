@@ -6,7 +6,6 @@ import polyglot.ast.Receiver;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
@@ -40,7 +39,6 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
         } else {
             // Instance fields.
             v.utils.typeRef(target.type()); // Ensure the type body is set before GEP
-
             LLVMValueRef thisTranslation = v.getTranslation(target);
             int fieldIndex = v.getFieldIndex((ReferenceType) n.target().type(), n.fieldInstance());
             return v.utils.buildStructGEP(thisTranslation, 0, fieldIndex);

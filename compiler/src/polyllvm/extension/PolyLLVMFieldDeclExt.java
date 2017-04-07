@@ -19,7 +19,8 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
     public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
         FieldDecl n = (FieldDecl) node();
 
-        // Only static field declarations need a translation.
+        // Only static fields require a translation here;
+        // non-static field initializers are handled in constructors.
         if (n.flags().isStatic()) {
             ReferenceType classType = v.getCurrentClass().type().toReference();
             String mangledName = v.mangler.mangleStaticFieldName(classType, n);

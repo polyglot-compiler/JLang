@@ -62,7 +62,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         v.debugInfo.emitLocation(n);
         LLVMBuildBr(v.builder, body_entry);
-        LLVMPositionBuilderAtEnd(v.builder,body_entry);
+        LLVMPositionBuilderAtEnd(v.builder, body_entry);
 
         // Register as entry point if applicable.
         boolean isEntryPoint = n.name().equals("main")
