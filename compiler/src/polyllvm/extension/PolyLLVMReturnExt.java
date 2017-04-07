@@ -17,7 +17,7 @@ public class PolyLLVMReturnExt extends PolyLLVMExt {
         Return n = (Return) node();
         Expr e = n.expr();
         if (v.inTry()) {
-            if (e==null) {
+            if (e == null) {
                 v.setTryRet();
             } else {
                 v.setTryRet(v.getTranslation(e));

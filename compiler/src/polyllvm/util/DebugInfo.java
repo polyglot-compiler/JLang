@@ -131,10 +131,10 @@ public class DebugInfo {
         String name = f.name();
         Position p = f.position();
         Type t = f.type().type();
-        LLVMMetadataRef paramVar = LLVMDIBuilderCreateParameterVariable(diBuilder, currentScope(),
+        LLVMMetadataRef paramVar = LLVMDIBuilderCreateParameterVariable(
+                diBuilder, currentScope(),
                 name, index, createFile(), p.line(),
-                debugType(t), /*Always Preserve*/0, /*Flags*/0);
-
+                debugType(t), /*alwaysPreserve*/ 0, /*flags*/ 0);
         insertDeclareAtEnd(v, alloc, paramVar, p);
     }
 
@@ -142,10 +142,10 @@ public class DebugInfo {
         String name = n.name();
         Position p = n.position();
         Type t = n.type().type();
-        LLVMMetadataRef localVar = LLVMDIBuilderCreateAutoVariable(diBuilder, currentScope(),
+        LLVMMetadataRef localVar = LLVMDIBuilderCreateAutoVariable(
+                diBuilder, currentScope(),
                 name, createFile(), p.line(),
-                debugType(t), /*Always Preserve*/0, /*Flags*/0);
-
+                debugType(t), /*alwaysPreserve*/ 0, /*flags*/ 0);
         insertDeclareAtEnd(v, alloc, localVar, p);
     }
 

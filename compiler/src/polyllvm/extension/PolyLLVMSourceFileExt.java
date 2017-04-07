@@ -40,8 +40,8 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         // Call an entry point within the current module if possible.
         Map<String, LLVMValueRef> entryPoints = v.getEntryPoints();
         String entryPointClass = ((PolyLLVMOptions) Options.global).entryPointClass;
-        if(entryPointClass != null){
-            if(entryPoints.containsKey(entryPointClass)){
+        if (entryPointClass != null) {
+            if (entryPoints.containsKey(entryPointClass)) {
                 buildEntryPoint(v, entryPoints.get(entryPointClass));
             } else {
                 //TODO: Should this be a different error?

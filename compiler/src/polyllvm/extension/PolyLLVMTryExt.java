@@ -9,8 +9,6 @@ import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
-import java.io.Serializable;
-
 public class PolyLLVMTryExt extends PolyLLVMExt {
 
     @Override
@@ -44,7 +42,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                 exnType, LLVMConstBitCast(personalityFunc, v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context))),
                 n.catchBlocks().size(), "lpad");
         n.catchBlocks().stream().forEach(cb ->
-                LLVMAddClause(lpad, v.classObjs.classIdVarRef(v.mod, cb.catchType().toReference())));
+                LLVMAddClause(lpad, v.classObjs.classIdVarRef(cb.catchType().toReference())));
 
         v.debugInfo.emitLocation();
         LLVMValueRef exn_slot = PolyLLVMLocalDeclExt.createLocal(v, "exn_slot", v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
@@ -109,7 +107,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             LLVMPositionBuilderAtEnd(v.builder, dispatch);
             LLVMValueRef sel = LLVMBuildLoad(v.builder, ehselector_slot, "sel");
             LLVMValueRef typeid = v.utils.buildMethodCall(typeidFunc,
-                    v.classObjs.classIdVarRef(v.mod, cb.catchType().toReference()));
+                    v.classObjs.classIdVarRef(cb.catchType().toReference()));
             LLVMValueRef matches = LLVMBuildICmp(v.builder, LLVMIntEQ, sel, typeid, "matches");
             if (i ==n.catchBlocks().size() - 1) {
                 //Need to resume Exception handling if last catch does not match exception type

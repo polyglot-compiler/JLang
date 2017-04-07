@@ -327,7 +327,7 @@ public class LLVMUtils {
         List<MethodInstance> layout = v.layouts(rt).part1();
         ReferenceType finalRt = rt;
         LLVMValueRef[] methods = Stream.concat(
-                Stream.of(next, v.classObjs.classObjRef(v.mod, rt)),
+                Stream.of(next, v.classObjs.classObjRef(rt)),
                 IntStream.range(0, layout.size()).mapToObj(i -> {
                     MethodInstance mi = layout.get(i);
                     LLVMValueRef function = getFunction(v.mod, v.mangler.mangleProcedureName(mi),
@@ -352,7 +352,7 @@ public class LLVMUtils {
         }
         ReferenceType finalIt = it;
         LLVMValueRef[] methods = Stream.concat(
-                Stream.of(next, v.classObjs.classObjRef(v.mod, it)),
+                Stream.of(next, v.classObjs.classObjRef(it)),
                 IntStream.range(0, layout.size()).mapToObj(i -> {
                     MethodInstance mi = layout.get(i);
                     LLVMValueRef function = getFunction(v.mod, v.mangler.mangleProcedureName(mi),

@@ -28,15 +28,15 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         // External class object declarations.
         Type superType = n.type().superType();
         while (superType != null) {
-            v.classObjs.classIdDeclRef(v.mod, superType.toReference(), /* extern */ true);
+            v.classObjs.classIdDeclRef(superType.toReference(), /* extern */ true);
             superType = superType.toReference().superType();
         }
         n.interfaces().stream().map(tn -> tn.type().toReference())
-                               .map(rt -> v.classObjs.classIdDeclRef(v.mod, rt, /* extern */ true));
+                               .map(rt -> v.classObjs.classIdDeclRef(rt, /* extern */ true));
 
         // Class object for this class.
-        v.classObjs.classIdDeclRef(v.mod, n.type().toReference(), /* extern */ false);
-        v.classObjs.classObjRef(v.mod, n.type().toReference());
+        v.classObjs.classIdDeclRef(n.type().toReference(), /* extern */ false);
+        v.classObjs.classObjRef(n.type().toReference());
 
 
         //Set the DV for this class.
@@ -92,7 +92,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         ClassDecl n = (ClassDecl) node();
         if (n.flags().isInterface()) {
             // Interfaces need only declare a class id.
-            v.classObjs.classIdDeclRef(v.mod, n.type().toReference(), /* extern */ false);
+            v.classObjs.classIdDeclRef(n.type().toReference(), /* extern */ false);
             return n;
         }
         return super.overrideTranslatePseudoLLVM(v);

@@ -1,12 +1,12 @@
 package polyllvm.extension;
 
 import polyglot.types.ReferenceType;
-import polyglot.types.Type;
-import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.LLVMTranslator;
 
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -25,47 +25,36 @@ public final class ClassObjects {
     }
 
     public LLVMTypeRef classIdVarPtrTypeRef() {
-        return  v.utils.ptrTypeRef(classIdVarTypeRef());
+        return v.utils.ptrTypeRef(classIdVarTypeRef());
     }
 
-    public LLVMValueRef classIdDeclRef(LLVMModuleRef mod,
-                                                       ReferenceType rt,
-                                                       boolean extern) {
+    public LLVMValueRef classIdDeclRef(ReferenceType rt, boolean extern) {
         rt = v.jl5Utils.translateType(rt);
-        LLVMValueRef global = v.utils.getGlobal(mod, v.mangler.classIdName(rt), classIdVarTypeRef());
+        LLVMValueRef global = v.utils.getGlobal(v.mod, v.mangler.classIdName(rt), classIdVarTypeRef());
         if (!extern) {
             LLVMSetInitializer(global, LLVMConstInt(LLVMInt8TypeInContext(v.context), 0, /*sign-extend*/ 0));
         }
         return global;
     }
 
-    public LLVMValueRef classIdVarRef(LLVMModuleRef mod, ReferenceType rt) {
+    public LLVMValueRef classIdVarRef(ReferenceType rt) {
         rt = v.jl5Utils.translateType(rt);
-        return v.utils.getGlobal(mod, v.mangler.classIdName(rt), classIdVarTypeRef());
+        return v.utils.getGlobal(v.mod, v.mangler.classIdName(rt), classIdVarTypeRef());
     }
 
-    public LLVMValueRef classObjRef(LLVMModuleRef mod, ReferenceType rt) {
+    public LLVMValueRef classObjRef(ReferenceType rt) {
         rt = v.jl5Utils.translateType(rt);
-        List<LLVMValueRef> classObjPtrOperands = new ArrayList<>();
 
-        Type superType = rt;
-        while (superType != null) {
-            classObjPtrOperands.add(classIdVarRef(mod, superType.toReference()));
-            superType = superType.toReference().superType();
-        }
-
-        rt.interfaces().stream().map(it -> classIdVarRef(mod, it))
-                .forEach(classObjPtrOperands::add);
-
-        LLVMValueRef classObjPtrs = v.utils.buildConstArray(classIdVarPtrTypeRef(), classObjPtrOperands.toArray(new LLVMValueRef[1]));
+        LLVMValueRef[] classObjPtrs = classObjPtrs(rt).stream().toArray(LLVMValueRef[]::new);
+        LLVMValueRef classObjPtrsArr = v.utils.buildConstArray(classIdVarPtrTypeRef(), classObjPtrs);
         LLVMValueRef numSupertypes = LLVMConstInt(LLVMInt32TypeInContext(v.context), countSupertypes(rt), /*sign-extend*/ 0);
-        LLVMValueRef classObjStruct = v.utils.buildConstStruct(numSupertypes, classObjPtrs);
+        LLVMValueRef classObjStruct = v.utils.buildConstStruct(numSupertypes, classObjPtrsArr);
 
-        LLVMValueRef global = v.utils.getGlobal(mod, v.mangler.classObjName(rt), LLVMTypeOf(classObjStruct));
+        LLVMValueRef global = v.utils.getGlobal(v.mod, v.mangler.classObjName(rt), LLVMTypeOf(classObjStruct));
         LLVMSetExternallyInitialized(global, 0);
         LLVMSetInitializer(global, classObjStruct);
-        if(v.isInterface(rt)){
-          LLVMSetLinkage(global, LLVMLinkOnceODRLinkage);
+        if (v.isInterface(rt)) {
+            LLVMSetLinkage(global, LLVMLinkOnceODRLinkage);
         }
 
         return global;
@@ -73,13 +62,18 @@ public final class ClassObjects {
 
     /** Counts the supertypes for this reference type, including itself. */
     public int countSupertypes(ReferenceType rt) {
-        rt = v.jl5Utils.translateType(rt);
+        return classObjPtrs(rt).size();
+    }
 
-        int ret = 0;
-        for (Type s = rt; s != null; s = s.toReference().superType())
-            ++ret;
-        ret += rt.interfaces().size();
-        return ret;
+    public List<LLVMValueRef> classObjPtrs(ReferenceType rt) {
+        rt = v.jl5Utils.translateType(rt);
+        Set<LLVMValueRef> res = new LinkedHashSet<>();
+        res.add(classIdVarRef(rt));
+        if (rt.superType() != null)
+            res.addAll(classObjPtrs(rt.superType().toReference()));
+        for (ReferenceType it : rt.interfaces())
+            res.addAll(classObjPtrs(it));
+        return res.stream().collect(Collectors.toList());
     }
 
     public LLVMTypeRef classObjArrTypeRef(ReferenceType rt) {

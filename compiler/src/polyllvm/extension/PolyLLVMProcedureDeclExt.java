@@ -70,15 +70,14 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 && n.formals().size() == 1
                 && n.formals().iterator().next().declType().equals(ts.arrayOf(ts.String()));
         if (isEntryPoint) {
-            v.addEntryPoint(funcRef, ((MethodInstance) n.procedureInstance()).container().toString());
+            String className = ((MethodInstance) n.procedureInstance()).container().toString();
+            v.addEntryPoint(funcRef, className);
         }
 
         v.pushFn(funcRef);
         v.addTranslation(n, funcRef);
         return super.enterTranslatePseudoLLVM(v);
     }
-
-
 
     @Override
     public Node translatePseudoLLVM(LLVMTranslator v) {
@@ -90,12 +89,14 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         // Add void return if necessary.
         LLVMBasicBlockRef block = LLVMGetInsertBlock(v.builder);
         if (LLVMGetBasicBlockTerminator(block) == null) {
-            Type retType = n instanceof MethodDecl ? ((MethodDecl) n).returnType().type() : v.typeSystem().Void();
-
-            if (retType.isVoid())
+            Type retType = n instanceof MethodDecl
+                    ? ((MethodDecl) n).returnType().type()
+                    : v.typeSystem().Void();
+            if (retType.isVoid()) {
                 LLVMBuildRetVoid(v.builder);
-            else
+            } else {
                 LLVMBuildUnreachable(v.builder);
+            }
         }
 
         v.clearAllocations();
