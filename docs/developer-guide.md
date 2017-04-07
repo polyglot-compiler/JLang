@@ -17,23 +17,19 @@ Overview
 PolyLLVM is built as an extension to the
 [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler. As
 PolyLLVM is a backend only, it does not extend the parser, or the type
-system built into polyglot. PolyLLVM adds compiler passes for desugaring 
-and translating the code. PolyLLVM translates directly to LLVM IR using 
-the LLVM C API. 
+system built into polyglot. PolyLLVM adds compiler passes for desugaring
+and translating the code. PolyLLVM translates directly to LLVM IR using
+the LLVM C API.
 
 
 Desugaring Passes
 -----------------
 
-There are currently 2 desugaring passes implemented as a part of
-PolyLLVM: `StringConversionVisitor` and `MakeCastsExplicitVisitor`.
-The `StringConversionVisitor` pass converts String addition to 
-a call to the `concat` method, and handles converting expressions 
-to strings.  The `MakeCastsExplicit` adds explicit casts where the 
-Java language implicitly casts between two types. This includes adding 
-casts to generic types and theie erasure. These are polyglot visitors,
-so the logic for these transformations is in the extension objects for 
-the Java AST nodes.
+There are currently several desugaring passes that run prior to translation:
+- The `StringConversionVisitor` pass converts String addition to
+a call to the `concat` method, and handles converting expressions to strings.
+- The `MakeCastsExplicit` adds explicit casts where the Java language implicitly casts between two types. This includes adding casts to generic types and type erasure. These are polyglot visitors, so the logic for these transformations is in the extension objects for the Java AST nodes.
+- The `ClassInitializerVisitor` searches for class initializer blocks and inline field initializers, and prepends these to object constructors.
 
 
 LLVM API
@@ -41,38 +37,38 @@ LLVM API
 
 The LLVM C API is used through the JavaCPP presets bridge. The LLVM
 C API was extended to add support for constructing debug info metadata
-through the DIBuilder. 
+through the DIBuilder.
 
 Translation Pass
 ----------------
 
 The translation pass is also implemented as a polyglot visitor, but the
 visitor translator maintains additional state for translation. The main
-data structure the translator uses is a map from Java `Node` objects to 
+data structure the translator uses is a map from Java `Node` objects to
 `LLVMValueRef` objects. When translating a Java node, the translation for
-sub-nodes is retrieved using the `getTranslation` method. 
+sub-nodes is retrieved using the `getTranslation` method.
 
-The translator stores references to the LLVM Module that is being 
+The translator stores references to the LLVM Module that is being
 constructed, the LLVM Context, and the LLVM Builder. These are exposed as
-public instance variables so translations can easily add the necessary 
-declations to the module using the builder and context. The translator 
+public instance variables so translations can easily add the necessary
+declations to the module using the builder and context. The translator
 also exposes utility classes to aid translation.
 
 <!--TODO: Do we want a section on each of these?-->
-- LLVMUtils : Contains methods to construct LLVM IR constructs 
+- LLVMUtils : Contains methods to construct LLVM IR constructs
 such as creating structs, calls, and translating types into LLVM types
-- Debug Info : Contains methods to construct debugging information, 
+- Debug Info : Contains methods to construct debugging information,
 emmiting line number mappings, variable mappings to source code, and
 function mapping to source code
-- Class Objects : Construct runtime information needed for `instanceof` checks 
-- PolyLLVMMangler : Mangles symbol names 
+- Class Objects : Construct runtime information needed for `instanceof` checks
+- PolyLLVMMangler : Mangles symbol names
 - JL5TypeUtils : Contains methods to erase generic type variables
 and intantiations from types and MemberInstances
 
 The translator contains helper functions to translate objects, local variables and arguments, loops, labeled nodes, switch statements, and exceptions.
 
 ### Objects ###
-The translator exposes helper methods for obtaining field and method layouts as described below. It exposes methods to obtain the indices of fields in an object, and methods in the dispatch vector.  
+The translator exposes helper methods for obtaining field and method layouts as described below. It exposes methods to obtain the indices of fields in an object, and methods in the dispatch vector.
 
 ### Local Variables and Arguments ###
 
@@ -83,15 +79,15 @@ SSA form, except for memory locations.
 
 ### Loops, Labels and Switch ###
 
-The translator maintains a list of Java loop labels, and 
-their associated head and end label used for translation. 
-The translator exposes functions for entering and exiting 
+The translator maintains a list of Java loop labels, and
+their associated head and end label used for translation.
+The translator exposes functions for entering and exiting
 loops to maintain its internal data structure.
 
 ### Exceptions ###
 When translating `Try` nodes, the compiler must know the
 landing pad to jump to if an exception is raised, the finally
-block, and flags to handle returns. There are methods to set a return while in a try block, and methods to enter and exit a try block. 
+block, and flags to handle returns. There are methods to set a return while in a try block, and methods to enter and exit a try block.
 
 
 Object Layout
@@ -194,9 +190,15 @@ The function accesses the dispatch vector of `obj` to retrieve a table containin
 Arrays
 ------
 
-A Java array (e.g., `int[3]`) is implemented as a contiguous region of memory, with one word to hold the length. Arrays must behave as standard Java objects with respect to type information, so for simplicity arrays are implemented as a Java class (see `Array.java` in the `runtime` directory). The catch is that PolyLLVM allocate extra memory for `Array` instances in order to store data elements. This memory is accessed using native methods `clearEntries` and `setObjectEntry`.
+A Java array (e.g., `int[3]`) is implemented as a contiguous region of memory, with one word at the beginning to hold the length. Arrays must behave as standard Java objects with respect to type information, so for simplicity arrays are implemented as a Java class (see `Array.java` in the `runtime` directory). The catch is that PolyLLVM allocates extra memory for `Array` instances in order to store data elements.
 
-Currently, array elements are always one word in size.
+Arrays are packed, so that an array of chars (for example) uses only two bytes per element. The one exception is that boolean arrays use one byte per element as opposed to one bit. Packed arrays are implemented by casting the array data pointer (in LLVM IR) to the appropriate type before offsetting with an index.
+
+
+Strings
+-------
+
+Strings do not require significant special handling from the compiler; they simply rely on a backing char array. The exception is that string *literals* are translated into global constants. The linkage for string literals is such that there will only be one copy of a given string among files that are linked together; e.g., `"hello" == "hello"` will evaluate true.
 
 
 Native Code and Mangling

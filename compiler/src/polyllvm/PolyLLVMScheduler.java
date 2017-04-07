@@ -20,7 +20,7 @@ import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.util.JL5TypeUtils;
 import polyllvm.util.MultiGoal;
-import polyllvm.visit.FieldInitializerVisitor;
+import polyllvm.visit.ClassInitializerVisitor;
 import polyllvm.visit.LLVMTranslator;
 import polyllvm.visit.MakeCastsExplicitVisitor;
 import polyllvm.visit.StringConversionVisitor;
@@ -58,7 +58,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 job,
                 new VisitorGoal(job, new AutoBoxer(job, (JL5TypeSystem) ts, nf)),
                 new VisitorGoal(job, new LoopNormalizer(job, ts, nf)),
-                new VisitorGoal(job, new FieldInitializerVisitor(job, ts, nf)),
+                new VisitorGoal(job, new ClassInitializerVisitor(job, ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
                 new VisitorGoal(job, new StringConversionVisitor(ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.

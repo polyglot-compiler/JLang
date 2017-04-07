@@ -13,10 +13,10 @@ import java.util.Deque;
 /**
  * Builds class initializers at the top of each constructor.
  */
-public class FieldInitializerVisitor extends ContextVisitor {
+public class ClassInitializerVisitor extends ContextVisitor {
     private Deque<ClassDecl> classes = new ArrayDeque<>();
 
-    public FieldInitializerVisitor(Job job, TypeSystem ts, NodeFactory nf) {
+    public ClassInitializerVisitor(Job job, TypeSystem ts, NodeFactory nf) {
         super(job, ts, nf);
     }
 
