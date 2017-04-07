@@ -32,11 +32,11 @@ public class LLVMUtils {
     }
 
     public LLVMTypeRef llvmPtrSizedIntType() {
-        return LLVMIntTypeInContext(v.context, llvmPtrSize());
+        return LLVMIntTypeInContext(v.context, llvmPtrSize() * 8);
     }
 
     public static int llvmPtrSize() {
-        return 64;
+        return 8;
     }
 
     public LLVMTypeRef llvmBytePtr() {
