@@ -25,7 +25,9 @@ public class Constants {
     /**
      * Offset from start of array object to the contents
      */
-    public static int ARR_HEADER_SIZE = LLVMUtils.llvmPtrSize() + 4; // Type info and length.
+
+    // Type info and length. Due to alignment, length takes up quadword.
+    public static int ARR_HEADER_SIZE = LLVMUtils.llvmPtrSize()*2;
     public static final int ARR_ELEM_OFFSET = 2;
     public static final int ARR_LEN_OFFSET = 1;
 

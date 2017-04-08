@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "types.h"
+#include "gc.h"
 
 extern "C" {
 
@@ -12,6 +13,8 @@ jstring* Java_support_Factory_createString___3B(jarray* bytes);
 } // extern "C"
 
 int main(int argc, char** argv) {
+    GC_INIT(); //Initialize the garbage collector
+
     // Ignore the 0th argument, which is the name of the program.
     --argc, ++argv;
     jarray* jargs = Java_support_Factory_createObjectArray__I(argc);
@@ -19,7 +22,7 @@ int main(int argc, char** argv) {
         size_t len = strlen(argv[i]);
         jarray* jargBytes = Java_support_Factory_createByteArray__I(len);
         for (int j = 0; j < len; ++j)
-            ((int64_t*) &jargBytes->data)[j] = argv[i][j];
+            ((int8_t*) &jargBytes->data)[j] = argv[i][j];
         jstring* jargString = Java_support_Factory_createString___3B(jargBytes);
         ((jstring**) &jargs->data)[i] = jargString;
     }
