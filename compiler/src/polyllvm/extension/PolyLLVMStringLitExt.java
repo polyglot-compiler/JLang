@@ -8,7 +8,9 @@ import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -35,7 +37,8 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
                         .toArray(LLVMValueRef[]::new);
 
         LLVMValueRef charArray = v.utils.buildConstStruct(structBody);
-        String charVarName = "_char_arr_" + n.value();
+        String reduce = Arrays.asList(n.value().getBytes()).stream().map(b -> b + "_").reduce("", (s1, s2) -> s1 + s2);
+        String charVarName = "_char_arr_" + reduce;
         LLVMValueRef stringLit = v.utils.getGlobal(v.mod, charVarName, LLVMTypeOf(charArray));
         LLVMSetLinkage(stringLit, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringLit, charArray);
@@ -46,7 +49,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
                         .toArray(LLVMValueRef[]::new);
 
         LLVMValueRef string = v.utils.buildConstStruct(stringLitBody);
-        String stringVarName = "_string_lit_" + n.value();
+        String stringVarName = "_string_lit_" + reduce;
         LLVMValueRef stringVar = v.utils.getGlobal(v.mod, stringVarName, LLVMTypeOf(string));
         LLVMSetLinkage(stringVar, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringVar, string);
