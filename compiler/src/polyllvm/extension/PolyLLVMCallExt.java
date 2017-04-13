@@ -24,7 +24,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 		if (n.target() instanceof Special
 				&& ((Special) n.target()).kind().equals(Special.SUPER)) {
 			translateSuperCall(v);
-		} else if (n.target() instanceof Expr && v.isInterfaceCall(mi)) {
+		} else if (n.target() instanceof Expr && v.isInterface(n.target().type().toReference())) {
 			translateInterfaceMethodCall(v);
 		} else if (mi.flags().isStatic()) {
 			translateStaticCall(v);
