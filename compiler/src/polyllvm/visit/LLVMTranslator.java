@@ -203,8 +203,8 @@ public class LLVMTranslator extends NodeVisitor {
             return layouts.get(rt.toString());
         }
 
-        List<MethodInstance> dvLayout = new ArrayList<>();
-        List<FieldInstance> objLayout = new ArrayList<>();
+        List<MethodInstance> dvLayout = new LinkedList<>();
+        List<FieldInstance> objLayout = new LinkedList<>();
         HashSet<MethodInstance> overridenMethods =  new HashSet<>();
 
         if (isInterface(rt)) {
@@ -215,8 +215,7 @@ public class LLVMTranslator extends NodeVisitor {
                 Triple<List<MethodInstance>, List<MethodInstance>, List<FieldInstance>> classMembers = classMembers(superClass);
                 dvLayout.addAll(0, classMembers.part1());
                 objLayout.addAll(0, classMembers.part3());
-                classMembers.part2().stream().forEach(overridenMethods::add);
-
+                classMembers.part2().forEach(overridenMethods::add);
                 superClass = (ReferenceType) superClass.superType();
             }
         }

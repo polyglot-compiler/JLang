@@ -60,7 +60,7 @@ else
 	@echo "Building polyllvmc"
 	@ant -f $(BASE_DIR)
 	@echo "Compiling $<"
-	@$(BASE_DIR)/bin/polyllvmc -c $<
+	@$(BASE_DIR)/bin/polyllvmc -assert -c $<
 endif
 
 %.binary: %.ll

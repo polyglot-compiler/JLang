@@ -160,11 +160,4 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         else if (op == GT) return LLVMRealOGT;
         else throw new InternalCompilerError("This operation is not a comparison");
     }
-
-
-    private static int llvmLogicalCmpBinopCode(Operator op) {
-        if      (op == COND_AND) return LLVMAnd;
-        else if (op == COND_OR)  return LLVMOr;
-        else throw new InternalCompilerError("This operation is not a logical binop: " + op);
-    }
 }
