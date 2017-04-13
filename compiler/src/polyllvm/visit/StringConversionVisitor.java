@@ -4,27 +4,29 @@ import polyglot.ast.Binary;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyglot.ast.NodeFactory;
+import polyglot.frontend.Job;
+import polyglot.types.MethodInstance;
+import polyglot.types.SemanticException;
 import polyglot.types.Type;
 import polyglot.types.TypeSystem;
 import polyglot.util.Position;
+import polyglot.visit.ContextVisitor;
 import polyglot.visit.NodeVisitor;
+
+import java.util.Collections;
 
 /**
  * Converts string literals to constructor calls, makes string concatenation explicit,
  * and promotes the corresponding concatenation arguments to strings.
  */
-public class StringConversionVisitor extends NodeVisitor {
-    private TypeSystem ts;
-    private NodeFactory nf;
+public class StringConversionVisitor extends ContextVisitor {
 
-    public StringConversionVisitor(TypeSystem ts, NodeFactory nf) {
-        super(nf.lang());
-        this.ts = ts;
-        this.nf = nf;
+    public StringConversionVisitor(Job job, TypeSystem ts, NodeFactory nf) {
+        super(job, ts, nf);
     }
 
     @Override
-    public Node leave(Node old, Node n, NodeVisitor v) {
+    public Node leaveCall(Node old, Node n, NodeVisitor v) throws SemanticException {
         Position pos = n.position();
         if (n instanceof Binary) {
             Binary binary = (Binary) n;
@@ -34,7 +36,15 @@ public class StringConversionVisitor extends NodeVisitor {
                 if (binary.operator().equals(Binary.ADD)) {
                     l = convertToString(l);
                     r = convertToString(r);
-                    return nf.Call(pos, l, nf.Id(pos, "concat"), r).type(ts.String());
+                    MethodInstance mi = ts.findMethod(
+                            ts.String(),
+                            "concat",
+                            Collections.singletonList(ts.String()),
+                            context().currentClass(),
+                            /*fromClient*/ true);
+                    return nf.Call(pos, l, nf.Id(pos, "concat"), r)
+                            .methodInstance(mi)
+                            .type(ts.String());
                 }
             }
         }

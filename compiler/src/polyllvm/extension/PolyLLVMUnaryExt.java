@@ -21,12 +21,12 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         // Override for increment operations on lvalues (++, --, etc.).
         Unary n = (Unary) node();
         Operator op = n.operator();
         if (!Arrays.asList(PRE_INC, PRE_DEC, POST_INC, POST_DEC).contains(op))
-            return super.overrideTranslatePseudoLLVM(v); // Translate other operations normally.
+            return super.overrideTranslateLLVM(v); // Translate other operations normally.
 
         boolean pre = op.equals(PRE_INC) || op.equals(PRE_DEC);
         boolean inc = op.equals(PRE_INC) || op.equals(POST_INC);
@@ -56,7 +56,7 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
     }
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         Unary n = (Unary) node();
         Type t = n.type();
         Operator op = n.operator();
@@ -88,7 +88,7 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         }
 
         v.addTranslation(n, translation);
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
 }

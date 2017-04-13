@@ -9,6 +9,7 @@ import polyglot.visit.NodeVisitor;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 
 /**
  * Builds class initializers at the top of each constructor.
@@ -36,6 +37,7 @@ public class ClassInitializerVisitor extends ContextVisitor {
             ConstructorDecl cd = (ConstructorDecl) n;
 
             // Check for a call to another constructor.
+            Block initCode = nf.Block(n.position());
             if (!cd.body().statements().isEmpty()) {
                 // The JLS ensures that a constructor call will be the first statement
                 // in a constructor body, if any.
@@ -46,12 +48,17 @@ public class ClassInitializerVisitor extends ContextVisitor {
                         // Avoid duplicating initializer side-effects; the other
                         // constructor will handle initialization.
                         return super.leaveCall(n);
+                    } else if (call.kind().equals(ConstructorCall.SUPER)) {
+                        // Initialization code should go after the call to super.
+                        initCode = initCode.append(firstStmt);
+                        List<Stmt> stmts = cd.body().statements();
+                        Block sansSuper = cd.body().statements(stmts.subList(1, stmts.size()));
+                        cd = (ConstructorDecl) cd.body(sansSuper);
                     }
                 }
             }
 
             // Build initialization assignments for each initialized non-static field.
-            Block initCode = nf.Block(n.position());
             for (ClassMember member : classes.getLast().body().members()) {
                 if (!(member instanceof FieldDecl))
                     continue;

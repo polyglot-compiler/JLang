@@ -15,7 +15,7 @@ public class PolyLLVMSwitchExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         Switch n = (Switch) node();
         LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
 

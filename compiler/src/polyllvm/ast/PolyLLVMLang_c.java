@@ -39,19 +39,19 @@ public class PolyLLVMLang_c extends J7Lang_c implements PolyLLVMLang {
     }
 
     @Override
-    public LLVMTranslator enterTranslatePseudoLLVM(Node n,
-                                                   LLVMTranslator v) {
-        return PolyLLVMOps(n).enterTranslatePseudoLLVM(v);
+    public LLVMTranslator enterTranslateLLVM(Node n,
+                                             LLVMTranslator v) {
+        return PolyLLVMOps(n).enterTranslateLLVM(v);
     }
 
     @Override
-    public Node translatePseudoLLVM(Node n, LLVMTranslator v) {
-        return PolyLLVMOps(n).translatePseudoLLVM(v);
+    public Node leaveTranslateLLVM(Node n, LLVMTranslator v) {
+        return PolyLLVMOps(n).leaveTranslateLLVM(v);
     }
 
     @Override
-    public Node overrideTranslatePseudoLLVM(Node n, LLVMTranslator v) {
-        return PolyLLVMOps(n).overrideTranslatePseudoLLVM(v);
+    public Node overrideTranslateLLVM(Node n, LLVMTranslator v) {
+        return PolyLLVMOps(n).overrideTranslateLLVM(v);
     }
 
     @Override

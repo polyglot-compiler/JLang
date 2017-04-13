@@ -12,13 +12,13 @@ public class PolyLLVMBooleanLitExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         BooleanLit n = (BooleanLit) node();
         v.debugInfo.emitLocation(n);
         LLVMTypeRef type = v.utils.typeRef(n.type());
         LLVMValueRef val = LLVMConstInt(type, n.value() ? 1 : 0, /*sign-extend*/ 0);
         v.addTranslation(node(), val);
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
     @Override

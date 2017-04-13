@@ -16,13 +16,13 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public LLVMTranslator enterTranslatePseudoLLVM(LLVMTranslator v) {
+    public LLVMTranslator enterTranslateLLVM(LLVMTranslator v) {
         v.enterClass((ClassDecl) node());
-        return super.enterTranslatePseudoLLVM(v);
+        return super.enterTranslateLLVM(v);
     }
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         ClassDecl n = (ClassDecl) node();
 
         // External class object declarations.
@@ -85,19 +85,19 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         }
 
         v.leaveClass();
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         ClassDecl n = (ClassDecl) node();
         if (n.flags().isInterface()) {
             // Interfaces need only declare a class id.
             v.classObjs.classIdDeclRef(n.type().toReference(), /* extern */ false);
             return n;
         }
-        return super.overrideTranslatePseudoLLVM(v);
+        return super.overrideTranslateLLVM(v);
 
     }
 }

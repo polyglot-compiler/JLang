@@ -4,15 +4,10 @@ import polyglot.ast.New;
 import polyglot.ast.Node;
 import polyglot.types.ConstructorInstance;
 import polyglot.types.ReferenceType;
-import polyglot.types.Type;
 import polyglot.util.SerialVersionUID;
 import polyllvm.util.Constants;
-import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.LLVMTranslator;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -21,7 +16,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         New n = (New) node();
 
         ConstructorInstance ci = n.constructorInstance();
@@ -29,7 +24,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         int mallocSize =
                 (v.layouts(classtype).part2().size() + /*Allocate space for DV ptr*/ 1) * 8;
         translateWithSize(v, LLVMConstInt(LLVMInt64TypeInContext(v.context), mallocSize, 0));
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
     // Visits children.

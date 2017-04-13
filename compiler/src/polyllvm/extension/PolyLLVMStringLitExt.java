@@ -18,7 +18,7 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMStringLitExt extends PolyLLVMExt {
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         StringLit n = (StringLit) node();
         char[] chars = n.value().toCharArray();
 
@@ -55,6 +55,6 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         LLVMSetInitializer(stringVar, string);
 
         v.addTranslation(n,LLVMConstBitCast(stringVar, v.utils.typeRef(n.type())));
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 }

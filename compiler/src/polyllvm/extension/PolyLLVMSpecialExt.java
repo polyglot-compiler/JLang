@@ -13,7 +13,7 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         Special n = (Special) node();
 
         if (n.qualifier() != null) {
@@ -33,6 +33,6 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
             v.addTranslation(n, to_super);
         }
 
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 }

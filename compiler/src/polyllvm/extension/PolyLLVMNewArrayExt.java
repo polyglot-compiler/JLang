@@ -20,7 +20,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         NewArray n = (NewArray) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
@@ -35,7 +35,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
             v.addTranslation(n, v.getTranslation(newArray));
         }
 
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
     public static New translateNewArray(LLVMTranslator v,
@@ -50,14 +50,14 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
 
         int sizeOfType;
         if (dims.size() == 1) {
-            arrayConstructor = getArrayConstructor(arrType, Dimensions.SINGLE);
+            arrayConstructor = getArrayConstructor(arrType, /*multidimensional*/ false);
             args.add(dims.iterator().next());
             sizeOfType = v.utils.sizeOfType(baseType);
         }
         else {
             ArrayInit arrayDims = (ArrayInit) nf.ArrayInit(pos, dims)
                                                 .type(v.typeSystem().Int().arrayOf());
-            arrayConstructor = getArrayConstructor(arrType, Dimensions.MULTI);
+            arrayConstructor = getArrayConstructor(arrType, /*multidimensional*/ true);
             args.add(arrayDims);
             sizeOfType = LLVMUtils.llvmPtrSize();
         }
@@ -80,12 +80,8 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         return newArray;
     }
 
-    private enum Dimensions {
-        SINGLE, MULTI
-    }
-
     private static ConstructorInstance getArrayConstructor(ReferenceType arrayType,
-                                                           Dimensions dimensions) {
+                                                           boolean multidimensional) {
         // See the support.Array class implemented in the runtime.
         // Both array constructors have only one formal type; int for single-dimensional arrays,
         // and int[] for multidimensional arrays.
@@ -93,9 +89,9 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
             if (member instanceof ConstructorInstance) {
                 ConstructorInstance constructor = (ConstructorInstance) member;
                 Type formalType = constructor.formalTypes().iterator().next();
-                if (formalType instanceof ArrayType && dimensions == Dimensions.MULTI) {
+                if (formalType instanceof ArrayType && multidimensional) {
                     return constructor;
-                } else if (formalType instanceof PrimitiveType && dimensions == Dimensions.SINGLE) {
+                } else if (formalType instanceof PrimitiveType && !multidimensional) {
                     return constructor;
                 }
             }

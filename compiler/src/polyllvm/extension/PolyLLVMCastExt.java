@@ -20,7 +20,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         // TODO: Double-check semantics with http://docs.oracle.com/javase/specs/jls/se7/html/jls-5.html
 
         Cast n = (Cast) node();
@@ -40,7 +40,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             } else {
                 v.addTranslation(n, exprRef);
             }
-            return super.translatePseudoLLVM(v);
+            return super.leaveTranslateLLVM(v);
         }
 
         v.debugInfo.emitLocation(n);
@@ -120,6 +120,6 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         else {
             throw new InternalCompilerError("Unhandled cast: " + n);
         }
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 }

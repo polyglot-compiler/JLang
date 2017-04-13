@@ -13,7 +13,6 @@ import polyllvm.extension.ClassObjects;
 import polyllvm.extension.PolyLLVMLocalDeclExt;
 import polyllvm.util.*;
 
-import java.lang.Override;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -97,17 +96,17 @@ public class LLVMTranslator extends NodeVisitor {
 
     @Override
     public Node leave(Node old, Node n, NodeVisitor v) {
-        return lang().translatePseudoLLVM(n, this);
+        return lang().leaveTranslateLLVM(n, this);
     }
 
     @Override
     public NodeVisitor enter(Node n) {
-        return lang().enterTranslatePseudoLLVM(n, this);
+        return lang().enterTranslateLLVM(n, this);
     }
 
     @Override
     public Node override(Node n) {
-        return lang().overrideTranslatePseudoLLVM(n, this);
+        return lang().overrideTranslateLLVM(n, this);
     }
 
     /**
@@ -204,8 +203,8 @@ public class LLVMTranslator extends NodeVisitor {
             return layouts.get(rt.toString());
         }
 
-        List<MethodInstance> dvLayout = new ArrayList<>();
-        List<FieldInstance> objLayout = new ArrayList<>();
+        List<MethodInstance> dvLayout = new LinkedList<>();
+        List<FieldInstance> objLayout = new LinkedList<>();
         HashSet<MethodInstance> overridenMethods =  new HashSet<>();
 
         if (isInterface(rt)) {
@@ -216,8 +215,7 @@ public class LLVMTranslator extends NodeVisitor {
                 Triple<List<MethodInstance>, List<MethodInstance>, List<FieldInstance>> classMembers = classMembers(superClass);
                 dvLayout.addAll(0, classMembers.part1());
                 objLayout.addAll(0, classMembers.part3());
-                classMembers.part2().stream().forEach(overridenMethods::add);
-
+                classMembers.part2().forEach(overridenMethods::add);
                 superClass = (ReferenceType) superClass.superType();
             }
         }
@@ -407,9 +405,6 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     public LLVMBasicBlockRef getContinueBlock(String label) {
-        System.out.println(label);
-        System.out.println(continueBlocks.size());
-        System.out.println(loopLabelMap.size());
         return label == null ? continueBlocks.getLast() : loopLabelMap.get(label).head;
     }
 

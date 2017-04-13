@@ -18,7 +18,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         Binary n = (Binary) node();
         Type resType = n.type();
         Operator op = n.operator();
@@ -29,11 +29,11 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
             return n;
         }
 
-        return super.overrideTranslatePseudoLLVM(v);
+        return super.overrideTranslateLLVM(v);
     }
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         Binary n = (Binary) node();
         Type resType = n.type();
         LLVMValueRef left = v.getTranslation(n.left());
@@ -45,7 +45,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         v.debugInfo.emitLocation(n);
         LLVMValueRef res = computeBinop(v.builder, op, left, right, resType, elemType);
         v.addTranslation(n, res);
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
     @Override
@@ -159,12 +159,5 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         else if (op == GE) return LLVMRealOGE;
         else if (op == GT) return LLVMRealOGT;
         else throw new InternalCompilerError("This operation is not a comparison");
-    }
-
-
-    private static int llvmLogicalCmpBinopCode(Operator op) {
-        if      (op == COND_AND) return LLVMAnd;
-        else if (op == COND_OR)  return LLVMOr;
-        else throw new InternalCompilerError("This operation is not a logical binop: " + op);
     }
 }

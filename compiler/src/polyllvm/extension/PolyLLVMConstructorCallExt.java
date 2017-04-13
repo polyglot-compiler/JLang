@@ -15,7 +15,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         ConstructorCall n = (ConstructorCall) node();
 
         if (n.qualifier() != null) {

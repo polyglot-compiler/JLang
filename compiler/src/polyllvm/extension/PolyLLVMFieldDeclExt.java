@@ -16,7 +16,7 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         FieldDecl n = (FieldDecl) node();
 
         // Only static fields require a translation here;
@@ -48,6 +48,6 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
             v.addTranslation(n, global);
         }
 
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 }

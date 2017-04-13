@@ -13,7 +13,7 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMConditionalExt extends PolyLLVMExt {
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         Conditional n = (Conditional) node();
 
         v.debugInfo.emitLocation(n);

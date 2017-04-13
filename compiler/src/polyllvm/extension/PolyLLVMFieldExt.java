@@ -16,12 +16,12 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         Field n = (Field) node();
         LLVMValueRef ptr = translateAsLValue(v); // Emits debug info.
         LLVMValueRef load = LLVMBuildLoad(v.builder, ptr, "load_field");
         v.addTranslation(n, load);
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
     @Override

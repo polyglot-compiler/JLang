@@ -15,7 +15,7 @@ public class PolyLLVMAssignExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         Assign n = (Assign) node();
         Assign.Operator op = n.operator();
         Type type = n.right().type();
