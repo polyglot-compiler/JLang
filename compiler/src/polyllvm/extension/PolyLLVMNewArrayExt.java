@@ -20,7 +20,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         NewArray n = (NewArray) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
@@ -35,7 +35,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
             v.addTranslation(n, v.getTranslation(newArray));
         }
 
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
     public static New translateNewArray(LLVMTranslator v,

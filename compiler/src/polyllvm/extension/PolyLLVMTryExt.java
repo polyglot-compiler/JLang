@@ -12,7 +12,7 @@ import polyllvm.visit.LLVMTranslator;
 public class PolyLLVMTryExt extends PolyLLVMExt {
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         Try n = (Try) node();
         v.enterTry();
 

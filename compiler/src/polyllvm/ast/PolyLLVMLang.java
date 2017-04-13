@@ -9,12 +9,11 @@ import static org.bytedeco.javacpp.LLVM.*;
 
 public interface PolyLLVMLang extends J7Lang {
 
-    LLVMTranslator enterTranslatePseudoLLVM(Node n,
-                                            LLVMTranslator v);
+    LLVMTranslator enterTranslateLLVM(Node n, LLVMTranslator v);
 
-    Node translatePseudoLLVM(Node n, LLVMTranslator v);
+    Node leaveTranslateLLVM(Node n, LLVMTranslator v);
 
-    Node overrideTranslatePseudoLLVM(Node n, LLVMTranslator LLVMTranslator);
+    Node overrideTranslateLLVM(Node n, LLVMTranslator LLVMTranslator);
 
     void translateLLVMConditional(Node n, LLVMTranslator v,
                                   LLVM.LLVMBasicBlockRef trueBlock,

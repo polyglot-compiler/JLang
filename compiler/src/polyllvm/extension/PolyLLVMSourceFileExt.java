@@ -21,7 +21,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public LLVMTranslator enterTranslatePseudoLLVM(LLVMTranslator v) {
+    public LLVMTranslator enterTranslateLLVM(LLVMTranslator v) {
         // Add a calloc declaration to the current module (declare i8* @GC_malloc(i64)).
         LLVMTypeRef retType = v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context));
         LLVMTypeRef sizeType = v.utils.llvmPtrSizedIntType();
@@ -35,7 +35,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     }
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
 
         // Call an entry point within the current module if possible.
         Map<String, LLVMValueRef> entryPoints = v.getEntryPoints();
@@ -54,7 +54,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         // Build ctor functions, if any.
         buildCtors(v);
 
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
     /**

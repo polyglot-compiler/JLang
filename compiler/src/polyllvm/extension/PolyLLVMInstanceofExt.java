@@ -13,14 +13,14 @@ public class PolyLLVMInstanceofExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         Instanceof n = (Instanceof) node();
         LLVMValueRef obj =  v.getTranslation(n.expr());
         ReferenceType rt = n.compareType().type().toReference();
         v.debugInfo.emitLocation(n);
         LLVMValueRef res = buildInstanceOf(v, obj, rt);
         v.addTranslation(n, res);
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
     static LLVMValueRef buildInstanceOf(LLVMTranslator v, LLVMValueRef obj, ReferenceType rt) {

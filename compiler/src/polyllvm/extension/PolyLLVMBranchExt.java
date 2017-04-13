@@ -12,7 +12,7 @@ public class PolyLLVMBranchExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         Branch n = (Branch) node();
         v.debugInfo.emitLocation(n);
         LLVMBasicBlockRef block = n.kind() == Branch.CONTINUE
@@ -20,6 +20,6 @@ public class PolyLLVMBranchExt extends PolyLLVMExt {
                 : v.getBreakBlock(n.label());
         LLVMValueRef br = LLVMBuildBr(v.builder, block);
         v.addTranslation(n, br);
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 }

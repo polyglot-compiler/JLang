@@ -13,11 +13,11 @@ public class PolyLLVMFloatLitExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         FloatLit n = (FloatLit) node();
         v.debugInfo.emitLocation(n);
         LLVMTypeRef type = v.utils.typeRef(n.type());
         v.addTranslation(n, LLVMConstReal(type, n.value()));
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 }

@@ -14,7 +14,7 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         While n = (While) node();
 
         LLVMBasicBlockRef head = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "head");

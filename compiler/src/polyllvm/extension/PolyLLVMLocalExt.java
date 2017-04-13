@@ -13,13 +13,13 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         Local n = (Local) node();
         v.debugInfo.emitLocation(n);
         LLVMValueRef ptr = translateAsLValue(v);
         LLVMValueRef val = LLVMBuildLoad(v.builder, ptr, "load_" + n.name());
         v.addTranslation(n, val);
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
     @Override

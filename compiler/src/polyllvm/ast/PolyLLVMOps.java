@@ -11,11 +11,11 @@ import static org.bytedeco.javacpp.LLVM.*;
  */
 public interface PolyLLVMOps extends NodeOps {
 
-    LLVMTranslator enterTranslatePseudoLLVM(LLVMTranslator v);
+    LLVMTranslator enterTranslateLLVM(LLVMTranslator v);
 
-    Node translatePseudoLLVM(LLVMTranslator v);
+    Node leaveTranslateLLVM(LLVMTranslator v);
 
-    Node overrideTranslatePseudoLLVM(LLVMTranslator v);
+    Node overrideTranslateLLVM(LLVMTranslator v);
 
     /**
      * Adds the conditional translation of this node to the current block. If this node

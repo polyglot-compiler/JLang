@@ -13,7 +13,6 @@ import polyllvm.extension.ClassObjects;
 import polyllvm.extension.PolyLLVMLocalDeclExt;
 import polyllvm.util.*;
 
-import java.lang.Override;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -97,17 +96,17 @@ public class LLVMTranslator extends NodeVisitor {
 
     @Override
     public Node leave(Node old, Node n, NodeVisitor v) {
-        return lang().translatePseudoLLVM(n, this);
+        return lang().leaveTranslateLLVM(n, this);
     }
 
     @Override
     public NodeVisitor enter(Node n) {
-        return lang().enterTranslatePseudoLLVM(n, this);
+        return lang().enterTranslateLLVM(n, this);
     }
 
     @Override
     public Node override(Node n) {
-        return lang().overrideTranslatePseudoLLVM(n, this);
+        return lang().overrideTranslateLLVM(n, this);
     }
 
     /**
@@ -407,9 +406,6 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     public LLVMBasicBlockRef getContinueBlock(String label) {
-        System.out.println(label);
-        System.out.println(continueBlocks.size());
-        System.out.println(loopLabelMap.size());
         return label == null ? continueBlocks.getLast() : loopLabelMap.get(label).head;
     }
 

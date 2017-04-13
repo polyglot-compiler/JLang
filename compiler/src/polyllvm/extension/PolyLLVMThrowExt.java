@@ -11,7 +11,7 @@ import polyllvm.visit.LLVMTranslator;
 public class PolyLLVMThrowExt extends PolyLLVMExt {
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         Throw n = (Throw) node();
         LLVMValueRef allocateExnFunc = v.utils.getFunction(v.mod, Constants.ALLOCATE_EXCEPTION,
                 v.utils.functionType(v.utils.llvmBytePtr(), v.utils.llvmBytePtr()));
@@ -21,6 +21,6 @@ public class PolyLLVMThrowExt extends PolyLLVMExt {
         LLVMValueRef exn = v.utils.buildMethodCall(allocateExnFunc, translation);
         v.utils.buildProcedureCall(throwExnFunc, exn);
         LLVMBuildUnreachable(v.builder);
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 }

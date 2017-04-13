@@ -12,10 +12,10 @@ public class PolyLLVMNullLitExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         NullLit n = (NullLit) node();
         v.debugInfo.emitLocation(n);
         v.addTranslation(n, LLVMConstNull(v.utils.typeRef(n.type())));
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 }

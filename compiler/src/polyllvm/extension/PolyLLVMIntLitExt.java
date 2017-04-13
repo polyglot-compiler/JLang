@@ -12,13 +12,13 @@ public class PolyLLVMIntLitExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         IntLit n = (IntLit) node();
         assert n.type().isLongOrLess();
         v.debugInfo.emitLocation(n);
         LLVMTypeRef type = v.utils.typeRef(n.type());
         LLVMValueRef res = LLVMConstInt(type, n.value(), /*sign-extend*/ 0);
         v.addTranslation(n, res);
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 }

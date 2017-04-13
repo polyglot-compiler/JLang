@@ -7,7 +7,6 @@ import polyglot.ast.Special;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
-import polyllvm.util.PolyLLVMMangler;
 import polyllvm.visit.LLVMTranslator;
 
 import java.util.stream.Stream;
@@ -17,7 +16,7 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 	private static final long serialVersionUID = SerialVersionUID.generate();
 
-	@Override public Node translatePseudoLLVM(LLVMTranslator v) {
+	@Override public Node leaveTranslateLLVM(LLVMTranslator v) {
 		Call n = (Call) node();
 		MethodInstance mi = n.methodInstance();
 
@@ -34,7 +33,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 			translateMethodCall(v);
 		}
 
-		return super.translatePseudoLLVM(v);
+		return super.leaveTranslateLLVM(v);
 	}
 
 	private void translateStaticCall(LLVMTranslator v) {

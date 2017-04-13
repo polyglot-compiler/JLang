@@ -19,7 +19,7 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslatePseudoLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         ArrayAccess n = (ArrayAccess) node();
         LLVMValueRef ptr = translateAsLValue(v); // Emits debug location.
         LLVMValueRef load = LLVMBuildLoad(v.builder, ptr, "arr_load");

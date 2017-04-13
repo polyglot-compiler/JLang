@@ -12,7 +12,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         LocalDecl n = (LocalDecl) node();
 
         LLVMBasicBlockRef currentBlock = LLVMGetInsertBlock(v.builder);
@@ -28,14 +28,14 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
         LLVMPositionBuilderAtEnd(v.builder, currentBlock);
 
         if (n.init() == null) {
-            return super.translatePseudoLLVM(v);
+            return super.leaveTranslateLLVM(v);
         }
 
         LLVMValueRef init = v.getTranslation(n.init());
 
         v.debugInfo.emitLocation(n);
         v.addTranslation(n, LLVMBuildStore(v.builder, init, alloc));
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 
     /**

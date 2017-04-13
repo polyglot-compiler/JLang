@@ -9,10 +9,10 @@ public class PolyLLVMLabeledExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public LLVMTranslator enterTranslatePseudoLLVM(
+    public LLVMTranslator enterTranslateLLVM(
             LLVMTranslator v) {
         Labeled n = (Labeled) node();
         v.pushLoopLabel(n.label());
-        return super.enterTranslatePseudoLLVM(v);
+        return super.enterTranslateLLVM(v);
     }
 }

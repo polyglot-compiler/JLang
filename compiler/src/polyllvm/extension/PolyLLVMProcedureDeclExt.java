@@ -23,12 +23,12 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
     }
 
     @Override
-    public LLVMTranslator enterTranslatePseudoLLVM(LLVMTranslator v) {
+    public LLVMTranslator enterTranslateLLVM(LLVMTranslator v) {
         ProcedureDecl n = (ProcedureDecl) node();
         TypeSystem ts = v.typeSystem();
         ProcedureInstance pi = n.procedureInstance();
         if (!containsCode(pi))
-            return super.enterTranslatePseudoLLVM(v); // Ignore native methods.
+            return super.enterTranslateLLVM(v); // Ignore native methods.
 
         // Build function type.
         Type retType = n instanceof MethodDecl ? ((MethodDecl) n).returnType().type() : ts.Void();
@@ -76,15 +76,15 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         v.pushFn(funcRef);
         v.addTranslation(n, funcRef);
-        return super.enterTranslatePseudoLLVM(v);
+        return super.enterTranslateLLVM(v);
     }
 
     @Override
-    public Node translatePseudoLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         ProcedureDecl n = (ProcedureDecl) node();
         ProcedureInstance pi = n.procedureInstance();
         if (!containsCode(pi))
-            return super.translatePseudoLLVM(v); // Ignore native methods.
+            return super.leaveTranslateLLVM(v); // Ignore native methods.
 
         // Add void return if necessary.
         LLVMBasicBlockRef block = LLVMGetInsertBlock(v.builder);
@@ -102,6 +102,6 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         v.clearAllocations();
         v.popFn();
         v.debugInfo.popScope();
-        return super.translatePseudoLLVM(v);
+        return super.leaveTranslateLLVM(v);
     }
 }
