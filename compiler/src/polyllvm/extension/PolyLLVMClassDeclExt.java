@@ -38,21 +38,23 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         v.classObjs.classIdDeclRef(n.type().toReference(), /* extern */ false);
         v.classObjs.classObjRef(n.type().toReference());
 
-
-        //Set the DV for this class.
         List<? extends ReferenceType> interfaces = v.allInterfaces(n.type());
-        LLVMValueRef[] dvMethods;
-        if (interfaces.size() > 0) {
-            LLVMValueRef itGlobal =  LLVMConstBitCast(v.utils.getItGlobal(interfaces.get(0), n.type()),
-                    v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
-            dvMethods = v.utils.dvMethods(n.type(), itGlobal);
-        } else {
-            dvMethods = v.utils.dvMethods(n.type());
-        }
 
-        LLVMValueRef dvGlobal = v.utils.getDvGlobal(n.type());
-        LLVMValueRef initStruct = v.utils.buildConstStruct(dvMethods);
-        LLVMSetInitializer(dvGlobal, initStruct);
+        if(!n.flags().isAbstract()) {
+            //Set the DV for this class.
+            LLVMValueRef[] dvMethods;
+            if (interfaces.size() > 0) {
+                LLVMValueRef itGlobal = LLVMConstBitCast(v.utils.getItGlobal(interfaces.get(0), n.type()),
+                        v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
+                dvMethods = v.utils.dvMethods(n.type(), itGlobal);
+            } else {
+                dvMethods = v.utils.dvMethods(n.type());
+            }
+
+            LLVMValueRef dvGlobal = v.utils.getDvGlobal(n.type());
+            LLVMValueRef initStruct = v.utils.buildConstStruct(dvMethods);
+            LLVMSetInitializer(dvGlobal, initStruct);
+        }
 
         //Setup the Interface Tables for this class
         for (int i=0; i< interfaces.size(); i++) {
