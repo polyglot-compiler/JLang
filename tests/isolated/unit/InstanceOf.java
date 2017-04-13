@@ -18,9 +18,9 @@ class InstanceOf implements IA {
         System.out.println(o instanceof IE);
         System.out.println(o instanceof IF);
     }
-}
 
-class Subclass extends InstanceOf implements IE {}
+    static class Subclass extends InstanceOf implements IE {}
+}
 
 interface IA {}
 interface IB {}
