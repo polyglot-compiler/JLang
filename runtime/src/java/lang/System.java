@@ -33,4 +33,13 @@ public class System {
         public static native void println(double n);
         public static native void print(double n);
     }
+
+    public static SecurityManager getSecurityManager() {
+        return null;
+    }
+
+    public static native long currentTimeMillis();
+    public static native int identityHashCode(Object x);
+
+
 }

@@ -1,9 +1,6 @@
 package polyllvm.visit;
 
-import polyglot.ast.Binary;
-import polyglot.ast.Expr;
-import polyglot.ast.Node;
-import polyglot.ast.NodeFactory;
+import polyglot.ast.*;
 import polyglot.frontend.Job;
 import polyglot.types.MethodInstance;
 import polyglot.types.SemanticException;
@@ -65,9 +62,13 @@ public class StringConversionVisitor extends ContextVisitor {
                     .type(ts.String());
         }
         else {
-            // TODO: According to the JLS, technically want "null" if toString() returns null.
             assert t.isReference();
-            return nf.Call(pos, e, nf.Id(pos, "toString")).type(ts.String());
+            Expr toString = nf.Call(pos, e, nf.Id(pos, "toString")).type(ts.String());
+            Conditional nullCheck = nf.Conditional(pos,
+                    nf.Binary(pos, toString, Binary.EQ, nf.NullLit(pos).type(ts.String())).type(ts.Boolean()),
+                    nf.StringLit(pos, "null").type(ts.String()),
+                    toString);
+            return nullCheck;
         }
     }
 }

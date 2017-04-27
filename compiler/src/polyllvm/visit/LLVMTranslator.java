@@ -63,17 +63,6 @@ public class LLVMTranslator extends NodeVisitor {
     public void addCtor(LLVMValueRef ctor) { ctors.add(ctor); }
     public List<LLVMValueRef> getCtors() { return ListUtil.copy(ctors, false); }
 
-    /**
-     * Flag to determine if in Try, and landingpad to jump to if in a Try
-     */
-    private boolean inTry = false;
-    private LLVMBasicBlockRef lpad = null;
-    private LLVMBasicBlockRef tryFinally = null;
-    private LLVMValueRef retFlag = null;
-    private LLVMValueRef ret = null;
-    private boolean retIsVoid = false;
-    private boolean isRet = false;
-
     public LLVMTranslator(String filePath, LLVMContextRef context, LLVMModuleRef mod, LLVMBuilderRef builder,
                           PolyLLVMNodeFactory nf, TypeSystem ts) {
         super(nf.lang());
@@ -205,7 +194,7 @@ public class LLVMTranslator extends NodeVisitor {
 
         List<MethodInstance> dvLayout = new LinkedList<>();
         List<FieldInstance> objLayout = new LinkedList<>();
-        HashSet<MethodInstance> overridenMethods =  new HashSet<>();
+        List<MethodInstance> overridenMethods =  new LinkedList<>();
 
         if (isInterface(rt)) {
             dvLayout = interfaceLayout(rt);
@@ -215,7 +204,7 @@ public class LLVMTranslator extends NodeVisitor {
                 Triple<List<MethodInstance>, List<MethodInstance>, List<FieldInstance>> classMembers = classMembers(superClass);
                 dvLayout.addAll(0, classMembers.part1());
                 objLayout.addAll(0, classMembers.part3());
-                classMembers.part2().forEach(overridenMethods::add);
+                classMembers.part2().forEach(mi -> overridenMethods.add(0, mi));
                 superClass = (ReferenceType) superClass.superType();
             }
         }
@@ -277,39 +266,7 @@ public class LLVMTranslator extends NodeVisitor {
             }
         }
         Comparator<MethodInstance> methodComparator =
-                new Comparator<MethodInstance>() {
-                    @Override
-                    public int compare(MethodInstance o1, MethodInstance o2) {
-                        if (visibilityInt(o1) != visibilityInt(o2)) {
-                            return visibilityInt(o2) - visibilityInt(o1);
-                        }
-                        else {
-                            return o1.name().compareTo(o2.name());
-                        }
-                    }
-
-                    private int visibilityInt(MethodInstance md) {
-                        int mdVisibility;
-                        if (md.flags().isPublic()) {
-                            mdVisibility = 3;
-                        }
-                        else if (md.flags().isPackage()) {
-                            mdVisibility = 2;
-                        }
-                        else if (md.flags().isProtected()) {
-                            mdVisibility = 1;
-                        }
-                        else if (md.flags().isPrivate()) {
-                            mdVisibility = 0;
-                        }
-                        else {
-                            throw new InternalCompilerError("Method " + md
-                                    + " does not have a know visibility modifier");
-                        }
-                        return mdVisibility;
-
-                    }
-                };
+                (o1, o2) -> o1.name().compareTo(o2.name());
         Comparator<FieldInstance> fieldComparator =
                 (o1, o2) -> o1.name().compareTo(o2.name());
 
@@ -350,7 +307,10 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     public LLVMValueRef getLocalVariable(String var) {
-        return allocations.get(var);
+        LLVMValueRef allocation = allocations.get(var);
+        if (allocation == null)
+            throw new InternalCompilerError("Local variable " +var + " has no allocation");
+        return allocation;
     }
 
     public void clearAllocations() {
@@ -444,7 +404,7 @@ public class LLVMTranslator extends NodeVisitor {
         List<FieldInstance> objectLayout = layouts(type).part2();
         for (int i = 0; i < objectLayout.size(); i++) {
             if (objectLayout.get(i).equals(fieldInstance)) {
-                return i + 1;
+                return i + Constants.OBJECT_HEADER_SIZE;
             }
         }
         throw new InternalCompilerError("The field " + fieldInstance
@@ -452,92 +412,107 @@ public class LLVMTranslator extends NodeVisitor {
 
     }
 
+    /**
+     * Flag to determine if in Try, and landingpad to jump to if in a Try
+     */
+//    private int tryDepth = 0;
+//    private LLVMBasicBlockRef lpad = null;
+//    private LLVMBasicBlockRef tryFinally = null;
+//    private LLVMValueRef retFlag = null;
+//    private LLVMValueRef ret = null;
+//    private boolean retIsVoid = false;
+//    private boolean isRet = false;
+
+
+    private static Deque<ExceptionRecord> exceptionRecords = new ArrayDeque<>();
+
+    private class ExceptionRecord{
+        private boolean inTry = true;
+        private LLVMBasicBlockRef lpad = null;
+        private LLVMBasicBlockRef tryFinally = null;
+        private LLVMValueRef retFlag = null;
+        private LLVMValueRef ret = null;
+        private boolean retIsVoid = false;
+        private boolean isRet = false;
+
+        ExceptionRecord(){
+            lpad = LLVMAppendBasicBlockInContext(context, currFn(), "lpad");
+            tryFinally = LLVMAppendBasicBlockInContext(context, currFn(), "try_finally");
+        }
+    }
+
     /*
      * Methods for implementing exceptions
      */
     public void enterTry() {
-        inTry = true;
-        lpad = LLVMAppendBasicBlockInContext(context, currFn(), "lpad");
-        tryFinally = LLVMAppendBasicBlockInContext(context, currFn(), "try_finally");
+        exceptionRecords.push(new ExceptionRecord());
     }
 
     public void exitTry() {
-        inTry = false;
-        lpad = null;
+        ExceptionRecord currTry = exceptionRecords.peek();
+        currTry.inTry = false;
+        currTry.lpad = null;
     }
 
     public boolean inTry() {
-        return inTry;
+        return exceptionRecords.peek() != null && exceptionRecords.peek().inTry;
     }
 
     public LLVMBasicBlockRef currLpad() {
-        assert inTry;
-        return lpad;
+        assert inTry();
+        return exceptionRecords.peek().lpad;
     }
 
     public void setLpad(LLVMBasicBlockRef lpad) {
-        assert inTry;
-        this.lpad = lpad;
+        assert inTry();
+        exceptionRecords.peek().lpad = lpad;
     }
 
     public LLVMBasicBlockRef currFinally() {
-        assert inTry;
-        return tryFinally;
+        assert inTry();
+        return exceptionRecords.peek().tryFinally;
     }
-
-    public void setTryFinally(LLVMBasicBlockRef tryFinally) {
-        assert inTry;
-        this.tryFinally = tryFinally;
-    }
-
 
     public void setTryRet() {
-        isRet = true;
-        retIsVoid = true;
-        if (retFlag == null) {
-            retFlag = PolyLLVMLocalDeclExt.createLocal(this, "ret_flag", LLVMInt1TypeInContext(context));
+        ExceptionRecord currTry = exceptionRecords.peek();
+        currTry.isRet = true;
+        currTry.retIsVoid = true;
+        if (currTry.retFlag == null) {
+            currTry.retFlag = PolyLLVMLocalDeclExt.createLocal(this, "ret_flag", LLVMInt1TypeInContext(context));
         }
-        LLVMBuildStore(builder, LLVMConstInt(LLVMInt1TypeInContext(context), 1, /*sign-extend*/ 0), retFlag);
+        LLVMBuildStore(builder, LLVMConstInt(LLVMInt1TypeInContext(context), 1, /*sign-extend*/ 0), currTry.retFlag);
     }
 
     public void setTryRet(LLVMValueRef v) {
-        isRet = true;
-        retIsVoid = false;
-        if (ret == null) {
-            ret = PolyLLVMLocalDeclExt.createLocal(this, "ret", LLVMTypeOf(v));
+        ExceptionRecord currTry = exceptionRecords.peek();
+        currTry.isRet = true;
+        currTry.retIsVoid = false;
+        if (currTry.ret == null) {
+            currTry.ret = PolyLLVMLocalDeclExt.createLocal(this, "ret", LLVMTypeOf(v));
         }
-        if (retFlag == null) {
-            retFlag = PolyLLVMLocalDeclExt.createLocal(this, "ret_flag", LLVMInt1TypeInContext(context));
+        if (currTry.retFlag == null) {
+            currTry.retFlag = PolyLLVMLocalDeclExt.createLocal(this, "ret_flag", LLVMInt1TypeInContext(context));
         }
-        LLVMBuildStore(builder, LLVMConstInt(LLVMInt1TypeInContext(context), 1, /*sign-extend*/ 0), retFlag);
-        LLVMBuildStore(builder, v, ret);
+        LLVMBuildStore(builder, LLVMConstInt(LLVMInt1TypeInContext(context), 1, /*sign-extend*/ 0), currTry.retFlag);
+        LLVMBuildStore(builder, v, currTry.ret);
     }
 
     public void emitTryRet() {
-        if (isRet) {
+        ExceptionRecord currTry = exceptionRecords.pop();
+        if (currTry.isRet) {
             LLVMBasicBlockRef doRet = LLVMAppendBasicBlockInContext(context, currFn(), "do_ret");
             LLVMBasicBlockRef noRet = LLVMAppendBasicBlockInContext(context, currFn(), "no_ret");
 
-            LLVMBuildCondBr(builder, LLVMBuildLoad(builder, retFlag, "ret_flag_load"), doRet, noRet);
+            LLVMBuildCondBr(builder, LLVMBuildLoad(builder, currTry.retFlag, "ret_flag_load"), doRet, noRet);
 
             LLVMPositionBuilderAtEnd(builder, doRet);
-            if (retIsVoid) {
+            if (currTry.retIsVoid) {
                 LLVMBuildRetVoid(builder);
             } else {
-                LLVMBuildRet(builder, LLVMBuildLoad(builder, ret, "ret_load"));
+                LLVMBuildRet(builder, LLVMBuildLoad(builder, currTry.ret, "ret_load"));
             }
 
             LLVMPositionBuilderAtEnd(builder, noRet);
         }
-
-
-        tryFinally = null;
-        retFlag = null;
-        ret = null;
-        retIsVoid = false;
-        isRet = false;
-        inTry = false;
-        lpad = null;
-
     }
 }

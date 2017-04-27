@@ -7,9 +7,7 @@ import polyglot.util.InternalCompilerError;
 import polyglot.util.Pair;
 import polyllvm.visit.LLVMTranslator;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -271,7 +269,7 @@ public class LLVMUtils {
         LLVMTypeRef dvType = structTypeRefOpaque(v.mangler.dispatchVectorTypeName(rt));
         LLVMTypeRef dvPtrType = LLVMPointerType(dvType, Constants.LLVM_ADDR_SPACE);
         return Stream.concat(
-                Stream.of(dvPtrType),
+                Stream.of(dvPtrType, llvmBytePtr()), //Slot for synchronization variable ptr
                 layouts.part2().stream().map(fi -> typeRef(fi.type(), false))
         ).toArray(LLVMTypeRef[]::new);
     }
@@ -342,22 +340,27 @@ public class LLVMUtils {
         usingClass = v.jl5Utils.translateType(usingClass);
 
         List<MethodInstance> layout = v.layouts(it).part1();
+        List<MethodInstance> updatedLayout = new ArrayList<>();
         List<MethodInstance> classLayout = v.layouts(usingClass).part1();
+
         for (int i=0; i< layout.size(); i++) {
             MethodInstance mi = layout.get(i);
             MethodInstance miClass = v.methodInList(mi, classLayout); // Find the method in the class layout to generate correct mangled name
             if(miClass != null) {
-                layout.set(i, miClass);
+                updatedLayout.add(miClass);
+            } else {
+                updatedLayout.add(mi);
             }
         }
         ReferenceType finalIt = it;
         LLVMValueRef[] methods = Stream.concat(
                 Stream.of(next, v.classObjs.classObjRef(it)),
-                IntStream.range(0, layout.size()).mapToObj(i -> {
-                    MethodInstance mi = layout.get(i);
+                IntStream.range(0, updatedLayout.size()).mapToObj(i -> {
+                    MethodInstance mi = updatedLayout.get(i);
+                    MethodInstance interfaceMi = layout.get(i);
                     LLVMValueRef function = getFunction(v.mod, v.mangler.mangleProcedureName(mi),
                             methodType(mi.container(), mi.returnType(), mi.formalTypes()));
-                    return LLVMConstBitCast(function, ptrTypeRef(methodType(finalIt, mi.returnType(), mi.formalTypes())));
+                    return LLVMConstBitCast(function, ptrTypeRef(methodType(finalIt, interfaceMi.returnType(), interfaceMi.formalTypes())));
                 })).toArray(LLVMValueRef[]::new);
         return methods;
     }

@@ -7,6 +7,7 @@ import polyglot.ast.Special;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
+import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
 import java.util.stream.Stream;
@@ -103,7 +104,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
 		LLVMValueRef thisTranslation = v.getTranslation(n.target());
 
-		LLVMValueRef dvDoublePtr = v.utils.buildStructGEP(thisTranslation, 0, 0);
+		LLVMValueRef dvDoublePtr = v.utils.buildStructGEP(thisTranslation, 0, Constants.DISPATCH_VECTOR_INDEX);
 
 		LLVMValueRef dvPtr = LLVMBuildLoad(v.builder, dvDoublePtr, "dv_ptr");
 

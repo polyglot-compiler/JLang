@@ -35,14 +35,19 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             LLVMBuildBr(v.builder, tryFinally);
         }
 
-        LLVMPositionBuilderAtEnd(v.builder, v.currLpad());
         LLVMValueRef personalityFunc = v.utils.getFunction(v.mod, Constants.PERSONALITY_FUNC,
                 v.utils.functionType(LLVMInt32TypeInContext(v.context)));
+
+        LLVMPositionBuilderAtEnd(v.builder, v.currLpad());
         LLVMValueRef lpad = LLVMBuildLandingPad(v.builder,
                 exnType, LLVMConstBitCast(personalityFunc, v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context))),
                 n.catchBlocks().size(), "lpad");
-        n.catchBlocks().stream().forEach(cb ->
-                LLVMAddClause(lpad, v.classObjs.classIdVarRef(cb.catchType().toReference())));
+        if(n.catchBlocks().isEmpty()){
+            LLVMSetCleanup(lpad,/*true*/1);
+        } else {
+            n.catchBlocks().forEach(cb ->
+                    LLVMAddClause(lpad, v.classObjs.classIdVarRef(cb.catchType().toReference())));
+        }
 
         v.debugInfo.emitLocation();
         LLVMValueRef exn_slot = PolyLLVMLocalDeclExt.createLocal(v, "exn_slot", v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
@@ -72,7 +77,6 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         LLVMBasicBlockRef dispatch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "catch_dispatch");
         LLVMBuildBr(v.builder, dispatch);
 
-        //TODO: need a cleanup lpad for catch blocks
         v.setLpad(LLVMAppendBasicBlockInContext(v.context, v.currFn(), "cleanup_lpad"));
         LLVMPositionBuilderAtEnd(v.builder, v.currLpad());
         LLVMValueRef cleanup_lpad = LLVMBuildLandingPad(v.builder,
@@ -117,6 +121,11 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                 LLVMBuildCondBr(v.builder, matches, catchBlock, dispatch);
             }
         }
+        if (LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(v.builder)) == null) {
+            //No catch blocks, need to execute finally and resume exception propogation
+            LLVMBuildBr(v.builder, setFinallyFlag);
+        }
+
 
         v.exitTry();
 
@@ -127,7 +136,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         }
 
         // Add branch to exception resumption or after try if necessary.
-        if (LLVMGetBasicBlockTerminator(tryFinally) == null) {
+        if (LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(v.builder)) == null) {
             LLVMBuildCondBr(v.builder, LLVMBuildLoad(v.builder, finally_flag, "flag"), ehResume, tryEnd);
         }
 
