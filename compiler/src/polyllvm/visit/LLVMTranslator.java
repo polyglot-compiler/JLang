@@ -412,21 +412,10 @@ public class LLVMTranslator extends NodeVisitor {
 
     }
 
-    /**
-     * Flag to determine if in Try, and landingpad to jump to if in a Try
-     */
-//    private int tryDepth = 0;
-//    private LLVMBasicBlockRef lpad = null;
-//    private LLVMBasicBlockRef tryFinally = null;
-//    private LLVMValueRef retFlag = null;
-//    private LLVMValueRef ret = null;
-//    private boolean retIsVoid = false;
-//    private boolean isRet = false;
-
-
+    // Stack of landing pads, returns, etc.
     private static Deque<ExceptionRecord> exceptionRecords = new ArrayDeque<>();
 
-    private class ExceptionRecord{
+    private class ExceptionRecord {
         private boolean inTry = true;
         private LLVMBasicBlockRef lpad = null;
         private LLVMBasicBlockRef tryFinally = null;
@@ -435,7 +424,7 @@ public class LLVMTranslator extends NodeVisitor {
         private boolean retIsVoid = false;
         private boolean isRet = false;
 
-        ExceptionRecord(){
+        ExceptionRecord() {
             lpad = LLVMAppendBasicBlockInContext(context, currFn(), "lpad");
             tryFinally = LLVMAppendBasicBlockInContext(context, currFn(), "try_finally");
         }
