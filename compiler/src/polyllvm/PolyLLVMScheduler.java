@@ -68,9 +68,6 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 new VisitorGoal(job, new StringConversionVisitor(job, ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.
                 new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf, new JL5TypeUtils(ts, nf)))
-
-
-//                , new VisitorGoal(job, new PrintVisitor())
                 );
         try {
             prep.addPrerequisiteGoal(Serialized(job), this);
