@@ -1,9 +1,11 @@
 package polyllvm.extension;
 
+import polyglot.ast.ClassBody;
 import polyglot.ast.New;
 import polyglot.ast.Node;
 import polyglot.types.ConstructorInstance;
 import polyglot.types.ReferenceType;
+import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
@@ -22,7 +24,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         ConstructorInstance ci = n.constructorInstance();
         ReferenceType classtype = ci.container();
         int mallocSize =
-                (v.layouts(classtype).part2().size() + /*Allocate space for DV ptr*/ 1) * 8;
+                (v.layouts(classtype).part2().size() + /*Allocate space for Header*/ Constants.OBJECT_HEADER_SIZE) * 8;
         translateWithSize(v, LLVMConstInt(LLVMInt64TypeInContext(v.context), mallocSize, 0));
         return super.leaveTranslateLLVM(v);
     }
@@ -48,7 +50,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         //Bitcast object
         LLVMValueRef cast = LLVMBuildBitCast(v.builder, obj, v.utils.typeRef(classtype), "obj_cast");
         //Set the Dispatch vector
-        LLVMValueRef gep = v.utils.buildStructGEP(cast, 0, 0);
+        LLVMValueRef gep = v.utils.buildStructGEP(cast, 0, Constants.DISPATCH_VECTOR_INDEX);
         LLVMValueRef dvGlobal = v.utils.getDvGlobal(classtype);
         LLVMBuildStore(v.builder, dvGlobal, gep);
 

@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include <stdint.h>
+#include <pthread.h>
 
 extern "C" {
 
@@ -25,10 +26,16 @@ public:
     type_info* type_info;
 };
 
+class sync_vars {
+	pthread_mutex_t* mutex;
+	pthread_cond_t *condition_variable;
+};
+
 // Header of a Java object instance.
 class jobject {
 public:
     dv* dv;
+    sync_vars* sync_vars;
 };
 
 class jarray : public jobject {

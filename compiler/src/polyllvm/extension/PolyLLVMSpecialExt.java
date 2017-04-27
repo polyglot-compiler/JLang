@@ -18,7 +18,7 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
 
         if (n.qualifier() != null) {
             // TODO
-            throw new InternalCompilerError("Qualifier on this not supported yet (JLS 15.8.4)");
+            throw new InternalCompilerError("Qualifier on this not supported yet (JLS 15.8.4): " + n);
         }
 
         v.debugInfo.emitLocation(n);

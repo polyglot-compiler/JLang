@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -27,17 +28,19 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         LLVMValueRef length = LLVMConstInt(v.utils.intType(32), chars.length, /*sign-extend*/ 0);
         List<LLVMValueRef> charTranslated = new ArrayList<>();
 
+        LLVMValueRef sync_vars = LLVMConstInt(v.utils.llvmPtrSizedIntType(), 0, /*sign-extend*/0);
+
         // Add an i32 for alignment.
         charTranslated.add(LLVMConstInt(v.utils.intType(32), 0, 0));
         for (char c : chars) {
             charTranslated.add(LLVMConstInt(v.utils.intType(16), c, 0));
         }
         LLVMValueRef[] structBody =
-                Stream.concat(Stream.of(dvGlobal, length), charTranslated.stream())
+                Stream.concat(Stream.of(dvGlobal, sync_vars, length), charTranslated.stream())
                         .toArray(LLVMValueRef[]::new);
 
         LLVMValueRef charArray = v.utils.buildConstStruct(structBody);
-        String reduce = Arrays.asList(n.value().getBytes()).stream().map(b -> b + "_").reduce("", (s1, s2) -> s1 + s2);
+        String reduce = intStream(n.value().getBytes()).mapToObj(b -> b + "_").reduce("", (s1, s2) -> s1 + s2);
         String charVarName = "_char_arr_" + reduce;
         LLVMValueRef stringLit = v.utils.getGlobal(v.mod, charVarName, LLVMTypeOf(charArray));
         LLVMSetLinkage(stringLit, LLVMLinkOnceODRLinkage);
@@ -45,7 +48,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
 
         LLVMValueRef dvString = v.utils.getDvGlobal(n.type().toReference());
         LLVMValueRef[] stringLitBody =
-                Stream.of(dvString, LLVMConstBitCast(stringLit, v.utils.typeRef(arrayType)))
+                Stream.of(dvString, sync_vars, LLVMConstBitCast(stringLit, v.utils.typeRef(arrayType)))
                         .toArray(LLVMValueRef[]::new);
 
         LLVMValueRef string = v.utils.buildConstStruct(stringLitBody);
@@ -56,5 +59,9 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
 
         v.addTranslation(n,LLVMConstBitCast(stringVar, v.utils.typeRef(n.type())));
         return super.leaveTranslateLLVM(v);
+    }
+
+    public static IntStream intStream(byte[] array) {
+        return IntStream.range(0, array.length).map(idx -> array[idx]);
     }
 }

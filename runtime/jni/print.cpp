@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <stdio.h>
+#include <string.h>
 #include "types.h"
 
 static void printJavaString(jstring* s) {
@@ -89,6 +90,61 @@ void Java_java_lang_System_PrintStream_print__D(jdouble n) {
 
 void Java_java_lang_System_PrintStream_println__D(jdouble n) {
     printf("%f\n", n);
+}
+
+
+//TEMP: Remove when java library included properly.
+jarray* Java_support_Factory_createByteArray__I(jint len);
+jarray* Java_support_Factory_createObjectArray__I(jint len);
+jstring* Java_support_Factory_createString___3B(jarray* bytes);
+
+jstring* cstring_to_jstring(const char* cstr){
+    size_t len = strlen(cstr);
+    jarray* jargBytes = Java_support_Factory_createByteArray__I(len);
+    for (int j = 0; j < len; ++j)
+        ((int8_t*) &jargBytes->data)[j] = cstr[j];
+    jstring* jstr = Java_support_Factory_createString___3B(jargBytes);
+    return jstr;
+}
+
+jstring* Java_java_lang_String_valueOf__Z(jbool b){
+   const char* str = b ? "true" : "false";
+   return cstring_to_jstring(str);
+}
+
+jstring* Java_java_lang_String_valueOf__B(jbyte n){
+    size_t len = 5; //Max of 4 chars for byte, 1 char for null terminator
+    char str[len];
+    sprintf(str, "%d", n);
+    return cstring_to_jstring(str);
+}
+
+jstring* Java_java_lang_String_valueOf__C(jchar c){
+    size_t len = 3; //Max of 2 chars for jchar (as java characters are 2 bytes), 1 char for null terminator
+    char str[len];
+    sprintf(str, "%lc", c);
+    return cstring_to_jstring(str);
+}
+
+jstring* Java_java_lang_String_valueOf__S(jshort n){
+    size_t len = 7; //Max of 6 chars for short, 1 char for null terminator
+    char str[len];
+    sprintf(str, "%d", n);
+    return cstring_to_jstring(str);
+}
+
+jstring* Java_java_lang_String_valueOf__I(jint n){
+    size_t len = 12; //Max of 11 chars for int, 1 char for null terminator
+    char str[len];
+    sprintf(str, "%d", n);
+    return cstring_to_jstring(str);
+}
+
+jstring* Java_java_lang_String_valueOf__J(jlong n){
+    size_t len = 21; //Max of 20 chars for long, 1 char for null terminator
+    char str[len];
+    sprintf(str, "%" PRId64, n);
+    return cstring_to_jstring(str);
 }
 
 } // extern "C"
