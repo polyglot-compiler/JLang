@@ -7,6 +7,19 @@ Since Polyglot translates extended Java code into vanilla Java ASTs, PolyLLVM sh
 
 A user manual and developer guide can be found on the PolyLLVM [website](http://dbd64.github.io/PolyLLVM/).
 
+
+Quick Start Guide
+-----------------
+
+PolyLLVM has the following dependencies, which you will need to download and install prior to use.
+
+- [Ant](http://ant.apache.org) is required to build the compiler. It is best installed through your preferred package manager.
+
+- [LLVM](http://llvm.org) and [Clang](https://clang.llvm.org) are needed to build the runtime and create binaries from Java programs. PolyLLVM is tested with version 4.0.0, which you can download [here](http://releases.llvm.org/download.html#4.0.0).
+
+- The [Boehm-Demers-Weiser garbage collector](http://www.hboehm.info/gc/) is also required for creating binaries. PolyLLVM is tested with version 7.6.0, which you can download [here](http://www.hboehm.info/gc/gc_source/).
+
+
 Navigating the Codebase
 -----------------------
 
