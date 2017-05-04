@@ -1,0 +1,26 @@
+#!/bin/sh
+
+DIR="$(dirname "$0")"
+RUNTIME=$DIR/../runtime
+
+out=a.out
+args=
+while true; do
+    case "$1" in
+        "")
+            break
+            ;;
+        -o)
+            shift
+            out="$1"
+            shift
+            ;;
+        *)
+            args="$args $1"
+            shift
+            ;;
+    esac
+done
+
+$DIR/polyllvmc $args && \
+clang++ -Wno-override-module -L/usr/local/lib/ -lgc -o "$out" "$RUNTIME"/runtime.o ${args//.java/.ll}
