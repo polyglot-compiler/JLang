@@ -495,7 +495,7 @@ _Unwind_Reason_Code __jxx_personality_v0 (
         _Unwind_Exception* unwind_exception,
         _Unwind_Context* context)
 {
-    uintptr_t lsda = _Unwind_GetLanguageSpecificData(context);
+    uintptr_t lsda = (uintptr_t) _Unwind_GetLanguageSpecificData(context);
 
     // The real work of the personality function is captured here
     return(handleLsda(version,
