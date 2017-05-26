@@ -77,7 +77,7 @@ done
 #  args="-ext '$ext' $args"
 #fi
 
-llvm_api_jars="$dir/lib/llvm.jar:$dir/lib/llvm-javadoc.jar:$dir/lib/llvm-macosx-x86_64.jar:$dir/lib/llvm-sources.jar:$dir/lib/javacpp.jar"
+llvm_api_jars="$dir/lib/llvm.jar:$dir/lib/llvm-javadoc.jar:$dir/lib/llvm-macosx-x86_64.jar:$dir/lib/llvm-linux-x86_64.jar:$dir/lib/llvm-sources.jar:$dir/lib/javacpp.jar"
 classpath="$dir/compiler/classes:$dir/runtime/classes:$dir/lib/polyglot.jar:$dir/lib/java_cup.jar:$llvm_api_jars"
 if [ -n "$ext" ]; then
   classpath="$classpath:$dir/lib/$ext.jar"
