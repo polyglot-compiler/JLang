@@ -54,13 +54,13 @@ $(LLVMIR): $(SRCS) $(POLYLLVMC_SRC) $(RUNTIME_SRC)
 	@echo "Building polyllvmc"
 	@ant -f $(BASE_DIR)
 	@echo "Compiling $(words $(SRCS)) Java files down to IR"
-	@$(BASE_DIR)/bin/polyllvmc -c $(SRCS)
+	@$(BASE_DIR)/bin/polyllvmc -assert $(SRCS)
 else
 %.ll: %.java $(POLYLLVMC_SRC) $(RUNTIME_SRC)
 	@echo "Building polyllvmc"
 	@ant -f $(BASE_DIR)
 	@echo "Compiling $<"
-	@$(BASE_DIR)/bin/polyllvmc -assert -c $<
+	@$(BASE_DIR)/bin/polyllvmc -assert $<
 endif
 
 %.binary: %.ll

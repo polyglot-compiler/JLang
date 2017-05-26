@@ -1,0 +1,48 @@
+#!/bin/sh
+
+DIR="$(dirname "$0")"
+RUNTIME=$DIR/../runtime
+
+out=a.out
+outdir=.
+clangflags=
+directories=
+files=
+while true; do
+    case "$1" in
+        "")
+            break
+            ;;
+        -o)
+            shift
+            out="$1"
+            shift
+            ;;
+        -d)
+            shift
+            outdir="$1"
+            shift
+            ;;
+        -g)
+            clangflags="$clangflags -g"
+            shift
+            ;;
+        *)
+            if [ -d "$1" ]; then
+                directories="$directories $1"
+            else
+                files="$files $1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+for d in $directories; do
+    srcs=`find $d -name "*.java"`
+    files="$files $srcs"
+done
+
+
+$DIR/polyllvmc -d "$outdir" $files && \
+clang++ -Wno-override-module -L/usr/local/lib/ -lgc -o "$out" $clangflags "$RUNTIME"/runtime.o `find "$outdir" -name *.ll`

@@ -13,11 +13,11 @@ Quick Start Guide
 
 PolyLLVM has the following dependencies, which you will need to download and install prior to use.
 
-- [Ant](http://ant.apache.org) is required to build the compiler. It is best installed through your preferred package manager.
+- [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/index-jsp-138363.html) and [Ant](http://ant.apache.org) are required to build the compiler. Ant is best installed through your preferred package manager.
 
-- [LLVM](http://llvm.org) and [Clang](https://clang.llvm.org) are needed to build the runtime and create binaries from Java programs. PolyLLVM is tested with version 4.0.0, which you can download [here](http://releases.llvm.org/download.html#4.0.0).
+- [LLVM](http://llvm.org) and [Clang](https://clang.llvm.org) are needed to build the runtime and create binaries from Java programs. PolyLLVM is tested with version 4.0.0, which you can download [here](http://releases.llvm.org/download.html#4.0.0). It may be possible to install through a package manager (e.g., `sudo apt install llvm && sudo apt install clang`)
 
-- The [Boehm-Demers-Weiser garbage collector](http://www.hboehm.info/gc/) is also required for creating binaries. PolyLLVM is tested with version 7.6.0, which you can download [here](http://www.hboehm.info/gc/gc_source/).
+- The [Boehm-Demers-Weiser garbage collector](http://www.hboehm.info/gc/) is also required for creating binaries. PolyLLVM is tested with version 7.6.0, which you can download [here](http://www.hboehm.info/gc/gc_source/). A typical install from source looks like this: `./configure && make && make install`. Note that the garbage collector depends on [libatomic_ops](https://github.com/ivmai/libatomic_ops), which is often available through a package manager.
 
 
 Navigating the Codebase

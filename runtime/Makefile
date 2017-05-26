@@ -13,7 +13,7 @@ all: runtime.o
 $(JNI_LL): ll/%.ll: %.cpp
 	@mkdir -p $(dir $@)
 	@echo "Compiling $<"
-	@clang++ -pthread -g -S -emit-llvm -std=c++11 -o $@ $<
+	@clang++ -pthread -S -emit-llvm -std=c++11 -o $@ $<
 
 # Mixing Ant and Make is tricky; this rule isn't perfect,
 # but will work in almost all cases. Note that build.xml
