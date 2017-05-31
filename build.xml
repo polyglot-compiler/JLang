@@ -79,6 +79,9 @@
         <!-- Delete the ${compiler.classes} and ${dist} directory trees -->
         <delete dir="${compiler.classes}" />
         <delete dir="${runtime.classes}" />
+        <exec executable="make" dir="${basedir}/runtime">
+            <arg value="clean" />
+        </exec>
         <delete dir="${dist}" />
         <delete includeemptydirs="true">
             <fileset dir="${basedir}/tests">
