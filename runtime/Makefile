@@ -8,6 +8,8 @@ JNI_LL = $(JNI_SRC:%.cpp=ll/%.ll)
 JAVA_LL = $(JAVA_SRC:src/%.java=ll/%.ll)
 ALL_LL = $(JNI_LL) $(JAVA_LL)
 
+SHELL:=/bin/bash
+
 all: runtime.o
 
 $(JNI_LL): ll/%.ll: %.cpp
