@@ -106,9 +106,6 @@
                 <include name="${runtime.jar.name}" />
             </fileset>
         </delete>
-        <delete file="${interp.sh}" />
-        <delete file="${compiler.sh}" />
-        <delete file="${compiler.bat}" />
     </target>
 
     <!-- initialize the build -->
