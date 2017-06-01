@@ -18,6 +18,9 @@ import java.util.stream.Collectors;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
+/**
+ * Translates Java into LLVM IR.
+ */
 public class LLVMTranslator extends NodeVisitor {
 
     private PolyLLVMNodeFactory nf;

@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 import static org.bytedeco.javacpp.LLVM.*;
 
 /**
- * Creates LLVM IR for class objects.
+ * Creates LLVM IR for class objects, which are used, e.g., to implement instanceof.
  */
 public final class ClassObjects {
     private final LLVMTranslator v;

@@ -5,6 +5,9 @@ import polyglot.util.CollectionUtil;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * PolyLLVM constants for, e.g., important method names and array data layout.
+ */
 public class Constants {
     public static String THIS_STR = "_this";
     public static String CALLOC = "GC_malloc";

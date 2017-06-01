@@ -14,6 +14,10 @@ import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
+/**
+ * Helper methods for building common LLVM types and IR instructions.
+ * This includes methods for retrieving, e.g., object layout and interface methods for a class.
+ */
 public class LLVMUtils {
     private final LLVMTranslator v;
 

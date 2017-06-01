@@ -9,6 +9,11 @@ import polyglot.frontend.goals.Goal;
 
 import java.util.stream.Stream;
 
+/**
+ * A goal that runs several sub-goals in sequence, succeeding only if all sub-goals succeed.
+ * The same effect could by achieved with appropriate goal prerequisites, but this class
+ * simplifies the scheduler code.
+ */
 public class MultiGoal extends AbstractGoal {
     private Goal[] goals;
 

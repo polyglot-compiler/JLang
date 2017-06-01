@@ -1,6 +1,5 @@
 package polyllvm.util;
 
-import org.bytedeco.javacpp.annotation.Const;
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Field;
 import polyglot.ast.FieldDecl;
@@ -8,6 +7,9 @@ import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyllvm.visit.LLVMTranslator;
 
+/**
+ * Mangles Java methods and variables for use in LLVM IR.
+ */
 public class PolyLLVMMangler {
     private final LLVMTranslator v;
 

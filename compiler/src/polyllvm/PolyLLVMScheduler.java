@@ -2,10 +2,7 @@ package polyllvm;
 
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
-import org.bytedeco.javacpp.clang;
-import org.bytedeco.javacpp.presets.LLVM;
 import polyglot.ast.Node;
-import polyglot.ast.NodeFactory;
 import polyglot.ast.SourceFile;
 import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.ext.jl5.visit.AutoBoxer;
@@ -16,10 +13,11 @@ import polyglot.frontend.goals.CodeGenerated;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
-import polyglot.types.Context_c;
 import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
-import polyglot.visit.*;
+import polyglot.visit.InnerClassRemover;
+import polyglot.visit.LoopNormalizer;
+import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.util.JL5TypeUtils;
 import polyllvm.util.MultiGoal;
@@ -31,6 +29,9 @@ import java.nio.file.Paths;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
+/**
+ * Schedules the passes necessary to translate Java down to LLVM IR.
+ */
 public class PolyLLVMScheduler extends JL7Scheduler {
 
     public PolyLLVMScheduler(JLExtensionInfo extInfo) {
