@@ -1,28 +1,28 @@
 package basic;
 
-public class InnerClass {
+public class Nesting {
     public static void main(String[] args) {
-        System.out.println(new StaticInner().toString());
+        System.out.println(new StaticNested().toString());
 
         InnerClass innerClass = new InnerClass();
-        NonStaticInner nonStaticInner = innerClass.new NonStaticInner();
-        System.out.println(nonStaticInner);
+        Inner inner = innerClass.new Inner();
+        System.out.println(inner);
 
-        NonStaticInner.InnerInner innerInner = nonStaticInner.new InnerInner();
+        Inner.InnerInner innerInner = inner.new InnerInner();
         System.out.println(innerInner);
 
     }
 
     public int outer = 100;
 
-    private static class StaticInner {
+    private static class StaticNested {
         @Override
         public String toString() {
-            return "StaticInner";
+            return "StaticNested";
         }
     }
 
-    public class NonStaticInner {
+    public class Inner {
 
         public class InnerInner{
 
@@ -34,7 +34,7 @@ public class InnerClass {
 
         @Override
         public String toString() {
-            return "NonStaticInner" + outer;
+            return "Inner" + outer;
         }
     }
 }
