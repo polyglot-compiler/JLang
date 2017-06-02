@@ -5,3 +5,4 @@
 /lib/polyllvm-rt.jar
 /out/
 *.DS_STORE
+.*.sw?
