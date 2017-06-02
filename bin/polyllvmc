@@ -12,7 +12,7 @@ usage() {
 EOF
 }
 
-fixclasspath() {
+fixpath() {
   windows=0
 
   if [ `uname | grep -c CYGWIN` -ne 0 ]; then
@@ -33,10 +33,6 @@ vmargs=
 classpath=
 java=java
 ext=polyllvm
-
-polyglot() {
-  eval "$java" -ea "$vmargs" -classpath "'$classpath'" polyllvm.Main -c "$@"
-}
 
 while true; do
     case "$1" in
@@ -73,18 +69,14 @@ while true; do
     esac
 done
 
-#if [ -n "$ext" ]; then
-#  args="-ext '$ext' $args"
-#fi
+compiler_classpath="$dir/compiler/classes:$dir/lib/java_cup.jar:$dir/lib/polyglot.jar:$dir/lib/llvm.jar:$dir/lib/javacpp.jar:$dir/lib/llvm-macosx-x86_64.jar:$dir/lib/llvm-linux-x86_64.jar"
+runtime_classpath="$dir/runtime/classes"
+runtime_classpath="$runtime_classpath:$extra_cp"
 
-llvm_api_jars="$dir/lib/llvm.jar:$dir/lib/llvm-javadoc.jar:$dir/lib/llvm-macosx-x86_64.jar:$dir/lib/llvm-linux-x86_64.jar:$dir/lib/llvm-sources.jar:$dir/lib/javacpp.jar"
-classpath="$dir/compiler/classes:$dir/runtime/classes:$dir/lib/polyglot.jar:$dir/lib/java_cup.jar:$llvm_api_jars"
-if [ -n "$ext" ]; then
-  classpath="$classpath:$dir/lib/$ext.jar"
-fi
-classpath="$classpath:$extra_cp"
-classpath=`fixclasspath "$classpath"`
-
+command="$java -ea $vmargs -classpath \"$(fixpath ${compiler_classpath})\" \
+polyllvm.Main \
+-classpath \"$(fixpath ${runtime_classpath})\" \
+$args"
 
 if [ "$usage" = 1 ]; then
   usage
@@ -92,7 +84,7 @@ if [ "$usage" = 1 ]; then
 fi
 
 if [ "$verbose" = 1 ]; then
-  echo "$java" "$vmargs" -classpath "'$classpath'" "$@"
+  echo "$command"
 fi
 
-polyglot "$args"
+eval $command
