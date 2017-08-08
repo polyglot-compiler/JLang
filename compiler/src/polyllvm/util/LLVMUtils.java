@@ -1,6 +1,7 @@
 package polyllvm.util;
 
 import org.bytedeco.javacpp.PointerPointer;
+
 import polyglot.ast.Node;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
@@ -134,6 +135,10 @@ public class LLVMUtils {
                 .toArray(LLVMTypeRef[]::new);
         return functionType(typeRef(returnType, false), args);
     }
+    
+	public LLVMValueRef llvmConstBitCastToBytePtr(LLVMValueRef val) {
+		return LLVMConstBitCast(val, llvmBytePtr());
+	}
 
     public LLVMValueRef buildProcedureCall(LLVMValueRef func, LLVMValueRef... args) {
         if (v.inTry() && !Constants.NON_INVOKE_FUNCTIONS.contains(LLVMGetValueName(func).getString())) {
@@ -167,7 +172,7 @@ public class LLVMUtils {
 
         int counter = v.incCtorCounter();
         String name = "ctor" + counter;
-        LLVMValueRef func = v.utils.getFunction(v.mod, "ctor" + counter, funcType);
+        LLVMValueRef func = v.utils.getFunction(v.mod, name, funcType);
         LLVMSetLinkage(func, LLVMPrivateLinkage);
         LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
                 v.debugInfo.diBuilder, new PointerPointer<>(), /*length*/ 0);
@@ -289,30 +294,67 @@ public class LLVMUtils {
         dvTypeRef(getArrayType());
     }
 
-    private LLVMTypeRef[] dvMethodTypes(ReferenceType rt) {
-        List<MethodInstance> layout = v.layouts(rt).part1();
-        List<LLVMTypeRef> typeList = new ArrayList<>();
-        typeList.add(ptrTypeRef(LLVMInt8TypeInContext(v.context)));
-
-        // Class dispatch vectors and interface tables currently differ in their second entry.
-        if (v.isInterface(rt)) {
-            typeList.add(ptrTypeRef(LLVMInt8TypeInContext(v.context)));
-        } else {
+	private LLVMTypeRef[] dvMethodTypes(ReferenceType rt) {
+		List<MethodInstance> layout = v.layouts(rt).part1();
+		List<LLVMTypeRef> typeList = new ArrayList<>();
+		if (v.isInterface(rt)) {
+			// nothing to be prepended to an interface dispatch vector
+		} else {
+			// first entry of an class dv points to the table of interface dvs
+			typeList.add(ptrTypeRef(LLVMInt8TypeInContext(v.context)));
+			// second entry of an class dv points to RTTI
             typeList.add(ptrTypeRef(v.classObjs.classObjTypeRef(rt)));
-        }
+		}
 
-        layout.stream().map(mi -> ptrTypeRef(methodType(rt, mi.returnType(), mi.formalTypes())))
-                .forEach(typeList::add);
+		layout.stream()
+				.map(mi -> ptrTypeRef(
+						methodType(rt, mi.returnType(), mi.formalTypes())))
+				.forEach(typeList::add);
 
-        LLVMTypeRef[] types = new LLVMTypeRef[typeList.size()];
-        return typeList.toArray(types);
-
+		LLVMTypeRef[] types = new LLVMTypeRef[typeList.size()];
+		return typeList.toArray(types);
     }
 
     public LLVMValueRef getDvGlobal(ReferenceType classtype) {
         classtype = v.jl5Utils.translateType(classtype);
         return getGlobal(v.mod, v.mangler.dispatchVectorVariable(classtype), dvTypeRef(classtype));
     }
+    	
+	public int intfHash(ReferenceType rt) {
+		rt = v.jl5Utils.translateType(rt);
+		int h = rt.toString().hashCode();
+	    h ^= (h >>> 20) ^ (h >>> 12);
+	    return h ^ (h >>> 7) ^ (h >>> 4);
+	}
+	
+	public int idvCapacity(int size) {
+		assert size >= 0;
+		int approx = (int) Math.ceil(size * 1.5); // load factor = 0.5
+		int c = 1;
+		while ((approx >>>= 1) > 0)
+			++c;
+		return  1<<c;
+	}
+
+	public LLVMValueRef getIdvArrGlobal(ReferenceType classtype, int length) {
+		classtype = v.jl5Utils.translateType(classtype);
+		return getGlobal(v.mod, v.mangler.idvArrGlobalId(classtype),
+				LLVMArrayType(llvmBytePtr(), length));
+	}
+
+	public LLVMValueRef getIdvIdArrGlobal(ReferenceType classtype,
+			int length) {
+		classtype = v.jl5Utils.translateType(classtype);
+		return getGlobal(v.mod, v.mangler.idvIdArrGlobalId(classtype),
+				LLVMArrayType(llvmBytePtr(), length));
+	}
+	
+	public LLVMValueRef getIdvIdHashArrGlobal(ReferenceType classtype,
+			int length) {
+		classtype = v.jl5Utils.translateType(classtype);
+		return getGlobal(v.mod, v.mangler.idvIdHashArrGlobalId(classtype),
+				LLVMArrayType(LLVMInt32TypeInContext(v.context), length));
+	}
 
     public LLVMValueRef getItGlobal(ReferenceType it, ReferenceType usingClass) {
         it = v.jl5Utils.translateType(it);
@@ -322,6 +364,15 @@ public class LLVMUtils {
         LLVMTypeRef interfaceTableType = dvTypeRef(it);
         return getGlobal(v.mod, interfaceTableVar, interfaceTableType);
     }
+    
+	public LLVMTypeRef intfNameTypeRef(ReferenceType it) {
+		if (!v.isInterface(it))
+			throw new InternalCompilerError(
+					"Reference type " + it + " is not an interface type.");
+		String itStr = it.toString();
+		return LLVMArrayType(LLVMInt8TypeInContext(v.context),
+				itStr.length() + 1);
+	}
 
     public LLVMValueRef[] dvMethods(ReferenceType rt, LLVMValueRef next) {
         rt = v.jl5Utils.translateType(rt);
@@ -339,7 +390,7 @@ public class LLVMUtils {
         return methods;
     }
 
-    public LLVMValueRef[] itMethods(ReferenceType it, ReferenceType usingClass, LLVMValueRef next) {
+    public LLVMValueRef[] itMethods(ReferenceType it, ReferenceType usingClass) {
         it = v.jl5Utils.translateType(it);
         usingClass = v.jl5Utils.translateType(usingClass);
 
@@ -357,22 +408,20 @@ public class LLVMUtils {
             }
         }
         ReferenceType finalIt = it;
-        LLVMValueRef[] methods = Stream.concat(
-                Stream.of(next, v.classObjs.classObjRef(it)),
-                IntStream.range(0, updatedLayout.size()).mapToObj(i -> {
+        LLVMValueRef[] methods = IntStream.range(0, updatedLayout.size()).
+                mapToObj(i -> {
                     MethodInstance mi = updatedLayout.get(i);
                     MethodInstance interfaceMi = layout.get(i);
                     LLVMValueRef function = getFunction(v.mod, v.mangler.mangleProcedureName(mi),
                             methodType(mi.container(), mi.returnType(), mi.formalTypes()));
                     return LLVMConstBitCast(function, ptrTypeRef(methodType(finalIt, interfaceMi.returnType(), interfaceMi.formalTypes())));
-                })).toArray(LLVMValueRef[]::new);
+                }).toArray(LLVMValueRef[]::new);
         return methods;
     }
 
     public LLVMValueRef[] dvMethods(ReferenceType rt) {
         rt = v.jl5Utils.translateType(rt);
-
-        return dvMethods(rt, LLVMConstNull(ptrTypeRef(LLVMInt8TypeInContext(v.context))));
+        return dvMethods(rt, LLVMConstNull(llvmBytePtr()));
     }
 
     public LLVMValueRef buildConstArray(LLVMTypeRef type, LLVMValueRef ...values) {

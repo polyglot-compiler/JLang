@@ -17,24 +17,27 @@ public class PolyLLVMMangler {
         this.v = v;
     }
 
-    private final String JAVA_PREFIX        = "Java";
-    private final String ENV_PREFIX         = "Env";
-    private final String CLASS_TYPE_STR     = "class";
-    private final String INTERFACE_TYPE_STR = "interface";
-    private final String DV_TYPE_STR        = "dv";
-    private final String IT_DV_TYPE_STR     = "ittable";
-    private final String SIZE_STR           = "size";
-    private final String DV_STR             = "dv";
-    private final String CLASS_INIT_STR     = "init";
-    private final String IT_INIT_STR        = "it_init";
-    private final String IT_STR_STR         = "ittype";
-    private final String TYPE_INFO_STR      = "type_info";
-    private final String CLASS_ID_STR       = "class_id";
+	static private final String JAVA_PREFIX = "Java";
+	static private final String ENV_PREFIX = "Env";
+	static private final String CLASS_TYPE_STR = "class";
+	static private final String INTERFACE_TYPE_STR = "interface";
+	static private final String DV_TYPE_STR = "cdv_ty";
+	static private final String IT_DV_TYPE_STR = "idv_ty";
+	static private final String SIZE_STR = "size";
+	static private final String DV_STR = "cdv";
+	static private final String IDV_ARR_STR = "idv_arr";
+	static private final String IDV_ID_ARR_STR = "idv_id_arr";
+	static private final String IDV_ID_HASH_ARR_STR = "idv_hash_arr";
+	static private final String CLASS_INIT_STR = "init";
+	static private final String IT_INIT_STR = "it_init";
+	static private final String IT_STR_STR = "intf_name";
+	static private final String TYPE_INFO_STR = "rtti";
+	static private final String CLASS_ID_STR = "class_id";
 
-    // From the JNI API.
-    private final String UNDERSCORE_ESCAPE = "_1";
-    private final String SEMICOLON_ESCAPE  = "_2";
-    private final String BRACKET_ESCAPE    = "_3";
+	// From the JNI API.
+	static private final String UNDERSCORE_ESCAPE = "_1";
+	static private final String SEMICOLON_ESCAPE = "_2";
+	static private final String BRACKET_ESCAPE = "_3";
 
     /**
      * To facilitate JNI support, we mangle types as specified in the JNI API.
@@ -124,18 +127,32 @@ public class PolyLLVMMangler {
     public String dispatchVectorVariable(ReferenceType rt) {
         return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + DV_STR;
     }
+    
+	public String idvArrGlobalId(ReferenceType rt) {
+		return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IDV_ARR_STR;
+	}
 
-    public String InterfaceTableVariable(ReferenceType rt, ReferenceType i ) {
-        if (!v.isInterface(i)) {
-            throw new InternalCompilerError("Reference type " + i + "is not an interface");
-        }
-        rt = v.jl5Utils.translateType(rt);
-        i = v.jl5Utils.translateType(i);
+	public String idvIdArrGlobalId(ReferenceType rt) {
+		return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IDV_ID_ARR_STR;
+	}
+	
+	public String idvIdHashArrGlobalId(ReferenceType rt) {
+		return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IDV_ID_HASH_ARR_STR;
+	}
 
-        String interfaceName =  i.toString();
-        String className =  rt.toString();
-        return ENV_PREFIX + "it_" + interfaceName.length() + interfaceName + "_" + className.length() + className;
-    }
+	public String InterfaceTableVariable(ReferenceType rt, ReferenceType i) {
+		if (!v.isInterface(i)) {
+			throw new InternalCompilerError(
+					"Reference type " + i + "is not an interface");
+		}
+		rt = v.jl5Utils.translateType(rt);
+		i = v.jl5Utils.translateType(i);
+
+		String interfaceName = i.toString();
+		String className = rt.toString();
+		return ENV_PREFIX + "_" + interfaceName.length() + interfaceName + "_"
+				+ className.length() + className + "_" + "idv";
+	}
 
     public String classTypeName(ClassDecl cd) {
         return classTypeName(cd.type());
@@ -158,7 +175,7 @@ public class PolyLLVMMangler {
             return DV_TYPE_STR + "." + className;
         }
     }
-
+    
     public String classInitFunction(ClassDecl n) {
         return classInitFunction(n.type());
     }

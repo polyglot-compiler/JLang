@@ -174,12 +174,12 @@ public class LLVMTranslator extends NodeVisitor {
         return isInterface(declaringType);
     }
 
-    /**
-     * Return true if {@code rt} is a Interface, false otherwise.
-     */
-    public boolean isInterface(ReferenceType rt) {
-        return rt instanceof MemberInstance && ((MemberInstance) rt).flags().isInterface();
-    }
+	/**
+	 * Return true if {@code rt} is an Interface, false otherwise.
+	 */
+	public boolean isInterface(ReferenceType rt) {
+		return rt.isClass() && rt.toClass().flags().isInterface();
+	}
 
     /**
     * Stores the layouts for classes.
@@ -384,15 +384,17 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     public int getMethodIndex(ReferenceType type, MethodInstance methodInstance, List<MethodInstance> methodLayout) {
-        type = jl5Utils.translateType(type);
-        MethodInstance old = methodInstance;
+    	type = jl5Utils.translateType(type);
         methodInstance = (MethodInstance) jl5Utils.translateMemberInstance(methodInstance);
         methodLayout = methodLayout.stream()
                 .map(mi -> (MethodInstance) jl5Utils.translateMemberInstance(mi))
                 .collect(Collectors.toList());
         for (int i = 0; i < methodLayout.size(); i++) {
             if (methodLayout.get(i).isSameMethod(methodInstance)) {
-                return i + Constants.DISPATCH_VECTOR_OFFSET;
+				return i + (type.isClass()
+						&& type.toClass().flags().isInterface()
+								? Constants.INTERFACE_TABLE_OFFSET
+								: Constants.DISPATCH_VECTOR_OFFSET);
             }
         }
 

@@ -47,12 +47,15 @@ public class Constants {
     // DV, mutex, cond var, and length. Due to alignment, allocate quadword for length.
     public static int ARR_HEADER_SIZE = LLVMUtils.llvmPtrSize()*(ARR_ELEM_OFFSET+1);
 
-    /**
-     * Offset from start of dispatch vector to the 0th method
-     *  * First slot used for interface dispatch
-     *  * Second slot used for type information
-     */
-    public static final int DISPATCH_VECTOR_OFFSET = 2;
+	/**
+	 * Offset from start of dispatch vector to the 0th method. First slot used
+	 * for interface dispatch. Second slot used for type information.
+	 */
+	public static final int DISPATCH_VECTOR_OFFSET = 2;
+	/**
+	 * Offset from start of dispatch vector to the 0th method.
+	 */
+	public static final int INTERFACE_TABLE_OFFSET = 0;
 
 
     /**

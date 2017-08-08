@@ -3,15 +3,9 @@
 
 #include <stdint.h>
 #include <pthread.h>
+#include "interface.h"
 
 extern "C" {
-
-// List of interfaces implemented by a Java class.
-class it {
-public:
-    it* next;
-    char* interface_name;
-};
 
 class type_info {
 public:
@@ -19,10 +13,15 @@ public:
     void* super_type_ids[];
 };
 
-// Dispatch vector for a Java class.
+// Interface table (a.k.a. interface dispatch vector).
+class it {
+public:
+};
+
+// Class dispatch vector.
 class dv {
 public:
-    it* it;
+	idv_ht* itt;
     type_info* type_info;
 };
 

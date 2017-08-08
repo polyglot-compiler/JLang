@@ -1,103 +1,143 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
+
+import java.util.List;
+
+import org.bytedeco.javacpp.LLVM.LLVMTypeRef;
+import org.bytedeco.javacpp.LLVM.LLVMValueRef;
+
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Node;
+import polyglot.types.ParsedClassType;
 import polyglot.types.ReferenceType;
 import polyglot.types.Type;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
 
-import java.util.List;
-
-import static org.bytedeco.javacpp.LLVM.*;
-
 public class PolyLLVMClassDeclExt extends PolyLLVMExt {
-    private static final long serialVersionUID = SerialVersionUID.generate();
+	private static final long serialVersionUID = SerialVersionUID.generate();
 
-    @Override
-    public LLVMTranslator enterTranslateLLVM(LLVMTranslator v) {
-        v.enterClass((ClassDecl) node());
-        return super.enterTranslateLLVM(v);
-    }
+	@Override
+	public LLVMTranslator enterTranslateLLVM(LLVMTranslator v) {
+		v.enterClass((ClassDecl) node());
+		return super.enterTranslateLLVM(v);
+	}
 
-    @Override
-    public Node leaveTranslateLLVM(LLVMTranslator v) {
-        ClassDecl n = (ClassDecl) node();
+	@Override
+	public Node leaveTranslateLLVM(LLVMTranslator v) {
+		ClassDecl n = (ClassDecl) node();
 
-        // External class object declarations.
-        Type superType = n.type().superType();
-        while (superType != null) {
-            v.classObjs.classIdDeclRef(superType.toReference(), /* extern */ true);
-            superType = superType.toReference().superType();
-        }
-        n.interfaces().stream().map(tn -> tn.type().toReference())
-                               .map(rt -> v.classObjs.classIdDeclRef(rt, /* extern */ true));
+		// External class object declarations.
+		Type superType = n.type().superType();
+		while (superType != null) {
+			v.classObjs.classIdDeclRef(superType.toReference(),
+					/* extern */ true);
+			superType = superType.toReference().superType();
+		}
 
-        // Class object for this class.
-        v.classObjs.classIdDeclRef(n.type().toReference(), /* extern */ false);
-        v.classObjs.classObjRef(n.type().toReference());
+		n.interfaces().stream().map(tn -> tn.type().toClass())
+				.map(rt -> v.classObjs.classIdDeclRef(rt, /* extern */ true));
 
-        List<? extends ReferenceType> interfaces = v.allInterfaces(n.type());
+		// Class object for this class.
+		v.classObjs.classIdDeclRef(n.type(), /* extern */ false);
+		v.classObjs.classObjRef(n.type());
 
-        if(!n.flags().isAbstract()) {
-            //Set the DV for this class.
-            LLVMValueRef[] dvMethods;
-            if (interfaces.size() > 0) {
-                LLVMValueRef itGlobal = LLVMConstBitCast(v.utils.getItGlobal(interfaces.get(0), n.type()),
-                        v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
-                dvMethods = v.utils.dvMethods(n.type(), itGlobal);
-            } else {
-                dvMethods = v.utils.dvMethods(n.type());
-            }
+		List<? extends ReferenceType> interfaces = v.allInterfaces(n.type());
 
-            LLVMValueRef dvGlobal = v.utils.getDvGlobal(n.type());
-            LLVMValueRef initStruct = v.utils.buildConstStruct(dvMethods);
-            LLVMSetInitializer(dvGlobal, initStruct);
-        }
+		if (!n.flags().isAbstract()) {
+			// Set up the class dispatch vector
+			LLVMValueRef dvGlobal = v.utils.getDvGlobal(n.type());
+			LLVMValueRef[] dvMethods = v.utils.dvMethods(n.type());
+			LLVMValueRef initStruct = v.utils.buildConstStruct(dvMethods);
+			LLVMSetInitializer(dvGlobal, initStruct);
+		}
 
-        //Setup the Interface Tables for this class
-        for (int i=0; i< interfaces.size(); i++) {
-            ReferenceType it = interfaces.get(i);
-            String interfaceTableVar = v.mangler.InterfaceTableVariable(n.type(), it);
-            LLVMTypeRef interfaceTableType = v.utils.dvTypeRef(it);
-            LLVMValueRef itGlobal = v.utils.getGlobal(v.mod, interfaceTableVar, interfaceTableType);
+		if (!n.type().flags().isAbstract() && !interfaces.isEmpty()) {
+			int numOfIntfs = interfaces.size();
+			LLVMValueRef[] intf_id_hashes = new LLVMValueRef[numOfIntfs];
+			LLVMValueRef[] intf_ids = new LLVMValueRef[numOfIntfs];
+			LLVMValueRef[] intf_tables = new LLVMValueRef[numOfIntfs];
 
-            LLVMValueRef next;
-            if (i == interfaces.size()-1) { // Last Interface next pointer points to null
-                next = LLVMConstNull(v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
-            } else {
-                next = LLVMConstBitCast(v.utils.getItGlobal(interfaces.get(i+1), n.type()), v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
-            }
-            LLVMValueRef[] itMethods = v.utils.itMethods(it, n.type(), next);
+			// Set up the interface dispatch vectors
+			for (int i = 0; i < numOfIntfs; i++) {
+				ReferenceType it = interfaces.get(i);
 
-            String s = it.toString();
-            LLVMTypeRef stringType = LLVMArrayType(LLVMInt8TypeInContext(v.context), s.length() + 1);
-            LLVMValueRef interfaceName = v.utils.getGlobal(v.mod,
-                    v.mangler.interfaceStringVariable(it), stringType);
-            LLVMSetInitializer(interfaceName, LLVMConstString(s, s.length(), /*Don't null terminate*/ 0));
-            LLVMSetLinkage(interfaceName, LLVMLinkOnceODRLinkage);
+				int hash = v.utils.intfHash(it);
+				intf_id_hashes[i] = LLVMConstInt(
+						LLVMInt32TypeInContext(v.context), hash,
+						/* sign-extend */ 0);
 
-            itMethods[1] = v.utils.constGEP(interfaceName,0,0);
-            LLVMValueRef itStruct = v.utils.buildConstStruct(itMethods);
-            LLVMSetInitializer(itGlobal, itStruct);
+				LLVMValueRef intf_id_global = v.classObjs.classIdVarRef(it);
+				intf_ids[i] = intf_id_global;
 
-        }
+				LLVMValueRef idv_global = v.utils.getItGlobal(it, n.type());
+				LLVMValueRef[] idv_methods = v.utils.itMethods(it, n.type());
+				LLVMValueRef idv_value = v.utils.buildConstStruct(idv_methods);
+				LLVMSetInitializer(idv_global, idv_value);
+				intf_tables[i] = LLVMBuildBitCast(v.builder, idv_global,
+						v.utils.llvmBytePtr(), "cast_for_idv");
+			}
 
-        v.leaveClass();
-        return super.leaveTranslateLLVM(v);
-    }
+			// Set up the hash table that points to the interface dispatch
+			// vectors
+			LLVMValueRef cdv_global = v.utils.getDvGlobal(n.type());
+			LLVMValueRef idv_arr_global = v.utils.getIdvArrGlobal(n.type(),
+					numOfIntfs);
+			LLVMValueRef idv_id_arr_global = v.utils.getIdvIdArrGlobal(n.type(),
+					numOfIntfs);
+			LLVMValueRef idv_id_hash_arr_global = v.utils
+					.getIdvIdHashArrGlobal(n.type(), numOfIntfs);
 
+			LLVMSetInitializer(idv_arr_global, v.utils
+					.buildConstArray(v.utils.llvmBytePtr(), intf_tables));
+			LLVMSetInitializer(idv_id_arr_global,
+					v.utils.buildConstArray(v.utils.llvmBytePtr(), intf_ids));
+			LLVMSetInitializer(idv_id_hash_arr_global, v.utils.buildConstArray(
+					LLVMInt32TypeInContext(v.context), intf_id_hashes));
 
-    @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
-        ClassDecl n = (ClassDecl) node();
-        if (n.flags().isInterface()) {
-            // Interfaces need only declare a class id.
-            v.classObjs.classIdDeclRef(n.type().toReference(), /* extern */ false);
-            return n;
-        }
-        return super.overrideTranslateLLVM(v);
+			LLVMTypeRef create_idv_ht_func_type = v.utils.functionType(
+					LLVMVoidType(), // void return type
+					v.utils.llvmBytePtr(), // dv*
+					LLVMInt32TypeInContext(v.context), // int
+					LLVMInt32TypeInContext(v.context), // int
+					v.utils.ptrTypeRef(LLVMInt32TypeInContext(v.context)), // int[]
+					v.utils.llvmBytePtr(), // void*[]
+					v.utils.llvmBytePtr() // it*[]
+			);
+			LLVMValueRef create_idv_ht_func = v.utils.getFunction(v.mod,
+					"__createInterfaceTables", create_idv_ht_func_type);
+			int capacity = v.utils.idvCapacity(numOfIntfs);
+			v.utils.buildCtor(node, () -> {
+				v.utils.buildProcedureCall(create_idv_ht_func,
+						v.utils.llvmConstBitCastToBytePtr(cdv_global),
+						LLVMConstInt(LLVMInt32TypeInContext(v.context),
+								capacity, /* sign-extend */ 0),
+						LLVMConstInt(LLVMInt32TypeInContext(v.context),
+								numOfIntfs, /* sign-extend */ 0),
+						LLVMConstBitCast(idv_id_hash_arr_global,
+								v.utils.ptrTypeRef(
+										LLVMInt32TypeInContext(v.context))),
+						v.utils.llvmConstBitCastToBytePtr(idv_id_arr_global),
+						v.utils.llvmConstBitCastToBytePtr(idv_arr_global));
+				return null;
+			});
+		}
 
-    }
+		v.leaveClass();
+		return super.leaveTranslateLLVM(v);
+	}
+
+	@Override
+	public Node overrideTranslateLLVM(LLVMTranslator v) {
+		ClassDecl n = (ClassDecl) node();
+		ParsedClassType ty = n.type();
+		if (v.isInterface(ty)) {
+			// Interfaces need only declare a class id.
+			v.classObjs.classIdDeclRef(ty, /* extern */ false);
+			return n;
+		}
+		return super.overrideTranslateLLVM(v);
+	}
 }

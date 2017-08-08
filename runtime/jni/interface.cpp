@@ -3,32 +3,64 @@
 #include <cstdlib>
 #include "types.h"
 
-/*
- * Pseudo Code for Interface lookup:
- * it = get itable out of DV (is an i8**)
- * while (it != null){
- *   if (strcmp(it[1], INTERFACE_STRING) == 0 ){
- *     get itable, perform dispatch
- *     break
- *   } else {
- *     advance it to it[0]
- *   }
- * }
- *
- */
+#include "interface.h"
 
 extern "C" {
 
-void* __getInterfaceMethod(jobject* obj, char* interface_string, int methodIndex) {
-    it* itable = obj->dv->it;
-    while(itable != 0){
-        if (strcmp(itable->interface_name, interface_string) == 0) {
-            return ((void **) itable)[methodIndex];
-        } else {
-            itable = itable->next;
-        }
-    }
-    std::abort(); //Should not reach here
+void __createInterfaceTables
+	(dv* D, int capacity, int size, int intf_id_hashcodes[], void* intf_ids[], it* intf_tables[])
+{
+	idv_ht* ittab = new idv_ht(capacity);
+	for (int i = 0; i < size; ++i)
+		ittab->put(intf_id_hashcodes[i], intf_ids[i], intf_tables[i]);
+	D->itt = ittab;
+}
+
+void* __getInterfaceMethod
+	(jobject* obj, int intf_id_hash, void* intf_id, int method_index)
+{
+	idv_ht* ittab = obj->dv->itt;
+	void** itab = reinterpret_cast<void**>(ittab->get(intf_id_hash, intf_id));
+	return itab[method_index];
 }
 
 } // extern "C"
+
+idv_ht::idv_ht(size_t capacity)
+{
+	this->table = new idv_ht_node*[capacity];
+	this->capacity = capacity;
+}
+
+void* idv_ht::get(int hashcode, void* intf_id) {
+	int index = getIndexForHash(hashcode);
+	idv_ht_node* node = table[index];
+	while (node->next != nullptr) {
+		if (node->intf_id == intf_id)
+			return node->idv;
+		node = node->next;
+	}
+	return node->idv;
+}
+
+void idv_ht::put(int hashcode, void* intf_id, void* idv) {
+	idv_ht_node* node = new idv_ht_node;
+	node->intf_id = intf_id;
+	node->idv = idv;
+
+	int index = getIndexForHash(hashcode);
+	idv_ht_node* lst = table[index];
+	if (lst == nullptr) {
+		table[index] = node;
+	} else {
+		idv_ht_node* tail = lst;
+		table[index] = node;
+		node->next = tail;
+	}
+}
+
+size_t idv_ht::getIndexForHash(int h) {
+	size_t index = h & (this->capacity - 1);
+	return index;
+}
+

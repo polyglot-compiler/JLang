@@ -1,5 +1,12 @@
 package polyllvm.extension;
 
+import static org.bytedeco.javacpp.LLVM.*;
+
+import java.util.stream.Stream;
+
+import org.bytedeco.javacpp.LLVM.LLVMTypeRef;
+import org.bytedeco.javacpp.LLVM.LLVMValueRef;
+
 import polyglot.ast.Call;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
@@ -9,10 +16,6 @@ import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
-
-import java.util.stream.Stream;
-
-import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 	private static final long serialVersionUID = SerialVersionUID.generate();
@@ -173,33 +176,32 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
 		int methodIndex = v.getMethodIndex(rt, mi);
 
-		LLVMValueRef interfaceStringPtr = v.utils.getGlobal(v.mod,
-				v.mangler.interfaceStringVariable(rt),
-				LLVMArrayType(LLVMInt8TypeInContext(v.context),
-						rt.toString().length() + 1));
-		LLVMValueRef interfaceStringBytePtr
-				= v.utils.buildStructGEP(interfaceStringPtr, 0, 0);
-
+		LLVMValueRef intf_id_global = v.classObjs.classIdVarRef(rt);
 		LLVMValueRef obj_bitcast = LLVMBuildBitCast(v.builder, thisTranslation,
 				v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)),
 				"cast_for_interface_call");
-
-		LLVMTypeRef getInterfaceMethodType = v.utils.functionType(
-				v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)), // void*
-																		// return
-																		// type
-				v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)), // jobject*
-				v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)), // char*
+		int hash = v.utils.intfHash(rt);
+		LLVMValueRef intf_id_hash_const = LLVMConstInt(
+				LLVMInt32TypeInContext(v.context), hash, /* sign-extend */ 0);
+		LLVMTypeRef get_intf_method_func_ty = v.utils.functionType(
+				v.utils.llvmBytePtr(), // void* return type
+				v.utils.llvmBytePtr(), // jobject*
+				LLVMInt32TypeInContext(v.context), // int
+				v.utils.llvmBytePtr(), // void*
 				LLVMInt32TypeInContext(v.context) // int
 		);
-		LLVMValueRef getInterfaceMethod = v.utils.getFunction(v.mod,
-				"__getInterfaceMethod", getInterfaceMethodType);
-		LLVMValueRef interfaceMethod = v.utils.buildMethodCall(
-				getInterfaceMethod, obj_bitcast, interfaceStringBytePtr,
+		LLVMValueRef get_intf_method_func = v.utils.getFunction(v.mod,
+				"__getInterfaceMethod", get_intf_method_func_ty);
+		LLVMValueRef intf_method_local = v.utils.buildMethodCall(
+				get_intf_method_func, // ptr to method code
+				obj_bitcast, // the object
+				intf_id_hash_const, // id hash code
+				intf_id_global, // id
 				LLVMConstInt(LLVMInt32TypeInContext(v.context), methodIndex,
-						/* sign-extend */ 0));
+						/* sign-extend */ 0) // method index
+		);
 
-		LLVMValueRef cast = LLVMBuildBitCast(v.builder, interfaceMethod,
+		LLVMValueRef cast = LLVMBuildBitCast(v.builder, intf_method_local,
 				methodType, "cast_interface_method");
 
 		LLVMValueRef[] args = Stream

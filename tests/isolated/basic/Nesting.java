@@ -4,8 +4,8 @@ public class Nesting {
     public static void main(String[] args) {
         System.out.println(new StaticNested().toString());
 
-        InnerClass innerClass = new InnerClass();
-        Inner inner = innerClass.new Inner();
+		Nesting outer = new Nesting();
+		Inner inner = outer.new Inner();
         System.out.println(inner);
 
         Inner.InnerInner innerInner = inner.new InnerInner();
