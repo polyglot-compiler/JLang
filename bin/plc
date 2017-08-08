@@ -45,4 +45,4 @@ done
 
 
 $DIR/polyllvmc -d "$outdir" $files && \
-clang++ -Wno-override-module -L/usr/local/lib/ -lgc -o "$out" $clangflags "$RUNTIME"/runtime.o `find "$outdir" -name *.ll`
+clang++ -Wno-override-module -L/usr/local/lib/ -lgc -O1 -o "$out" $clangflags "$RUNTIME"/runtime.o `find "$outdir" -name *.ll`
