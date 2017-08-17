@@ -39,7 +39,6 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         LLVMValueRef left = v.getTranslation(n.left());
         LLVMValueRef right = v.getTranslation(n.right());
         Operator op = n.operator();
-        assert n.left().type().typeEquals(n.right().type());
         Type elemType = n.left().type();
 
         v.debugInfo.emitLocation(n);
