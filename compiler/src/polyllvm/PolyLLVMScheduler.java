@@ -7,19 +7,18 @@ import polyglot.ast.SourceFile;
 import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.ext.jl5.visit.AutoBoxer;
 import polyglot.ext.jl7.JL7Scheduler;
+import polyglot.ext.jl7.types.JL7TypeSystem;
 import polyglot.frontend.*;
 import polyglot.frontend.ExtensionInfo;
 import polyglot.frontend.goals.CodeGenerated;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
-import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
 import polyglot.visit.InnerClassRemover;
 import polyglot.visit.LoopNormalizer;
 import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.util.JL5TypeUtils;
 import polyllvm.util.MultiGoal;
 import polyllvm.visit.*;
 
@@ -53,7 +52,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
 
     public Goal PrepareForLLVMOutput(Job job) {
         ExtensionInfo extInfo = job.extensionInfo();
-        TypeSystem ts = extInfo.typeSystem();
+        JL7TypeSystem ts = (JL7TypeSystem) extInfo.typeSystem();
         PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
         Goal prep = new MultiGoal(
                 job,
@@ -68,7 +67,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
                 new VisitorGoal(job, new StringConversionVisitor(job, ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.
-                new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf, new JL5TypeUtils(ts, nf)))
+                new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf))
                 );
         try {
             prep.addPrerequisiteGoal(Serialized(job), this);
@@ -88,7 +87,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
         public boolean run() {
             ExtensionInfo extInfo = goal.job().extensionInfo();
             PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
-            TypeSystem ts = extInfo.typeSystem();
+            JL7TypeSystem ts = (JL7TypeSystem) extInfo.typeSystem();
             Node ast = goal.job().ast();
             if (!(ast instanceof SourceFile))
                 throw new InternalCompilerError("AST root should be a SourceFile");

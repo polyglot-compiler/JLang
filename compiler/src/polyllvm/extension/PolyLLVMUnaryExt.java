@@ -33,7 +33,7 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         boolean integral = n.expr().type().isLongOrLess();
         Binary.Operator binop = inc ? Binary.ADD : Binary.SUB;
         Type type = n.expr().type();
-        LLVMTypeRef typeRef = v.utils.typeRef(type);
+        LLVMTypeRef typeRef = v.utils.toLL(type);
 
         // Get lvalue.
         LLVMValueRef exprPtr = lang().translateAsLValue(n.expr(), v);
@@ -62,7 +62,7 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         Operator op = n.operator();
         Expr expr = n.expr();
         LLVMValueRef exprRef = v.getTranslation(expr);
-        LLVMTypeRef typeRef = v.utils.typeRef(expr.type());
+        LLVMTypeRef typeRef = v.utils.toLL(expr.type());
 
         v.debugInfo.emitLocation(n);
 

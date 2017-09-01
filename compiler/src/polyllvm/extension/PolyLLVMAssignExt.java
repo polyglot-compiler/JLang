@@ -18,23 +18,23 @@ public class PolyLLVMAssignExt extends PolyLLVMExt {
     public Node overrideTranslateLLVM(LLVMTranslator v) {
         Assign n = (Assign) node();
         Assign.Operator op = n.operator();
-        Type type = n.right().type();
+        Type rhsTy = n.right().type();
 
         LLVMValueRef ptr = lang().translateAsLValue(n.left(), v);
         n.right().visit(v);
-        LLVMValueRef expr = v.getTranslation(n.right());
+        LLVMValueRef x_rhs = v.getTranslation(n.right());
         v.debugInfo.emitLocation(n);
 
         if (op.equals(Assign.ASSIGN)) {
             // Simple assignment.
-            LLVMBuildStore(v.builder, expr, ptr);
-            v.addTranslation(n,expr);
+            LLVMBuildStore(v.builder, v.getTranslation(n.right()), ptr);
+            v.addTranslation(n, x_rhs);
         } else {
             // Update assignment.
             LLVMValueRef prevVal = LLVMBuildLoad(v.builder, ptr, "load");
             Binary.Operator binop = convertAssignOpToBinop(n.operator());
             LLVMValueRef newVal
-                    = PolyLLVMBinaryExt.computeBinop(v.builder, binop, prevVal, expr, type, type);
+                    = PolyLLVMBinaryExt.computeBinop(v.builder, binop, prevVal, x_rhs, rhsTy, rhsTy);
             LLVMBuildStore(v.builder, newVal, ptr);
             v.addTranslation(n, newVal);
         }

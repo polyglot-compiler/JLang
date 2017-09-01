@@ -3,86 +3,97 @@ package polyllvm.extension;
 import polyglot.types.ReferenceType;
 import polyllvm.visit.LLVMTranslator;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
 /**
- * Creates LLVM IR for class objects, which are used, e.g., to implement instanceof.
+ * Creates LLVM IR for class objects, which are used, e.g., to implement
+ * instanceof.
  */
 public final class ClassObjects {
-    private final LLVMTranslator v;
+	private final LLVMTranslator v;
 
-    public ClassObjects(LLVMTranslator v) {
-        this.v = v;
-    }
+	public ClassObjects(LLVMTranslator v) {
+		this.v = v;
+	}
 
-    public LLVMTypeRef classIdVarTypeRef() {
-        return LLVMInt8TypeInContext(v.context);
-    }
+	public LLVMTypeRef classIdVarTypeRef() {
+		return LLVMInt8TypeInContext(v.context);
+	}
 
-    public LLVMTypeRef classIdVarPtrTypeRef() {
-        return v.utils.ptrTypeRef(classIdVarTypeRef());
-    }
+	public LLVMTypeRef classIdVarPtrTypeRef() {
+		return v.utils.ptrTypeRef(classIdVarTypeRef());
+	}
 
-    public LLVMValueRef classIdDeclRef(ReferenceType rt, boolean extern) {
-        rt = v.jl5Utils.translateType(rt);
-        LLVMValueRef global = v.utils.getGlobal(v.mod, v.mangler.classIdName(rt), classIdVarTypeRef());
-        if (!extern) {
-            LLVMSetInitializer(global, LLVMConstInt(LLVMInt8TypeInContext(v.context), 0, /*sign-extend*/ 0));
-        }
-        return global;
-    }
+	/**
+	 * Obtains the LLVM representation of the identity of Java class/interface
+	 * type {@code rt}. The identity is efficiently represented by a pointer to
+	 * a global variable allocated per class/interface.
+	 * 
+	 * @param rt
+	 * @param extern
+	 *            indicates whether to initialize the global variable
+	 */
+	public LLVMValueRef toTypeIdentity(ReferenceType rt, boolean extern) {
+		LLVMValueRef global = v.utils.getGlobal(v.mod,
+				v.mangler.typeIdentityId(v.utils.erasureLL(rt)),
+				classIdVarTypeRef());
+		if (!extern) {
+			LLVMSetInitializer(global, LLVMConstInt(
+					LLVMInt8TypeInContext(v.context), 0, /* sign-extend */ 0));
+		}
+		return global;
+	}
 
-    public LLVMValueRef classIdVarRef(ReferenceType rt) {
-        rt = v.jl5Utils.translateType(rt);
-        return v.utils.getGlobal(v.mod, v.mangler.classIdName(rt), classIdVarTypeRef());
-    }
+	/**
+	 * See {@link #toTypeIdentity(ReferenceType, boolean)} ({@code extern} is
+	 * always true).
+	 */
+	public LLVMValueRef toTypeIdentity(ReferenceType rt) {
+		return toTypeIdentity(rt, true);
+	}
 
-    public LLVMValueRef classObjRef(ReferenceType rt) {
-        rt = v.jl5Utils.translateType(rt);
+	public LLVMTypeRef classObjTypeRef(ReferenceType rt) {
+		LLVMValueRef[] classObjPtrs = classObjPtrs(rt);
+		return v.utils.structType(LLVMInt32TypeInContext(v.context),
+				LLVMArrayType(classIdVarPtrTypeRef(), classObjPtrs.length));
+	}
 
-        LLVMValueRef[] classObjPtrs = classObjPtrs(rt).stream().toArray(LLVMValueRef[]::new);
-        LLVMValueRef classObjPtrsArr = v.utils.buildConstArray(classIdVarPtrTypeRef(), classObjPtrs);
-        LLVMValueRef numSupertypes = LLVMConstInt(LLVMInt32TypeInContext(v.context), countSupertypes(rt), /*sign-extend*/ 0);
-        LLVMValueRef classObjStruct = v.utils.buildConstStruct(numSupertypes, classObjPtrsArr);
+	public LLVMValueRef classObjRef(ReferenceType rt) {
+		LLVMValueRef[] classObjPtrs = classObjPtrs(rt);
+		LLVMValueRef classObjPtrsArr = v.utils
+				.buildConstArray(classIdVarPtrTypeRef(), classObjPtrs);
+		LLVMValueRef numSupertypes = LLVMConstInt(
+				LLVMInt32TypeInContext(v.context), classObjPtrs.length,
+				/* sign-extend */ 0);
+		LLVMValueRef classObjStruct = v.utils.buildConstStruct(numSupertypes,
+				classObjPtrsArr);
 
-        LLVMValueRef global = v.utils.getGlobal(v.mod, v.mangler.classObjName(rt), LLVMTypeOf(classObjStruct));
-        LLVMSetExternallyInitialized(global, 0);
-        LLVMSetInitializer(global, classObjStruct);
-        if (v.isInterface(rt)) {
-            LLVMSetLinkage(global, LLVMLinkOnceODRLinkage);
-        }
+		LLVMValueRef global = v.utils.getGlobal(v.mod,
+				v.mangler.classObjName(rt), LLVMTypeOf(classObjStruct));
+		LLVMSetExternallyInitialized(global, 0);
+		LLVMSetInitializer(global, classObjStruct);
+		LLVMSetLinkage(global, LLVMLinkOnceODRLinkage);
 
-        return global;
-    }
+		return global;
+	}
 
-    /** Counts the supertypes for this reference type, including itself. */
-    public int countSupertypes(ReferenceType rt) {
-        return classObjPtrs(rt).size();
-    }
+	private LLVMValueRef[] classObjPtrs(ReferenceType rt) {
+		// suptypes will contain the erasure of all supertypes
+		Set<ReferenceType> suptypes = new LinkedHashSet<>();
+		Deque<ReferenceType> toVisit = new LinkedList<>();
+		toVisit.add(rt);
+		while (!toVisit.isEmpty()) {
+			ReferenceType t = toVisit.remove();
+			suptypes.add(v.utils.erasureLL(t));
+			if (t.superType() != null)
+				toVisit.add(t.superType().toReference());
+			for (ReferenceType it : t.interfaces())
+				toVisit.add(it);
+		}
+		return suptypes.stream().map(t -> toTypeIdentity(t))
+				.toArray(LLVMValueRef[]::new);
+	}
 
-    public List<LLVMValueRef> classObjPtrs(ReferenceType rt) {
-        rt = v.jl5Utils.translateType(rt);
-        Set<LLVMValueRef> res = new LinkedHashSet<>();
-        res.add(classIdVarRef(rt));
-        if (rt.superType() != null)
-            res.addAll(classObjPtrs(rt.superType().toReference()));
-        for (ReferenceType it : rt.interfaces())
-            res.addAll(classObjPtrs(it));
-        return res.stream().collect(Collectors.toList());
-    }
-
-    public LLVMTypeRef classObjArrTypeRef(ReferenceType rt) {
-        rt = v.jl5Utils.translateType(rt);
-        return LLVMArrayType(classIdVarPtrTypeRef(), countSupertypes(rt));
-    }
-
-    public LLVMTypeRef classObjTypeRef(ReferenceType rt) {
-        rt = v.jl5Utils.translateType(rt);
-        return v.utils.structType(LLVMInt32TypeInContext(v.context), classObjArrTypeRef(rt));
-    }
 }

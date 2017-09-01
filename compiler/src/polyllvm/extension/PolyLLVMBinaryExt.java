@@ -92,7 +92,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
     }
 
     private LLVMValueRef computeShortCircuitOp(LLVMTranslator v, Type resType) {
-        LLVMValueRef binopRes = PolyLLVMLocalDeclExt.createLocal(v, "binop_res", v.utils.typeRef(resType));
+        LLVMValueRef binopRes = PolyLLVMLocalDeclExt.createLocal(v, "binop_res", v.utils.toLL(resType));
         LLVMBasicBlockRef trueBranch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "true_branch");
         LLVMBasicBlockRef falseBranch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "false_branch");
         LLVMBasicBlockRef continueBranch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "continue");
@@ -100,11 +100,11 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         translateLLVMConditional(v, trueBranch, falseBranch);
 
         LLVMPositionBuilderAtEnd(v.builder, trueBranch);
-        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.typeRef(resType), 1, /*sign-extend*/ 0), binopRes);
+        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.toLL(resType), 1, /*sign-extend*/ 0), binopRes);
         LLVMBuildBr(v.builder, continueBranch);
 
         LLVMPositionBuilderAtEnd(v.builder, falseBranch);
-        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.typeRef(resType), 0, /*sign-extend*/ 0), binopRes);
+        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.toLL(resType), 0, /*sign-extend*/ 0), binopRes);
         LLVMBuildBr(v.builder, continueBranch);
 
         LLVMPositionBuilderAtEnd(v.builder, continueBranch);

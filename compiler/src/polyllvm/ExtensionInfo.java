@@ -7,9 +7,11 @@ import polyglot.ext.jl7.ast.JL7ExtFactory_c;
 import polyglot.frontend.Scheduler;
 import polyglot.main.*;
 import polyglot.main.Version;
+import polyglot.types.TypeSystem;
 import polyllvm.ast.PolyLLVMExtFactory_c;
 import polyllvm.ast.PolyLLVMLang_c;
 import polyllvm.ast.PolyLLVMNodeFactory_c;
+import polyllvm.types.PolyLLVMTypeSystem_c;
 
 /**
  * Extension information for polyllvm extension.
@@ -43,6 +45,11 @@ public class ExtensionInfo extends JL7ExtensionInfo {
                 new PolyLLVMExtFactory_c(
                         new JL7ExtFactory_c(
                                 new JL5ExtFactory_c())));
+    }
+    
+    @Override
+    protected TypeSystem createTypeSystem() {
+        return new PolyLLVMTypeSystem_c();
     }
 
     @Override

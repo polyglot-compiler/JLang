@@ -1,30 +1,21 @@
 package unit;
 
-class InstanceOf implements IA {
-
-    public static void main(String[] args) {
-        f(new Subclass());
-    }
-
+class InstanceOf {
+	public static void main(String[] args) {
+		f(new C2());
+		f(new C3());
+	}
     public static void f(Object o) {
-        System.out.println(o instanceof Subclass);
+        System.out.println(o instanceof I1);
+        System.out.println(o instanceof I2);
+        System.out.println(o instanceof C1);
+        System.out.println(o instanceof C2);
+        System.out.println(o instanceof C3);
         System.out.println(o instanceof InstanceOf);
-        System.out.println(o instanceof Object);
-        System.out.println(o instanceof String);
-        System.out.println(o instanceof IA);
-        System.out.println(o instanceof IB);
-        System.out.println(o instanceof IC);
-        System.out.println(o instanceof ID);
-        System.out.println(o instanceof IE);
-        System.out.println(o instanceof IF);
     }
-
-    static class Subclass extends InstanceOf implements IE {}
+	public static class C1 implements I1<I2> { }
+	public static class C2<T> extends C1 implements I2 { }
+	public static class C3 extends C2<C3> { }
+	public interface I1<T> {}
+	public interface I2 extends I1<I2> {}
 }
-
-interface IA {}
-interface IB {}
-interface IC {}
-interface ID extends IA {}
-interface IE extends IB {}
-interface IF extends IC {}

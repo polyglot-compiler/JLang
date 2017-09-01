@@ -25,8 +25,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
         if (n.init() != null) {
-            LLVMValueRef val = v.getTranslation(n.init());
-            v.addTranslation(n, val);
+            v.addTranslation(n, v.utils.bitcastToLHS(n.init(), n.type()));
         }
         else {
             List<Expr> dims = n.dims();
@@ -48,7 +47,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         List<Expr> args = new ArrayList<>();
         ConstructorInstance arrayConstructor;
 
-        int sizeOfType;
+        int sizeOfType; // in byte
         if (dims.size() == 1) {
             arrayConstructor = getArrayConstructor(arrType, /*multidimensional*/ false);
             args.add(dims.iterator().next());
@@ -72,7 +71,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         LLVMValueRef arrLen64 = LLVMBuildSExt(v.builder, arrLen, i64, "arr_len");
         LLVMValueRef elemSize = LLVMConstInt(i64, sizeOfType, /*sign-extend*/ 0);
         LLVMValueRef contentSize = LLVMBuildMul(v.builder, elemSize, arrLen64, "mul");
-        LLVMValueRef headerSize = LLVMConstInt(i64, Constants.ARR_HEADER_SIZE, /*sign-extend*/ 0);
+        LLVMValueRef headerSize = LLVMConstInt(i64, Constants.ARR_ELEM_OFFSET*LLVMUtils.llvmPtrSize(), /*sign-extend*/ 0);
         LLVMValueRef size = LLVMBuildAdd(v.builder, headerSize, contentSize, "size");
 
         PolyLLVMNewExt ext = (PolyLLVMNewExt) PolyLLVMExt.ext(newArray);

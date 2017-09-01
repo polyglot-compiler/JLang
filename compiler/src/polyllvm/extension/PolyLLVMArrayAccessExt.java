@@ -45,7 +45,7 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
 
         LLVMValueRef lenPtr = v.utils.buildStructGEP(arr, 0, Constants.ARR_LEN_OFFSET);
         LLVMValueRef len = LLVMBuildLoad(v.builder, lenPtr, "len");
-        LLVMValueRef zero = LLVMConstNull(v.utils.typeRef(n.index().type()));
+        LLVMValueRef zero = LLVMConstNull(v.utils.toLL(n.index().type()));
         LLVMValueRef boundsCheck = LLVMBuildOr(
                 v.builder,
                 LLVMBuildICmp(v.builder, LLVMIntSLT, offset, zero, "lt_zero"),

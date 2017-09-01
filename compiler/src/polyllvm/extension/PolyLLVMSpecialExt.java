@@ -28,7 +28,7 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
             v.addTranslation(n, thisPtr);
         }
         else if (n.kind() == Special.SUPER) {
-            LLVMTypeRef type = v.utils.typeRef(n.type());
+            LLVMTypeRef type = v.utils.toLL(n.type());
             LLVMValueRef to_super = LLVMBuildBitCast(v.builder, thisPtr, type, "cast_to_super");
             v.addTranslation(n, to_super);
         }

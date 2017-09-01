@@ -37,10 +37,10 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 .collect(Collectors.toList());
         ReferenceType target = v.getCurrentClass().type().toReference();
         LLVMTypeRef funcType = pi.flags().isStatic()
-                ? v.utils.functionType(retType, formalTypes)
-                : v.utils.methodType(target, retType, formalTypes);
+                ? v.utils.toLLFuncTy(retType, formalTypes)
+                : v.utils.toLLFuncTy(target, retType, formalTypes);
 
-        LLVMValueRef funcRef = v.utils.funcRef(v.mod, pi, funcType);
+        LLVMValueRef funcRef = v.utils.getFunction(v.mod, v.mangler.mangleProcedureName(pi), funcType);
         v.debugInfo.funcDebugInfo(n, funcRef);
         v.debugInfo.emitLocation(n);
 
@@ -50,7 +50,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         for (int i = 0; i < n.formals().size(); ++i) {
             Formal formal = n.formals().get(i);
-            LLVMTypeRef typeRef = v.utils.typeRef(formal.type().type());
+            LLVMTypeRef typeRef = v.utils.toLL(formal.type().type());
 
             LLVMValueRef alloc = LLVMBuildAlloca(v.builder, typeRef, "arg_" + formal.name());
             int idx = i + (pi.flags().isStatic() ? 0 : 1);

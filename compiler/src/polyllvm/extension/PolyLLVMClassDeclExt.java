@@ -9,9 +9,8 @@ import org.bytedeco.javacpp.LLVM.LLVMValueRef;
 
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Node;
+import polyglot.types.ClassType;
 import polyglot.types.ParsedClassType;
-import polyglot.types.ReferenceType;
-import polyglot.types.Type;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
@@ -28,30 +27,19 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
 	@Override
 	public Node leaveTranslateLLVM(LLVMTranslator v) {
 		ClassDecl n = (ClassDecl) node();
+		assert !n.type().flags().isInterface(); // cannot be an interface
 
-		// External class object declarations.
-		Type superType = n.type().superType();
-		while (superType != null) {
-			v.classObjs.classIdDeclRef(superType.toReference(),
-					/* extern */ true);
-			superType = superType.toReference().superType();
-		}
-
-		n.interfaces().stream().map(tn -> tn.type().toClass())
-				.map(rt -> v.classObjs.classIdDeclRef(rt, /* extern */ true));
-
-		// Class object for this class.
-		v.classObjs.classIdDeclRef(n.type(), /* extern */ false);
+		// Initialize the type identity
+		v.classObjs.toTypeIdentity(n.type(), /* extern */ false);
 		v.classObjs.classObjRef(n.type());
 
-		List<? extends ReferenceType> interfaces = v.allInterfaces(n.type());
+		List<ClassType> interfaces = v.allInterfaces(n.type());
 
 		if (!n.flags().isAbstract()) {
-			// Set up the class dispatch vector
-			LLVMValueRef dvGlobal = v.utils.getDvGlobal(n.type());
-			LLVMValueRef[] dvMethods = v.utils.dvMethods(n.type());
-			LLVMValueRef initStruct = v.utils.buildConstStruct(dvMethods);
-			LLVMSetInitializer(dvGlobal, initStruct);
+			// Initialize the CDV global
+			LLVMValueRef cdv_global = v.utils.toCDVGlobal(n.type());
+			LLVMValueRef[] cdv_slots = v.utils.toCDVSlots(n.type());
+			LLVMSetInitializer(cdv_global, v.utils.buildConstStruct(cdv_slots));
 		}
 
 		if (!n.type().flags().isAbstract() && !interfaces.isEmpty()) {
@@ -60,20 +48,20 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
 			LLVMValueRef[] intf_ids = new LLVMValueRef[numOfIntfs];
 			LLVMValueRef[] intf_tables = new LLVMValueRef[numOfIntfs];
 
-			// Set up the interface dispatch vectors
-			for (int i = 0; i < numOfIntfs; i++) {
-				ReferenceType it = interfaces.get(i);
+			// Initialize the IDV globals
+			for (int i = 0; i < numOfIntfs; ++i) {
+				ClassType it = interfaces.get(i);
 
 				int hash = v.utils.intfHash(it);
 				intf_id_hashes[i] = LLVMConstInt(
 						LLVMInt32TypeInContext(v.context), hash,
 						/* sign-extend */ 0);
 
-				LLVMValueRef intf_id_global = v.classObjs.classIdVarRef(it);
+				LLVMValueRef intf_id_global = v.classObjs.toTypeIdentity(it);
 				intf_ids[i] = intf_id_global;
 
-				LLVMValueRef idv_global = v.utils.getItGlobal(it, n.type());
-				LLVMValueRef[] idv_methods = v.utils.itMethods(it, n.type());
+				LLVMValueRef idv_global = v.utils.toIDVGlobal(it, n.type());
+				LLVMValueRef[] idv_methods = v.utils.toIDVSlots(it, n.type());
 				LLVMValueRef idv_value = v.utils.buildConstStruct(idv_methods);
 				LLVMSetInitializer(idv_global, idv_value);
 				intf_tables[i] = LLVMBuildBitCast(v.builder, idv_global,
@@ -82,13 +70,13 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
 
 			// Set up the hash table that points to the interface dispatch
 			// vectors
-			LLVMValueRef cdv_global = v.utils.getDvGlobal(n.type());
-			LLVMValueRef idv_arr_global = v.utils.getIdvArrGlobal(n.type(),
+			LLVMValueRef cdv_global = v.utils.toCDVGlobal(n.type());
+			LLVMValueRef idv_arr_global = v.utils.toIDVArrGlobal(n.type(),
 					numOfIntfs);
-			LLVMValueRef idv_id_arr_global = v.utils.getIdvIdArrGlobal(n.type(),
+			LLVMValueRef idv_id_arr_global = v.utils.toIDVIdArrGlobal(n.type(),
 					numOfIntfs);
 			LLVMValueRef idv_id_hash_arr_global = v.utils
-					.getIdvIdHashArrGlobal(n.type(), numOfIntfs);
+					.toIDVIdHashArrGlobal(n.type(), numOfIntfs);
 
 			LLVMSetInitializer(idv_arr_global, v.utils
 					.buildConstArray(v.utils.llvmBytePtr(), intf_tables));
@@ -111,7 +99,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
 			int capacity = v.utils.idvCapacity(numOfIntfs);
 			v.utils.buildCtor(node, () -> {
 				v.utils.buildProcedureCall(create_idv_ht_func,
-						v.utils.llvmConstBitCastToBytePtr(cdv_global),
+						v.utils.buildCastToBytePtr(cdv_global),
 						LLVMConstInt(LLVMInt32TypeInContext(v.context),
 								capacity, /* sign-extend */ 0),
 						LLVMConstInt(LLVMInt32TypeInContext(v.context),
@@ -119,8 +107,8 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
 						LLVMConstBitCast(idv_id_hash_arr_global,
 								v.utils.ptrTypeRef(
 										LLVMInt32TypeInContext(v.context))),
-						v.utils.llvmConstBitCastToBytePtr(idv_id_arr_global),
-						v.utils.llvmConstBitCastToBytePtr(idv_arr_global));
+						v.utils.buildCastToBytePtr(idv_id_arr_global),
+						v.utils.buildCastToBytePtr(idv_arr_global));
 				return null;
 			});
 		}
@@ -133,9 +121,9 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
 	public Node overrideTranslateLLVM(LLVMTranslator v) {
 		ClassDecl n = (ClassDecl) node();
 		ParsedClassType ty = n.type();
-		if (v.isInterface(ty)) {
-			// Interfaces need only declare a class id.
-			v.classObjs.classIdDeclRef(ty, /* extern */ false);
+		if (ty.flags().isInterface()) {
+			// An interface need only establish its identity.
+			v.classObjs.toTypeIdentity(ty, /* extern */ false);
 			return n;
 		}
 		return super.overrideTranslateLLVM(v);

@@ -3,6 +3,7 @@ package polyllvm.extension;
 import polyglot.ast.FieldDecl;
 import polyglot.ast.Lit;
 import polyglot.ast.Node;
+import polyglot.types.FieldInstance;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
@@ -23,8 +24,9 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
         // non-static field initializers are handled in constructors.
         if (n.flags().isStatic()) {
             ReferenceType classType = v.getCurrentClass().type().toReference();
-            String mangledName = v.mangler.mangleStaticFieldName(classType, n);
-            LLVMTypeRef type = v.utils.typeRef(n.type().type());
+            FieldInstance fi = n.fieldInstance();
+            String mangledName = v.mangler.mangleStaticFieldName(fi);
+            LLVMTypeRef type = v.utils.toLL(n.type().type());
             LLVMValueRef global = v.utils.getGlobal(v.mod, mangledName, type);
             if (n.init() == null) {
                 // LLVMConstNull will give zero for any type, including numeric and pointer types.

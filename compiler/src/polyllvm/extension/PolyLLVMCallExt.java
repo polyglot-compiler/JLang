@@ -2,217 +2,223 @@ package polyllvm.extension;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.bytedeco.javacpp.LLVM.LLVMTypeRef;
 import org.bytedeco.javacpp.LLVM.LLVMValueRef;
 
 import polyglot.ast.Call;
-import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyglot.ast.Special;
+import polyglot.ext.jl5.types.JL5MethodInstance;
+import polyglot.types.ClassType;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
+import polyllvm.types.SubstMethodInstance;
+import polyllvm.util.CollectUtils;
 import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
+import polyllvm.visit.LLVMTranslator.DispatchInfo;
 
 public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 	private static final long serialVersionUID = SerialVersionUID.generate();
 
-	@Override public Node leaveTranslateLLVM(LLVMTranslator v) {
-		Call n = (Call) node();
+	@Override
+	public Node leaveTranslateLLVM(LLVMTranslator v) {
+		Call n = node();
 		MethodInstance mi = n.methodInstance();
 
 		if (n.target() instanceof Special
 				&& ((Special) n.target()).kind().equals(Special.SUPER)) {
 			translateSuperCall(v);
-		} else if (n.target() instanceof Expr && v.isInterface(n.target().type().toReference())) {
-			translateInterfaceMethodCall(v);
 		} else if (mi.flags().isStatic()) {
 			translateStaticCall(v);
 		} else if (mi.flags().isPrivate() || mi.flags().isFinal()) {
 			translateFinalMethodCall(v);
 		} else {
-			translateMethodCall(v);
+			translateNonStaticCall(v);
 		}
 
 		return super.leaveTranslateLLVM(v);
 	}
 
+	@Override
+	public Call node() {
+		return (Call) super.node();
+	}
+
+	private void translateNonStaticCall(LLVMTranslator v) {
+		Call n = node();
+		ReferenceType recvTy = n.target().type().toReference();
+		SubstMethodInstance substM = (SubstMethodInstance) n.methodInstance();
+		JL5MethodInstance origM = substM.base();
+		LLVMValueRef x_recv = v.getTranslation(n.target());
+		List<LLVMValueRef> x_args = n.arguments().stream()
+				.<LLVMValueRef> map(e -> v.getTranslation(e))
+				.collect(Collectors.toList());
+		LLVMValueRef[] ll_args = CollectUtils.<LLVMValueRef> toArray(x_recv,
+				x_args, LLVMValueRef.class);
+		LLVMValueRef func_ptr;
+
+		DispatchInfo dispInfo = v.dispatchInfo(recvTy, origM);
+		if (dispInfo.isClassDisp()) { // dispatching a class method
+			// Calling toLL ensures the LLVM types of the object and its CDV are
+			// not opaque before the following GEPs occur
+			v.utils.toLL(recvTy);
+			LLVMValueRef cdv_ptr_ptr = v.utils.buildStructGEP(x_recv, 0,
+					Constants.DISPATCH_VECTOR_OFFSET);
+			LLVMValueRef cdv_ptr = LLVMBuildLoad(v.builder, cdv_ptr_ptr,
+					"cdv_ptr");
+			LLVMValueRef func_ptr_ptr = v.utils.buildStructGEP(cdv_ptr, 0,
+					dispInfo.methodIndex());
+			func_ptr = LLVMBuildLoad(v.builder, func_ptr_ptr,
+					"load_method_ptr");
+			// Bitcast the function so that the formal types are the types that
+			// the arguments were cast to by MakeCastsExplicitVisitor. It is
+			// needed due to potential mismatch between the types caused by
+			// erasure.
+			LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(recvTy,
+					substM.returnType(), substM.formalTypes());
+			func_ptr = v.utils.bitcastFunc(func_ptr, func_ty_cast);
+
+		} else { // dispatching an interface method
+			ClassType intf = dispInfo.intfErasure();
+			LLVMValueRef intf_id_global = v.classObjs.toTypeIdentity(intf);
+			LLVMValueRef obj_bitcast = LLVMBuildBitCast(v.builder, x_recv,
+					v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)),
+					"cast_for_interface_call");
+			int hash = v.utils.intfHash(intf);
+			LLVMValueRef intf_id_hash_const = LLVMConstInt(
+					LLVMInt32TypeInContext(v.context), hash,
+					/* sign-extend */ 0);
+			LLVMTypeRef get_intf_method_func_ty = v.utils.functionType(
+					v.utils.llvmBytePtr(), // void* return type
+					v.utils.llvmBytePtr(), // jobject*
+					LLVMInt32TypeInContext(v.context), // int
+					v.utils.llvmBytePtr(), // void*
+					LLVMInt32TypeInContext(v.context) // int
+			);
+			LLVMValueRef get_intf_method_func = v.utils.getFunction(v.mod,
+					"__getInterfaceMethod", get_intf_method_func_ty);
+			LLVMValueRef offset_local = LLVMConstInt(
+					LLVMInt32TypeInContext(v.context), dispInfo.methodIndex(),
+					/* sign-extend */ 0);
+			LLVMValueRef intf_method_local = v.utils.buildMethodCall(
+					get_intf_method_func, // ptr to method code
+					obj_bitcast, // the object
+					intf_id_hash_const, // id hash code
+					intf_id_global, // id
+					offset_local // method index
+			);
+			// Bitcast the function so that the formal types are the types that
+			// the arguments were cast to by MakeCastsExplicitVisitor. It is
+			// needed due to potential mismatch between the types caused by
+			// erasure.
+			LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(intf,
+					substM.returnType(), substM.formalTypes());
+			func_ptr = v.utils.bitcastFunc(intf_method_local, func_ty_cast);
+		}
+
+		LLVMValueRef val;
+		if (substM.returnType().isVoid()) {
+			val = v.utils.buildProcedureCall(func_ptr, ll_args);
+		} else {
+			val = v.utils.buildMethodCall(func_ptr, ll_args);
+		}
+		v.addTranslation(n, val);
+	}
+
 	private void translateStaticCall(LLVMTranslator v) {
-		Call n = (Call) node();
+		Call n = node();
+		MethodInstance substM = n.methodInstance();
 
-		String mangledFuncName = v.mangler
-				.mangleProcedureName(n.methodInstance());
+		LLVMValueRef[] x_args = new LLVMValueRef[n.arguments().size()];
+		for (int i = 0; i < x_args.length; ++i)
+			x_args[i] = v.getTranslation(n.arguments().get(i));
 
-		LLVMTypeRef tn = v.utils.functionType(n.methodInstance().returnType(),
-				n.methodInstance().formalTypes());
-
-		LLVMValueRef[] args = n.arguments().stream().map(v::getTranslation)
-				.toArray(LLVMValueRef[]::new);
-
-		LLVMValueRef func = v.utils.getFunction(v.mod, mangledFuncName, tn);
+		String func_name = v.mangler.mangleProcedureName(substM);
+		LLVMTypeRef func_type = v.utils.toLLFuncTy(v.utils.retErasureLL(substM),
+				v.utils.formalsErasureLL(substM));
+		LLVMValueRef func_ptr = v.utils.getFunction(v.mod, func_name,
+				func_type);
+		// Bitcast the function so that the formal types are the types that the
+		// arguments were cast to by MakeCastsExplicitVisitor. It is needed due
+		// to potential mismatch between the types caused by erasure.
+		LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(substM.returnType(),
+				substM.formalTypes());
+		func_ptr = v.utils.bitcastFunc(func_ptr, func_ty_cast);
 
 		v.debugInfo.emitLocation(n);
-		if (n.methodInstance().returnType().isVoid()) {
-			v.addTranslation(n, v.utils.buildProcedureCall(func, args));
+
+		LLVMValueRef val;
+		if (substM.returnType().isVoid()) {
+			val = v.utils.buildProcedureCall(func_ptr, x_args);
 		} else {
-			v.addTranslation(n, v.utils.buildMethodCall(func, args));
+			val = v.utils.buildMethodCall(func_ptr, x_args);
 		}
-
-	}
-
-	private void translateSuperCall(LLVMTranslator v) {
-		Call n = (Call) node();
-		MethodInstance superMethod = n.methodInstance().overrides().get(0);
-
-		LLVMTypeRef toType = v.utils.ptrTypeRef(
-				v.utils.methodType(v.getCurrentClass().type(),
-					n.methodInstance().returnType(),
-					n.methodInstance().formalTypes()));
-
-		LLVMTypeRef superMethodType = v.utils.methodType(
-				superMethod.container(), superMethod.returnType(),
-				superMethod.formalTypes());
-
-		LLVMValueRef superFunc = v.utils.getFunction(v.mod,
-				v.mangler.mangleProcedureName(superMethod),
-				superMethodType);
-
-		LLVMValueRef superBitCast = LLVMBuildBitCast(v.builder, superFunc,
-				toType, "bitcast_super");
-
-		LLVMValueRef thisArg = LLVMGetParam(v.currFn(), 0);
-
-		LLVMValueRef[] args = Stream
-				.concat(Stream.of(thisArg),
-						n.arguments().stream().map(v::getTranslation))
-				.toArray(LLVMValueRef[]::new);
-
-		if (n.methodInstance().returnType().isVoid()) {
-			v.addTranslation(n, v.utils.buildProcedureCall(superBitCast, args));
-		} else {
-			v.addTranslation(n, v.utils.buildMethodCall(superBitCast, args));
-		}
-
-	}
-
-	private void translateMethodCall(LLVMTranslator v) {
-		Call n = (Call) node();
-
-		ReferenceType referenceType = (ReferenceType) v.jl5Utils.translateType(n.target().type());
-		MethodInstance methodInstance = (MethodInstance) v.jl5Utils.translateMemberInstance(n.methodInstance());
-		v.utils.typeRef(referenceType); // Ensure the target type body and dv type body (with generics stripped) are set before GEP
-
-		LLVMValueRef thisTranslation = v.getTranslation(n.target());
-
-		LLVMValueRef dvDoublePtr = v.utils.buildStructGEP(thisTranslation, 0, Constants.DISPATCH_VECTOR_INDEX);
-
-		LLVMValueRef dvPtr = LLVMBuildLoad(v.builder, dvDoublePtr, "dv_ptr");
-
-		int methodIndex = v.getMethodIndex(referenceType, methodInstance);
-
-		LLVMTypeRef res = LLVMGetTypeByName(v.mod,
-				v.mangler.dispatchVectorTypeName(referenceType));
-
-		LLVMValueRef funcDoublePtr = v.utils.buildStructGEP(dvPtr, 0, methodIndex);
-
-		LLVMValueRef methodPtr = LLVMBuildLoad(v.builder, funcDoublePtr,
-				"load_method_ptr");
-
-		LLVMValueRef[] args = Stream
-				.concat(Stream.of(thisTranslation),
-						n.arguments().stream()
-								.map(v::getTranslation))
-				.toArray(LLVMValueRef[]::new);
-
-		if (methodInstance.returnType().isVoid()) {
-			v.addTranslation(n, v.utils.buildProcedureCall(methodPtr, args));
-		} else {
-			v.addTranslation(n, v.utils.buildMethodCall(methodPtr, args));
-
-		}
+		v.addTranslation(n, val);
 	}
 
 	private void translateFinalMethodCall(LLVMTranslator v) {
-		Call n = (Call) node();
+		Call n = node();
+		MethodInstance substM = n.methodInstance();
 
-		String mangledFuncName = v.mangler
-				.mangleProcedureName(n.methodInstance());
+		String func_name = v.mangler.mangleProcedureName(substM);
 
-		ReferenceType referenceType = (ReferenceType) n.target().type();
-		LLVMTypeRef tn = v.utils.methodType(referenceType,
-				n.methodInstance().returnType(),
-				n.methodInstance().formalTypes());
+		LLVMTypeRef func_ty = v.utils.toLLFuncTy(
+				n.target().type().toReference(), v.utils.retErasureLL(substM),
+				v.utils.formalsErasureLL(substM));
 
-		LLVMValueRef thisTranslation = v.getTranslation(n.target());
-		LLVMValueRef[] args = Stream
-				.concat(Stream.of(thisTranslation),
-						n.arguments().stream()
-								.map(v::getTranslation))
-				.toArray(LLVMValueRef[]::new);
-
-		LLVMValueRef func = v.utils.getFunction(v.mod, mangledFuncName, tn);
-
-		v.debugInfo.emitLocation(n);
-		if (n.methodInstance().returnType().isVoid()) {
-			v.addTranslation(n, v.utils.buildProcedureCall(func, args));
-		} else {
-			v.addTranslation(n, v.utils.buildMethodCall(func, args));
-		}
-
-	}
-
-
-	private void translateInterfaceMethodCall(LLVMTranslator v) {
-		Call n = (Call) node();
-		ReferenceType rt = (ReferenceType) n.target().type();
-		MethodInstance mi = (MethodInstance) v.jl5Utils.translateMemberInstance(n.methodInstance());
-		LLVMValueRef thisTranslation = v.getTranslation(n.target());
-
-		LLVMTypeRef methodType = v.utils.ptrTypeRef(
-				v.utils.methodType(rt, mi.returnType(), mi.formalTypes()));
-
-		int methodIndex = v.getMethodIndex(rt, mi);
-
-		LLVMValueRef intf_id_global = v.classObjs.classIdVarRef(rt);
-		LLVMValueRef obj_bitcast = LLVMBuildBitCast(v.builder, thisTranslation,
-				v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)),
-				"cast_for_interface_call");
-		int hash = v.utils.intfHash(rt);
-		LLVMValueRef intf_id_hash_const = LLVMConstInt(
-				LLVMInt32TypeInContext(v.context), hash, /* sign-extend */ 0);
-		LLVMTypeRef get_intf_method_func_ty = v.utils.functionType(
-				v.utils.llvmBytePtr(), // void* return type
-				v.utils.llvmBytePtr(), // jobject*
-				LLVMInt32TypeInContext(v.context), // int
-				v.utils.llvmBytePtr(), // void*
-				LLVMInt32TypeInContext(v.context) // int
-		);
-		LLVMValueRef get_intf_method_func = v.utils.getFunction(v.mod,
-				"__getInterfaceMethod", get_intf_method_func_ty);
-		LLVMValueRef intf_method_local = v.utils.buildMethodCall(
-				get_intf_method_func, // ptr to method code
-				obj_bitcast, // the object
-				intf_id_hash_const, // id hash code
-				intf_id_global, // id
-				LLVMConstInt(LLVMInt32TypeInContext(v.context), methodIndex,
-						/* sign-extend */ 0) // method index
-		);
-
-		LLVMValueRef cast = LLVMBuildBitCast(v.builder, intf_method_local,
-				methodType, "cast_interface_method");
-
-		LLVMValueRef[] args = Stream
-				.concat(Stream.of(thisTranslation),
+		LLVMValueRef x_recv = v.getTranslation(n.target());
+		LLVMValueRef[] x_args = Stream
+				.concat(Stream.of(x_recv),
 						n.arguments().stream().map(v::getTranslation))
 				.toArray(LLVMValueRef[]::new);
 
-		if (n.methodInstance().returnType().isVoid()) {
-			v.addTranslation(n, v.utils.buildProcedureCall(cast, args));
+		LLVMValueRef func_ptr = v.utils.getFunction(v.mod, func_name, func_ty);
+		// Bitcast the function so that the formal types are the types that the
+		// arguments were cast to by MakeCastsExplicitVisitor. It is needed due
+		// to potential mismatch between the types caused by erasure.
+		LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(
+				n.target().type().toReference(), substM.returnType(),
+				substM.formalTypes());
+		func_ptr = v.utils.bitcastFunc(func_ptr, func_ty_cast);
+
+		v.debugInfo.emitLocation(n);
+		if (substM.returnType().isVoid()) {
+			v.addTranslation(n, v.utils.buildProcedureCall(func_ptr, x_args));
 		} else {
-			v.addTranslation(n, v.utils.buildMethodCall(cast, args));
+			v.addTranslation(n, v.utils.buildMethodCall(func_ptr, x_args));
+		}
+	}
+
+	private void translateSuperCall(LLVMTranslator v) {
+		Call n = node();
+		MethodInstance substM = n.methodInstance();
+
+		LLVMTypeRef func_ty = v.utils.toLLFuncTy(substM.container(),
+				v.utils.retErasureLL(substM), v.utils.formalsErasureLL(substM));
+		LLVMValueRef func_ptr = v.utils.getFunction(v.mod,
+				v.mangler.mangleProcedureName(substM), func_ty);
+
+		LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(
+				v.getCurrentClass().type(), substM.returnType(),
+				substM.formalTypes());
+		func_ptr = v.utils.bitcastFunc(func_ptr, func_ty_cast);
+
+		LLVMValueRef x_this = LLVMGetParam(v.currFn(), 0);
+		LLVMValueRef[] x_args = Stream
+				.concat(Stream.of(x_this),
+						n.arguments().stream().map(v::getTranslation))
+				.toArray(LLVMValueRef[]::new);
+
+		if (substM.returnType().isVoid()) {
+			v.addTranslation(n, v.utils.buildProcedureCall(func_ptr, x_args));
+		} else {
+			v.addTranslation(n, v.utils.buildMethodCall(func_ptr, x_args));
 		}
 	}
 

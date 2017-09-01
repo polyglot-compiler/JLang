@@ -29,7 +29,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         Type exprType = n.expr().type();
 
         Type castType = n.castType().type();
-        LLVMTypeRef castTypeRef = v.utils.typeRef(castType);
+        LLVMTypeRef castTypeRef = v.utils.toLL(castType);
 
         LLVMValueRef exprRef = v.getTranslation(n.expr());
 

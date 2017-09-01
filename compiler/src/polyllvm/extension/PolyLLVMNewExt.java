@@ -1,11 +1,9 @@
 package polyllvm.extension;
 
-import polyglot.ast.ClassBody;
 import polyglot.ast.New;
 import polyglot.ast.Node;
 import polyglot.types.ConstructorInstance;
 import polyglot.types.ReferenceType;
-import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
@@ -22,9 +20,8 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         New n = (New) node();
 
         ConstructorInstance ci = n.constructorInstance();
-        ReferenceType classtype = ci.container();
         int mallocSize =
-                (v.layouts(classtype).part2().size() + /*Allocate space for Header*/ Constants.OBJECT_HEADER_SIZE) * 8;
+                (v.objFields(ci.container()).size() + /*Allocate space for Header*/ Constants.OBJECT_FIELDS_OFFSET) * 8;
         translateWithSize(v, LLVMConstInt(LLVMInt64TypeInContext(v.context), mallocSize, 0));
         return super.leaveTranslateLLVM(v);
     }
@@ -34,9 +31,8 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         New n = (New) node();
         n.visitChildren(v);
 
-        ConstructorInstance origCi = n.constructorInstance();
-        ConstructorInstance ci = (ConstructorInstance) v.jl5Utils.translateMemberInstance(origCi);
-        ReferenceType classtype = ci.container();
+        ConstructorInstance substC = n.constructorInstance();
+        ReferenceType clazz = substC.container();
 
 
         v.debugInfo.emitLocation();
@@ -48,26 +44,29 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         v.debugInfo.emitLocation(n);
 
         //Bitcast object
-        LLVMValueRef cast = LLVMBuildBitCast(v.builder, obj, v.utils.typeRef(classtype), "obj_cast");
+        LLVMValueRef obj_cast = LLVMBuildBitCast(v.builder, obj, v.utils.toLL(clazz), "obj_cast");
         //Set the Dispatch vector
-        LLVMValueRef gep = v.utils.buildStructGEP(cast, 0, Constants.DISPATCH_VECTOR_INDEX);
-        LLVMValueRef dvGlobal = v.utils.getDvGlobal(classtype);
+        LLVMValueRef gep = v.utils.buildStructGEP(obj_cast, 0, Constants.DISPATCH_VECTOR_OFFSET);
+        LLVMValueRef dvGlobal = v.utils.toCDVGlobal(clazz);
         LLVMBuildStore(v.builder, dvGlobal, gep);
 
         //Call the constructor function
-        String mangledFuncName =
-                v.mangler.mangleProcedureName(ci);
+        String mangledFuncName = v.mangler.mangleProcedureName(substC);
 
+        LLVMTypeRef func_ty = v.utils.toLLFuncTy(clazz, v.typeSystem().Void(), v.utils.formalsErasureLL(substC));
+        LLVMValueRef func = v.utils.getFunction(v.mod, mangledFuncName, func_ty);
+        // Bitcast the function so that the formal types are the types that
+        // the arguments were cast to by MakeCastsExplicitVisitor. It is
+        // needed due to potential mismatch between the types caused by
+        // erasure.
+        LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(clazz, v.typeSystem().Void(), substC.formalTypes());
+        func = LLVMBuildBitCast(v.builder, func, v.utils.ptrTypeRef(func_ty_cast), "constructor_cast");
 
-        LLVMTypeRef constructorType = v.utils.methodType(classtype,
-                v.typeSystem().Void(), ci.formalTypes());
-        LLVMValueRef constructor = v.utils.getFunction(v.mod, mangledFuncName, constructorType);
-
-        LLVMValueRef[] constructorArgs = Stream.concat(
-                Stream.of(cast), n.arguments().stream().map(v::getTranslation))
+        LLVMValueRef[] args = Stream.concat(
+                Stream.of(obj_cast), n.arguments().stream().map(v::getTranslation))
                 .toArray(LLVMValueRef[]::new);
-        v.utils.buildProcedureCall(constructor, constructorArgs);
+        v.utils.buildProcedureCall(func, args);
 
-        v.addTranslation(n, cast);
+        v.addTranslation(n, obj_cast);
     }
 }

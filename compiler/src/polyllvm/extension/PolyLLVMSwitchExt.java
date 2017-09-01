@@ -76,7 +76,7 @@ public class PolyLLVMSwitchExt extends PolyLLVMExt {
             Case c = cases.get(i);
             if (c.isDefault())
                 continue;
-            LLVMTypeRef type = v.utils.typeRef(c.expr().type());
+            LLVMTypeRef type = v.utils.toLL(c.expr().type());
             LLVMValueRef val = LLVMConstInt(type, c.value(), /*sign-extend*/ 0);
             LLVMBasicBlockRef block = blocks.get(blockMap.get(i));
             LLVMAddCase(switchRef, val, block);

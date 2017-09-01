@@ -20,7 +20,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
         LLVMBasicBlockRef firstBlock = LLVMGetFirstBasicBlock(v.currFn());
         LLVMPositionBuilderBefore(v.builder,LLVMGetBasicBlockTerminator(firstBlock));
         v.debugInfo.emitLocation(n);
-        LLVMValueRef alloc = LLVMBuildAlloca(v.builder, v.utils.typeRef(n.type().type()), n.name());
+        LLVMValueRef alloc = LLVMBuildAlloca(v.builder, v.utils.toLL(n.type().type()), n.name());
         v.addAllocation(n.name(), alloc);
 
         v.debugInfo.createLocalVariable(v, n ,alloc);
@@ -31,10 +31,8 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
             return super.leaveTranslateLLVM(v);
         }
 
-        LLVMValueRef init = v.getTranslation(n.init());
-
         v.debugInfo.emitLocation(n);
-        v.addTranslation(n, LLVMBuildStore(v.builder, init, alloc));
+        v.addTranslation(n, LLVMBuildStore(v.builder, v.getTranslation(n.init()), alloc));
         return super.leaveTranslateLLVM(v);
     }
 

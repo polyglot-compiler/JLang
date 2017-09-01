@@ -2,6 +2,7 @@ package polyllvm.extension;
 
 import polyglot.ast.Node;
 import polyglot.ast.StringLit;
+import polyglot.types.ParsedClassType;
 import polyglot.types.ReferenceType;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
@@ -23,8 +24,8 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         StringLit n = (StringLit) node();
         char[] chars = n.value().toCharArray();
 
-        ReferenceType arrayType = v.utils.getArrayType();
-        LLVMValueRef dvGlobal = v.utils.getDvGlobal(arrayType);
+        ParsedClassType arrayType = v.utils.getArrayType();
+        LLVMValueRef dvGlobal = v.utils.toCDVGlobal(arrayType);
         LLVMValueRef length = LLVMConstInt(v.utils.intType(32), chars.length, /*sign-extend*/ 0);
         List<LLVMValueRef> charTranslated = new ArrayList<>();
 
@@ -46,9 +47,9 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         LLVMSetLinkage(stringLit, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringLit, charArray);
 
-        LLVMValueRef dvString = v.utils.getDvGlobal(n.type().toReference());
+        LLVMValueRef dvString = v.utils.toCDVGlobal((ParsedClassType) v.typeSystem().String());
         LLVMValueRef[] stringLitBody =
-                Stream.of(dvString, sync_vars, LLVMConstBitCast(stringLit, v.utils.typeRef(arrayType)))
+                Stream.of(dvString, sync_vars, LLVMConstBitCast(stringLit, v.utils.toLL(arrayType)))
                         .toArray(LLVMValueRef[]::new);
 
         LLVMValueRef string = v.utils.buildConstStruct(stringLitBody);
@@ -57,7 +58,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         LLVMSetLinkage(stringVar, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringVar, string);
 
-        v.addTranslation(n,LLVMConstBitCast(stringVar, v.utils.typeRef(n.type())));
+        v.addTranslation(n,LLVMConstBitCast(stringVar, v.utils.toLL(n.type())));
         return super.leaveTranslateLLVM(v);
     }
 

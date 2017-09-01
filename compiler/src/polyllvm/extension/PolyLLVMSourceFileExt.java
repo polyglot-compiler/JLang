@@ -28,9 +28,6 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         LLVMTypeRef funcType = v.utils.functionType(retType, sizeType);
         LLVMAddFunction(v.mod, Constants.CALLOC, funcType);
 
-        // Add array type to the current module.
-        v.utils.setupArrayType();
-
         return v;
     }
 
@@ -62,7 +59,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
      */
     private static void buildEntryPoint(LLVMTranslator v, LLVMValueRef javaEntryPoint) {
         TypeSystem ts = v.typeSystem();
-        LLVMTypeRef argType = v.utils.typeRef(ts.arrayOf(ts.String()));
+        LLVMTypeRef argType = v.utils.toLL(ts.arrayOf(ts.String()));
         LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context), argType);
 
         LLVMValueRef func = LLVMAddFunction(v.mod, Constants.ENTRY_TRAMPOLINE, funcType);

@@ -173,26 +173,26 @@ public class DebugInfo {
      */
 
     public LLVMMetadataRef debugType(Type t) {
-        if (typeMap.containsKey(t)) {
-            return typeMap.get(t);
+    	Type erased = v.utils.erasureLL(t);
+        if (typeMap.containsKey(erased)) {
+            return typeMap.get(erased);
         }
-        t = v.jl5Utils.translateType(t);
 
         LLVMMetadataRef debugType;
-        if (t.isBoolean() || t.isLongOrLess() || t.isFloat() || t.isDouble()) {
-            debugType = debugBasicType(t);
-        } else if (t.isArray()) {
-            debugType = LLVMDIBuilderCreateArrayType(diBuilder, v.utils.sizeOfType(t), v.utils.sizeOfType(t), debugType(t.toArray().base()), null);
+        if (erased.isBoolean() || erased.isLongOrLess() || erased.isFloat() || erased.isDouble()) {
+            debugType = debugBasicType(erased);
+        } else if (erased.isNull()) {
+            debugType = LLVMDIBuilderCreatePointerType(diBuilder, LLVMDIBuilderCreateBasicType(diBuilder, erased.toString(), 64, 64, DW_ATE_signed), v.utils.sizeOfType(erased)*8, v.utils.sizeOfType(erased)*8, "class");
+        } else if (erased.isArray()) {
+            debugType = LLVMDIBuilderCreateArrayType(diBuilder, v.utils.sizeOfType(erased), v.utils.sizeOfType(erased), debugType(erased.toArray().base()), null);
             //debugType = LLVMDIBuilderCreatePointerType(diBuilder, debugType(t.toArray().base()), v.utils.sizeOfType(t), v.utils.sizeOfType(t), "array");
-        } else if (t.isNull()) {
-            debugType = LLVMDIBuilderCreatePointerType(diBuilder, LLVMDIBuilderCreateBasicType(diBuilder, t.toString(), 64, 64, DW_ATE_signed), v.utils.sizeOfType(t)*8, v.utils.sizeOfType(t)*8, "class");
-        } else if (t.isReference()) {
-            int line = t.position().line() == -1 ? 0 : t.position().line() ;
-            debugType = LLVMDIBuilderCreateClassType(diBuilder, currentScope(), t.toString(), createFile(),
-                    line, 0,0, /*Flags*/0 , t.toClass().superType() == null ? null : debugType(t.toClass().superType()), null);
+        } else if (erased.isClass()) {
+            int line = erased.position().line() == -1 ? 0 : erased.position().line() ;
+            debugType = LLVMDIBuilderCreateClassType(diBuilder, currentScope(), v.utils.erasureLL(erased).toString(), createFile(),
+                    line, 0,0, /*Flags*/0 , erased.toClass().superType() == null ? null : debugType(erased.toClass().superType()), null);
 
-        } else throw new InternalCompilerError("Invalid type");
-        typeMap.put(t, debugType);
+        } else throw new InternalCompilerError("Cannot handle "+erased.getClass());
+        typeMap.put(erased, debugType);
         return debugType;
 
     }

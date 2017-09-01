@@ -16,7 +16,7 @@ public class PolyLLVMFloatLitExt extends PolyLLVMExt {
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         FloatLit n = (FloatLit) node();
         v.debugInfo.emitLocation(n);
-        LLVMTypeRef type = v.utils.typeRef(n.type());
+        LLVMTypeRef type = v.utils.toLL(n.type());
         v.addTranslation(n, LLVMConstReal(type, n.value()));
         return super.leaveTranslateLLVM(v);
     }
