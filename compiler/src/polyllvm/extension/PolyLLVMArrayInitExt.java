@@ -20,8 +20,17 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
         ArrayInit n = (ArrayInit) node();
         PolyLLVMNodeFactory nf = v.nodeFactory();
         List<Expr> elements = n.elements();
-        // elemType is the "least common ancestor" of the elements
-        Type elemType = n.type().toArray().base();
+        // An ArrayInit's type is an array type whose base is the
+        // "least common ancestor" of the elements; it can also be
+        // the Null type when there is no element.
+        Type elemType;
+        if (n.type().isArray()) {
+            elemType = n.type().toArray().base();
+        }
+        else  {
+            assert n.type().isNull();
+            elemType = v.typeSystem().Null();
+        }
 
         Expr one = nf.IntLit(n.position(), IntLit.INT, elements.size())
                          .type(v.typeSystem().Int());

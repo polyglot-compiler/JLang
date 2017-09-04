@@ -311,10 +311,15 @@ public class LLVMTranslator extends NodeVisitor {
 					// it.
 					m2 = typeSystem().findImplementingMethod(recvTy.toClass(),
 							m);
-					if (m2 == null)
-						throw new InternalCompilerError(
-								"Could not find a method implementing \"" + m
-										+ "\" in " + recvTy);
+					if (m2 == null) {
+						if (recvTy.toClass().flags().isAbstract())
+							m2 = m; // It's OK if we couldn't find one in an
+							        // abstract class.
+						else
+							throw new InternalCompilerError(
+									"Could not find a method implementing \""
+											+ m + "\" in " + recvTy);
+					}
 				} else {
 					m2 = m;
 				}
