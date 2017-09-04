@@ -83,7 +83,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         } else if (resType.isBoolean() && (elemType.isFloat() || elemType.isDouble())) {
             // Floating point comparison.
             return LLVMBuildFCmp(builder, llvmFCmpBinopCode(op), left, right, "fcmp");
-        } else if (resType.isBoolean() && (elemType.isLongOrLess() || elemType.isReference())) {
+        } else if (resType.isBoolean() && (elemType.isLongOrLess() || elemType.isBoolean() || elemType.isReference())) {
             // Integer comparison.
             return LLVMBuildICmp(builder, llvmICmpBinopCode(op, elemType), left, right, "icmp");
         } else {
@@ -113,7 +113,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
     }
 
     private static boolean isUnsigned(Type t) {
-        return t.isChar();
+        return t.isChar() || t.isBoolean();
     }
 
     private static int llvmIntBinopCode(Operator op, Type type) {
