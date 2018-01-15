@@ -4,7 +4,6 @@ import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
 
 import polyglot.ast.Node;
-import polyglot.ast.NodeFactory;
 import polyglot.ast.SourceFile;
 import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.ext.jl5.visit.AutoBoxer;
@@ -16,7 +15,6 @@ import polyglot.frontend.goals.CodeGenerated;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
-import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
 import polyglot.visit.InnerClassRemover;
 import polyglot.visit.LoopNormalizer;
@@ -28,9 +26,6 @@ import polyllvm.visit.*;
 import java.io.File;
 import java.lang.Override;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -42,53 +37,6 @@ public class PolyLLVMScheduler extends JL7Scheduler {
     public PolyLLVMScheduler(JLExtensionInfo extInfo) {
         super(extInfo);
     }
-
-	@Override
-	public Goal TypesInitialized(Job job) {
-		TypeSystem ts = extInfo.typeSystem();
-		NodeFactory nf = extInfo.nodeFactory();
-		Goal g = TypesInitialized.create(this, job, ts, nf);
-		return g;
-	}
-
-	protected static class TypesInitialized
-		extends polyglot.frontend.goals.TypesInitialized {
-		protected TypesInitialized(Job job, TypeSystem ts, NodeFactory nf) {
-			super(job, ts, nf);
-		}
-
-		public static Goal create(Scheduler scheduler, Job job, TypeSystem ts,
-			NodeFactory nf) {
-			return scheduler.internGoal(new TypesInitialized(job, ts, nf));
-		}
-
-		@Override
-		public Collection<Goal> prerequisiteGoals(Scheduler scheduler) {
-			List<Goal> l = new ArrayList<>();
-
-			// Require the type java.lang.Object to be built before processing
-			// any other types.
-			// XXX
-			// This is to work around the fact that in a language extension that
-			// provides its own source for java.lang.Object, building a type may
-			// potentially involve a missing dependency on java.lang.Object
-			// being built first, after which trying to build the type again
-			// results in a "Duplicate class ..." error.
-			FileSource objectSource = job.extensionInfo().sourceLoader()
-				.classSource("java.lang.Object");
-			if (objectSource == null)
-				throw new InternalCompilerError(
-					"Cannot find the source file for \"java.lang.Object\".");
-			if (!job().source().equals(objectSource)) {
-				Job objectJob = scheduler.addJob(objectSource);
-				if (objectJob != null)
-					l.add(scheduler.TypesInitialized(objectJob));
-			}
-
-			l.addAll(super.prerequisiteGoals(scheduler));
-			return l;
-		}
-	}
 
     @Override
     public Goal Serialized(Job job) {

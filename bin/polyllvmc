@@ -28,7 +28,6 @@ fixpath() {
 }
 
 extra_cp=
-extra_sourcepath=
 args=
 vmargs=
 java=java
@@ -46,11 +45,6 @@ while true; do
         -classpath)
             shift
             extra_cp="$extra_cp:$1"
-            shift
-            ;;
-        -sourcepath)
-            shift
-            extra_sourcepath="$extra_sourcepath:$1"
             shift
             ;;
         -j)
@@ -77,13 +71,10 @@ done
 compiler_classpath="$dir/compiler/classes:$dir/lib/java_cup.jar:$dir/lib/polyglot.jar:$dir/lib/llvm.jar:$dir/lib/javacpp.jar:$dir/lib/llvm-macosx-x86_64.jar:$dir/lib/llvm-linux-x86_64.jar"
 runtime_classpath="$dir/runtime/classes"
 runtime_classpath="$runtime_classpath:$extra_cp"
-runtime_sourcepath="$dir/runtime/src"
-runtime_sourcepath="$runtime_sourcepath:$extra_sourcepath"
 
 command="$java -ea $vmargs -classpath \"$(fixpath ${compiler_classpath})\" \
 polyllvm.Main \
 -classpath \"$(fixpath ${runtime_classpath})\" \
--sourcepath \"$(fixpath ${runtime_sourcepath})\" \
 $args"
 
 if [ "$usage" = 1 ]; then

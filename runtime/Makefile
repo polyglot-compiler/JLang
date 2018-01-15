@@ -26,7 +26,8 @@ ifndef PREBUILT
 	@ant -S -f "$(BASE_DIR)"
 endif
 	@echo "Compiling $(words $(JAVA_SRC)) Java files down to IR"
-	@$(BASE_DIR)/bin/polyllvmc -c -d ll $(JAVA_SRC)
+	@$(BASE_DIR)/bin/polyllvmc -c -d ll src/java/lang/Object.java
+	@$(BASE_DIR)/bin/polyllvmc -c -d ll $(filter-out src/java/lang/Object.java, $(JAVA_SRC))
 
 runtime.ll: $(ALL_LL)
 	@echo "Linking $(words $(ALL_LL)) IR files into $@"
