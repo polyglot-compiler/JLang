@@ -1,0 +1,3 @@
+[submodule "lib/polyglot"]
+	path = lib/polyglot
+	url = https://github.com/polyglot-compiler/polyglot/

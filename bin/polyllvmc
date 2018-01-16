@@ -68,7 +68,7 @@ while true; do
     esac
 done
 
-compiler_classpath="$dir/compiler/classes:$dir/lib/java_cup.jar:$dir/lib/polyglot.jar:$dir/lib/llvm.jar:$dir/lib/javacpp.jar:$dir/lib/llvm-macosx-x86_64.jar:$dir/lib/llvm-linux-x86_64.jar"
+compiler_classpath="$dir/compiler/classes:$dir/lib/polyglot/lib/java_cup.jar:$dir/lib/polyglot/lib/polyglot.jar:$dir/lib/llvm.jar:$dir/lib/javacpp.jar:$dir/lib/llvm-macosx-x86_64.jar:$dir/lib/llvm-linux-x86_64.jar"
 runtime_classpath="$dir/runtime/classes"
 runtime_classpath="$runtime_classpath:$extra_cp"
 

@@ -54,6 +54,9 @@
     <!-- set the prefix for accessing environment variables -->
     <property environment="env" />
 
+    <!-- the Polyglot project -->
+    <property name="polyglot.home" value="${lib.dir}/polyglot" />
+
     <!-- the standard classpath -->
     <path id="standard.classpath">
         <!-- our generated classes -->
@@ -62,6 +65,11 @@
 
         <!-- the java classpath -->
         <pathelement path="${java.class.path}" />
+
+        <!-- the Polyglot classpath -->
+        <pathelement path="${polyglot.home}/lib/polyglot.jar"/>
+        <pathelement path="${polyglot.home}/lib/jflex.jar"/>
+        <pathelement path="${polyglot.home}/lib/java_cup.jar"/>
 
         <!-- jar files in the lib directory, excluding generated jars -->
         <fileset dir="${lib.dir}">
