@@ -798,7 +798,7 @@ public class LLVMTranslator extends NodeVisitor {
 	}
 
 	// Stack of landing pads, returns, etc.
-	private static Deque<ExceptionRecord> exceptionRecords = new ArrayDeque<>();
+	private final Deque<ExceptionRecord> exceptionRecords = new ArrayDeque<>();
 
 	private class ExceptionRecord {
 		private boolean inTry = true;
