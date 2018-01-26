@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <iostream>
 
 namespace llvm {
   namespace dwarf {
@@ -302,7 +303,8 @@ static bool handleActionValue(int64_t *resultAction,
     int64_t typeOffset = 0,
             actionOffset;
 
-    for (int i = 0; true; ++i) {
+    int count = 0, matchIndex;
+    for (; true; ++count) {
         // Each emitted dwarf action corresponds to a 2 tuple of
         // type info address offset, and action offset to the next
         // emitted action.
@@ -312,15 +314,14 @@ static bool handleActionValue(int64_t *resultAction,
 
         // Note: A typeOffset == 0 implies that a cleanup llvm.eh.selector
         //       argument has been matched.
-        if (typeOffset > 0) {
+        if (!ret && typeOffset > 0) {
             unsigned EncSize = getEncodingSize(TTypeEncoding);
             const uint8_t *EntryP = ClassInfo - typeOffset * EncSize;
             uintptr_t P = readEncodedPointer(&EntryP, TTypeEncoding);
             void *ThisClassInfo = reinterpret_cast<void *>(P);
             if (instanceof(jobj, ThisClassInfo)) {
-                *resultAction = i + 1;
+                matchIndex = count;
                 ret = true;
-                break;
             }
         }
 
@@ -329,6 +330,9 @@ static bool handleActionValue(int64_t *resultAction,
 
         actionPos += actionOffset;
     }
+
+    if (ret)
+        *resultAction = count + 1 - matchIndex;
 
     return(ret);
 }
