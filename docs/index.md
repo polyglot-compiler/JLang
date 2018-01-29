@@ -17,4 +17,4 @@ Supported Features
 
 The project currently supports the basic arithmetic operations, variables, loops, arrays, class dispatch, interface dispatch, and instanceof checks. We are currently working on implementing threading and exception support.
 
-Dynamic class loading and reflection are not currently supported.
+We do not currently plan to support dynamic class loading or reflection.
