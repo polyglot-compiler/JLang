@@ -23,6 +23,8 @@ PolyLLVM has the following dependencies, which you will need to download and ins
 
 Finally, build PolyLLVM by running `ant` at the top level of the repository.
 
+If wanting to run tests from IntelliJ, run the `TestAll` class, using the top level of the repository as the working directory.
+
 
 Navigating the Codebase
 -----------------------

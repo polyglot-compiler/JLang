@@ -45,7 +45,7 @@ $(CLASSES): $(SRCS)
 
 %.sol: %.class
 	@echo "Generating solution for $*"
-	@java -cp .:$(RUNTIME)/classes $(subst /,.,$*) > $@
+	@java -ea -cp .:$(RUNTIME)/classes $(subst /,.,$*) > $@
 
 # Mixing Ant and Make is tricky; this rule isn't perfect,
 # but will work in almost all cases.
