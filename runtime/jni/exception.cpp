@@ -63,7 +63,7 @@ const unsigned char polyLLVMExceptionClassChars[] =
 /// Generates our _Unwind_Exception class from a given character array.
 /// thereby handling arbitrary lengths (not in standard), and handling
 /// embedded \0s.
-/// See @link http://mentorembedded.github.com/cxx-abi/abi-eh.html @unlink
+/// See @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html @unlink
 /// @param classChars char array to encode. NULL values not checkedf
 /// @param classCharsSize number of chars in classChars. Value is not checked.
 /// @returns class value
@@ -266,7 +266,7 @@ unsigned getEncodingSize(uint8_t Encoding) {
 /// are supported. Filters are not supported.
 /// See Variable Length Data in:
 /// @link http://dwarfstd.org/Dwarf3.pdf @unlink
-/// Also see @link http://mentorembedded.github.com/cxx-abi/abi-eh.html @unlink
+/// Also see @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html @unlink
 /// @param resultAction reference variable which will be set with result
 /// @param classInfo our array of type info pointers (to globals)
 /// @param actionEntry index into above type info array or 0 (clean up).
@@ -338,7 +338,7 @@ static bool handleActionValue(int64_t *resultAction,
 }
 
 /// Deals with the Language specific data portion of the emitted dwarf code.
-/// See @link http://mentorembedded.github.com/cxx-abi/abi-eh.html @unlink
+/// See @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html @unlink
 /// @param version unsupported (ignored), unwind version
 /// @param lsda language specific data area
 /// @param _Unwind_Action actions minimally supported unwind stage

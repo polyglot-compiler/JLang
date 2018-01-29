@@ -90,7 +90,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         LLVMBuildStore(v.builder, LLVMConstInt(LLVMInt1TypeInContext(v.context), 1, /*sign-extend*/ 0), finally_flag);
         LLVMBuildBr(v.builder, tryFinally);
 
-        //Block to set finally flag to resume exception propogation
+        //Block to set finally flag to resume exception propagation
         LLVMBasicBlockRef setFinallyFlag = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "set_finally_flag");
         LLVMPositionBuilderAtEnd(v.builder, setFinallyFlag);
         LLVMBuildStore(v.builder, LLVMConstInt(LLVMInt1TypeInContext(v.context), 1, /*sign-extend*/ 0), finally_flag);
@@ -122,7 +122,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             }
         }
         if (LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(v.builder)) == null) {
-            //No catch blocks, need to execute finally and resume exception propogation
+            //No catch blocks, need to execute finally and resume exception propagation
             LLVMBuildBr(v.builder, setFinallyFlag);
         }
 
