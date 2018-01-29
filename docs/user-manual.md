@@ -22,10 +22,9 @@ Clone the [repo](https://github.com/dbd64/PolyLLVM) and build:
 $ git clone https://github.com/dbd64/PolyLLVM.git
 $ cd PolyLLVM
 $ ant
-$ make -C runtime
 ```
 
-[Ant](http://ant.apache.org) is needed to build the compiler, and [LLVM](http://llvm.org/releases/) is needed to build the runtime. Both should be available through your package manager of choice.
+Please note the dependencies listed in the README.
 
 
 Compiling Hello World
