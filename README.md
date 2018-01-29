@@ -19,7 +19,7 @@ PolyLLVM has the following dependencies, which you will need to download and ins
 
 - The [Boehm-Demers-Weiser garbage collector](http://www.hboehm.info/gc/) is also required for creating binaries. PolyLLVM is tested with version 7.6.0, which you can download [here](http://www.hboehm.info/gc/gc_source/) or install through a package manager. A typical install from source looks like this: `./configure && make && make install`. Note that the garbage collector depends on [libatomic_ops](https://github.com/ivmai/libatomic_ops), which is often available through a package manager.
 
-- [Polyglot](https://github.com/polyglot-compiler/polyglot/) is the required front end for PolyLLVM, and exists as a git submodule. Run `git submodule init` and then `git submodule update` at the top level of the repository. To build: `cd lib/polyglot && ant`.
+- [Polyglot](https://github.com/polyglot-compiler/polyglot/) is the required front end for PolyLLVM, and exists as a git submodule. Run `git submodule init` and then `git submodule update` at the top level of the repository. To build: `cd lib/polyglot && ant && ant jar`.
 
 
 Navigating the Codebase
