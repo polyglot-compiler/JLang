@@ -30,19 +30,15 @@ Please note the dependencies listed in the README.
 Compiling Hello World
 ---------------------
 
-Create a simple `HelloWorld.java` file, printing to stdout using `placeholder.Print.println()`. (`System.out` and other library classes are not yet available.) Compile using
+Create a simple `HelloWorld.java` file, printing to stdout using `System.out.println()`. Compile using
 
 ```
-$ bin/polyllvmc HelloWorld.java
+$ bin/plc HelloWorld.java
 ```
 
-This will output a file called `HelloWorld.ll`, which will contain human-readable LLVM IR. From here you can use `llvm-link`, `llc`, and `clang++` to link `HelloWorld.ll` with the runtime and create an executable. For convenience you can execute
+This will output a file called `HelloWorld.ll`, which will contain human-readable LLVM IR. It will also create an executable `a.out` which you can run directly!
 
-```
-$ bin/link HelloWorld.ll
-```
-
-which creates an assembly file `HelloWorld.s` and an executable file `HelloWorld.binary`.
+From here you could also use `llvm-link`, `llc`, and `clang++` to link `HelloWorld.ll` with the runtime and create an executable manually.
 
 
 Using PolyLLVM With Another Extension
