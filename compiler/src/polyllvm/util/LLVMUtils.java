@@ -1,16 +1,6 @@
 package polyllvm.util;
 
-import static org.bytedeco.javacpp.LLVM.*;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
 import org.bytedeco.javacpp.PointerPointer;
-
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyglot.ext.jl5.types.JL5TypeSystem;
@@ -19,6 +9,15 @@ import polyglot.ext.jl5.types.inference.LubType;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyllvm.visit.LLVMTranslator;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 /**
  * Helper methods for building common LLVM types and IR instructions. This
@@ -672,7 +671,6 @@ public class LLVMUtils {
     }
 
     /**
-     * @param recvTy
      * @param retTy
      * @param formalTys
      * @return The LLVM function type whose argument types are the translation

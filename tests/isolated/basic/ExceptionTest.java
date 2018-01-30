@@ -2,31 +2,51 @@ package basic;
 
 public class ExceptionTest {
     public static void main(String[] args) {
-        try {
-            Throwable exception = new Throwable();
-            throw exception;
-        } catch (Throwable e) {
-            System.out.println("Correctly Catch");
-        } finally {
-            System.out.println("Correctly Finalize");
-        }
+        simple();
 
         try {
-            f();
-        } catch (Throwable e){
-            System.out.println("Correctly Catch");
+            tunnel();
+        } catch (Throwable e) {
+            System.out.println("catch tunnel");
+        }
+
+        nested();
+
+        System.out.println("end");
+    }
+
+    public static void simple() {
+        try {
+            throw new Throwable();
+        } catch (Throwable e) {
+            System.out.println("catch simple");
+        } finally {
+            System.out.println("finalize simple");
         }
     }
 
-    public static void f(){
+    public static void tunnel() {
         try {
-            Error exception = new Error();
+            Error err = new Error();
             Exception e = new Exception();
-            throw exception;
+            throw err;
         } catch (Exception e) {
-            System.out.println("DO NOT CATCH THIS");
+            System.out.println("bad tunnel");
         } finally {
-            System.out.println("Correctly Finalize");
+            System.out.println("finalize tunnel");
+        }
+    }
+
+    public static void nested() {
+        try {
+            try {
+                throw new Exception();
+            } catch (Exception e) {
+                System.out.println("catch inner");
+                throw new Exception();
+            }
+        } catch (Exception e) {
+            System.out.println("catch outer");
         }
     }
 }
