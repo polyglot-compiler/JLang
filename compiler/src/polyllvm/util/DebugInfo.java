@@ -173,7 +173,7 @@ public class DebugInfo {
      */
 
     public LLVMMetadataRef debugType(Type t) {
-    	Type erased = v.utils.erasureLL(t);
+        Type erased = v.utils.erasureLL(t);
         if (typeMap.containsKey(erased)) {
             return typeMap.get(erased);
         }

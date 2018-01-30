@@ -17,15 +17,15 @@ import polyglot.ext.jl5.types.JL5Subst;
  *
  */
 public interface SubstMethodInstance extends JL5MethodInstance {
-	/**
-	 * Returns the method before substituting its type parameters. The returned
-	 * value cannot be a {@link SubstmethodInstance}.
-	 */
-	JL5MethodInstance base();
+    /**
+     * Returns the method before substituting its type parameters. The returned
+     * value cannot be a {@link SubstmethodInstance}.
+     */
+    JL5MethodInstance base();
 
-	/**
-	 * Returns the substitution for the type parameters of the method. If the
-	 * original method is not parameterized, it returns an empty substitution.
-	 */
-	JL5Subst subst();
+    /**
+     * Returns the substitution for the type parameters of the method. If the
+     * original method is not parameterized, it returns an empty substitution.
+     */
+    JL5Subst subst();
 }

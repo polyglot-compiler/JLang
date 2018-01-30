@@ -11,36 +11,36 @@ import polyglot.util.SerialVersionUID;
  * See {@link SubstMethodInstance}.
  */
 public class SubstMethodInstance_c extends JL5MethodInstance_c
-		implements SubstMethodInstance {
-	private static final long serialVersionUID = SerialVersionUID.generate();
+        implements SubstMethodInstance {
+    private static final long serialVersionUID = SerialVersionUID.generate();
 
-	final protected JL5MethodInstance base;
-	final protected JL5Subst subst;
+    final protected JL5MethodInstance base;
+    final protected JL5Subst subst;
 
-	public SubstMethodInstance_c(JL5MethodInstance postSubst,
-			JL5MethodInstance preSubst, JL5Subst subst) {
-		super((JL5TypeSystem) postSubst.typeSystem(), postSubst.position(),
-				postSubst.container(), postSubst.flags(),
-				postSubst.returnType(), postSubst.name(),
-				postSubst.formalTypes(), postSubst.throwTypes(),
-				postSubst.typeParams());
-		this.decl = (MethodInstance) postSubst.declaration();
+    public SubstMethodInstance_c(JL5MethodInstance postSubst,
+            JL5MethodInstance preSubst, JL5Subst subst) {
+        super((JL5TypeSystem) postSubst.typeSystem(), postSubst.position(),
+                postSubst.container(), postSubst.flags(),
+                postSubst.returnType(), postSubst.name(),
+                postSubst.formalTypes(), postSubst.throwTypes(),
+                postSubst.typeParams());
+        this.decl = (MethodInstance) postSubst.declaration();
 
-		// Type parameters should have been eliminated by substitution.
-		assert postSubst.typeParams().isEmpty();
+        // Type parameters should have been eliminated by substitution.
+        assert postSubst.typeParams().isEmpty();
 
-		this.base = preSubst;
-		this.subst = subst;
-	}
+        this.base = preSubst;
+        this.subst = subst;
+    }
 
-	@Override
-	public JL5MethodInstance base() {
-		return base;
-	}
+    @Override
+    public JL5MethodInstance base() {
+        return base;
+    }
 
-	@Override
-	public JL5Subst subst() {
-		return subst;
-	}
+    @Override
+    public JL5Subst subst() {
+        return subst;
+    }
 
 }
