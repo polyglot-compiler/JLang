@@ -70,7 +70,7 @@ endif
 .PHONY: phony
 %.output: %.binary phony
 	@echo "Generating output for $*"
-	@$< | tee $@
+	@./$< | tee $@
 
 
 EXT = sol ll binary output dSYM class
