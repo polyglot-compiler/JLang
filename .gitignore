@@ -1,10 +1,11 @@
 /compiler/classes
-*.class
-/.idea/
-*.iml
 /lib/polyllvm.jar
 /lib/polyllvm-rt.jar
+/.idea/workspace.xml
+/.idea/tasks.xml
+/.idea/dictionary
 /out/
+*.class
 *.DS_STORE
 .*.sw?
 *.out
