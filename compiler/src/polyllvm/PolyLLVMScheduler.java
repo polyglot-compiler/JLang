@@ -2,10 +2,8 @@ package polyllvm;
 
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
-
 import polyglot.ast.Node;
 import polyglot.ast.SourceFile;
-import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.ext.jl5.visit.AutoBoxer;
 import polyglot.ext.jl7.JL7Scheduler;
 import polyglot.ext.jl7.types.JL7TypeSystem;
@@ -57,7 +55,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
         PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
         Goal prep = new MultiGoal(
                 job,
-                new VisitorGoal(job, new AutoBoxer(job, (JL5TypeSystem) ts, nf)),
+                new VisitorGoal(job, new AutoBoxer(job, ts, nf)),
                 //TODO: Translate these directly.
                 new VisitorGoal(job, new InnerClassRemover(job, ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check classes.

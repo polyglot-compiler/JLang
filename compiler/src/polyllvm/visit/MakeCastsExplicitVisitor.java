@@ -37,12 +37,7 @@ public class MakeCastsExplicitVisitor extends AscriptionVisitor {
     protected Node leaveCall(Node parent, Node old, Node n, NodeVisitor v)
             throws SemanticException {
         if (parent instanceof Cast) {
-            // Do not bother to insert an extra cast.
-            return n;
-        } else if (n instanceof ArrayInit && parent instanceof NewArray) {
-            // The initializer of a NewArray cannot be a Cast.
-            // We work around this by special handling when we translate a
-            // NewArray.
+            // Avoid redundant casts.
             return n;
         } else if (n instanceof Field && parent instanceof FieldAssign) {
             // The LHS of a FieldAssign cannot be a Cast. Plus there is no need
@@ -56,8 +51,18 @@ public class MakeCastsExplicitVisitor extends AscriptionVisitor {
     @Override
     public Expr ascribe(Expr e, Type toType) throws SemanticException {
         if (e.type().typeEquals(toType) || toType.isVoid()) {
+            // Avoid redundant casts.
             return super.ascribe(e, toType);
-        } else {
+        }
+        else if (e instanceof ArrayInit) {
+            // We change the types of array initializer expressions directly (rather than using
+            // a cast) because (1) the correct element type is needed during translation to create
+            // correct allocation code, and (2) Polyglot does not allow the initializer expression
+            // of a NewArray node to be a cast.
+            return e.type(typeSystem().arrayOf(toType.toArray().base()));
+        }
+        else {
+            // Add cast.
             NodeFactory nf = nodeFactory();
             Position pos = e.position();
             TypeNode typeNode = nf.CanonicalTypeNode(pos, toType);

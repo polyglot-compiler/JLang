@@ -15,6 +15,8 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMArrayInitExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
+
+
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         ArrayInit n = (ArrayInit) node();
@@ -42,12 +44,14 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
         New newArray = PolyLLVMNewArrayExt.translateNewArray(v, nf, dims, elemType, n.position());
         LLVMValueRef array = v.getTranslation(newArray);
 
-        LLVMValueRef base = v.utils.buildJavaArrayBase(array, elemType);
-        int idx = 0;
-        for (Expr expr : elements) {
-            LLVMValueRef gep = v.utils.buildStructGEP(base, idx);
-            LLVMBuildStore(v.builder, v.utils.bitcastToLHS(expr, elemType), gep);
-            ++idx;
+        if (!elements.isEmpty()) {
+            LLVMValueRef base = v.utils.buildJavaArrayBase(array, elemType);
+            int idx = 0;
+            for (Expr expr : elements) {
+                LLVMValueRef gep = v.utils.buildStructGEP(base, idx);
+                LLVMBuildStore(v.builder, v.getTranslation(expr), gep);
+                ++idx;
+            }
         }
 
         v.addTranslation(n, array);
