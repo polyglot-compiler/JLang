@@ -12,6 +12,8 @@
       <root url="jar://$PROJECT_DIR$/lib/polyglot/lib/jflex.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/lib/polyglot/src" />
+    </SOURCES>
   </library>
 </component>
