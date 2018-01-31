@@ -12,6 +12,8 @@
       <root url="jar://$PROJECT_DIR$/lib/llvm-javadoc.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/llvm-sources.jar!/" />
+    </SOURCES>
   </library>
 </component>
