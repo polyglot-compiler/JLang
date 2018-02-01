@@ -43,10 +43,14 @@ public class ExceptionTest {
                 throw new Exception();
             } catch (Exception e) {
                 System.out.println("catch inner");
-                throw new Exception();
+                throw new Error();
+            } finally {
+                System.out.println("finalize inner");
             }
-        } catch (Exception e) {
+        } catch (Error e) {
             System.out.println("catch outer");
+        } finally {
+            System.out.println("finalize outer");
         }
     }
 }

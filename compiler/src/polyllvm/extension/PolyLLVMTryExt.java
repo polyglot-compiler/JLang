@@ -1,13 +1,15 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
-
 import polyglot.ast.Catch;
 import polyglot.ast.Node;
 import polyglot.ast.Try;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
+
+import java.lang.Override;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMTryExt extends PolyLLVMExt {
 
@@ -16,7 +18,9 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         Try n = (Try) node();
         v.enterTry();
 
-        LLVMTypeRef exnType = v.utils.structType(v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)), LLVMInt32TypeInContext(v.context));
+        LLVMTypeRef exnType = v.utils.structType(
+                v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)),
+                LLVMInt32TypeInContext(v.context));
 
         LLVMBasicBlockRef tryBlock = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "try_block");
         LLVMBasicBlockRef tryEnd = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "try_end");
@@ -26,8 +30,8 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
 
         v.debugInfo.emitLocation(n);
 
+        // Build try block.
         LLVMBuildBr(v.builder, tryBlock);
-
         LLVMPositionBuilderAtEnd(v.builder, tryBlock);
         LLVMBuildStore(v.builder, LLVMConstInt(LLVMInt1TypeInContext(v.context), 0, /*sign-extend*/ 0), finally_flag);
         v.visitEdge(n, n.tryBlock());
@@ -35,15 +39,17 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             LLVMBuildBr(v.builder, tryFinally);
         }
 
-        LLVMValueRef personalityFunc = v.utils.getFunction(v.mod, Constants.PERSONALITY_FUNC,
+        LLVMValueRef personalityFunc = v.utils.getFunction(
+                v.mod, Constants.PERSONALITY_FUNC,
                 v.utils.functionType(LLVMInt32TypeInContext(v.context)));
 
+        // Build landing pad.
         LLVMPositionBuilderAtEnd(v.builder, v.currLpad());
-        LLVMValueRef lpad = LLVMBuildLandingPad(v.builder,
-                exnType, LLVMConstBitCast(personalityFunc, v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context))),
+        LLVMValueRef lpad = LLVMBuildLandingPad(
+                v.builder, exnType, personalityFunc,
                 n.catchBlocks().size(), "lpad");
-        if(n.catchBlocks().isEmpty()){
-            LLVMSetCleanup(lpad,/*true*/1);
+        if (n.catchBlocks().isEmpty()) {
+            LLVMSetCleanup(lpad, /*true*/ 1);
         } else {
             n.catchBlocks().forEach(cb ->
                     LLVMAddClause(lpad, v.classObjs.toTypeIdentity(cb.catchType().toReference())));
@@ -72,7 +78,6 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         lpadVal = LLVMBuildInsertValue(v.builder, lpadVal, resumeSel, 1, "lpad.val");
         LLVMBuildResume(v.builder, lpadVal);
 
-
         LLVMPositionBuilderAtEnd(v.builder, v.currLpad());
         LLVMBasicBlockRef dispatch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "catch_dispatch");
         LLVMBuildBr(v.builder, dispatch);
@@ -80,9 +85,9 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         v.setLpad(LLVMAppendBasicBlockInContext(v.context, v.currFn(), "cleanup_lpad"));
         LLVMPositionBuilderAtEnd(v.builder, v.currLpad());
         LLVMValueRef cleanup_lpad = LLVMBuildLandingPad(v.builder,
-                exnType, LLVMConstBitCast(personalityFunc, v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context))),
+                exnType, personalityFunc,
                 0, "cleanup_lpad");
-        LLVMSetCleanup(cleanup_lpad,/*true*/1);
+        LLVMSetCleanup(cleanup_lpad, /*true*/ 1);
         LLVMValueRef exn_clean = LLVMBuildExtractValue(v.builder, cleanup_lpad, 0, "exn");
         LLVMBuildStore(v.builder, exn_clean, exn_slot);
         LLVMValueRef ehselector_clean = LLVMBuildExtractValue(v.builder, cleanup_lpad, 1, "ehselector");
@@ -102,9 +107,8 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         LLVMBuildStore(v.builder, LLVMConstInt(LLVMInt1TypeInContext(v.context), 1, /*sign-extend*/ 0), finally_flag);
         LLVMBuildBr(v.builder, tryFinally);
 
-
         LLVMPositionBuilderAtEnd(v.builder, dispatch);
-        for (int i = 0; i<n.catchBlocks().size(); i++) {
+        for (int i = 0; i < n.catchBlocks().size(); i++) {
             Catch cb = n.catchBlocks().get(i);
             v.debugInfo.emitLocation(cb);
             LLVMBasicBlockRef catchBlock = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "catch_" + cb.catchType());

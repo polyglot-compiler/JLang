@@ -1,6 +1,6 @@
 package polyllvm.extension;
 
-import org.bytedeco.javacpp.LLVM;
+import org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Do;
 import polyglot.ast.For;
 import polyglot.ast.Labeled;
@@ -10,9 +10,9 @@ import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
 
-import static org.bytedeco.javacpp.LLVM.LLVMAppendBasicBlockInContext;
-import static org.bytedeco.javacpp.LLVM.LLVMBuildBr;
-import static org.bytedeco.javacpp.LLVM.LLVMPositionBuilderAtEnd;
+import java.lang.Override;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMLabeledExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -28,9 +28,9 @@ public class PolyLLVMLabeledExt extends PolyLLVMExt {
                     "after reaching a continue statement jumping to this label");
         }
 
-        LLVM.LLVMBasicBlockRef head = LLVMAppendBasicBlockInContext(
+        LLVMBasicBlockRef head = LLVMAppendBasicBlockInContext(
                 v.context, v.currFn(), n.label() + ".head");
-        LLVM.LLVMBasicBlockRef end = LLVMAppendBasicBlockInContext(
+        LLVMBasicBlockRef end = LLVMAppendBasicBlockInContext(
                 v.context, v.currFn(), n.label() + ".end");
 
         LLVMBuildBr(v.builder, head);

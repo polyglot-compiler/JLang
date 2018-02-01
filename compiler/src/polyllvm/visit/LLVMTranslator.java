@@ -113,13 +113,13 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     @Override
-    public Node leave(Node old, Node n, NodeVisitor v) {
-        return lang().leaveTranslateLLVM(n, this);
+    public NodeVisitor enter(Node n) {
+        return lang().enterTranslateLLVM(n, this);
     }
 
     @Override
-    public NodeVisitor enter(Node n) {
-        return lang().enterTranslateLLVM(n, this);
+    public Node leave(Node old, Node n, NodeVisitor v) {
+        return lang().leaveTranslateLLVM(n, this);
     }
 
     @Override
@@ -187,7 +187,7 @@ public class LLVMTranslator extends NodeVisitor {
      *         <ul>
      *         <li>the greatest uninstantiated superclass type that declares
      *         method {@code mi} if such a type exists;</li>
-     *         <li>the {@link container MemberInstance#container()} of
+     *         <li>the {@link MemberInstance#container()} of
      *         {@code mi} otherwise.</li>
      *         </ul>
      */
@@ -810,8 +810,8 @@ public class LLVMTranslator extends NodeVisitor {
 
     private class ExceptionRecord {
         private boolean inTry = true;
-        private LLVMBasicBlockRef lpad = null;
-        private LLVMBasicBlockRef tryFinally = null;
+        private LLVMBasicBlockRef lpad;
+        private LLVMBasicBlockRef tryFinally;
         private LLVMValueRef retFlag = null;
         private LLVMValueRef ret = null;
         private boolean retIsVoid = false;
@@ -819,8 +819,7 @@ public class LLVMTranslator extends NodeVisitor {
 
         ExceptionRecord() {
             lpad = LLVMAppendBasicBlockInContext(context, currFn(), "lpad");
-            tryFinally = LLVMAppendBasicBlockInContext(context, currFn(),
-                    "try_finally");
+            tryFinally = LLVMAppendBasicBlockInContext(context, currFn(), "finally");
         }
     }
 

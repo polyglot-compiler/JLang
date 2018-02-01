@@ -1,43 +1,116 @@
 package basic;
 
-public class TryFinally {
+class TryFinally {
 
     public static void main(String[] args) {
-        try {
-           throwsExn();
-        } catch (Exception e){
-            System.out.println("Catch!");
-        }
-
-        try {
-            nestedTryFinally();
-        } catch (Exception e){
-            System.out.println("Catch nested try finally!");
-        }
+        empty();
+        simpleReturn();
+        simpleBreak();
+        simpleContinue();
+        nestedReturn();
+        crazy();
     }
 
-    public static void throwsExn() throws Exception{
-        try{
-            System.out.println("Try block");
-            throw new Exception();
-        } finally {
-            System.out.println("Finally block");
-        }
+    static void empty() {
+        try {}
+        finally {}
     }
 
-    public static void nestedTryFinally() throws Exception{
+    static void simpleReturn() {
         try {
-            System.out.println("Try block");
-            throw new Exception();
+            System.out.println("simple return try");
+            if (true) return;
         } finally {
+            System.out.println("simple return finally");
+        }
+        System.out.println("simple return end");
+    }
+
+    static void simpleBreak() {
+        label: try {
+            System.out.println("simple break try");
+            break label;
+        } finally {
+            System.out.println("simple break finally");
+        }
+
+        while (true) {
             try {
-                System.out.println("Started false");
-                throw new Exception();
-            } catch (Throwable ignore) {
-                /* do nothing. If start0 threw a Throwable then
-                  it will be passed up the call stack */
-                System.out.println("Ignore");
+                inner: if (true) {
+                    break inner;
+                }
+                System.out.println("simple break loop try");
+                break;
+            } finally {
+                System.out.println("simple break loop finally");
             }
         }
+
+        System.out.println("simple break end");
+    }
+
+    static void simpleContinue() {
+        for (int i = 0; i < 2; ++i) {
+            try {
+                for (int j = 0; j < 1; ++j)
+                    if (j == 0)
+                        continue;
+                System.out.println("simple continue try");
+                continue;
+            } finally {
+                System.out.println("simple continue finally");
+            }
+        }
+
+        System.out.println("simple continue end");
+    }
+
+    static void nestedReturn() {
+        try {
+            try {
+                System.out.println("nested return try");
+                if (true) return;
+            } finally {
+                System.out.println("nested return inner");
+            }
+        } finally {
+            System.out.println("nested return outer");
+        }
+        System.out.println("nested return end");
+    }
+
+    static void crazy() {
+        while (true) {
+            try {
+                try {
+                    System.out.println("crazy inner try");
+                    if (true) break;
+                } finally {
+                    System.out.println("crazy inner finally");
+                }
+                System.out.println("crazy outer try end");
+            } finally {
+                System.out.println("crazy outer finally");
+                try {
+                    try {
+                        System.out.println("crazy second inner try");
+                        if (true) {
+                            while (true) {
+                                return;
+                            }
+                        }
+                    } finally {
+                        System.out.println("crazy second inner finally");
+                        if (true) break;
+                    }
+                    System.out.println("crazy second inner try end");
+                } finally {
+                    System.out.println("crazy second outer try finally");
+                }
+                System.out.println("crazy second outer finally end");
+            }
+            System.out.println("crazy loop end");
+        }
+        System.out.println("crazy end");
     }
 }

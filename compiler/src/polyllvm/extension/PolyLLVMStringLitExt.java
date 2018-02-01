@@ -3,15 +3,12 @@ package polyllvm.extension;
 import polyglot.ast.Node;
 import polyglot.ast.StringLit;
 import polyglot.types.ParsedClassType;
-import polyglot.types.ReferenceType;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -47,7 +44,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         LLVMSetLinkage(stringLit, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringLit, charArray);
 
-        LLVMValueRef dvString = v.utils.toCDVGlobal((ParsedClassType) v.typeSystem().String());
+        LLVMValueRef dvString = v.utils.toCDVGlobal(v.typeSystem().String());
         LLVMValueRef[] stringLitBody =
                 Stream.of(dvString, sync_vars, LLVMConstBitCast(stringLit, v.utils.toLL(arrayType)))
                         .toArray(LLVMValueRef[]::new);
