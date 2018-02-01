@@ -90,7 +90,13 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         LLVMBuildStore(v.builder, LLVMConstInt(LLVMInt1TypeInContext(v.context), 1, /*sign-extend*/ 0), finally_flag);
         LLVMBuildBr(v.builder, tryFinally);
 
-        //Block to set finally flag to resume exception propagation
+        // Block to set finally_flag
+        // The flag is set iff an exception needs to be propagated further after the "finally" ends
+        // successfully.  This can happen when the "try" block raises an exception but no "catch"
+        // block catches it or when the "catch" block raises an exception again.
+        // However, this does not necessarily mean a "resume" instruction is needed after "finally"
+        // ends; we may want to jump to another landing pad. This is probably the cause of the
+        // nested try-catch bug.
         LLVMBasicBlockRef setFinallyFlag = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "set_finally_flag");
         LLVMPositionBuilderAtEnd(v.builder, setFinallyFlag);
         LLVMBuildStore(v.builder, LLVMConstInt(LLVMInt1TypeInContext(v.context), 1, /*sign-extend*/ 0), finally_flag);
