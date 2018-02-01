@@ -1,3 +1,7 @@
 [submodule "lib/polyglot"]
 	path = lib/polyglot
 	url = https://github.com/polyglot-compiler/polyglot/
+[submodule "lib/javacpp-presets"]
+	path = lib/javacpp-presets
+	url = https://github.com/gharrma/javacpp-presets
+	branch = master

@@ -43,43 +43,13 @@ hosting JNI bridges for popular C++ libraries.
 
 The LLVM C API is limited in that it does not have a stable API for debug
 information. Other languages (Go, Rust, etc.) get around this by manually
-creating their own C bindings. Our solution: hack the LLVM Go bindings into the
-LLVM library so that we can use them in PolyLLVM. Manual instructions for how to do
-this (in case we update our LLVM dependency) are below.
+creating their own C bindings. Our solution: start with the LLVM Go bindings,
+and create custom additional bindings as needed. This process is automated
+through a fork of `javacpp-presets` at `https://github.com/gharrma/javacpp-presets`,
+which is tracked as a git submodule. Cloning with `--depth 1` is recommended. To
+build, `cd` into the `llvm` subdirectory and run `mvn install`. This will
+produce the needed `.jar` files in the `llvm/target` directory.
 
-Clone the javacpp-presets repo (`git@github.com:bytedeco/javacpp-presets.git`)
-and `cd` into the `llvm` directory.
-
-Run `./cppbuild.sh install` to download and build the LLVM source.
-You can specify, e.g., `-platform macosx-x86_64` if you don't want
-to target the host platform. It will take a while to build LLVM.
-
-Next we need to force the Go debug bindings into the LLVM library.
-
-Find `DIBuilderBindings.{h,cpp}` and `IRBindings.{h,cpp}` in `cppbuild/<platform>/llvm-5.0.1.src/bindings/go/llvm/`
-    where platform is (e.g.) macosx-x86_64
-
-Copy `DIBuilderBindings.h` and `IRBindings.h` to `cppbuild/<platform>/llvm-5.0.1.src/include/llvm-c/`
-
-Copy `DIBuilderBindings.{h,cpp}` and `IRBindings.{h,cpp}` to `cppbuild/<platform>/llvm-5.0.1.src/lib/IR/`
-
-Edit `cppbuild/macosx-x86_64/llvm-5.0.1.src/lib/IR/CMakeLists.txt` to include
-the two `.cpp` files from above.
-
-Edit `src/main/java/org/bytedeco/javacpp/presets/LLVM.java` to
-
-(1) include the two header files above:
-    `include = { ..., "<llvm-c/DIBuilderBindings.h>", "<llvm-c/IRBindings.h>", ... }`
-
-(2) map `LLVMOpaqueDIBuilder` to `LLVMDIBuilderRef`:
-    `.put(new Info("LLVMOpaqueDIBuilder").pointerTypes("LLVMDIBuilderRef"))`
-
-(3) specify value and pointer types for `LLVMDIBuilderRef`:
-    `.put(new Info("LLVMDIBuilderRef").valueTypes("LLVMDIBuilderRef").pointerTypes("@ByPtrPtr LLVMDIBuilderRef", "@Cast(\"LLVMDIBuilderRef*\") PointerPointer"))`
-
-Run `mvn install -Djavacpp.cppbuild.skip` to create the desired jar files under
-`target/`, including `llvm.jar`, `llvm-sources.jar`, `llvm-<platform>.jar`, and
-`llvm-javadoc.jar`.
 
 Translation Pass
 ----------------
