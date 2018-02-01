@@ -40,7 +40,7 @@ public class DebugInfo {
         this.fileName = file.getName();
         this.filePath = file.getParent();
 
-        this.compileUnit = LLVMDIBuilderCreateCompileUnit(diBuilder, DW_LANG_C, fileName, this.filePath, "PolyLLVM", 0, "", 0);
+        this.compileUnit = LLVMDIBuilderCreateCompileUnit(diBuilder, DW_LANG_Java, fileName, this.filePath, "PolyLLVM", 0, "", 0);
         this.scopes = new ArrayDeque<>();
 
         String s = "Debug Info Version";
@@ -119,10 +119,11 @@ public class DebugInfo {
     }
 
     private void insertDeclareAtEnd(LLVMTranslator v, LLVMValueRef alloc, LLVMMetadataRef varMetadata, Position p) {
-        LLVMDIBuilderInsertDeclareAtEnd(diBuilder, alloc, varMetadata,
+        LLVMDIBuilderInsertDeclareAtEnd(
+                diBuilder, alloc, varMetadata,
                 createExpression(),
-                p.line(), p.column(), currentScope(), null,
-                LLVMGetInsertBlock(v.builder));
+                LLVMGetInsertBlock(v.builder),
+                p.line(), p.column(), currentScope());
     }
 
     public void createParamVariable(LLVMTranslator v, Formal f, int index, LLVMValueRef alloc) {
@@ -143,7 +144,7 @@ public class DebugInfo {
         LLVMMetadataRef localVar = LLVMDIBuilderCreateAutoVariable(
                 diBuilder, currentScope(),
                 name, createFile(), p.line(),
-                debugType(t), /*alwaysPreserve*/ 0, /*flags*/ 0);
+                debugType(t), /*alwaysPreserve*/ 0, /*flags*/ 0, /*align*/ 0);
         insertDeclareAtEnd(v, alloc, localVar, p);
     }
 
@@ -182,13 +183,12 @@ public class DebugInfo {
         if (erased.isBoolean() || erased.isLongOrLess() || erased.isFloat() || erased.isDouble()) {
             debugType = debugBasicType(erased);
         } else if (erased.isNull()) {
-            debugType = LLVMDIBuilderCreatePointerType(diBuilder, LLVMDIBuilderCreateBasicType(diBuilder, erased.toString(), 64, 64, DW_ATE_signed), v.utils.sizeOfType(erased)*8, v.utils.sizeOfType(erased)*8, "class");
+            debugType = LLVMDIBuilderCreatePointerType(diBuilder, LLVMDIBuilderCreateBasicType(diBuilder, erased.toString(), 64, DW_ATE_signed), v.utils.sizeOfType(erased)*8, v.utils.sizeOfType(erased)*8, "class");
         } else if (erased.isArray()) {
             debugType = LLVMDIBuilderCreateArrayType(diBuilder, v.utils.sizeOfType(erased), v.utils.sizeOfType(erased), debugType(erased.toArray().base()), null);
-            //debugType = LLVMDIBuilderCreatePointerType(diBuilder, debugType(t.toArray().base()), v.utils.sizeOfType(t), v.utils.sizeOfType(t), "array");
         } else if (erased.isClass()) {
-            int line = erased.position().line() == -1 ? 0 : erased.position().line() ;
-            debugType = LLVMDIBuilderCreateClassType(diBuilder, currentScope(), v.utils.erasureLL(erased).toString(), createFile(),
+            int line = erased.position().line() == -1 ? 0 : erased.position().line();
+            debugType = LLVMDIBuilderCreateStructType(diBuilder, currentScope(), v.utils.erasureLL(erased).toString(), createFile(),
                     line, 0,0, /*Flags*/0 , erased.toClass().superType() == null ? null : debugType(erased.toClass().superType()), null);
 
         } else throw new InternalCompilerError("Cannot handle "+erased.getClass());
@@ -208,7 +208,7 @@ public class DebugInfo {
             encoding = DW_ATE_float;
         } else throw new InternalCompilerError("Type " + t + " is not a basic type");
         long numBits = v.utils.sizeOfType(t)*8;
-        return LLVMDIBuilderCreateBasicType(diBuilder, t.toString(), numBits, numBits, encoding);
+        return LLVMDIBuilderCreateBasicType(diBuilder, t.toString(), numBits, encoding);
     }
 
     public LLVMMetadataRef createFunctionType(ProcedureInstance pi, LLVMMetadataRef unit) {
