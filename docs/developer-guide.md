@@ -252,3 +252,4 @@ Some AST extensions are unneeded, either because they do not require a translati
 - FieldAssign (uses AssignExt)
 - MethodDecl (uses ProcedureDeclExt)
 - Eval (the child translation suffices)
+- For/Do (converted to While by LoopNormalizer)

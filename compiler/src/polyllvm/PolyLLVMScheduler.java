@@ -60,7 +60,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 new VisitorGoal(job, new InnerClassRemover(job, ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check classes.
                 // TODO: May be cleaner to translate loops directly.
-                new VisitorGoal(job, new LoopNormalizer(job, ts, nf)),
+                new VisitorGoal(job, new LoopNormalizer(job, ts, nf, /*dumbDo*/ false)),
                 new VisitorGoal(job, new ClassInitializerVisitor(job, ts, nf)),
                 new VisitorGoal(job, new AssertionVisitor(job, ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
