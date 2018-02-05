@@ -26,23 +26,16 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
 
         LLVMPositionBuilderAtEnd(v.builder, ifTrue);
         n.consequent().visit(v);
-        branchToEnd(v, ifEnd);
+        v.utils.branchUnlessTerminated(ifEnd);
 
         if (n.alternative() != null) {
             LLVMPositionBuilderAtEnd(v.builder, ifFalse);
             n.alternative().visit(v);
-            branchToEnd(v, ifEnd);
+            v.utils.branchUnlessTerminated(ifEnd);
         }
 
         LLVMPositionBuilderAtEnd(v.builder, ifEnd);
         return n;
-    }
-
-    private static void branchToEnd(LLVMTranslator v, LLVMBasicBlockRef end) {
-        LLVMBasicBlockRef blockEnd = LLVMGetInsertBlock(v.builder);
-        if (LLVMGetBasicBlockTerminator(blockEnd) == null) {
-            LLVMBuildBr(v.builder, end);
-        }
     }
 
 
@@ -53,7 +46,7 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
         LLVMBuildCondBr(v.builder, cond, ifTrue, ifEnd);
         LLVMPositionBuilderAtEnd(v.builder, ifTrue);
         builder.run();
-        branchToEnd(v, ifEnd);
+        v.utils.branchUnlessTerminated(ifEnd);
         LLVMPositionBuilderAtEnd(v.builder, ifEnd);
     }
 }

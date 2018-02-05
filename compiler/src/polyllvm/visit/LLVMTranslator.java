@@ -1,25 +1,11 @@
 package polyllvm.visit;
 
 import org.bytedeco.javacpp.LLVM.*;
-
-import static org.bytedeco.javacpp.LLVM.*;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Node;
 import polyglot.ext.jl5.types.*;
 import polyglot.ext.jl7.types.JL7TypeSystem;
-import polyglot.types.ArrayType;
-import polyglot.types.ClassType;
-import polyglot.types.FieldInstance;
-import polyglot.types.MemberInstance;
-import polyglot.types.MethodInstance;
-import polyglot.types.ParsedClassType;
-import polyglot.types.ReferenceType;
-import polyglot.types.Type;
-import polyglot.types.TypeSystem;
+import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.ListUtil;
 import polyglot.visit.NodeVisitor;
@@ -31,6 +17,11 @@ import polyllvm.util.Constants;
 import polyllvm.util.DebugInfo;
 import polyllvm.util.LLVMUtils;
 import polyllvm.util.PolyLLVMMangler;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 /**
  * Translates Java into LLVM IR.
@@ -536,62 +527,79 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     /*
-     * Loops
+     * Loops, labels, break, and continue.
      */
 
-    // Note that these stacks may have different sizes because switch statements
-    // only create a break-block.
-    private Deque<LLVMBasicBlockRef> continueBlocks = new ArrayDeque<>();
-    private Deque<LLVMBasicBlockRef> breakBlocks = new ArrayDeque<>();
+    /**
+     * Represents the target of a break or continue statement.
+     * Usually targets the beginning or end of a loop, the end of a switch statement, or
+     * the end of a labeled statement.
+     */
+    private class ControlTransferLoc {
+        LLVMBasicBlockRef block;
 
-    private static class Loop {
-        LLVMBasicBlockRef head;
-        LLVMBasicBlockRef end;
+        // The try-catch nesting level is used to determine how many try-catch finally blocks
+        // we need to run before jumping to this location.
+        int tryCatchNestingLevel = exceptionRecords.size();
 
-        Loop(LLVMBasicBlockRef head, LLVMBasicBlockRef end) {
-            this.head = head;
-            this.end = end;
+        ControlTransferLoc(LLVMBasicBlockRef block) {
+            this.block = block;
         }
     }
 
-    private Map<String, Loop> loopLabelMap = new HashMap<>();
+    // The last items in these stacks hold the destination of unlabeled continue/break statements.
+    // Note that these stacks may have different sizes because switch statements
+    // only create a break-block.
+    private Deque<ControlTransferLoc> continueLocs = new ArrayDeque<>();
+    private Deque<ControlTransferLoc> breakLocs = new ArrayDeque<>();
 
-    private String currLoopLabel; // Null if none.
+    /**
+     * Holds the beginning and end of a labeled statement.
+     */
+    private class LabeledStmtLocs {
+        ControlTransferLoc head, end;
 
-    public void pushLoopLabel(String label) {
-        currLoopLabel = label;
+        LabeledStmtLocs(LLVMBasicBlockRef head, LLVMBasicBlockRef end) {
+            this.head = new ControlTransferLoc(head);
+            this.end = new ControlTransferLoc(end);
+        }
+    }
+
+    // Labels cannot be shadowed, so no need to worry about overwriting previous mappings.
+    private Map<String, LabeledStmtLocs> labelMap = new HashMap<>();
+
+    public void pushLabel(String label, LLVMBasicBlockRef before, LLVMBasicBlockRef after) {
+        labelMap.put(label, new LabeledStmtLocs(before, after));
+    }
+
+    public void popLabel(String label) {
+        labelMap.remove(label);
     }
 
     public void pushLoop(LLVMBasicBlockRef head, LLVMBasicBlockRef end) {
-        continueBlocks.addLast(head);
-        breakBlocks.addLast(end);
-        if (currLoopLabel != null) {
-            loopLabelMap.put(currLoopLabel, new Loop(head, end));
-            currLoopLabel = null;
-        }
-    }
-
-    public void pushSwitch(LLVMBasicBlockRef end) {
-        breakBlocks.addLast(end);
+        continueLocs.addLast(new ControlTransferLoc(head));
+        breakLocs.addLast(new ControlTransferLoc(end));
     }
 
     public void popLoop() {
-        continueBlocks.removeLast();
-        breakBlocks.removeLast();
+        continueLocs.removeLast();
+        breakLocs.removeLast();
+    }
+
+    public void pushSwitch(LLVMBasicBlockRef end) {
+        breakLocs.addLast(new ControlTransferLoc(end));
     }
 
     public void popSwitch() {
-        breakBlocks.removeLast();
+        breakLocs.removeLast();
     }
 
     public LLVMBasicBlockRef getContinueBlock(String label) {
-        return label == null ? continueBlocks.getLast()
-                : loopLabelMap.get(label).head;
+        return label == null ? continueLocs.getLast().block : labelMap.get(label).head.block;
     }
 
     public LLVMBasicBlockRef getBreakBlock(String label) {
-        return label == null ? breakBlocks.getLast()
-                : loopLabelMap.get(label).end;
+        return label == null ? breakLocs.getLast().block : labelMap.get(label).end.block;
     }
 
     /**

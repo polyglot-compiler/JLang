@@ -239,6 +239,16 @@ public class LLVMUtils {
     }
 
     /**
+     *  If the current block has no terminator, then branch to [block].
+     */
+    public void branchUnlessTerminated(LLVMBasicBlockRef block) {
+        LLVMBasicBlockRef curr = LLVMGetInsertBlock(v.builder);
+        if (LLVMGetBasicBlockTerminator(curr) == null) {
+            LLVMBuildBr(v.builder, block);
+        }
+    }
+
+    /**
      * Returns the pointer to the function with the given name and type in the
      * given module. If the function is not in the module, it gets declared in
      * the module before returned.

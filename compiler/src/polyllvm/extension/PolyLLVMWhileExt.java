@@ -18,24 +18,19 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
         While n = (While) node();
 
         LLVMBasicBlockRef head = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "head");
-        LLVMBasicBlockRef end = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "end");
         LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "body");
+        LLVMBasicBlockRef end = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "end");
         v.pushLoop(head, end);
 
         v.debugInfo.emitLocation(n);
 
-        LLVMPositionBuilderAtEnd(v.builder, LLVMGetInsertBlock(v.builder));
         LLVMBuildBr(v.builder, head);
-
         LLVMPositionBuilderAtEnd(v.builder, head);
         lang().translateLLVMConditional(n.cond(), v, body, end);
 
         LLVMPositionBuilderAtEnd(v.builder, body);
         v.visitEdge(n, n.body());
-        LLVMBasicBlockRef blockEnd = LLVMGetInsertBlock(v.builder);
-        if (LLVMGetBasicBlockTerminator(blockEnd) == null) {
-            LLVMBuildBr(v.builder, head);
-        }
+        v.utils.branchUnlessTerminated(head);
         LLVMPositionBuilderAtEnd(v.builder, end);
 
         v.popLoop();
