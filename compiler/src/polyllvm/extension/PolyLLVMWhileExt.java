@@ -17,9 +17,9 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
     public Node overrideTranslateLLVM(LLVMTranslator v) {
         While n = (While) node();
 
-        LLVMBasicBlockRef head = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "head");
-        LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "body");
-        LLVMBasicBlockRef end = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "end");
+        LLVMBasicBlockRef head = v.utils.buildBlock("head");
+        LLVMBasicBlockRef body = v.utils.buildBlock("body");
+        LLVMBasicBlockRef end = v.utils.buildBlock("end");
         v.pushLoop(head, end);
 
         v.debugInfo.emitLocation(n);

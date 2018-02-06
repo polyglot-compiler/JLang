@@ -1,14 +1,6 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
-
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.bytedeco.javacpp.LLVM.LLVMTypeRef;
-import org.bytedeco.javacpp.LLVM.LLVMValueRef;
-
+import org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Call;
 import polyglot.ast.Node;
 import polyglot.ast.Special;
@@ -22,6 +14,13 @@ import polyllvm.util.CollectUtils;
 import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 import polyllvm.visit.LLVMTranslator.DispatchInfo;
+
+import java.lang.Override;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -106,7 +105,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
             LLVMValueRef offset_local = LLVMConstInt(
                     LLVMInt32TypeInContext(v.context), dispInfo.methodIndex(),
                     /* sign-extend */ 0);
-            LLVMValueRef intf_method_local = v.utils.buildMethodCall(
+            LLVMValueRef intf_method_local = v.utils.buildFunCall(
                     get_intf_method_func, // ptr to method code
                     obj_bitcast, // the object
                     intf_id_hash_const, // id hash code
@@ -124,9 +123,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
         LLVMValueRef val;
         if (substM.returnType().isVoid()) {
-            val = v.utils.buildProcedureCall(func_ptr, ll_args);
+            val = v.utils.buildProcCall(func_ptr, ll_args);
         } else {
-            val = v.utils.buildMethodCall(func_ptr, ll_args);
+            val = v.utils.buildFunCall(func_ptr, ll_args);
         }
         v.addTranslation(n, val);
     }
@@ -155,9 +154,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
         LLVMValueRef val;
         if (substM.returnType().isVoid()) {
-            val = v.utils.buildProcedureCall(func_ptr, x_args);
+            val = v.utils.buildProcCall(func_ptr, x_args);
         } else {
-            val = v.utils.buildMethodCall(func_ptr, x_args);
+            val = v.utils.buildFunCall(func_ptr, x_args);
         }
         v.addTranslation(n, val);
     }
@@ -189,9 +188,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
         v.debugInfo.emitLocation(n);
         if (substM.returnType().isVoid()) {
-            v.addTranslation(n, v.utils.buildProcedureCall(func_ptr, x_args));
+            v.addTranslation(n, v.utils.buildProcCall(func_ptr, x_args));
         } else {
-            v.addTranslation(n, v.utils.buildMethodCall(func_ptr, x_args));
+            v.addTranslation(n, v.utils.buildFunCall(func_ptr, x_args));
         }
     }
 
@@ -216,9 +215,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                 .toArray(LLVMValueRef[]::new);
 
         if (substM.returnType().isVoid()) {
-            v.addTranslation(n, v.utils.buildProcedureCall(func_ptr, x_args));
+            v.addTranslation(n, v.utils.buildProcCall(func_ptr, x_args));
         } else {
-            v.addTranslation(n, v.utils.buildMethodCall(func_ptr, x_args));
+            v.addTranslation(n, v.utils.buildFunCall(func_ptr, x_args));
         }
     }
 

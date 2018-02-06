@@ -8,152 +8,207 @@ import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMTryExt extends PolyLLVMExt {
 
+    /**
+     * An exception frame holds information relevant to a try-catch-finally block,
+     * such as the catch landing pad. Translations use it to know where to send
+     * exceptions and when to execute finally blocks.
+     */
+    public static class ExceptionFrame {
+        private LLVMTranslator v;
+
+        /**
+         * Landing pad that jumps to a matching catch clause.
+         * Null if no catch blocks, or if we have already passed through the try block.
+         */
+        private LLVMBasicBlockRef lpadCatch;
+
+        /** Landing pad that jumps to the finally block. Null if no finally block. */
+        private LLVMBasicBlockRef lpadFinally;
+
+        /**
+         * Maps finally-block destinations to finally-block copies.
+         * Becomes the identity map if there is no finally block (to prevent redundant jumps).
+         */
+        // There can be multiple branch destinations after a finally block because a finally
+        // block can be entered after a break, continue, return, exception, or normal execution.
+        // Making a full copy of the finally block for each destination trades some code bloat
+        // for the sake of simplicity.
+        private Map<LLVMBasicBlockRef, LLVMBasicBlockRef> finallyBlocks = new HashMap<>();
+
+        private ExceptionFrame(
+                LLVMTranslator v,
+                LLVMBasicBlockRef lpadCatch,
+                LLVMBasicBlockRef lpadFinally) {
+            this.v = v;
+            this.lpadCatch = lpadCatch;
+            this.lpadFinally = lpadFinally;
+        }
+
+        public LLVMBasicBlockRef getLpadCatch() {
+            return lpadCatch;
+        }
+
+        public LLVMBasicBlockRef getLpadFinally() {
+            return lpadFinally;
+        }
+
+        /**
+         * Returns the block ref to the finally-block copy which branches to [dest],
+         * creating one if necessary. Returns [dest] if there is no finally block.
+         */
+        public LLVMBasicBlockRef getFinallyBlockBranchingTo(LLVMBasicBlockRef dest) {
+            return lpadFinally == null
+                    ? dest // If no finally block, just return [dest] directly.
+                    : finallyBlocks.computeIfAbsent(dest, (key) -> {
+                String destName = LLVMGetBasicBlockName(key).getString();
+                return v.utils.buildBlock("finally.then." + destName);
+            });
+        }
+    }
+
     @Override
     public Node overrideTranslateLLVM(LLVMTranslator v) {
         Try n = (Try) node();
-        v.enterTry();
 
-        LLVMTypeRef exnType = v.utils.structType(
-                v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)),
-                LLVMInt32TypeInContext(v.context));
-
-        LLVMBasicBlockRef tryBlock = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "try_block");
-        LLVMBasicBlockRef tryEnd = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "try_end");
-        LLVMBasicBlockRef tryFinally = v.currFinally();
-
-        LLVMValueRef finally_flag = PolyLLVMLocalDeclExt.createLocal(v, "finally_flag", LLVMInt1TypeInContext(v.context));
-
-        v.debugInfo.emitLocation(n);
-
-        // Build try block.
-        LLVMBuildBr(v.builder, tryBlock);
-        LLVMPositionBuilderAtEnd(v.builder, tryBlock);
-        LLVMBuildStore(v.builder, LLVMConstInt(LLVMInt1TypeInContext(v.context), 0, /*sign-extend*/ 0), finally_flag);
-        v.visitEdge(n, n.tryBlock());
-        if (LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(v.builder)) == null) {
-            LLVMBuildBr(v.builder, tryFinally);
-        }
-
+        // Useful functions, types, and constants.
         LLVMValueRef personalityFunc = v.utils.getFunction(
                 v.mod, Constants.PERSONALITY_FUNC,
                 v.utils.functionType(LLVMInt32TypeInContext(v.context)));
-
-        // Build landing pad.
-        LLVMPositionBuilderAtEnd(v.builder, v.currLpad());
-        LLVMValueRef lpad = LLVMBuildLandingPad(
-                v.builder, exnType, personalityFunc,
-                n.catchBlocks().size(), "lpad");
-        if (n.catchBlocks().isEmpty()) {
-            LLVMSetCleanup(lpad, /*true*/ 1);
-        } else {
-            n.catchBlocks().forEach(cb ->
-                    LLVMAddClause(lpad, v.classObjs.toTypeIdentity(cb.catchType().toReference())));
-        }
-
-        v.debugInfo.emitLocation();
-        LLVMValueRef exn_slot = PolyLLVMLocalDeclExt.createLocal(v, "exn_slot", v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)));
-        v.debugInfo.emitLocation(n);
-        LLVMValueRef exn = LLVMBuildExtractValue(v.builder, lpad, 0, "exn");
-        LLVMBuildStore(v.builder, exn, exn_slot);
-
-        v.debugInfo.emitLocation();
-        LLVMValueRef ehselector_slot = PolyLLVMLocalDeclExt.createLocal(v, "ehselector_slot", LLVMInt32TypeInContext(v.context));
-        v.debugInfo.emitLocation(n);
-        LLVMValueRef ehselector = LLVMBuildExtractValue(v.builder, lpad, 1, "ehselector");
-        LLVMBuildStore(v.builder, ehselector, ehselector_slot);
-
-        LLVMValueRef typeidFunc = v.utils.getFunction(v.mod, Constants.TYPEID_INTRINSIC,
+        LLVMValueRef tidFunc = v.utils.getFunction(
+                v.mod, Constants.TYPEID_INTRINSIC,
                 v.utils.functionType(LLVMInt32TypeInContext(v.context), v.utils.llvmBytePtr()));
+        LLVMTypeRef exnType = v.utils.structType(
+                v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)),
+                LLVMInt32TypeInContext(v.context));
+        LLVMValueRef nullBytePtr = LLVMConstPointerNull(v.utils.llvmBytePtr());
+        LLVMValueRef throwExnFunc = v.utils.getFunction(v.mod, Constants.THROW_EXCEPTION,
+                v.utils.functionType(LLVMVoidTypeInContext(v.context), v.utils.llvmBytePtr()));
 
-        LLVMBasicBlockRef ehResume = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "eh_resume");
-        LLVMPositionBuilderAtEnd(v.builder, ehResume);
-        LLVMValueRef reumeExn = LLVMBuildLoad(v.builder, exn_slot, "exn");
-        LLVMValueRef resumeSel = LLVMBuildLoad(v.builder, ehselector_slot, "sel");
-        LLVMValueRef lpadVal = LLVMBuildInsertValue(v.builder, LLVMGetUndef(exnType), reumeExn, 0, "lpad.val");
-        lpadVal = LLVMBuildInsertValue(v.builder, lpadVal, resumeSel, 1, "lpad.val");
-        LLVMBuildResume(v.builder, lpadVal);
+        // Useful blocks, null if not needed.
+        LLVMBasicBlockRef lpadCatch = !n.catchBlocks().isEmpty()
+                ? v.utils.buildBlock("lpad.catch")
+                : null;
+        LLVMBasicBlockRef lpadFinally = n.finallyBlock() != null
+                ? v.utils.buildBlock("lpad.finally")
+                : null;
+        LLVMBasicBlockRef end = v.utils.buildBlock("try.end");
 
-        LLVMPositionBuilderAtEnd(v.builder, v.currLpad());
-        LLVMBasicBlockRef dispatch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "catch_dispatch");
-        LLVMBuildBr(v.builder, dispatch);
+        // Push exception frame, which holds blocks useful for child translations.
+        LLVMBasicBlockRef lpadOuter = v.currLandingPad();
+        ExceptionFrame frame = new ExceptionFrame(v, lpadCatch, lpadFinally);
+        v.pushExceptionFrame(frame);
 
-        v.setLpad(LLVMAppendBasicBlockInContext(v.context, v.currFn(), "cleanup_lpad"));
-        LLVMPositionBuilderAtEnd(v.builder, v.currLpad());
-        LLVMValueRef cleanup_lpad = LLVMBuildLandingPad(v.builder,
-                exnType, personalityFunc,
-                0, "cleanup_lpad");
-        LLVMSetCleanup(cleanup_lpad, /*true*/ 1);
-        LLVMValueRef exn_clean = LLVMBuildExtractValue(v.builder, cleanup_lpad, 0, "exn");
-        LLVMBuildStore(v.builder, exn_clean, exn_slot);
-        LLVMValueRef ehselector_clean = LLVMBuildExtractValue(v.builder, cleanup_lpad, 1, "ehselector");
-        LLVMBuildStore(v.builder, ehselector_clean, ehselector_slot);
-        LLVMBuildStore(v.builder, LLVMConstInt(LLVMInt1TypeInContext(v.context), 1, /*sign-extend*/ 0), finally_flag);
-        LLVMBuildBr(v.builder, tryFinally);
+        // Build try block.
+        v.debugInfo.emitLocation(n.tryBlock());
+        n.visitChild(n.tryBlock(), v);
+        v.utils.branchUnlessTerminated(frame.getFinallyBlockBranchingTo(end));
+        frame.lpadCatch = null; // We don't want future translations landing at this catch.
 
-        // Block to set finally_flag
-        // The flag is set iff an exception needs to be propagated further after the "finally" ends
-        // successfully.  This can happen when the "try" block raises an exception but no "catch"
-        // block catches it or when the "catch" block raises an exception again.
-        // However, this does not necessarily mean a "resume" instruction is needed after "finally"
-        // ends; we may want to jump to another landing pad. This is probably the cause of the
-        // nested try-catch bug.
-        LLVMBasicBlockRef setFinallyFlag = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "set_finally_flag");
-        LLVMPositionBuilderAtEnd(v.builder, setFinallyFlag);
-        LLVMBuildStore(v.builder, LLVMConstInt(LLVMInt1TypeInContext(v.context), 1, /*sign-extend*/ 0), finally_flag);
-        LLVMBuildBr(v.builder, tryFinally);
+        if (!n.catchBlocks().isEmpty()) {
 
-        LLVMPositionBuilderAtEnd(v.builder, dispatch);
-        for (int i = 0; i < n.catchBlocks().size(); i++) {
-            Catch cb = n.catchBlocks().get(i);
-            v.debugInfo.emitLocation(cb);
-            LLVMBasicBlockRef catchBlock = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "catch_" + cb.catchType());
-            LLVMPositionBuilderAtEnd(v.builder, catchBlock);
-            v.visitEdge(n, cb);
-            if (LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(v.builder)) == null) {
-                LLVMBuildBr(v.builder, tryFinally);
+            // Even if no catch claus matches an in-flight exception, we must still stop unwinding
+            // if (1) there is a finally block, or (2) there is an enclosing landing pad in this
+            // same function. (1) is true because finally blocks might raise a new exception or
+            // cancel the existing one (through a control transfer), and the unwinder disallows
+            // both while unwinding. (2) is true for convenience only; in principle we could
+            // include the outer catch clauses in the inner landing pad instruction, and jump
+            // to the outer catch dispatch code if none of the inner catch clauses match.
+            boolean mustStopUnwinding = n.finallyBlock() != null || lpadOuter != null;
+
+            // Build catch landing pad.
+            LLVMPositionBuilderAtEnd(v.builder, lpadCatch);
+            int numClauses = n.catchBlocks().size() + (mustStopUnwinding ? 1 : 0);
+            LLVMValueRef lpadCatchRes = LLVMBuildLandingPad(
+                    v.builder, exnType, personalityFunc, numClauses, "lpad.catch.res");
+            n.catchBlocks().stream()
+                    .map((cb) -> v.classObjs.toTypeIdentity(cb.catchType().toReference()))
+                    .forEachOrdered((typeId) -> LLVMAddClause(lpadCatchRes, typeId));
+            if (mustStopUnwinding)
+                LLVMAddClause(lpadCatchRes, nullBytePtr); // Catch-all clause.
+
+            LLVMValueRef catchExn = LLVMBuildExtractValue(v.builder, lpadCatchRes, 0, "exn");
+            LLVMValueRef catchSel = LLVMBuildExtractValue(v.builder, lpadCatchRes, 1, "sel");
+
+            // Translate catch blocks.
+            for (Catch cb : n.catchBlocks()) {
+
+                // Extend dispatch chain.
+                LLVMBasicBlockRef catchBlock = v.utils.buildBlock("catch." + cb.catchType());
+                LLVMBasicBlockRef catchNext = v.utils.buildBlock("catch.next");
+                LLVMValueRef tid = v.utils.buildFunCall(
+                        tidFunc, v.classObjs.toTypeIdentity(cb.catchType().toReference()));
+                LLVMValueRef matches = LLVMBuildICmp(
+                        v.builder, LLVMIntEQ, catchSel, tid, "catch.matches");
+                LLVMBuildCondBr(v.builder, matches, catchBlock, catchNext);
+
+                // Build catch block.
+                LLVMPositionBuilderAtEnd(v.builder, catchBlock);
+                v.debugInfo.emitLocation(cb);
+                n.visitChild(cb, v);
+                v.utils.branchUnlessTerminated(frame.getFinallyBlockBranchingTo(end));
+
+                LLVMPositionBuilderAtEnd(v.builder, catchNext);
             }
 
-            LLVMPositionBuilderAtEnd(v.builder, dispatch);
-            LLVMValueRef sel = LLVMBuildLoad(v.builder, ehselector_slot, "sel");
-            LLVMValueRef typeid = v.utils.buildMethodCall(typeidFunc,
-                    v.classObjs.toTypeIdentity(cb.catchType().toReference()));
-            LLVMValueRef matches = LLVMBuildICmp(v.builder, LLVMIntEQ, sel, typeid, "matches");
-            if (i ==n.catchBlocks().size() - 1) {
-                //Need to resume Exception handling if last catch does not match exception type
-                LLVMBuildCondBr(v.builder, matches, catchBlock, setFinallyFlag);
+            if (mustStopUnwinding) {
+                // We temporarily caught the exception using a catch-all clause.
+                // Rethrow the exception after running the finally block (if any).
+                LLVMBasicBlockRef catchRethrow = v.utils.buildBlock("catch.rethrow");
+                LLVMBuildBr(v.builder, frame.getFinallyBlockBranchingTo(catchRethrow));
+                LLVMPositionBuilderAtEnd(v.builder, catchRethrow);
+                v.utils.buildProcCall(lpadOuter, throwExnFunc, catchExn);
+                LLVMBuildUnreachable(v.builder);
             } else {
-                dispatch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "catch_dispatch");
-                LLVMBuildCondBr(v.builder, matches, catchBlock, dispatch);
+                // We did not catch the exception. Resume unwinding.
+                LLVMBuildResume(v.builder, lpadCatchRes);
             }
-        }
-        if (LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(v.builder)) == null) {
-            //No catch blocks, need to execute finally and resume exception propagation
-            LLVMBuildBr(v.builder, setFinallyFlag);
+
         }
 
-
-        v.exitTry();
-
-        LLVMPositionBuilderAtEnd(v.builder, tryFinally);
         if (n.finallyBlock() != null) {
-            v.debugInfo.emitLocation(n.finallyBlock());
-            v.visitEdge(n, n.finallyBlock());
+
+            // Build finally landing pad. This handles exceptions thrown from within a catch block.
+            LLVMPositionBuilderAtEnd(v.builder, lpadFinally);
+            LLVMValueRef lpadFinallyRes = LLVMBuildLandingPad(
+                    v.builder, exnType, personalityFunc, /*numClauses*/ 1, "lpad.finally.res");
+            LLVMAddClause(lpadFinallyRes, nullBytePtr); // Catch-all clause.
+            LLVMValueRef finallyExn = LLVMBuildExtractValue(v.builder, lpadFinallyRes, 0, "exn");
+
+            // Build block to rethrow the exception once the finally block finishes.
+            LLVMBasicBlockRef finallyRethrow = v.utils.buildBlock("finally.rethrow");
+            LLVMBuildBr(v.builder, frame.getFinallyBlockBranchingTo(finallyRethrow));
+            LLVMPositionBuilderAtEnd(v.builder, finallyRethrow);
+            v.utils.buildProcCall(lpadOuter, throwExnFunc, finallyExn);
+            LLVMBuildUnreachable(v.builder);
+
+            // Pop the exception frame before translating the finally blocks
+            // since we want the translations to use the outer landing pad for any
+            // exceptions thrown within the finally block.
+            v.popExceptionFrame();
+
+            // Build finally blocks (one copy for each possible control flow destination).
+            for (Entry<LLVMBasicBlockRef, LLVMBasicBlockRef> entry
+                    : frame.finallyBlocks.entrySet()) {
+                LLVMBasicBlockRef dest = entry.getKey();
+                LLVMBasicBlockRef head = entry.getValue();
+                LLVMPositionBuilderAtEnd(v.builder, head);
+                v.debugInfo.emitLocation(n.finallyBlock());
+                n.visitChild(n.finallyBlock(), v);
+                v.utils.branchUnlessTerminated(dest);
+            }
+        } else {
+            v.popExceptionFrame();
         }
 
-        // Add branch to exception resumption or after try if necessary.
-        if (LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(v.builder)) == null) {
-            LLVMBuildCondBr(v.builder, LLVMBuildLoad(v.builder, finally_flag, "flag"), ehResume, tryEnd);
-        }
-
-        LLVMPositionBuilderAtEnd(v.builder, tryEnd);
-
-        v.emitTryRet();
-
+        LLVMPositionBuilderAtEnd(v.builder, end);
         return n;
     }
 }

@@ -55,13 +55,13 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         Operator op = n.operator();
         v.debugInfo.emitLocation(n);
         if (op.equals(Binary.COND_AND)) {
-            LLVMBasicBlockRef l1 = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "l1");
+            LLVMBasicBlockRef l1 = v.utils.buildBlock("l1");
             lang().translateLLVMConditional(n.left(), v, l1, falseBlock);
             LLVMPositionBuilderAtEnd(v.builder, l1);
             lang().translateLLVMConditional(n.right(), v, trueBlock, falseBlock);
         }
         else if (op.equals(Binary.COND_OR)) {
-            LLVMBasicBlockRef l1 = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "l1");
+            LLVMBasicBlockRef l1 = v.utils.buildBlock("l1");
             lang().translateLLVMConditional(n.left(), v, trueBlock, l1);
             LLVMPositionBuilderAtEnd(v.builder, l1);
             lang().translateLLVMConditional(n.right(), v, trueBlock, falseBlock);
@@ -93,9 +93,9 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
 
     private LLVMValueRef computeShortCircuitOp(LLVMTranslator v, Type resType) {
         LLVMValueRef binopRes = PolyLLVMLocalDeclExt.createLocal(v, "binop_res", v.utils.toLL(resType));
-        LLVMBasicBlockRef trueBranch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "true_branch");
-        LLVMBasicBlockRef falseBranch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "false_branch");
-        LLVMBasicBlockRef continueBranch = LLVMAppendBasicBlockInContext(v.context, v.currFn(), "continue");
+        LLVMBasicBlockRef trueBranch = v.utils.buildBlock("true_branch");
+        LLVMBasicBlockRef falseBranch = v.utils.buildBlock("false_branch");
+        LLVMBasicBlockRef continueBranch = v.utils.buildBlock("continue");
 
         translateLLVMConditional(v, trueBranch, falseBranch);
 

@@ -12,7 +12,7 @@ import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.extension.ClassObjects;
-import polyllvm.extension.PolyLLVMLocalDeclExt;
+import polyllvm.extension.PolyLLVMTryExt.ExceptionFrame;
 import polyllvm.util.Constants;
 import polyllvm.util.DebugInfo;
 import polyllvm.util.LLVMUtils;
@@ -20,8 +20,6 @@ import polyllvm.util.PolyLLVMMangler;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static org.bytedeco.javacpp.LLVM.*;
 
 /**
  * Translates Java into LLVM IR.
@@ -526,24 +524,32 @@ public class LLVMTranslator extends NodeVisitor {
         allocations.clear();
     }
 
-    /*
-     * Loops, labels, break, and continue.
-     */
+    ////////////////////////////////////////////////////////////////////////////
+    // Loops, labels, break, and continue.
+    ////////////////////////////////////////////////////////////////////////////
 
     /**
      * Represents the target of a break or continue statement.
      * Usually targets the beginning or end of a loop, the end of a switch statement, or
      * the end of a labeled statement.
      */
-    private class ControlTransferLoc {
-        LLVMBasicBlockRef block;
+    public class ControlTransferLoc {
+        private LLVMBasicBlockRef block;
 
         // The try-catch nesting level is used to determine how many try-catch finally blocks
         // we need to run before jumping to this location.
-        int tryCatchNestingLevel = exceptionRecords.size();
+        private int tryCatchNestingLevel = exceptionFrames.size();
 
         ControlTransferLoc(LLVMBasicBlockRef block) {
             this.block = block;
+        }
+
+        public LLVMBasicBlockRef getBlock() {
+            return block;
+        }
+
+        public int getTryCatchNestingLevel() {
+            return tryCatchNestingLevel;
         }
     }
 
@@ -594,12 +600,12 @@ public class LLVMTranslator extends NodeVisitor {
         breakLocs.removeLast();
     }
 
-    public LLVMBasicBlockRef getContinueBlock(String label) {
-        return label == null ? continueLocs.getLast().block : labelMap.get(label).head.block;
+    public ControlTransferLoc getContinueLoc(String label) {
+        return label == null ? continueLocs.getLast() : labelMap.get(label).head;
     }
 
-    public LLVMBasicBlockRef getBreakBlock(String label) {
-        return label == null ? breakLocs.getLast().block : labelMap.get(label).end.block;
+    public ControlTransferLoc getBreakLoc(String label) {
+        return label == null ? breakLocs.getLast() : labelMap.get(label).end;
     }
 
     /**
@@ -805,106 +811,50 @@ public class LLVMTranslator extends NodeVisitor {
         return false;
     }
 
-    // Stack of landing pads, returns, etc.
-    private final Deque<ExceptionRecord> exceptionRecords = new ArrayDeque<>();
+    ////////////////////////////////////////////////////////////////////////////
+    // Exception handling.
+    ////////////////////////////////////////////////////////////////////////////
 
-    private class ExceptionRecord {
-        private boolean inTry = true;
-        private LLVMBasicBlockRef lpad;
-        private LLVMBasicBlockRef tryFinally;
-        private LLVMValueRef retFlag = null;
-        private LLVMValueRef ret = null;
-        private boolean retIsVoid = false;
-        private boolean isRet = false;
+    /** Stack of nested exception frames, innermost first. */
+    private final Deque<ExceptionFrame> exceptionFrames = new ArrayDeque<>();
 
-        ExceptionRecord() {
-            lpad = LLVMAppendBasicBlockInContext(context, currFn(), "lpad");
-            tryFinally = LLVMAppendBasicBlockInContext(context, currFn(), "finally");
-        }
+    /** Must be called when entering a try-catch-finally structure. */
+    public void pushExceptionFrame(ExceptionFrame frame) {
+        exceptionFrames.push(frame);
     }
 
-    /*
-     * Methods for implementing exceptions
+    /** Must be called when leaving a try-catch finally structure. */
+    public void popExceptionFrame() {
+        exceptionFrames.pop();
+    }
+
+    /** Returns the landing pad in the current exception frame. */
+    public LLVMBasicBlockRef currLandingPad() {
+        for (ExceptionFrame frame : exceptionFrames) {
+            if (frame.getLpadCatch() != null)
+                return frame.getLpadCatch();
+            if (frame.getLpadFinally() != null)
+                return frame.getLpadFinally();
+        }
+        return null;
+    }
+
+    public boolean needsFinallyBlockChain() {
+        return exceptionFrames.stream().anyMatch((ef) -> ef.getLpadFinally() != null);
+    }
+
+    /**
+     * Runs all finally blocks between the current location of the translator and the
+     * [destExceptionFrameNestingLevel], returning the first finally block to jump to.
      */
-    public void enterTry() {
-        exceptionRecords.push(new ExceptionRecord());
-    }
-
-    public void exitTry() {
-        ExceptionRecord currTry = exceptionRecords.peek();
-        currTry.inTry = false;
-        currTry.lpad = null;
-    }
-
-    public boolean inTry() {
-        return exceptionRecords.peek() != null && exceptionRecords.peek().inTry;
-    }
-
-    public LLVMBasicBlockRef currLpad() {
-        assert inTry();
-        return exceptionRecords.peek().lpad;
-    }
-
-    public void setLpad(LLVMBasicBlockRef lpad) {
-        assert inTry();
-        exceptionRecords.peek().lpad = lpad;
-    }
-
-    public LLVMBasicBlockRef currFinally() {
-        assert inTry();
-        return exceptionRecords.peek().tryFinally;
-    }
-
-    public void setTryRet() {
-        ExceptionRecord currTry = exceptionRecords.peek();
-        currTry.isRet = true;
-        currTry.retIsVoid = true;
-        if (currTry.retFlag == null) {
-            currTry.retFlag = PolyLLVMLocalDeclExt.createLocal(this, "ret_flag",
-                    LLVMInt1TypeInContext(context));
-        }
-        LLVMBuildStore(builder, LLVMConstInt(LLVMInt1TypeInContext(context), 1,
-                /* sign-extend */ 0), currTry.retFlag);
-    }
-
-    public void setTryRet(LLVMValueRef v) {
-        ExceptionRecord currTry = exceptionRecords.peek();
-        currTry.isRet = true;
-        currTry.retIsVoid = false;
-        if (currTry.ret == null) {
-            currTry.ret = PolyLLVMLocalDeclExt.createLocal(this, "ret",
-                    LLVMTypeOf(v));
-        }
-        if (currTry.retFlag == null) {
-            currTry.retFlag = PolyLLVMLocalDeclExt.createLocal(this, "ret_flag",
-                    LLVMInt1TypeInContext(context));
-        }
-        LLVMBuildStore(builder, LLVMConstInt(LLVMInt1TypeInContext(context), 1,
-                /* sign-extend */ 0), currTry.retFlag);
-        LLVMBuildStore(builder, v, currTry.ret);
-    }
-
-    public void emitTryRet() {
-        ExceptionRecord currTry = exceptionRecords.pop();
-        if (currTry.isRet) {
-            LLVMBasicBlockRef doRet = LLVMAppendBasicBlockInContext(context,
-                    currFn(), "do_ret");
-            LLVMBasicBlockRef noRet = LLVMAppendBasicBlockInContext(context,
-                    currFn(), "no_ret");
-
-            LLVMBuildCondBr(builder,
-                    LLVMBuildLoad(builder, currTry.retFlag, "ret_flag_load"),
-                    doRet, noRet);
-
-            LLVMPositionBuilderAtEnd(builder, doRet);
-            if (currTry.retIsVoid) {
-                LLVMBuildRetVoid(builder);
-            } else {
-                LLVMBuildRet(builder,
-                        LLVMBuildLoad(builder, currTry.ret, "ret_load"));
-            }
-
-            LLVMPositionBuilderAtEnd(builder, noRet);
-        }
+    public LLVMBasicBlockRef buildFinallyBlockChain(
+            LLVMBasicBlockRef dest,
+            int destExceptionFrameNestingLevel) {
+         ExceptionFrame[] frames = exceptionFrames.stream()
+                .limit(exceptionFrames.size() - destExceptionFrameNestingLevel)
+                .toArray(ExceptionFrame[]::new);
+         for (int i = frames.length - 1; i >= 0; --i)
+             dest = frames[i].getFinallyBlockBranchingTo(dest);
+         return dest;
     }
 }

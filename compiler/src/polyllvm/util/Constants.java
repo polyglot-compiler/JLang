@@ -16,7 +16,7 @@ public class Constants {
     public static final int LLVM_ADDR_SPACE = 0;
 
     public static final String TYPEID_INTRINSIC = "llvm.eh.typeid.for";
-    public static final String PERSONALITY_FUNC = "__jxx_personality_v0";
+    public static final String PERSONALITY_FUNC = "__java_personality_v0";
     public static final String ALLOCATE_EXCEPTION = "allocateJavaException";
     public static final String THROW_EXCEPTION = "throwJavaException";
 

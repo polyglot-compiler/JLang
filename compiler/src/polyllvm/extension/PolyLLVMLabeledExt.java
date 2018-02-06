@@ -28,10 +28,8 @@ public class PolyLLVMLabeledExt extends PolyLLVMExt {
                     "after reaching a continue statement jumping to this label");
         }
 
-        LLVMBasicBlockRef head = LLVMAppendBasicBlockInContext(
-                v.context, v.currFn(), n.label() + ".head");
-        LLVMBasicBlockRef end = LLVMAppendBasicBlockInContext(
-                v.context, v.currFn(), n.label() + ".end");
+        LLVMBasicBlockRef head = v.utils.buildBlock(n.label() + ".head");
+        LLVMBasicBlockRef end = v.utils.buildBlock(n.label() + ".end");
 
         LLVMBuildBr(v.builder, head);
         LLVMPositionBuilderAtEnd(v.builder, head);

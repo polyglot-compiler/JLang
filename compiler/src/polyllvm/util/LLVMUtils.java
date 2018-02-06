@@ -153,36 +153,37 @@ public class LLVMUtils {
         return LLVMConstBitCast(val, llvmBytePtr());
     }
 
-    public LLVMValueRef buildProcedureCall(LLVMValueRef func,
-            LLVMValueRef... args) {
-        if (v.inTry() && !Constants.NON_INVOKE_FUNCTIONS
-                .contains(LLVMGetValueName(func).getString())) {
-            LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlockInContext(
-                    v.context, v.currFn(), "invoke.cont");
-            LLVMValueRef invoke = LLVMBuildInvoke(v.builder, func,
-                    new PointerPointer<>(args), args.length, invokeCont,
-                    v.currLpad(), "");
+    /** Builds a call, or an invoke if the translator is currently within an exception frame. */
+    private LLVMValueRef buildCall(
+            String label, LLVMBasicBlockRef lpad, LLVMValueRef func, LLVMValueRef... args) {
+        String funcName = LLVMGetValueName(func).getString();
+        if (lpad != null && !Constants.NON_INVOKE_FUNCTIONS.contains(funcName)) {
+            // Invoke instruction which unwinds to the current landing pad.
+            LLVMBasicBlockRef invokeCont = v.utils.buildBlock("invoke.cont");
+            LLVMValueRef invoke = LLVMBuildInvoke(
+                    v.builder, func, new PointerPointer<>(args),
+                    args.length, invokeCont, lpad, label);
             LLVMPositionBuilderAtEnd(v.builder, invokeCont);
             return invoke;
         }
-        return LLVMBuildCall(v.builder, func, new PointerPointer<>(args),
-                args.length, "");
+        else {
+            // Simple call instruction with no landing pad.
+            return LLVMBuildCall(v.builder, func, new PointerPointer<>(args), args.length, label);
+        }
     }
 
-    public LLVMValueRef buildMethodCall(LLVMValueRef func,
-            LLVMValueRef... args) {
-        if (v.inTry() && !Constants.NON_INVOKE_FUNCTIONS
-                .contains(LLVMGetValueName(func).getString())) {
-            LLVMBasicBlockRef invokeCont = LLVMAppendBasicBlockInContext(
-                    v.context, v.currFn(), "invoke.cont");
-            LLVMValueRef invoke = LLVMBuildInvoke(v.builder, func,
-                    new PointerPointer<>(args), args.length, invokeCont,
-                    v.currLpad(), "call");
-            LLVMPositionBuilderAtEnd(v.builder, invokeCont);
-            return invoke;
-        }
-        return LLVMBuildCall(v.builder, func, new PointerPointer<>(args),
-                args.length, "call");
+    // LLVM requires that void-returning functions have the empty string for their label.
+    public LLVMValueRef buildProcCall(LLVMValueRef p, LLVMValueRef... a) {
+        return buildCall("", v.currLandingPad(), p, a);
+    }
+
+    // Same as above, but allows custom landing pad.
+    public LLVMValueRef buildProcCall(LLVMBasicBlockRef lpad, LLVMValueRef p, LLVMValueRef... a) {
+        return buildCall("", lpad, p, a);
+    }
+
+    public LLVMValueRef buildFunCall(LLVMValueRef fun, LLVMValueRef... args) {
+        return buildCall("call", v.currLandingPad(), fun, args);
     }
 
     /**
@@ -209,10 +210,8 @@ public class LLVMUtils {
         v.debugInfo.funcDebugInfo(0, name, name, funcDiType, func);
         v.debugInfo.emitLocation(n);
 
-        LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, func,
-                "entry");
-        LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func,
-                "body");
+        LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, func, "entry");
+        LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func, "body");
         LLVMPositionBuilderAtEnd(v.builder, entry);
         LLVMBuildBr(v.builder, body);
         LLVMPositionBuilderAtEnd(v.builder, body);
@@ -236,6 +235,11 @@ public class LLVMUtils {
 
         LLVMBuildRetVoid(v.builder);
         v.debugInfo.popScope();
+    }
+
+    /** Convenience function for appending basic blocks to the current function. */
+    public LLVMBasicBlockRef buildBlock(String name) {
+        return LLVMAppendBasicBlockInContext(v.context, v.currFn(), name);
     }
 
     /**

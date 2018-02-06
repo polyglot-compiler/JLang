@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <iostream>
+#include <cassert>
 
 namespace llvm {
   namespace dwarf {
@@ -306,21 +307,29 @@ static bool handleActionValue(int64_t *resultAction,
             actionOffset;
 
     int count = 0, matchIndex;
-    for (; true; ++count) {
+    for (;; ++count) {
         // Each emitted dwarf action corresponds to a 2 tuple of
         // type info address offset, and action offset to the next
         // emitted action.
         typeOffset = readSLEB128(&actionPos);
         tempActionPos = actionPos;
         actionOffset = readSLEB128(&tempActionPos);
+        bool isCleanup = typeOffset == 0;
+
+        if (isCleanup) {
+            // Don't count cleanups.
+            --count;
+        }
 
         // Note: A typeOffset == 0 implies that a cleanup llvm.eh.selector
         //       argument has been matched.
-        if (!ret && typeOffset > 0) {
+        if (!ret && !isCleanup) {
             unsigned EncSize = getEncodingSize(TTypeEncoding);
             const uint8_t *EntryP = ClassInfo - typeOffset * EncSize;
             uintptr_t P = readEncodedPointer(&EntryP, TTypeEncoding);
             void *ThisClassInfo = reinterpret_cast<void *>(P);
+            assert(ThisClassInfo != nullptr);
+
             if (instanceof(jobj, ThisClassInfo)) {
                 matchIndex = count;
                 ret = true;
@@ -494,7 +503,7 @@ static _Unwind_Reason_Code handleLsda(int version,
     return(ret);
 }
 
-_Unwind_Reason_Code __jxx_personality_v0 (
+_Unwind_Reason_Code __java_personality_v0 (
         int version,
         _Unwind_Action actions,
         uint64_t exceptionClass,

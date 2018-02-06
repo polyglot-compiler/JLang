@@ -1,12 +1,6 @@
 package polyllvm.extension;
 
-import static org.bytedeco.javacpp.LLVM.*;
-
-import java.util.List;
-
-import org.bytedeco.javacpp.LLVM.LLVMTypeRef;
-import org.bytedeco.javacpp.LLVM.LLVMValueRef;
-
+import org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Node;
 import polyglot.types.ClassType;
@@ -14,6 +8,11 @@ import polyglot.types.ParsedClassType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
+
+import java.lang.Override;
+import java.util.List;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMClassDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -86,7 +85,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                     LLVMInt32TypeInContext(v.context), intf_id_hashes));
 
             LLVMTypeRef create_idv_ht_func_type = v.utils.functionType(
-                    LLVMVoidType(), // void return type
+                    LLVMVoidTypeInContext(v.context), // void return type
                     v.utils.llvmBytePtr(), // dv*
                     LLVMInt32TypeInContext(v.context), // int
                     LLVMInt32TypeInContext(v.context), // int
@@ -98,7 +97,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                     "__createInterfaceTables", create_idv_ht_func_type);
             int capacity = v.utils.idvCapacity(numOfIntfs);
             v.utils.buildCtor(node, () -> {
-                v.utils.buildProcedureCall(create_idv_ht_func,
+                v.utils.buildProcCall(create_idv_ht_func,
                         v.utils.buildCastToBytePtr(cdv_global),
                         LLVMConstInt(LLVMInt32TypeInContext(v.context),
                                 capacity, /* sign-extend */ 0),

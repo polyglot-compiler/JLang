@@ -1,43 +1,48 @@
 package basic;
 
-public class ExceptionTest {
+public class Exceptions {
     public static void main(String[] args) {
         simple();
 
         try {
             tunnel();
         } catch (Throwable e) {
-            System.out.println("catch tunnel");
+            System.out.println("catch");
         }
 
         nested();
+
+        throwInFinally();
 
         System.out.println("end");
     }
 
     public static void simple() {
+        System.out.println("begin simple");
         try {
             throw new Throwable();
         } catch (Throwable e) {
-            System.out.println("catch simple");
+            System.out.println("catch");
         } finally {
-            System.out.println("finalize simple");
+            System.out.println("finalize");
         }
     }
 
     public static void tunnel() {
+        System.out.println("begin tunnel");
         try {
             Error err = new Error();
             Exception e = new Exception();
             throw err;
         } catch (Exception e) {
-            System.out.println("bad tunnel");
+            System.out.println("bad");
         } finally {
-            System.out.println("finalize tunnel");
+            System.out.println("finalize");
         }
     }
 
     public static void nested() {
+        System.out.println("begin nested");
         try {
             try {
                 throw new Exception();
@@ -51,6 +56,21 @@ public class ExceptionTest {
             System.out.println("catch outer");
         } finally {
             System.out.println("finalize outer");
+        }
+    }
+
+    public static void throwInFinally() {
+        System.out.println("begin throwInFinally");
+        try {
+            try {
+                throw new Exception();
+            } finally {
+                throw new Error();
+            }
+        } catch (Exception e) {
+            System.out.println("caught exception");
+        } catch (Error e) {
+            System.out.println("caught error");
         }
     }
 }
