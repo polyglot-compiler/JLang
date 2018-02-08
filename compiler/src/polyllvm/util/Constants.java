@@ -17,13 +17,11 @@ public class Constants {
 
     public static final String TYPEID_INTRINSIC = "llvm.eh.typeid.for";
     public static final String PERSONALITY_FUNC = "__java_personality_v0";
-    public static final String ALLOCATE_EXCEPTION = "allocateJavaException";
+    public static final String CREATE_EXCEPTION = "createJavaException";
     public static final String THROW_EXCEPTION = "throwJavaException";
 
-    public static final Set<String> NON_INVOKE_FUNCTIONS = new HashSet<>(CollectionUtil.list(
-                    TYPEID_INTRINSIC,
-                    CALLOC,
-                    ALLOCATE_EXCEPTION));
+    public static final Set<String> NON_INVOKE_FUNCTIONS =
+            new HashSet<>(CollectionUtil.list(TYPEID_INTRINSIC, CALLOC, CREATE_EXCEPTION));
 
     /**
      * Offset from start of Object to the 0th field

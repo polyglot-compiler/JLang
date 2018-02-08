@@ -138,15 +138,16 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             LLVMValueRef catchSel = LLVMBuildExtractValue(v.builder, lpadCatchRes, 1, "sel");
 
             // Translate catch blocks.
+            int catchIdx = 1;
             for (Catch cb : n.catchBlocks()) {
 
                 // Extend dispatch chain.
                 LLVMBasicBlockRef catchBlock = v.utils.buildBlock("catch." + cb.catchType());
                 LLVMBasicBlockRef catchNext = v.utils.buildBlock("catch.next");
-                LLVMValueRef tid = v.utils.buildFunCall(
-                        tidFunc, v.classObjs.toTypeIdentity(cb.catchType().toReference()));
+                LLVMValueRef typeId = LLVMConstInt(
+                        LLVMInt32TypeInContext(v.context), catchIdx++, /*signExtend*/ 0);
                 LLVMValueRef matches = LLVMBuildICmp(
-                        v.builder, LLVMIntEQ, catchSel, tid, "catch.matches");
+                        v.builder, LLVMIntEQ, catchSel, typeId, "catch.matches");
                 LLVMBuildCondBr(v.builder, matches, catchBlock, catchNext);
 
                 // Build catch block.
@@ -161,7 +162,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             if (mustStopUnwinding) {
                 // We temporarily caught the exception using a catch-all clause.
                 // Rethrow the exception after running the finally block (if any).
-                LLVMBasicBlockRef catchRethrow = v.utils.buildBlock("catch.rethrow");
+                LLVMBasicBlockRef catchRethrow = v.utils.buildBlock("rethrow");
                 LLVMBuildBr(v.builder, frame.getFinallyBlockBranchingTo(catchRethrow));
                 LLVMPositionBuilderAtEnd(v.builder, catchRethrow);
                 v.utils.buildProcCall(lpadOuter, throwExnFunc, catchExn);
@@ -183,7 +184,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             LLVMValueRef finallyExn = LLVMBuildExtractValue(v.builder, lpadFinallyRes, 0, "exn");
 
             // Build block to rethrow the exception once the finally block finishes.
-            LLVMBasicBlockRef finallyRethrow = v.utils.buildBlock("finally.rethrow");
+            LLVMBasicBlockRef finallyRethrow = v.utils.buildBlock("rethrow");
             LLVMBuildBr(v.builder, frame.getFinallyBlockBranchingTo(finallyRethrow));
             LLVMPositionBuilderAtEnd(v.builder, finallyRethrow);
             v.utils.buildProcCall(lpadOuter, throwExnFunc, finallyExn);

@@ -6,15 +6,14 @@
 #define JNI_EXCEPTION_H
 
 #include <unwind.h>
+#include "types.h"
 
 extern "C" {
 
-typedef struct _Unwind_Exception UnwindException;
+_Unwind_Exception *createJavaException(jobject *jexception);
+void throwJavaException(_Unwind_Exception* exception);
 
-UnwindException *allocateJavaException(void *jexception);
-void throwJavaException(UnwindException* exception);
-
-}
+} // extern "C"
 
 
 #endif //JNI_EXCEPTION_H

@@ -15,12 +15,13 @@ public class PolyLLVMThrowExt extends PolyLLVMExt {
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         Throw n = (Throw) node();
-        LLVMValueRef allocateExnFunc = v.utils.getFunction(v.mod, Constants.ALLOCATE_EXCEPTION,
+        LLVMValueRef createExnFun = v.utils.getFunction(v.mod, Constants.CREATE_EXCEPTION,
                 v.utils.functionType(v.utils.llvmBytePtr(), v.utils.llvmBytePtr()));
         LLVMValueRef throwExnFunc = v.utils.getFunction(v.mod, Constants.THROW_EXCEPTION,
                 v.utils.functionType(LLVMVoidTypeInContext(v.context), v.utils.llvmBytePtr()));
-        LLVMValueRef translation = LLVMBuildBitCast(v.builder, v.getTranslation(n.expr()), v.utils.llvmBytePtr(), "cast");
-        LLVMValueRef exn = v.utils.buildFunCall(allocateExnFunc, translation);
+        LLVMValueRef cast = LLVMBuildBitCast(
+                v.builder, v.getTranslation(n.expr()), v.utils.llvmBytePtr(), "cast");
+        LLVMValueRef exn = v.utils.buildFunCall(createExnFun, cast);
         v.utils.buildProcCall(throwExnFunc, exn);
         LLVMBuildUnreachable(v.builder);
         return super.leaveTranslateLLVM(v);

@@ -5,6 +5,7 @@ public class System {
     public static PrintStream out;
 
     public static class PrintStream {
+
         public static void print(Object o) {
             print(o == null ? "null" : o.toString());
         }
@@ -32,6 +33,8 @@ public class System {
         public static native void print(float n);
         public static native void println(double n);
         public static native void print(double n);
+
+        public static native void flush();
     }
 
     public static SecurityManager getSecurityManager() {
