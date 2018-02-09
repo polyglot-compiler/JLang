@@ -50,8 +50,8 @@ public class Exceptions {
             throw new Exception();
         } catch (AssertionError e) {
             System.out.println("catch assertion error");
-        } catch (Error e) {
-            System.out.println("catch error");
+        } catch (Error | Exception e) {
+            System.out.println("catch error or exception");
         } catch (Throwable e) {
             System.out.println("catch throwable");
         } finally {

@@ -97,9 +97,9 @@ The translator exposes functions for entering and exiting
 loops to maintain its internal data structure.
 
 ### Exceptions ###
-When translating `Try` nodes, the compiler must know the
-landing pad to jump to if an exception is raised, the finally
-block, and flags to handle returns. There are methods to set a return while in a try block, and methods to enter and exit a try block.
+We implement Itanium ABI zero-cost exception handling. LLVM provides a lot of support for this, though the support is designed for C++ exceptions rather than Java exceptions. Notably, for example, LLVM does not directly support finally-blocks which are able to stop unwinding; we get around this by catching the exception at the finally block and re-throwing it afterward.
+
+See the translation for the Try node, which is heavily commented, for in-depth details.
 
 
 Object Layout

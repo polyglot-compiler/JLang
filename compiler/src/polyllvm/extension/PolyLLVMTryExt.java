@@ -14,6 +14,32 @@ import java.util.Map.Entry;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
+/**
+ * Translates try-catch blocks.
+ *
+ * Exception handling is one of the harder aspects of LLVM, so read the LLVM documentation on
+ * exception handling very carefully. The basic idea is this: within a try block, all
+ * function calls must specify a "landing pad," which is just a basic block that processes
+ * a thrown exception. The landing pad must examine the exception to see if it matches any of the
+ * catch clauses. If no clauses are matched, we run the finally block and rethrow the exception.
+ *
+ * The "unwinder" is the library code that actually walks up the stack and jumps to landing pads
+ * when necessary. The unwinder calls into a language-defined "personality" function when
+ * deciding whether to stop at a landing pad, which for us exists in jni/exceptions.cpp.
+ * The personality function contains the call to instanceof (for example) to determine whether the
+ * exception thrown matches one of the catch clauses.
+ *
+ * Java exception handling can get tricky. E.g., finally blocks can throw a new exception, thereby
+ * cancelling the previous one; catch blocks can contain a break statement which jumps to a
+ * label several try-catch-finally nesting levels away; etc. To combat this complexity, we maintain
+ * that v.currLandingPad() always points to the landing pad of the try-catch block which should
+ * gain control if an exception is thrown at the current position of the translator within the AST.
+ * This might be a landing pad which dispatches to a catch block, or one which merely runs
+ * the finally block and rethrows. To ensure that finally blocks will be run despite early returns
+ * from a function (for example), we also maintain a stack of exception frames so that return
+ * statements can copy requisite finally blocks before emitting the ret instruction. This state is
+ * held in the translator, but updated by this class during translation.
+ */
 public class PolyLLVMTryExt extends PolyLLVMExt {
 
     /**
@@ -65,9 +91,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
          * creating one if necessary. Returns [dest] if there is no finally block.
          */
         public LLVMBasicBlockRef getFinallyBlockBranchingTo(LLVMBasicBlockRef dest) {
-            return lpadFinally == null
-                    ? dest // If no finally block, just return [dest] directly.
-                    : finallyBlocks.computeIfAbsent(dest, (key) -> {
+            return lpadFinally == null ? dest : finallyBlocks.computeIfAbsent(dest, (key) -> {
                 String destName = LLVMGetBasicBlockName(key).getString();
                 return v.utils.buildBlock("finally.then." + destName);
             });
@@ -110,7 +134,11 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         v.debugInfo.emitLocation(n.tryBlock());
         n.visitChild(n.tryBlock(), v);
         v.utils.branchUnlessTerminated(frame.getFinallyBlockBranchingTo(end));
-        frame.lpadCatch = null; // We don't want future translations landing at this catch.
+
+        // Prevent future translations landing at this catch.
+        // For example, exceptions thrown within the catch blocks should either land at the
+        // finally block landing pad, or otherwise at an enclosing try-catch landing pad.
+        frame.lpadCatch = null;
 
         if (!n.catchBlocks().isEmpty()) {
 
@@ -134,10 +162,16 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             if (mustStopUnwinding)
                 LLVMAddClause(lpadCatchRes, nullBytePtr); // Catch-all clause.
 
+            // The exception value is an unwinder data structure that contains a reference
+            // to the actual Java exception object.
             LLVMValueRef catchExn = LLVMBuildExtractValue(v.builder, lpadCatchRes, 0, "exn");
+
+            // The selector value is the catch clause index that the unwinder claims is matched.
             LLVMValueRef catchSel = LLVMBuildExtractValue(v.builder, lpadCatchRes, 1, "sel");
 
             // Translate catch blocks.
+            // Note that MultiCatch nodes are handled automatically because the type system
+            // sets the catch type to the lowest upper bound.
             int catchIdx = 1;
             for (Catch cb : n.catchBlocks()) {
 
@@ -151,6 +185,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                 LLVMBuildCondBr(v.builder, matches, catchBlock, catchNext);
 
                 // Build catch block.
+                v.debugInfo.emitLocation(cb);
                 LLVMPositionBuilderAtEnd(v.builder, catchBlock);
                 LLVMTypeRef exnType = v.utils.toLL(cb.catchType().toReference());
                 LLVMValueRef exnVar = PolyLLVMLocalDeclExt.createLocal(
@@ -159,7 +194,6 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                 LLVMValueRef jexn = v.utils.buildFunCall(extractJavaExnFunc, catchExn);
                 LLVMValueRef castJExn = LLVMBuildBitCast(v.builder, jexn, exnType, "cast");
                 LLVMBuildStore(v.builder, castJExn, exnVar);
-                v.debugInfo.emitLocation(cb);
                 n.visitChild(cb, v);
                 v.utils.branchUnlessTerminated(frame.getFinallyBlockBranchingTo(end));
 
