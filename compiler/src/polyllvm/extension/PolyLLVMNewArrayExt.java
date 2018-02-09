@@ -11,6 +11,7 @@ import polyllvm.util.Constants;
 import polyllvm.util.LLVMUtils;
 import polyllvm.visit.LLVMTranslator;
 
+import java.lang.Override;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +26,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nodeFactory();
 
         if (n.init() != null) {
-            v.addTranslation(n, v.utils.bitcastToLHS(n.init(), n.type()));
+            v.addTranslation(n, v.getTranslation(n.init()));
         }
         else {
             List<Expr> dims = n.dims();

@@ -34,7 +34,6 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         ConstructorInstance substC = n.constructorInstance();
         ReferenceType clazz = substC.container();
 
-
         v.debugInfo.emitLocation();
 
         //Allocate space for the new object - need to get the size of the object

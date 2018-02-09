@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import org.bytedeco.javacpp.LLVM;
 import org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Call;
 import polyglot.ast.Node;
@@ -81,7 +82,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
             // erasure.
             LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(recvTy,
                     substM.returnType(), substM.formalTypes());
-            func_ptr = v.utils.bitcastFunc(func_ptr, func_ty_cast);
+            func_ptr = LLVM.LLVMBuildBitCast(
+                    v.builder, func_ptr, v.utils.ptrTypeRef(func_ty_cast), "cast");
 
         } else { // dispatching an interface method
             ClassType intf = dispInfo.intfErasure();
@@ -118,7 +120,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
             // erasure.
             LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(intf,
                     substM.returnType(), substM.formalTypes());
-            func_ptr = v.utils.bitcastFunc(intf_method_local, func_ty_cast);
+            func_ptr = LLVM.LLVMBuildBitCast(
+                    v.builder, intf_method_local, v.utils.ptrTypeRef(func_ty_cast), "cast");
         }
 
         LLVMValueRef val;
@@ -148,7 +151,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         // to potential mismatch between the types caused by erasure.
         LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(substM.returnType(),
                 substM.formalTypes());
-        func_ptr = v.utils.bitcastFunc(func_ptr, func_ty_cast);
+        func_ptr = LLVM.LLVMBuildBitCast(
+                v.builder, func_ptr, v.utils.ptrTypeRef(func_ty_cast), "cast");
 
         v.debugInfo.emitLocation(n);
 
@@ -184,7 +188,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(
                 n.target().type().toReference(), substM.returnType(),
                 substM.formalTypes());
-        func_ptr = v.utils.bitcastFunc(func_ptr, func_ty_cast);
+        func_ptr = LLVM.LLVMBuildBitCast(
+                v.builder, func_ptr, v.utils.ptrTypeRef(func_ty_cast), "cast");
 
         v.debugInfo.emitLocation(n);
         if (substM.returnType().isVoid()) {
@@ -206,7 +211,8 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(
                 v.getCurrentClass().type(), substM.returnType(),
                 substM.formalTypes());
-        func_ptr = v.utils.bitcastFunc(func_ptr, func_ty_cast);
+        func_ptr = LLVM.LLVMBuildBitCast(
+                v.builder, func_ptr, v.utils.ptrTypeRef(func_ty_cast), "cast");
 
         LLVMValueRef x_this = LLVMGetParam(v.currFn(), 0);
         LLVMValueRef[] x_args = Stream

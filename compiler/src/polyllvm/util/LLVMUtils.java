@@ -1,7 +1,6 @@
 package polyllvm.util;
 
 import org.bytedeco.javacpp.PointerPointer;
-import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.ext.jl5.types.RawClass;
@@ -10,7 +9,6 @@ import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyllvm.visit.LLVMTranslator;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -178,8 +176,8 @@ public class LLVMUtils {
     }
 
     // Same as above, but allows custom landing pad.
-    public LLVMValueRef buildProcCall(LLVMBasicBlockRef lpad, LLVMValueRef p, LLVMValueRef... a) {
-        return buildCall("", lpad, p, a);
+    public void buildProcCall(LLVMBasicBlockRef lpad, LLVMValueRef p, LLVMValueRef... a) {
+        buildCall("", lpad, p, a);
     }
 
     public LLVMValueRef buildFunCall(LLVMValueRef fun, LLVMValueRef... args) {
@@ -265,20 +263,6 @@ public class LLVMUtils {
         return func;
     }
 
-    /**
-     * Creates a bitcast that casts a pointer to a function to a given type.
-     *
-     * @param funcPtr
-     * @param castToTy
-     *            the cast-to function type (not a pointer type)
-     * @return
-     */
-    public LLVMValueRef bitcastFunc(LLVMValueRef funcPtr,
-            LLVMTypeRef castToTy) {
-        return LLVMBuildBitCast(v.builder, funcPtr, ptrTypeRef(castToTy),
-                "func_cast");
-    }
-
     public LLVMTypeRef structType(LLVMTypeRef... types) {
         return LLVMStructType(new PointerPointer<>(types), types.length,
                 /* Packed */ 0);
@@ -298,20 +282,7 @@ public class LLVMUtils {
 
     public LLVMValueRef buildGEP(LLVMValueRef ptr, LLVMValueRef... indices) {
         // TODO: If safe to do so, might be better to use LLVMBuildInBoundsGEP.
-        return LLVMBuildGEP(v.builder, ptr, new PointerPointer<>(indices),
-                indices.length, "gep");
-    }
-
-    /**
-     * Create a constant GEP using i32 indices from indices
-     */
-    public LLVMValueRef constGEP(LLVMValueRef ptr, int... indices) {
-        LLVMValueRef[] llvmIndices = Arrays.stream(indices)
-                .mapToObj(i -> LLVMConstInt(LLVMInt32TypeInContext(v.context),
-                        i, /* sign-extend */ 0))
-                .toArray(LLVMValueRef[]::new);
-        return LLVMConstGEP(ptr, new PointerPointer<>(llvmIndices),
-                llvmIndices.length);
+        return LLVMBuildGEP(v.builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
 
     public LLVMValueRef buildStructGEP(LLVMValueRef ptr, int... intIndices) {
@@ -320,8 +291,7 @@ public class LLVMUtils {
                 .mapToObj(i -> LLVMConstInt(LLVMInt32TypeInContext(v.context),
                         i, /* sign-extend */ 0))
                 .toArray(LLVMValueRef[]::new);
-        return LLVMBuildGEP(v.builder, ptr, new PointerPointer<>(indices),
-                indices.length, "gep");
+        return LLVMBuildGEP(v.builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
 
     /**
@@ -405,9 +375,7 @@ public class LLVMUtils {
      * The LLVM types of each slot in the LLVM structure representation of a
      * Java object of Java type {@code jt}.
      *
-     * @param jt
-     *            The Java non-interface reference type (not required to be
-     *            erasure).
+     * @param jt The Java non-interface reference type (not required to be erasure).
      * @return an array of LLVM types that correspond to the slots in the object
      *         layout for Java type {@code jt}.
      */
@@ -427,6 +395,7 @@ public class LLVMUtils {
         for (FieldInstance fi : fields)
             res[idx++] = /* field */ toLL(fi.type(), false);
         if (isArray)
+            // noinspection UnusedAssignment
             res[idx++] = /* extra i8* slot */ llvmBytePtr();
         return res;
     }
@@ -446,10 +415,9 @@ public class LLVMUtils {
      * Obtains the LLVM type of the LLVM structure representation of the class
      * dispatch vector for Java reference type {@code jt}.
      *
-     * @param jt
-     *            The Java type (not required to be erasure)
+     * @param jt The Java type (not required to be erasure)
      */
-    public LLVMTypeRef toCDVTy(ReferenceType jt) {
+    private LLVMTypeRef toCDVTy(ReferenceType jt) {
         String mangledDVName = v.mangler.cdvTyName(erasureLL(jt));
         LLVMTypeRef cdv_ty = structTypeRefOpaque(mangledDVName);
         if (LLVMIsOpaqueStruct(cdv_ty) != 0)
@@ -494,8 +462,7 @@ public class LLVMUtils {
      *            The Java class type (not required to be erasure)
      */
     public LLVMValueRef toIDVGlobal(ClassType intf, ReferenceType clazz) {
-        return getGlobal(v.mod, v.mangler.idvGlobalId(intf, clazz),
-                toIDVTy(intf));
+        return getGlobal(v.mod, v.mangler.idvGlobalId(intf, clazz), toIDVTy(intf));
     }
 
     /**
@@ -505,7 +472,7 @@ public class LLVMUtils {
      * @param intf
      *            The Java interface type (not required to be the erasure)
      */
-    public LLVMTypeRef toIDVTy(ClassType intf) {
+    private LLVMTypeRef toIDVTy(ClassType intf) {
         String mangledDVName = v.mangler.idvTyName(intf);
         LLVMTypeRef idv_ty = structTypeRefOpaque(mangledDVName);
         if (LLVMIsOpaqueStruct(idv_ty) != 0)
@@ -585,9 +552,7 @@ public class LLVMUtils {
      * of Java type {@code jt} except for the first slot. The first slot is left
      * null, and will be initialized later to point to the IDV hash table.
      *
-     * @param jt
-     *            The Java non-abstract class type.
-     * @return
+     * @param jt The Java non-abstract class type.
      */
     public LLVMValueRef[] toCDVSlots(ReferenceType jt) {
         return toCDVSlots(jt, LLVMConstNull(llvmBytePtr()));
@@ -607,14 +572,10 @@ public class LLVMUtils {
         res[idx++] = v.classObjs.classObjRef(jt);
         // remaining slots point to method codes
         for (MethodInstance jm : jms) {
-            LLVMTypeRef llm_ty_cast_from = toLLFuncTy(jm.container(),
-                    jm.returnType(), jm.formalTypes());
-            LLVMTypeRef llm_ty_cast_to = toLLFuncTy(jt, jm.returnType(),
-                    jm.formalTypes());
-            LLVMValueRef llm = getFunction(v.mod,
-                    v.mangler.mangleProcedureName(jm), llm_ty_cast_from);
-            LLVMValueRef cast = LLVMConstBitCast(llm,
-                    ptrTypeRef(llm_ty_cast_to));
+            LLVMTypeRef castFrom = toLLFuncTy(jm.container(), jm.returnType(), jm.formalTypes());
+            LLVMTypeRef castTo = toLLFuncTy(jt, jm.returnType(), jm.formalTypes());
+            LLVMValueRef llm = getFunction(v.mod, v.mangler.mangleProcedureName(jm), castFrom);
+            LLVMValueRef cast = LLVMConstBitCast(llm, ptrTypeRef(castTo));
             res[idx++] = cast;
         }
         return res;
@@ -625,13 +586,10 @@ public class LLVMUtils {
      * vector of Java class type {@code clazz} for Java interface type
      * {@code intf}.
      *
-     * @param intf
-     *            a Java interface type
-     *            {@link LLVMTranslator#allInterfaces(ClassType) implemented} by
-     *            {@code clazz}
-     * @param clazz
-     *            the non-abstract Java class type
-     * @return
+     * @param intf a Java interface type
+     *             {@link LLVMTranslator#allInterfaces(ClassType) implemented} by
+     *             {@code clazz}
+     * @param clazz the non-abstract Java class type
      */
     public LLVMValueRef[] toIDVSlots(ClassType intf, ParsedClassType clazz) {
         List<MethodInstance> cdvMethods = v.cdvMethods(erasureLL(clazz));
@@ -667,16 +625,13 @@ public class LLVMUtils {
     }
 
     /**
-     * @param recvTy
-     * @param retTy
-     * @param formalTys
      * @return The LLVM function type whose argument types are the translation
      *         of {@code recvTy} followed by the translation of
      *         {@code formalTys}, and whose return type is the translation of
      *         {@code retTy};
      */
-    public LLVMTypeRef toLLFuncTy(ReferenceType recvTy, Type retTy,
-            List<? extends Type> formalTys) {
+    public LLVMTypeRef toLLFuncTy(
+            ReferenceType recvTy, Type retTy, List<? extends Type> formalTys) {
         LLVMTypeRef[] arg_tys = Stream
                 .of(CollectUtils.toArray(recvTy, formalTys, Type.class))
                 .map(jt -> toLL(jt, false)).toArray(LLVMTypeRef[]::new);
@@ -685,8 +640,6 @@ public class LLVMUtils {
     }
 
     /**
-     * @param retTy
-     * @param formalTys
      * @return The LLVM function type whose argument types are the translation
      *         of {@code formalTys} and whose return type is the translation of
      *         {@code retTy};
@@ -699,75 +652,31 @@ public class LLVMUtils {
     }
 
     /**
-     * Returns the bitcast that casts the translation of a Java expression to
-     * the LLVM translation of the expression's expected type. (For example, the
-     * expected type of the initializer of a local variable declaration is the
-     * type of the variable.)
-     * <p>
-     * This method is different from {@link #toBitcastR}.
-     *
-     * @param e
-     * @param expectedTy
-     * @return
-     */
-    public LLVMValueRef bitcastToLHS(Expr e, Type expectedTy) {
-        return LLVMBuildSExtOrBitCast(v.builder, v.getTranslation(e),
-                toLL(expectedTy), "cast_with_expected");
-    }
-
-    /**
-     * Returns the bitcast to the LLVM translation of a Java type. It is used to
-     * eliminate any potential mismatch between the LLVM type of the translation
-     * of a Java expression and the LLVM translation of the Java expression's
-     * type.
-     * <p>
-     * This method is different from {@link #bitcastToLHS}.
-     *
-     * @param val
-     *            the LLVM translation of a Java expression (an r-value)
-     * @param jty
-     *            the Java type of the Java expression
-     * @return
-     */
-    public LLVMValueRef toBitcastR(LLVMValueRef val, Type jty) {
-        return LLVMBuildBitCast(v.builder, val, toLL(jty), "cast_r");
-    }
-
-    /**
      * Returns the bitcast to the LLVM translation of a Java type. It is used to
      * eliminate any potential mismatch between the LLVM type of the translation
      * of a Java expression and the LLVM translation of the Java expression's
      * type.
      *
-     * @param val
-     *            the LLVM translation of a Java expression (an l-value)
-     * @param jty
-     *            the Java type of the Java expression
-     * @return
+     * @param val the LLVM translation of a Java expression (an l-value)
+     * @param jty the Java type of the Java expression
      */
     public LLVMValueRef toBitcastL(LLVMValueRef val, Type jty) {
-        return LLVMBuildBitCast(v.builder, val, ptrTypeRef(toLL(jty)),
-                "cast_l");
+        return LLVMBuildBitCast(v.builder, val, ptrTypeRef(toLL(jty)), "cast_l");
     }
 
     public LLVMValueRef buildConstArray(LLVMTypeRef type,
             LLVMValueRef... values) {
-        return LLVMConstArray(type, new PointerPointer<>(values),
-                values.length);
+        return LLVMConstArray(type, new PointerPointer<>(values), values.length);
     }
 
     public LLVMValueRef buildConstStruct(LLVMValueRef... values) {
         PointerPointer<LLVMValueRef> valArr = new PointerPointer<>(values);
-        return LLVMConstStructInContext(v.context, valArr, values.length,
-                /* packed */ 0);
+        return LLVMConstStructInContext(v.context, valArr, values.length, /* packed */ 0);
     }
 
     /**
      * Returns the number of bytes occupied by a value of Java type {@code t}.
-     *
-     * @param t
-     *            the Java type (not required to be erasure)
-     * @return
+     * @param t the Java type (not required to be erasure)
      */
     public int sizeOfType(Type t) {
         Type erased = erasureLL(t);
@@ -804,8 +713,7 @@ public class LLVMUtils {
             return 32;
         else if (t.isLong())
             return 64;
-        throw new InternalCompilerError(
-                "Type " + t + " is not an integral type");
+        throw new InternalCompilerError("Type " + t + " is not an integral type");
     }
 
 }
