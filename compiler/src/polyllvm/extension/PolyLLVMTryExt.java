@@ -56,7 +56,10 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
          */
         private LLVMBasicBlockRef lpadCatch;
 
-        /** Landing pad that jumps to the finally block. Null if no finally block. */
+        /**
+         * Landing pad that jumps to the finally block. Null if no finally block,
+         * or if we have already passed through all catch blocks.
+         */
         private LLVMBasicBlockRef lpadFinally;
 
         /**
@@ -231,10 +234,9 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             v.utils.buildProcCall(lpadOuter, throwExnFunc, finallyExn);
             LLVMBuildUnreachable(v.builder);
 
-            // Pop the exception frame before translating the finally blocks
-            // since we want the translations to use the outer landing pad for any
+            // We want the finally block translations to use the outer landing pad for any
             // exceptions thrown within the finally block.
-            v.popExceptionFrame();
+            frame.lpadFinally = null;
 
             // Build finally blocks (one copy for each possible control flow destination).
             for (Entry<LLVMBasicBlockRef, LLVMBasicBlockRef> entry
@@ -246,10 +248,9 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                 n.visitChild(n.finallyBlock(), v);
                 v.utils.branchUnlessTerminated(dest);
             }
-        } else {
-            v.popExceptionFrame();
         }
 
+        v.popExceptionFrame();
         LLVMPositionBuilderAtEnd(v.builder, end);
         return n;
     }
