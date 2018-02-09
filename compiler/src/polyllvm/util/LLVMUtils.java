@@ -31,8 +31,7 @@ public class LLVMUtils {
 
     public ParsedClassType getArrayType() {
         try {
-            return (ParsedClassType) v.typeSystem()
-                    .typeForName("support.Array");
+            return (ParsedClassType) v.typeSystem().typeForName("support.Array");
         } catch (SemanticException | ClassCastException e) {
             throw new InternalCompilerError("Could not load array type");
         }
@@ -80,8 +79,7 @@ public class LLVMUtils {
      *            applied
      */
     public List<? extends Type> formalsErasureLL(MethodInstance m) {
-        return m.orig().formalTypes().stream().map(this::erasureLL)
-                .collect(Collectors.toList());
+        return m.orig().formalTypes().stream().map(this::erasureLL).collect(Collectors.toList());
     }
 
     /**
@@ -138,13 +136,11 @@ public class LLVMUtils {
     }
 
     public LLVMTypeRef functionType(LLVMTypeRef ret, LLVMTypeRef... args) {
-        return LLVMFunctionType(ret, new PointerPointer<>(args), args.length,
-                /* isVarArgs */ 0);
+        return LLVMFunctionType(ret, new PointerPointer<>(args), args.length, /* isVarArgs */ 0);
     }
 
     private void setStructBody(LLVMTypeRef struct, LLVMTypeRef... types) {
-        LLVMStructSetBody(struct, new PointerPointer<>(types), types.length,
-                /* packed */ 0);
+        LLVMStructSetBody(struct, new PointerPointer<>(types), types.length, /* packed */ 0);
     }
 
     public LLVMValueRef buildCastToBytePtr(LLVMValueRef val) {
@@ -264,16 +260,15 @@ public class LLVMUtils {
     }
 
     public LLVMTypeRef structType(LLVMTypeRef... types) {
-        return LLVMStructType(new PointerPointer<>(types), types.length,
-                /* Packed */ 0);
+        return LLVMStructTypeInContext(
+                v.context, new PointerPointer<>(types), types.length, /*packed*/ 0);
     }
 
     /**
      * If the global is already in the module, return it, otherwise add it to
      * the module and return it.
      */
-    public LLVMValueRef getGlobal(LLVMModuleRef mod, String globalName,
-            LLVMTypeRef globalType) {
+    public LLVMValueRef getGlobal(LLVMModuleRef mod, String globalName, LLVMTypeRef globalType) {
         LLVMValueRef global = LLVMGetNamedGlobal(mod, globalName);
         if (global == null)
             global = LLVMAddGlobal(mod, globalType, globalName);
@@ -301,8 +296,7 @@ public class LLVMUtils {
         LLVMValueRef baseRaw = v.utils.buildStructGEP(arr, 0,
                 Constants.ARR_ELEM_OFFSET);
         LLVMTypeRef ptrType = v.utils.ptrTypeRef(v.utils.toLL(elemType, false));
-        return LLVMBuildCast(v.builder, LLVMBitCast, baseRaw, ptrType,
-                "arr_cast");
+        return LLVMBuildCast(v.builder, LLVMBitCast, baseRaw, ptrType, "cast");
     }
 
     /**
@@ -404,8 +398,7 @@ public class LLVMUtils {
      * Obtains the LLVM global variable that denotes the class dispatch vector
      * for Java reference type {@code jt}.
      *
-     * @param jt
-     *            The Java type (not required to be erasure)
+     * @param jt The Java type (not required to be erasure)
      */
     public LLVMValueRef toCDVGlobal(ReferenceType jt) {
         return getGlobal(v.mod, v.mangler.cdvGlobalId(jt), toCDVTy(jt));
@@ -437,8 +430,7 @@ public class LLVMUtils {
      */
     private LLVMTypeRef[] toCDVTySlots(ReferenceType jt) {
         List<MethodInstance> methods = v.cdvMethods(erasureLL(jt));
-        LLVMTypeRef[] res = new LLVMTypeRef[Constants.CLASS_DISP_VEC_OFFSET
-                + methods.size()];
+        LLVMTypeRef[] res = new LLVMTypeRef[Constants.CLASS_DISP_VEC_OFFSET + methods.size()];
         int idx = 0;
         // 1st slot points to the table of IDVs
         res[idx++] = ptrTypeRef(LLVMInt8TypeInContext(v.context));
@@ -484,8 +476,7 @@ public class LLVMUtils {
      * The LLVM types of each slot in the LLVM structure representation of the
      * interface dispatch vector for Java interface type {@code intf}.
      *
-     * @param intf
-     *            The Java interface type (not required to be erasure)
+     * @param intf The Java interface type (not required to be erasure)
      * @return an array of LLVM types that correspond to the slots in the
      *         interface dispatch vector for Java type {@code jt}.
      */

@@ -48,7 +48,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
      * exceptions and when to execute finally blocks.
      */
     public static class ExceptionFrame {
-        private LLVMTranslator v;
+        private final LLVMTranslator v;
 
         /**
          * Landing pad that jumps to a matching catch clause.
@@ -70,7 +70,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         // block can be entered after a break, continue, return, exception, or normal execution.
         // Making a full copy of the finally block for each destination trades some code bloat
         // for the sake of simplicity.
-        private Map<LLVMBasicBlockRef, LLVMBasicBlockRef> finallyBlocks = new HashMap<>();
+        private final Map<LLVMBasicBlockRef, LLVMBasicBlockRef> finallyBlocks = new HashMap<>();
 
         private ExceptionFrame(
                 LLVMTranslator v,

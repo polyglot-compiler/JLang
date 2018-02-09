@@ -46,9 +46,7 @@ public class LLVMTranslator extends NodeVisitor {
         return ctorCounter++;
     }
 
-    /**
-     * A stack of all enclosing functions.
-     */
+    /** A stack of all enclosing functions. */
     private Deque<LLVMValueRef> functions = new ArrayDeque<>();
 
     public void pushFn(LLVMValueRef fn) {
@@ -63,9 +61,7 @@ public class LLVMTranslator extends NodeVisitor {
         return functions.peek();
     }
 
-    /**
-     * A list of all potential entry points (i.e., Java main functions).
-     */
+    /** A list of all potential entry points (i.e., Java main functions). */
     private Map<String, LLVMValueRef> entryPoints = new HashMap<>();
 
     public void addEntryPoint(LLVMValueRef entryPoint, String className) {
