@@ -515,8 +515,7 @@ public class LLVMTranslator extends NodeVisitor {
     public LLVMValueRef getLocalVariable(String var) {
         LLVMValueRef allocation = allocations.get(var);
         if (allocation == null)
-            throw new InternalCompilerError(
-                    "Local variable " + var + " has no allocation");
+            throw new InternalCompilerError("Local variable " + var + " has no allocation");
         return allocation;
     }
 

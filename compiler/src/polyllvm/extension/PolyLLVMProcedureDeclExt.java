@@ -52,7 +52,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             Formal formal = n.formals().get(i);
             LLVMTypeRef typeRef = v.utils.toLL(formal.type().type());
 
-            LLVMValueRef alloc = LLVMBuildAlloca(v.builder, typeRef, "arg_" + formal.name());
+            LLVMValueRef alloc = LLVMBuildAlloca(v.builder, typeRef, "arg." + formal.name());
             int idx = i + (pi.flags().isStatic() ? 0 : 1);
             LLVMBuildStore(v.builder, LLVMGetParam(funcRef, idx), alloc);
             v.addAllocation(formal.name(), alloc);
@@ -70,7 +70,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 && n.formals().size() == 1
                 && n.formals().iterator().next().declType().equals(ts.arrayOf(ts.String()));
         if (isEntryPoint) {
-            String className = ((MethodInstance) n.procedureInstance()).container().toString();
+            String className = (n.procedureInstance()).container().toString();
             v.addEntryPoint(funcRef, className);
         }
 

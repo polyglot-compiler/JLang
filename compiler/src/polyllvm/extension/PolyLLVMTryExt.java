@@ -79,16 +79,16 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         Try n = (Try) node();
 
         // Useful functions, types, and constants.
+        LLVMValueRef nullBytePtr = LLVMConstPointerNull(v.utils.llvmBytePtr());
         LLVMValueRef personalityFunc = v.utils.getFunction(
                 v.mod, Constants.PERSONALITY_FUNC,
                 v.utils.functionType(LLVMInt32TypeInContext(v.context)));
-        LLVMValueRef tidFunc = v.utils.getFunction(
-                v.mod, Constants.TYPEID_INTRINSIC,
-                v.utils.functionType(LLVMInt32TypeInContext(v.context), v.utils.llvmBytePtr()));
-        LLVMTypeRef exnType = v.utils.structType(
+        LLVMValueRef extractJavaExnFunc = v.utils.getFunction(
+                v.mod, Constants.EXTRACT_EXCEPTION,
+                v.utils.functionType(v.utils.llvmBytePtr(), v.utils.llvmBytePtr()));
+        LLVMTypeRef bytePtr = v.utils.structType(
                 v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)),
                 LLVMInt32TypeInContext(v.context));
-        LLVMValueRef nullBytePtr = LLVMConstPointerNull(v.utils.llvmBytePtr());
         LLVMValueRef throwExnFunc = v.utils.getFunction(v.mod, Constants.THROW_EXCEPTION,
                 v.utils.functionType(LLVMVoidTypeInContext(v.context), v.utils.llvmBytePtr()));
 
@@ -127,7 +127,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             LLVMPositionBuilderAtEnd(v.builder, lpadCatch);
             int numClauses = n.catchBlocks().size() + (mustStopUnwinding ? 1 : 0);
             LLVMValueRef lpadCatchRes = LLVMBuildLandingPad(
-                    v.builder, exnType, personalityFunc, numClauses, "lpad.catch.res");
+                    v.builder, bytePtr, personalityFunc, numClauses, "lpad.catch.res");
             n.catchBlocks().stream()
                     .map((cb) -> v.classObjs.toTypeIdentity(cb.catchType().toReference()))
                     .forEachOrdered((typeId) -> LLVMAddClause(lpadCatchRes, typeId));
@@ -152,6 +152,13 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
 
                 // Build catch block.
                 LLVMPositionBuilderAtEnd(v.builder, catchBlock);
+                LLVMTypeRef exnType = v.utils.toLL(cb.catchType().toReference());
+                LLVMValueRef exnVar = PolyLLVMLocalDeclExt.createLocal(
+                        v, cb.formal().name(), exnType);
+                v.addAllocation(cb.formal().name(), exnVar);
+                LLVMValueRef jexn = v.utils.buildFunCall(extractJavaExnFunc, catchExn);
+                LLVMValueRef castJExn = LLVMBuildBitCast(v.builder, jexn, exnType, "cast");
+                LLVMBuildStore(v.builder, castJExn, exnVar);
                 v.debugInfo.emitLocation(cb);
                 n.visitChild(cb, v);
                 v.utils.branchUnlessTerminated(frame.getFinallyBlockBranchingTo(end));
@@ -179,7 +186,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             // Build finally landing pad. This handles exceptions thrown from within a catch block.
             LLVMPositionBuilderAtEnd(v.builder, lpadFinally);
             LLVMValueRef lpadFinallyRes = LLVMBuildLandingPad(
-                    v.builder, exnType, personalityFunc, /*numClauses*/ 1, "lpad.finally.res");
+                    v.builder, bytePtr, personalityFunc, /*numClauses*/ 1, "lpad.finally.res");
             LLVMAddClause(lpadFinallyRes, nullBytePtr); // Catch-all clause.
             LLVMValueRef finallyExn = LLVMBuildExtractValue(v.builder, lpadFinallyRes, 0, "exn");
 

@@ -9,19 +9,19 @@ import java.util.Set;
  * PolyLLVM constants for, e.g., important method names and array data layout.
  */
 public class Constants {
-    public static final String THIS_STR = "_this";
     public static final String CALLOC = "GC_malloc";
     public static final String ENTRY_TRAMPOLINE = "java_entry_point";
-    public static final String ARR_CLASS = "class.support_Array";
     public static final int LLVM_ADDR_SPACE = 0;
 
     public static final String TYPEID_INTRINSIC = "llvm.eh.typeid.for";
     public static final String PERSONALITY_FUNC = "__java_personality_v0";
-    public static final String CREATE_EXCEPTION = "createJavaException";
-    public static final String THROW_EXCEPTION = "throwJavaException";
+    public static final String CREATE_EXCEPTION = "createUnwindException";
+    public static final String THROW_EXCEPTION = "throwUnwindException";
+    public static final String EXTRACT_EXCEPTION = "extractJavaExceptionObject";
 
-    public static final Set<String> NON_INVOKE_FUNCTIONS =
-            new HashSet<>(CollectionUtil.list(TYPEID_INTRINSIC, CALLOC, CREATE_EXCEPTION));
+    public static final Set<String> NON_INVOKE_FUNCTIONS = new HashSet<>(CollectionUtil.list(
+            TYPEID_INTRINSIC, CALLOC, CREATE_EXCEPTION, EXTRACT_EXCEPTION
+    ));
 
     /**
      * Offset from start of Object to the 0th field

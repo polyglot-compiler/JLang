@@ -10,8 +10,8 @@
 
 extern "C" {
 
-_Unwind_Exception *createJavaException(jobject *jexception);
-void throwJavaException(_Unwind_Exception* exception);
+_Unwind_Exception *createUnwindException(jobject *jexception);
+void throwUnwindException(_Unwind_Exception* exception);
 
 } // extern "C"
 

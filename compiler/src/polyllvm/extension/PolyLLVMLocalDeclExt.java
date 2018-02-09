@@ -18,7 +18,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
         LLVMBasicBlockRef currentBlock = LLVMGetInsertBlock(v.builder);
 
         LLVMBasicBlockRef firstBlock = LLVMGetFirstBasicBlock(v.currFn());
-        LLVMPositionBuilderBefore(v.builder,LLVMGetBasicBlockTerminator(firstBlock));
+        LLVMPositionBuilderBefore(v.builder, LLVMGetBasicBlockTerminator(firstBlock));
         v.debugInfo.emitLocation(n);
         LLVMValueRef alloc = LLVMBuildAlloca(v.builder, v.utils.toLL(n.type().type()), n.name());
         v.addAllocation(n.name(), alloc);

@@ -70,20 +70,34 @@ void deleteJavaException(_Unwind_Reason_Code reason,
   return; // The exception will be deleted by the garbage collector
 }
 
-_Unwind_Exception *createJavaException(jobject* jexception) {
+_Unwind_Exception *createUnwindException(jobject* jexception) {
   JavaException_t *ret = (JavaException_t*) GC_malloc(sizeof(JavaException_t));
   ret->jexception = jexception;
   ret->unwindException.exception_class = javaExceptionClass;
   ret->unwindException.exception_cleanup = deleteJavaException;
-
   return &ret->unwindException;
 }
 
-void throwJavaException(_Unwind_Exception* exception) {
+void throwUnwindException(_Unwind_Exception* exception) {
   _Unwind_RaiseException(exception);
   printf("Aborting due to uncaught exception.\n");
   fflush(stdout);
   abort();
+}
+
+JavaException_t* extractJavaException(_Unwind_Exception *unwindException) {
+  struct JavaException_t dummyException;
+  int64_t ourBaseFromUnwindOffset =
+    ((uintptr_t) &dummyException) -
+    ((uintptr_t) &dummyException.unwindException);
+
+  JavaException_t *exn = (struct JavaException_t*)
+    (((char*) unwindException) + ourBaseFromUnwindOffset);
+  return exn;
+}
+
+jobject* extractJavaExceptionObject(_Unwind_Exception *unwindException) {
+  return extractJavaException(unwindException)->jexception;
 }
 
 /// Read a uleb128 encoded value and advance pointer
@@ -250,14 +264,7 @@ static bool handleActionValue(int64_t *resultAction,
       (exceptionClass != javaExceptionClass))
     return(ret);
 
-  // Calculate offset of OurException::unwindException member.
-  struct JavaException_t dummyException;
-  int64_t ourBaseFromUnwindOffset =
-    ((uintptr_t) &dummyException) -
-    ((uintptr_t) &(dummyException.unwindException));
-
-  struct JavaException_t *exn = (struct JavaException_t*)
-    (((char*) exceptionObject) + ourBaseFromUnwindOffset);
+  struct JavaException_t *exn = extractJavaException(exceptionObject);
 
   const uint8_t *actionPos = (uint8_t*) actionEntry,
   *tempActionPos;
