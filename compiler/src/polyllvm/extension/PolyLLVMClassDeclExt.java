@@ -36,16 +36,18 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
 
         if (!n.flags().isAbstract()) {
             // Initialize the CDV global
-            LLVMValueRef cdv_global = v.utils.toCDVGlobal(n.type());
-            LLVMValueRef[] cdv_slots = v.utils.toCDVSlots(n.type());
-            LLVMSetInitializer(cdv_global, v.utils.buildConstStruct(cdv_slots));
+            LLVMValueRef cdvGlobal = v.utils.toCDVGlobal(n.type());
+            LLVMValueRef[] cdvSlots = v.utils.toCDVSlots(n.type());
+            LLVMTypeRef cdvType = v.utils.toCDVTy(n.type());
+            LLVMValueRef init = v.utils.buildNamedConstStruct(cdvType, cdvSlots);
+            LLVMSetInitializer(cdvGlobal, init);
         }
 
         if (!n.type().flags().isAbstract() && !interfaces.isEmpty()) {
             int numOfIntfs = interfaces.size();
             LLVMValueRef[] intf_id_hashes = new LLVMValueRef[numOfIntfs];
             LLVMValueRef[] intf_ids = new LLVMValueRef[numOfIntfs];
-            LLVMValueRef[] intf_tables = new LLVMValueRef[numOfIntfs];
+            LLVMValueRef[] intfTables = new LLVMValueRef[numOfIntfs];
 
             // Initialize the IDV globals
             for (int i = 0; i < numOfIntfs; ++i) {
@@ -59,12 +61,13 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 LLVMValueRef intf_id_global = v.classObjs.toTypeIdentity(it);
                 intf_ids[i] = intf_id_global;
 
-                LLVMValueRef idv_global = v.utils.toIDVGlobal(it, n.type());
-                LLVMValueRef[] idv_methods = v.utils.toIDVSlots(it, n.type());
-                LLVMValueRef idv_value = v.utils.buildConstStruct(idv_methods);
-                LLVMSetInitializer(idv_global, idv_value);
-                intf_tables[i] = LLVMBuildBitCast(v.builder, idv_global,
-                        v.utils.llvmBytePtr(), "cast_for_idv");
+                LLVMTypeRef idvType = v.utils.toIDVTy(it);
+                LLVMValueRef idvGlobal = v.utils.toIDVGlobal(it, n.type());
+                LLVMValueRef[] idvMethods = v.utils.toIDVSlots(it, n.type());
+                LLVMValueRef init = v.utils.buildNamedConstStruct(idvType, idvMethods);
+                LLVMSetInitializer(idvGlobal, init);
+                intfTables[i] = LLVMBuildBitCast(
+                        v.builder, idvGlobal, v.utils.llvmBytePtr(), "cast");
             }
 
             // Set up the hash table that points to the interface dispatch
@@ -78,7 +81,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                     .toIDVIdHashArrGlobal(n.type(), numOfIntfs);
 
             LLVMSetInitializer(idv_arr_global, v.utils
-                    .buildConstArray(v.utils.llvmBytePtr(), intf_tables));
+                    .buildConstArray(v.utils.llvmBytePtr(), intfTables));
             LLVMSetInitializer(idv_id_arr_global,
                     v.utils.buildConstArray(v.utils.llvmBytePtr(), intf_ids));
             LLVMSetInitializer(idv_id_hash_arr_global, v.utils.buildConstArray(

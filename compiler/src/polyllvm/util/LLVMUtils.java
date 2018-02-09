@@ -410,7 +410,7 @@ public class LLVMUtils {
      *
      * @param jt The Java type (not required to be erasure)
      */
-    private LLVMTypeRef toCDVTy(ReferenceType jt) {
+    public LLVMTypeRef toCDVTy(ReferenceType jt) {
         String mangledDVName = v.mangler.cdvTyName(erasureLL(jt));
         LLVMTypeRef cdv_ty = structTypeRefOpaque(mangledDVName);
         if (LLVMIsOpaqueStruct(cdv_ty) != 0)
@@ -464,7 +464,7 @@ public class LLVMUtils {
      * @param intf
      *            The Java interface type (not required to be the erasure)
      */
-    private LLVMTypeRef toIDVTy(ClassType intf) {
+    public LLVMTypeRef toIDVTy(ClassType intf) {
         String mangledDVName = v.mangler.idvTyName(intf);
         LLVMTypeRef idv_ty = structTypeRefOpaque(mangledDVName);
         if (LLVMIsOpaqueStruct(idv_ty) != 0)
@@ -660,9 +660,20 @@ public class LLVMUtils {
         return LLVMConstArray(type, new PointerPointer<>(values), values.length);
     }
 
+    /** Returns an anonymous constant struct. */
     public LLVMValueRef buildConstStruct(LLVMValueRef... values) {
         PointerPointer<LLVMValueRef> valArr = new PointerPointer<>(values);
         return LLVMConstStructInContext(v.context, valArr, values.length, /* packed */ 0);
+    }
+
+    /**
+     * Returns a named constant struct.
+     * This is necessary for building initializer structs for variables with a named type, since
+     * otherwise the type of the variable and the type of the value will be considered distinct.
+     */
+    public LLVMValueRef buildNamedConstStruct(LLVMTypeRef type, LLVMValueRef... values) {
+        PointerPointer<LLVMValueRef> valArr = new PointerPointer<>(values);
+        return LLVMConstNamedStruct(type, valArr, values.length);
     }
 
     /**

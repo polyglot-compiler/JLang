@@ -67,8 +67,7 @@ public final class ClassObjects {
         LLVMValueRef numSupertypes = LLVMConstInt(
                 LLVMInt32TypeInContext(v.context), classObjPtrs.length,
                 /* sign-extend */ 0);
-        LLVMValueRef classObjStruct = v.utils.buildConstStruct(numSupertypes,
-                classObjPtrsArr);
+        LLVMValueRef classObjStruct = v.utils.buildConstStruct(numSupertypes, classObjPtrsArr);
 
         LLVMValueRef global = v.utils.getGlobal(v.mod,
                 v.mangler.classObjName(rt), LLVMTypeOf(classObjStruct));
