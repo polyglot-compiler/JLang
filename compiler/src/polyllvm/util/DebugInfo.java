@@ -128,7 +128,7 @@ public class DebugInfo {
         insertDeclareAtEnd(v, alloc, paramVar, p);
     }
 
-    public void createLocalVariable(LLVMTranslator v, LocalDecl n, LLVMValueRef alloc) {
+    public void createLocalVariable(LLVMTranslator v, VarDecl n, LLVMValueRef alloc) {
         String name = n.name();
         Position p = n.position();
         Type t = n.type().type();
@@ -149,9 +149,12 @@ public class DebugInfo {
                 line, /*DINode::FlagPrototyped*/ 1 << 8, /*isOptimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);
         pushScope(sp);
+        emitLocation(n); // Update debug location with correct scope.
     }
 
-    public void funcDebugInfo(int line, String name, String linkageName, LLVMMetadataRef funcType, LLVMValueRef funcRef) {
+    public void funcDebugInfo(
+            int line, String name, String linkageName,
+            LLVMMetadataRef funcType, LLVMValueRef funcRef) {
         LLVMMetadataRef unit = createFile();
         LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
                 diBuilder, unit, name, linkageName, unit, line,
@@ -159,6 +162,7 @@ public class DebugInfo {
                 line, /*DINode::FlagPrototyped*/ 1 << 8, /*isOptimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);
         pushScope(sp);
+        emitLocation(line, 0); // Update debug location with correct scope.
     }
 
     /*
@@ -217,6 +221,7 @@ public class DebugInfo {
                 diBuilder, currentScope(), createFile(),
                 node.position().line(), node.position().column());
         pushScope(lexicalBlockScope);
+        emitLocation(node); // Update debug location with correct scope.
     }
 }
 

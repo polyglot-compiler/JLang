@@ -193,6 +193,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                 LLVMTypeRef exnType = v.utils.toLL(cb.catchType().toReference());
                 LLVMValueRef exnVar = PolyLLVMLocalDeclExt.createLocal(
                         v, cb.formal().name(), exnType);
+                v.debugInfo.createLocalVariable(v, cb.formal(), exnVar);
                 v.addAllocation(cb.formal().name(), exnVar);
                 LLVMValueRef jexn = v.utils.buildFunCall(extractJavaExnFunc, catchExn);
                 LLVMValueRef castJExn = LLVMBuildBitCast(v.builder, jexn, exnType, "cast");

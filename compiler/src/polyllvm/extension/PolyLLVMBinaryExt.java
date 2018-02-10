@@ -99,12 +99,14 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
 
         translateLLVMConditional(v, trueBranch, falseBranch);
 
+        LLVMValueRef one = LLVMConstInt(v.utils.toLL(resType), 1, /*sign-extend*/ 0);
         LLVMPositionBuilderAtEnd(v.builder, trueBranch);
-        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.toLL(resType), 1, /*sign-extend*/ 0), binopRes);
+        LLVMBuildStore(v.builder, one, binopRes);
         LLVMBuildBr(v.builder, continueBranch);
 
+        LLVMValueRef zero = LLVMConstInt(v.utils.toLL(resType), 0, /*sign-extend*/ 0);
         LLVMPositionBuilderAtEnd(v.builder, falseBranch);
-        LLVMBuildStore(v.builder, LLVMConstInt(v.utils.toLL(resType), 0, /*sign-extend*/ 0), binopRes);
+        LLVMBuildStore(v.builder, zero, binopRes);
         LLVMBuildBr(v.builder, continueBranch);
 
         LLVMPositionBuilderAtEnd(v.builder, continueBranch);
