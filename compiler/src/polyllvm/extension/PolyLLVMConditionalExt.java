@@ -16,17 +16,11 @@ public class PolyLLVMConditionalExt extends PolyLLVMExt {
     public Node overrideTranslateLLVM(LLVMTranslator v) {
         Conditional n = (Conditional) node();
 
-        v.debugInfo.emitLocation(n);
+        LLVMValueRef conditionalTemp = v.utils.buildAlloca("cond.temp", v.utils.toLL(n.type()));
 
-        LLVMBasicBlockRef currentBlock = LLVMGetInsertBlock(v.builder);
-        LLVMBasicBlockRef firstBlock = LLVMGetFirstBasicBlock(v.currFn());
-        LLVMPositionBuilderBefore(v.builder,LLVMGetBasicBlockTerminator(firstBlock));
-        LLVMValueRef conditionalTemp = LLVMBuildAlloca(v.builder, v.utils.toLL(n.type()), "conditional_temp");
-        LLVMPositionBuilderAtEnd(v.builder, currentBlock);
-
-        LLVMBasicBlockRef ifEnd = v.utils.buildBlock("conditional_end");
-        LLVMBasicBlockRef ifTrue = v.utils.buildBlock("conditional_true");
-        LLVMBasicBlockRef ifFalse = v.utils.buildBlock("conditional_false");
+        LLVMBasicBlockRef ifEnd = v.utils.buildBlock("cond.end");
+        LLVMBasicBlockRef ifTrue = v.utils.buildBlock("cond.true");
+        LLVMBasicBlockRef ifFalse = v.utils.buildBlock("cond.false");
 
         lang().translateLLVMConditional(n.cond(), v, ifTrue, ifFalse);
 
@@ -44,7 +38,7 @@ public class PolyLLVMConditionalExt extends PolyLLVMExt {
         emitBlock.accept(ifFalse, n.alternative());
         LLVMPositionBuilderAtEnd(v.builder, ifEnd);
 
-        v.addTranslation(n, LLVMBuildLoad(v.builder, conditionalTemp, "load_conditional_temp"));
+        v.addTranslation(n, LLVMBuildLoad(v.builder, conditionalTemp, "cond.load.temp"));
 
         return n;
     }

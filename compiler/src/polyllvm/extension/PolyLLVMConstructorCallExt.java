@@ -27,8 +27,6 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
                     "Qualifier on this not supported yet (Java spec 15.8.4)");
         }
 
-        v.debugInfo.emitLocation(n);
-
         LLVMValueRef thisArg;
 
         if (n.kind() == ConstructorCall.THIS) {
@@ -41,7 +39,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
                     + "` of constructor call not handled: " + n);
         }
 
-        String mangledFuncName = v.mangler.mangleProcedureName(substC);
+        String mangledFuncName = v.mangler.mangleProcName(substC);
         LLVMTypeRef func_ty = v.utils.toLLFuncTy(supc, v.typeSystem().Void(),
                 v.utils.formalsErasureLL(substC));
         LLVMValueRef func = v.utils.getFunction(v.mod, mangledFuncName,

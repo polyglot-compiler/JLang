@@ -22,8 +22,6 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
         LLVMBasicBlockRef end = v.utils.buildBlock("end");
         v.pushLoop(head, end);
 
-        v.debugInfo.emitLocation(n);
-
         LLVMBuildBr(v.builder, head);
         LLVMPositionBuilderAtEnd(v.builder, head);
         lang().translateLLVMConditional(n.cond(), v, body, end);

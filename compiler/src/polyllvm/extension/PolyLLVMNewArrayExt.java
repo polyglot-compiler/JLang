@@ -30,7 +30,6 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         }
         else {
             List<Expr> dims = n.dims();
-            v.debugInfo.emitLocation(n);
             New newArray = translateNewArray(v, nf, dims, n.baseType().type(), n.position());
             v.addTranslation(n, v.getTranslation(newArray));
         }

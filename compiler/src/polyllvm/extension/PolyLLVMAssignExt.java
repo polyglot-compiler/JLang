@@ -23,7 +23,6 @@ public class PolyLLVMAssignExt extends PolyLLVMExt {
         LLVMValueRef ptr = lang().translateAsLValue(n.left(), v);
         n.right().visit(v);
         LLVMValueRef x_rhs = v.getTranslation(n.right());
-        v.debugInfo.emitLocation(n);
 
         if (op.equals(Assign.ASSIGN)) {
             // Simple assignment.

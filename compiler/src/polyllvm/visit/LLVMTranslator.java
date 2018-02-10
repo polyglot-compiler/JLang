@@ -93,12 +93,22 @@ public class LLVMTranslator extends NodeVisitor {
         this.context = context;
         this.mod = mod;
         this.builder = builder;
-        this.debugInfo = new DebugInfo(this, mod, builder, filePath);
+        this.debugInfo = new DebugInfo(this, mod, filePath);
         this.utils = new LLVMUtils(this);
         this.classObjs = new ClassObjects(this);
         this.mangler = new PolyLLVMMangler(this);
         this.nf = nf;
         this.ts = ts;
+    }
+
+    @Override
+    public <N extends Node> N visitEdge(Node parent, N child) {
+        // Switch the debug location to that of the child node.
+        LLVMValueRef prevDebugLoc = debugInfo.getLocation();
+        debugInfo.setLocation(child);
+        N res = super.visitEdge(parent, child);
+        debugInfo.setLocation(prevDebugLoc);
+        return res;
     }
 
     @Override
@@ -483,13 +493,11 @@ public class LLVMTranslator extends NodeVisitor {
      * Appends {@code t} to {@code types} if there does not exist a {@code t0}
      * in {@code types} such that {@code t.typeEquals(t0)} is true.
      *
-     * @param types
-     * @param t
      * @return true if {@code t} is appended to {@code types}, or false
      *         otherwise
      */
     private <T extends Type> boolean addIfNonExistent(List<T> types, T t) {
-        if (types.stream().anyMatch(t0 -> t.typeEquals(t0))) {
+        if (types.stream().anyMatch(t::typeEquals)) {
             return false;
         } else {
             types.add(t);

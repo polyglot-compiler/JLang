@@ -21,8 +21,6 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
             throw new InternalCompilerError("Qualifier on this not supported yet (JLS 15.8.4): " + n);
         }
 
-        v.debugInfo.emitLocation(n);
-
         LLVMValueRef thisPtr = LLVMGetParam(v.currFn(), 0);
         if (n.kind() == Special.THIS) {
             v.addTranslation(n, thisPtr);

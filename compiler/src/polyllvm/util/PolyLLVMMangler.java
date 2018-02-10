@@ -84,7 +84,7 @@ public class PolyLLVMMangler {
         }
     }
 
-    private String mangleProcedureName(ProcedureInstance pi, String name) {
+    private String mangleProcName(ProcedureInstance pi, String name) {
         StringBuilder sb = new StringBuilder();
         sb.append(JAVA_PREFIX);
         sb.append('_');
@@ -97,13 +97,13 @@ public class PolyLLVMMangler {
         return sb.toString();
     }
 
-    public String mangleProcedureName(ProcedureInstance pi) {
+    public String mangleProcName(ProcedureInstance pi) {
         if (pi instanceof MethodInstance) {
             MethodInstance mi = (MethodInstance) pi;
-            return mangleProcedureName(mi.orig(), mi.name());
+            return mangleProcName(mi.orig(), mi.name());
         } else if (pi instanceof ConstructorInstance) {
             ConstructorInstance ci = (ConstructorInstance) pi;
-            return mangleProcedureName(ci.orig(),
+            return mangleProcName(ci.orig(),
                     ci.container().toClass().name());
         } else {
             throw new InternalCompilerError(

@@ -15,7 +15,6 @@ public class PolyLLVMIntLitExt extends PolyLLVMExt {
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         IntLit n = (IntLit) node();
         assert n.type().isLongOrLess();
-        v.debugInfo.emitLocation(n);
         LLVMTypeRef type = v.utils.toLL(n.type());
         LLVMValueRef res = LLVMConstInt(type, n.value(), /*sign-extend*/ 0);
         v.addTranslation(n, res);

@@ -14,7 +14,6 @@ public class PolyLLVMBooleanLitExt extends PolyLLVMExt {
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         BooleanLit n = (BooleanLit) node();
-        v.debugInfo.emitLocation(n);
         LLVMTypeRef type = v.utils.toLL(n.type());
         LLVMValueRef val = LLVMConstInt(type, n.value() ? 1 : 0, /*sign-extend*/ 0);
         v.addTranslation(node(), val);
@@ -26,7 +25,6 @@ public class PolyLLVMBooleanLitExt extends PolyLLVMExt {
                                          LLVMBasicBlockRef trueBlock,
                                          LLVMBasicBlockRef falseBlock) {
         BooleanLit n = (BooleanLit) node();
-        v.debugInfo.emitLocation(n);
         if (n.value()) {
             LLVMBuildBr(v.builder, trueBlock);
         } else {

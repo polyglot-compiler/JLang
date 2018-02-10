@@ -66,7 +66,6 @@ public class PolyLLVMSwitchExt extends PolyLLVMExt {
         LLVMPositionBuilderAtEnd(v.builder, prevBlock);
         n.expr().visit(v);
 
-        v.debugInfo.emitLocation(n);
         LLVMValueRef exprRef = v.getTranslation(n.expr());
         int numNormalCases = (int) cases.stream().filter(c -> !c.isDefault()).count();
         LLVMValueRef switchRef = LLVMBuildSwitch(v.builder, exprRef, defaultBlock, numNormalCases);

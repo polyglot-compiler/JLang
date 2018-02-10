@@ -134,7 +134,6 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         v.pushExceptionFrame(frame);
 
         // Build try block.
-        v.debugInfo.emitLocation(n.tryBlock());
         n.visitChild(n.tryBlock(), v);
         v.utils.branchUnlessTerminated(frame.getFinallyBlockBranchingTo(end));
 
@@ -188,11 +187,9 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                 LLVMBuildCondBr(v.builder, matches, catchBlock, catchNext);
 
                 // Build catch block.
-                v.debugInfo.emitLocation(cb);
                 LLVMPositionBuilderAtEnd(v.builder, catchBlock);
                 LLVMTypeRef exnType = v.utils.toLL(cb.catchType().toReference());
-                LLVMValueRef exnVar = PolyLLVMLocalDeclExt.createLocal(
-                        v, cb.formal().name(), exnType);
+                LLVMValueRef exnVar = v.utils.buildAlloca(cb.formal().name(), exnType);
                 v.debugInfo.createLocalVariable(v, cb.formal(), exnVar);
                 v.addAllocation(cb.formal().name(), exnVar);
                 LLVMValueRef jexn = v.utils.buildFunCall(extractJavaExnFunc, catchExn);
@@ -245,7 +242,6 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                 LLVMBasicBlockRef dest = entry.getKey();
                 LLVMBasicBlockRef head = entry.getValue();
                 LLVMPositionBuilderAtEnd(v.builder, head);
-                v.debugInfo.emitLocation(n.finallyBlock());
                 n.visitChild(n.finallyBlock(), v);
                 v.utils.branchUnlessTerminated(dest);
             }

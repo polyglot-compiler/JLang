@@ -17,7 +17,6 @@ public class PolyLLVMInstanceofExt extends PolyLLVMExt {
         Instanceof n = (Instanceof) node();
         LLVMValueRef obj =  v.getTranslation(n.expr());
         ReferenceType rt = n.compareType().type().toReference();
-        v.debugInfo.emitLocation(n);
         LLVMValueRef res = buildInstanceOf(v, obj, rt);
         v.addTranslation(n, res);
         return super.leaveTranslateLLVM(v);

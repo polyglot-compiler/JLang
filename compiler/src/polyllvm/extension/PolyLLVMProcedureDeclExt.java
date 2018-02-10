@@ -18,20 +18,22 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
-    private static boolean containsCode(ProcedureInstance pi) {
-        return !pi.flags().contains(Flags.NATIVE) && !pi.flags().contains(Flags.ABSTRACT);
+    private static boolean noImplementation(ProcedureInstance pi) {
+        return pi.flags().contains(Flags.NATIVE) || pi.flags().contains(Flags.ABSTRACT);
     }
 
     @Override
-    public LLVMTranslator enterTranslateLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(LLVMTranslator v) {
         ProcedureDecl n = (ProcedureDecl) node();
         TypeSystem ts = v.typeSystem();
         ProcedureInstance pi = n.procedureInstance();
-        if (!containsCode(pi))
-            return super.enterTranslateLLVM(v); // Ignore native methods.
+        if (noImplementation(pi))
+            return super.overrideTranslateLLVM(v); // Ignore native and abstract methods.
 
         // Build function type.
-        Type retType = n instanceof MethodDecl ? ((MethodDecl) n).returnType().type() : ts.Void();
+        Type retType = n instanceof MethodDecl
+                ? ((MethodDecl) n).returnType().type()
+                : ts.Void();
         List<Type> formalTypes = n.formals().stream()
                 .map(Formal::declType)
                 .collect(Collectors.toList());
@@ -40,12 +42,14 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 ? v.utils.toLLFuncTy(retType, formalTypes)
                 : v.utils.toLLFuncTy(target, retType, formalTypes);
 
-        LLVMValueRef funcRef = v.utils.getFunction(v.mod, v.mangler.mangleProcedureName(pi), funcType);
+        LLVMValueRef funcRef = v.utils.getFunction(v.mod, v.mangler.mangleProcName(pi), funcType);
         v.debugInfo.funcDebugInfo(n, funcRef);
-        v.debugInfo.emitLocation(n);
 
-        LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, funcRef, "allocs_entry");
-        LLVMBasicBlockRef body_entry = LLVMAppendBasicBlockInContext(v.context, funcRef, "body_entry");
+        // Note that the entry block is reserved exclusively for alloca instructions
+        // and parameter initialization. Children translations will insert alloca instructions
+        // into this block as needed.
+        LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, funcRef, "entry");
+        LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, funcRef, "body");
         LLVMPositionBuilderAtEnd(v.builder, entry);
 
         for (int i = 0; i < n.formals().size(); ++i) {
@@ -60,10 +64,6 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             v.debugInfo.createParamVariable(v, formal, i, alloc);
         }
 
-        v.debugInfo.emitLocation(n);
-        LLVMBuildBr(v.builder, body_entry);
-        LLVMPositionBuilderAtEnd(v.builder, body_entry);
-
         // Register as entry point if applicable.
         boolean isEntryPoint = n.name().equals("main")
                 && n.flags().isPublic()
@@ -76,22 +76,14 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         v.pushFn(funcRef);
         v.addTranslation(n, funcRef);
-        return super.enterTranslateLLVM(v);
-    }
 
-    @Override
-    public Node leaveTranslateLLVM(LLVMTranslator v) {
-        ProcedureDecl n = (ProcedureDecl) node();
-        ProcedureInstance pi = n.procedureInstance();
-        if (!containsCode(pi))
-            return super.leaveTranslateLLVM(v); // Ignore native methods.
+        // Recurse to children.
+        LLVMPositionBuilderAtEnd(v.builder, body);
+        n.visitChildren(v);
 
         // Add void return if necessary.
         LLVMBasicBlockRef block = LLVMGetInsertBlock(v.builder);
         if (LLVMGetBasicBlockTerminator(block) == null) {
-            Type retType = n instanceof MethodDecl
-                    ? ((MethodDecl) n).returnType().type()
-                    : v.typeSystem().Void();
             if (retType.isVoid()) {
                 LLVMBuildRetVoid(v.builder);
             } else {
@@ -99,9 +91,15 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             }
         }
 
+        // We build this branch at the end since child translations need to be able
+        // to insert into the entry block before its terminator. (LLVMPositionBuilderBefore
+        // is inconvenient because it changes the debug location.)
+        LLVMPositionBuilderAtEnd(v.builder, entry);
+        LLVMBuildBr(v.builder, body);
+
         v.clearAllocations();
         v.popFn();
         v.debugInfo.popScope();
-        return super.leaveTranslateLLVM(v);
+        return n;
     }
 }

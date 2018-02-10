@@ -37,7 +37,6 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
 
         // Get lvalue.
         LLVMValueRef exprPtr = lang().translateAsLValue(n.expr(), v);
-        v.debugInfo.emitLocation(n);
 
         // Increment and store.
         LLVMValueRef one = integral
@@ -63,8 +62,6 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         Expr expr = n.expr();
         LLVMValueRef exprRef = v.getTranslation(expr);
         LLVMTypeRef typeRef = v.utils.toLL(expr.type());
-
-        v.debugInfo.emitLocation(n);
 
         LLVMValueRef translation;
         if (op.equals(BIT_NOT)) {

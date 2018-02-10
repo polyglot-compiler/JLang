@@ -31,7 +31,6 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
         Receiver target = n.target();
         FieldInstance fi = n.fieldInstance();
         target.visit(v);
-        v.debugInfo.emitLocation(n);
 
         if (n.flags().isStatic()) {
             String mangledGlobalName = v.mangler.mangleStaticFieldName(fi);

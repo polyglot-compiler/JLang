@@ -14,7 +14,6 @@ public class PolyLLVMCharLitExt extends PolyLLVMExt {
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         CharLit n = (CharLit) node();
-        v.debugInfo.emitLocation(n);
         LLVMTypeRef type = v.utils.toLL(n.type());
         LLVMValueRef val = LLVMConstInt(type, n.value(), /*sign-extend*/ 0);
         v.addTranslation(n, val);

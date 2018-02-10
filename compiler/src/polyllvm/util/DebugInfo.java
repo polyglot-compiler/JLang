@@ -22,7 +22,6 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class DebugInfo {
     private final LLVMTranslator v;
     public final LLVMDIBuilderRef diBuilder;
-    public final LLVMBuilderRef builder;
     public final LLVMMetadataRef compileUnit;
     private Deque<LLVMMetadataRef> scopes;
 
@@ -31,10 +30,9 @@ public class DebugInfo {
     public final String fileName;
     public final String filePath;
 
-    public DebugInfo(LLVMTranslator v, LLVMModuleRef mod, LLVMBuilderRef builder, String filePath) {
+    public DebugInfo(LLVMTranslator v, LLVMModuleRef mod, String filePath) {
         this.v = v;
         this.diBuilder = LLVMNewDIBuilder(mod);
-        this.builder = builder;
 
         File file = new File(filePath);
         this.fileName = file.getName();
@@ -56,10 +54,17 @@ public class DebugInfo {
 
     public void pushScope(LLVMMetadataRef scope) {
         scopes.push(scope);
+        updateLocationScope();
     }
 
     public void popScope() {
         scopes.pop();
+        updateLocationScope();
+    }
+
+    private void updateLocationScope() {
+        LLVMDebugLocMetadata loc = LLVMGetCurrentDebugLocation2(v.builder);
+        LLVMSetCurrentDebugLocation2(v.builder, loc.Line(), loc.Col(), currentScope(), null);
     }
 
     public LLVMMetadataRef currentScope() {
@@ -77,39 +82,38 @@ public class DebugInfo {
         return LLVMDIBuilderCreateFile(diBuilder, fileName, filePath);
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // Debug locations.
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /*
-     * Helper functions for emitting locations
-     */
-
-    public void emitLocation(Node n) {
-        if (n.position().line() == Position.UNKNOWN || n.position().column() == Position.UNKNOWN) {
-            emitLocation();
-            return;
-        }
-        emitLocation(n.position().line(), n.position().column());
+    public LLVMValueRef getLocation() {
+        return LLVMGetCurrentDebugLocation(v.builder);
     }
 
-    public void emitLocation() {
-        emitLocation(0, 0);
+    public void setLocation(LLVMValueRef loc) {
+        LLVMSetCurrentDebugLocation(v.builder, loc);
     }
 
-    private void emitLocation(int line, int column) {
+    public void setLocation(Node n) {
+        // TODO: Warn for unknown positions?
         LLVMMetadataRef scope = currentScope();
         assert scope != null && !scope.isNull();
-        LLVMSetCurrentDebugLocation2(builder, line, column, scope, null);
+        int line = n.position().line();
+        int col = n.position().column();
+        LLVMSetCurrentDebugLocation2(v.builder, line, col, scope, /*inlinedAt*/ null);
     }
 
-    /*
-     * Helper functions for creating debug information for variables and parameters
-     */
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // Variables, parameters, and functions.
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     private LLVMMetadataRef createExpression() {
         long[] longs = new long[0];
         return LLVMDIBuilderCreateExpression(diBuilder, longs, 0);
     }
 
-    private void insertDeclareAtEnd(LLVMTranslator v, LLVMValueRef alloc, LLVMMetadataRef varMetadata, Position p) {
+    private void insertDeclareAtEnd(
+            LLVMTranslator v, LLVMValueRef alloc, LLVMMetadataRef varMetadata, Position p) {
         LLVMDIBuilderInsertDeclareAtEnd(
                 diBuilder, alloc, varMetadata,
                 createExpression(),
@@ -144,17 +148,16 @@ public class DebugInfo {
         LLVMMetadataRef unit = createFile();
         int line = n.position().line();
         LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
-                diBuilder, unit, n.name(), v.mangler.mangleProcedureName(pi), unit, line,
+                diBuilder, unit, n.name(), v.mangler.mangleProcName(pi), unit, line,
                 createFunctionType(pi, unit), /*internalLinkage*/ 0, /*definition*/ 1,
                 line, /*DINode::FlagPrototyped*/ 1 << 8, /*isOptimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);
         pushScope(sp);
-        emitLocation(n); // Update debug location with correct scope.
     }
 
     public void funcDebugInfo(
-            int line, String name, String linkageName,
-            LLVMMetadataRef funcType, LLVMValueRef funcRef) {
+            LLVMValueRef funcRef, String name, String linkageName,
+            LLVMMetadataRef funcType, int line) {
         LLVMMetadataRef unit = createFile();
         LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
                 diBuilder, unit, name, linkageName, unit, line,
@@ -162,12 +165,11 @@ public class DebugInfo {
                 line, /*DINode::FlagPrototyped*/ 1 << 8, /*isOptimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);
         pushScope(sp);
-        emitLocation(line, 0); // Update debug location with correct scope.
     }
 
-    /*
-     * Helper functions for creating debug types
-     */
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // Debug types.
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     public LLVMMetadataRef debugType(Type t) {
         Type erased = v.utils.erasureLL(t);
@@ -207,7 +209,7 @@ public class DebugInfo {
         return LLVMDIBuilderCreateBasicType(diBuilder, t.toString(), numBits, encoding);
     }
 
-    public LLVMMetadataRef createFunctionType(ProcedureInstance pi, LLVMMetadataRef unit) {
+    private LLVMMetadataRef createFunctionType(ProcedureInstance pi, LLVMMetadataRef unit) {
         LLVMMetadataRef[] formals = pi.formalTypes().stream()
                 .map(this::debugType).toArray(LLVMMetadataRef[]::new);
         LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
@@ -221,7 +223,6 @@ public class DebugInfo {
                 diBuilder, currentScope(), createFile(),
                 node.position().line(), node.position().column());
         pushScope(lexicalBlockScope);
-        emitLocation(node); // Update debug location with correct scope.
     }
 }
 

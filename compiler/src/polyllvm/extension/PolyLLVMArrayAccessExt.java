@@ -37,7 +37,6 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
 
         n.array().visit(v);
         n.index().visit(v);
-        v.debugInfo.emitLocation(n);
 
         LLVMValueRef arr = v.getTranslation(n.array());
         LLVMValueRef base = v.utils.buildJavaArrayBase(arr, n.type());

@@ -50,7 +50,6 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
                                          LLVM.LLVMBasicBlockRef trueBlock,
                                          LLVM.LLVMBasicBlockRef falseBlock) {
         Node n = v.visitEdge(null, node());
-        v.debugInfo.emitLocation(node());
         LLVMBuildCondBr(v.builder, v.getTranslation(n), trueBlock, falseBlock);
     }
 

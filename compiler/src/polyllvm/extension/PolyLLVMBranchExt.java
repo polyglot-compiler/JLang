@@ -15,7 +15,6 @@ public class PolyLLVMBranchExt extends PolyLLVMExt {
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         Branch n = (Branch) node();
-        v.debugInfo.emitLocation(n);
 
         LLVMTranslator.ControlTransferLoc loc = n.kind() == Branch.CONTINUE
                 ? v.getContinueLoc(n.label())

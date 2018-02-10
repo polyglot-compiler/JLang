@@ -199,8 +199,7 @@ public class LLVMUtils {
                 v.debugInfo.diBuilder, new PointerPointer<>(), /* length */ 0);
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
                 v.debugInfo.diBuilder, v.debugInfo.createFile(), typeArray);
-        v.debugInfo.funcDebugInfo(0, name, name, funcDiType, func);
-        v.debugInfo.emitLocation(n);
+        v.debugInfo.funcDebugInfo(func, name, name, funcDiType, 0);
 
         LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, func, "entry");
         LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func, "body");
@@ -225,6 +224,18 @@ public class LLVMUtils {
 
         LLVMBuildRetVoid(v.builder);
         v.debugInfo.popScope();
+    }
+
+    /**
+     * Allocates space for a new variable on the stack, and returns the pointer to this space.
+     * Does not change the position of the instruction builder.
+     */
+    public LLVMValueRef buildAlloca(String name, LLVMTypeRef t) {
+        LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
+        LLVMPositionBuilderAtEnd(v.builder, LLVMGetEntryBasicBlock(v.currFn()));
+        LLVMValueRef res = LLVMBuildAlloca(v.builder, t, name);
+        LLVMPositionBuilderAtEnd(v.builder, prevBlock);
+        return res;
     }
 
     /** Convenience function for appending basic blocks to the current function. */
@@ -561,7 +572,7 @@ public class LLVMUtils {
         for (MethodInstance jm : jms) {
             LLVMTypeRef castFrom = toLLFuncTy(jm.container(), jm.returnType(), jm.formalTypes());
             LLVMTypeRef castTo = toLLFuncTy(jt, jm.returnType(), jm.formalTypes());
-            LLVMValueRef llm = getFunction(v.mod, v.mangler.mangleProcedureName(jm), castFrom);
+            LLVMValueRef llm = getFunction(v.mod, v.mangler.mangleProcName(jm), castFrom);
             LLVMValueRef cast = LLVMConstBitCast(llm, ptrTypeRef(castTo));
             res[idx++] = cast;
         }
@@ -599,7 +610,7 @@ public class LLVMUtils {
             LLVMTypeRef cdvM_LLTy = toLLFuncTy(clazz, cdvM.returnType(),
                     cdvM.formalTypes());
             LLVMValueRef funcVal = getFunction(v.mod,
-                    v.mangler.mangleProcedureName(cdvM), cdvM_LLTy);
+                    v.mangler.mangleProcName(cdvM), cdvM_LLTy);
             // Cast funcVal to the method signature used by IDV
             MethodInstance idvM = idvMethods.get(idxI);
             LLVMTypeRef idvM_LLTy = toLLFuncTy(intf, idvM.returnType(),

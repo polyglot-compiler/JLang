@@ -141,7 +141,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         for (int i = 0; i < x_args.length; ++i)
             x_args[i] = v.getTranslation(n.arguments().get(i));
 
-        String func_name = v.mangler.mangleProcedureName(substM);
+        String func_name = v.mangler.mangleProcName(substM);
         LLVMTypeRef func_type = v.utils.toLLFuncTy(v.utils.retErasureLL(substM),
                 v.utils.formalsErasureLL(substM));
         LLVMValueRef func_ptr = v.utils.getFunction(v.mod, func_name,
@@ -153,8 +153,6 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                 substM.formalTypes());
         func_ptr = LLVM.LLVMBuildBitCast(
                 v.builder, func_ptr, v.utils.ptrTypeRef(func_ty_cast), "cast");
-
-        v.debugInfo.emitLocation(n);
 
         LLVMValueRef val;
         if (substM.returnType().isVoid()) {
@@ -169,7 +167,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         Call n = node();
         MethodInstance substM = n.methodInstance();
 
-        String func_name = v.mangler.mangleProcedureName(substM);
+        String func_name = v.mangler.mangleProcName(substM);
 
         LLVMTypeRef func_ty = v.utils.toLLFuncTy(
                 n.target().type().toReference(), v.utils.retErasureLL(substM),
@@ -191,7 +189,6 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         func_ptr = LLVM.LLVMBuildBitCast(
                 v.builder, func_ptr, v.utils.ptrTypeRef(func_ty_cast), "cast");
 
-        v.debugInfo.emitLocation(n);
         if (substM.returnType().isVoid()) {
             v.addTranslation(n, v.utils.buildProcCall(func_ptr, x_args));
         } else {
@@ -206,7 +203,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMTypeRef func_ty = v.utils.toLLFuncTy(substM.container(),
                 v.utils.retErasureLL(substM), v.utils.formalsErasureLL(substM));
         LLVMValueRef func_ptr = v.utils.getFunction(v.mod,
-                v.mangler.mangleProcedureName(substM), func_ty);
+                v.mangler.mangleProcName(substM), func_ty);
 
         LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(
                 v.getCurrentClass().type(), substM.returnType(),

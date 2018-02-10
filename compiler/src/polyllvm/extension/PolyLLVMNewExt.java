@@ -34,13 +34,9 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         ConstructorInstance substC = n.constructorInstance();
         ReferenceType clazz = substC.container();
 
-        v.debugInfo.emitLocation();
-
         //Allocate space for the new object - need to get the size of the object
         LLVMValueRef calloc = LLVMGetNamedFunction(v.mod, Constants.CALLOC);
         LLVMValueRef obj = v.utils.buildFunCall(calloc, size);
-
-        v.debugInfo.emitLocation(n);
 
         //Bitcast object
         LLVMValueRef obj_cast = LLVMBuildBitCast(v.builder, obj, v.utils.toLL(clazz), "obj_cast");
@@ -50,7 +46,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         LLVMBuildStore(v.builder, dvGlobal, gep);
 
         //Call the constructor function
-        String mangledFuncName = v.mangler.mangleProcedureName(substC);
+        String mangledFuncName = v.mangler.mangleProcName(substC);
 
         LLVMTypeRef func_ty = v.utils.toLLFuncTy(clazz, v.typeSystem().Void(), v.utils.formalsErasureLL(substC));
         LLVMValueRef func = v.utils.getFunction(v.mod, mangledFuncName, func_ty);

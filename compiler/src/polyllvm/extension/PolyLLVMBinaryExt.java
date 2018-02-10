@@ -41,7 +41,6 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         Operator op = n.operator();
         Type elemType = n.left().type();
 
-        v.debugInfo.emitLocation(n);
         LLVMValueRef res = computeBinop(v.builder, op, left, right, resType, elemType);
         v.addTranslation(n, res);
         return super.leaveTranslateLLVM(v);
@@ -53,7 +52,6 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
                                          LLVMBasicBlockRef falseBlock) {
         Binary n = (Binary) node();
         Operator op = n.operator();
-        v.debugInfo.emitLocation(n);
         if (op.equals(Binary.COND_AND)) {
             LLVMBasicBlockRef l1 = v.utils.buildBlock("l1");
             lang().translateLLVMConditional(n.left(), v, l1, falseBlock);
@@ -92,7 +90,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
     }
 
     private LLVMValueRef computeShortCircuitOp(LLVMTranslator v, Type resType) {
-        LLVMValueRef binopRes = PolyLLVMLocalDeclExt.createLocal(v, "binop_res", v.utils.toLL(resType));
+        LLVMValueRef binopRes = v.utils.buildAlloca("binop.res", v.utils.toLL(resType));
         LLVMBasicBlockRef trueBranch = v.utils.buildBlock("true_branch");
         LLVMBasicBlockRef falseBranch = v.utils.buildBlock("false_branch");
         LLVMBasicBlockRef continueBranch = v.utils.buildBlock("continue");
