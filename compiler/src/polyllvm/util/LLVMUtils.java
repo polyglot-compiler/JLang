@@ -188,13 +188,11 @@ public class LLVMUtils {
      * order that they are built.
      */
     public void buildCtor(Node n, Supplier<LLVMValueRef> ctor) {
-        LLVMTypeRef funcType = v.utils
-                .functionType(LLVMVoidTypeInContext(v.context));
-        LLVMTypeRef voidPtr = v.utils
-                .ptrTypeRef(LLVMInt8TypeInContext(v.context));
+        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context));
+        LLVMTypeRef voidPtr = v.utils.llvmBytePtr();
 
         int counter = v.incCtorCounter();
-        String name = "ctor" + counter;
+        String name = "ctor." + counter;
         LLVMValueRef func = v.utils.getFunction(v.mod, name, funcType);
         LLVMSetLinkage(func, LLVMPrivateLinkage);
         LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
@@ -210,15 +208,13 @@ public class LLVMUtils {
         LLVMBuildBr(v.builder, body);
         LLVMPositionBuilderAtEnd(v.builder, body);
 
-        // We use `counter` as the ctor priority to help ensure that static
-        // initializers
+        // We use `counter` as the ctor priority to help ensure that static initializers
         // are executed in textual order, per the JLS.
         LLVMTypeRef i32 = LLVMInt32TypeInContext(v.context);
         LLVMValueRef priority = LLVMConstInt(i32, counter, /* sign-extend */ 0);
 
         v.pushFn(func);
-        LLVMValueRef data = ctor.get(); // Calls supplier lambda to build ctor
-                                        // body.
+        LLVMValueRef data = ctor.get(); // Calls supplier lambda to build ctor body.
         v.popFn();
 
         if (data == null)

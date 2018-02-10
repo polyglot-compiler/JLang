@@ -90,22 +90,13 @@ public class DebugInfo {
         emitLocation(n.position().line(), n.position().column());
     }
 
-    public void emitLocationEnd(Node n) {
-        if (n.position().line() == Position.UNKNOWN || n.position().column() == Position.UNKNOWN) {
-            emitLocation();
-            return;
-        }
-        emitLocation(n.position().endLine(), n.position().endColumn());
-    }
-
-
     public void emitLocation() {
-        emitLocation(0,0);
+        emitLocation(0, 0);
     }
 
     private void emitLocation(int line, int column) {
         LLVMMetadataRef scope = currentScope();
-        assert scope !=null && !scope.isNull();
+        assert scope != null && !scope.isNull();
         LLVMSetCurrentDebugLocation2(builder, line, column, scope, null);
     }
 
@@ -150,24 +141,25 @@ public class DebugInfo {
 
     public void funcDebugInfo(ProcedureDecl n, LLVMValueRef funcRef) {
         ProcedureInstance pi = n.procedureInstance();
-        LLVMMetadataRef Unit = createFile();
-        int LineNo = n.position().line();
-        LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(diBuilder, Unit, n.name(), v.mangler.mangleProcedureName(pi), Unit, LineNo,
-                createFunctionType(pi, Unit), /* internal linkage */ 0, /* definition */ 1,
-                LineNo, /*DINode::FlagPrototyped*/ 1 << 8, /*is optimized*/ 0);
+        LLVMMetadataRef unit = createFile();
+        int line = n.position().line();
+        LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
+                diBuilder, unit, n.name(), v.mangler.mangleProcedureName(pi), unit, line,
+                createFunctionType(pi, unit), /*internalLinkage*/ 0, /*definition*/ 1,
+                line, /*DINode::FlagPrototyped*/ 1 << 8, /*isOptimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);
         pushScope(sp);
     }
 
-    public void funcDebugInfo(int LineNo, String name, String linkageName, LLVMMetadataRef funcType, LLVMValueRef funcRef) {
-        LLVMMetadataRef Unit = createFile();
-        LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(diBuilder, Unit, name, linkageName, Unit, LineNo,
-                funcType, /* internal linkage */ 0, /* definition */ 1,
-                LineNo, /*DINode::FlagPrototyped*/ 1 << 8, /*is optimized*/ 0);
+    public void funcDebugInfo(int line, String name, String linkageName, LLVMMetadataRef funcType, LLVMValueRef funcRef) {
+        LLVMMetadataRef unit = createFile();
+        LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
+                diBuilder, unit, name, linkageName, unit, line,
+                funcType, /*internalLinkage*/ 0, /*definition*/ 1,
+                line, /*DINode::FlagPrototyped*/ 1 << 8, /*isOptimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);
         pushScope(sp);
     }
-
 
     /*
      * Helper functions for creating debug types
@@ -207,19 +199,22 @@ public class DebugInfo {
         } else if (t.isFloat() || t.isDouble()) {
             encoding = DW_ATE_float;
         } else throw new InternalCompilerError("Type " + t + " is not a basic type");
-        long numBits = v.utils.sizeOfType(t)*8;
+        long numBits = 8 * v.utils.sizeOfType(t);
         return LLVMDIBuilderCreateBasicType(diBuilder, t.toString(), numBits, encoding);
     }
 
     public LLVMMetadataRef createFunctionType(ProcedureInstance pi, LLVMMetadataRef unit) {
-        LLVMMetadataRef[] formals = pi.formalTypes().stream().map(this::debugType).toArray(LLVMMetadataRef[]::new);
-        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(diBuilder, new PointerPointer<>(formals), formals.length);
+        LLVMMetadataRef[] formals = pi.formalTypes().stream()
+                .map(this::debugType).toArray(LLVMMetadataRef[]::new);
+        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
+                diBuilder, new PointerPointer<>(formals), formals.length);
         return LLVMDIBuilderCreateSubroutineType(diBuilder, unit, typeArray);
     }
 
 
     public void enterBlock(Block node) {
-        LLVMMetadataRef lexicalBlockScope = LLVMDIBuilderCreateLexicalBlock(diBuilder, currentScope(), createFile(),
+        LLVMMetadataRef lexicalBlockScope = LLVMDIBuilderCreateLexicalBlock(
+                diBuilder, currentScope(), createFile(),
                 node.position().line(), node.position().column());
         pushScope(lexicalBlockScope);
     }

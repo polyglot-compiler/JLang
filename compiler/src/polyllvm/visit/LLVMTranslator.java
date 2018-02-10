@@ -149,8 +149,7 @@ public class LLVMTranslator extends NodeVisitor {
     public <T> T getTranslation(Node n) {
         T res = (T) translations.get(n);
         if (res == null)
-            throw new InternalCompilerError(
-                    "Null translation of " + n.getClass() + ": " + n);
+            throw new InternalCompilerError("Null translation of " + n.getClass() + ": " + n);
         return res;
     }
 
