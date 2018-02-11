@@ -13,15 +13,17 @@ public class Constants {
     public static final String ENTRY_TRAMPOLINE = "java_entry_point";
     public static final int LLVM_ADDR_SPACE = 0;
 
-    public static final String TYPEID_INTRINSIC = "llvm.eh.typeid.for";
     public static final String PERSONALITY_FUNC = "__java_personality_v0";
     public static final String CREATE_EXCEPTION = "createUnwindException";
     public static final String THROW_EXCEPTION = "throwUnwindException";
     public static final String EXTRACT_EXCEPTION = "extractJavaExceptionObject";
 
     public static final Set<String> NON_INVOKE_FUNCTIONS = new HashSet<>(CollectionUtil.list(
-            TYPEID_INTRINSIC, CALLOC, CREATE_EXCEPTION, EXTRACT_EXCEPTION
+            CALLOC, CREATE_EXCEPTION, EXTRACT_EXCEPTION
     ));
+
+    public static final int DEBUG_INFO_VERSION = 3;
+    public static final int DEBUG_DWARF_VERSION = 2;
 
     /**
      * Offset from start of Object to the 0th field

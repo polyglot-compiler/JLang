@@ -109,10 +109,10 @@ public class LLVMUtils {
     }
 
     public LLVMTypeRef llvmPtrSizedIntType() {
-        return LLVMIntTypeInContext(v.context, llvmPtrSize() * 8);
+        return LLVMIntTypeInContext(v.context, 8 * llvmPtrSize());
     }
 
-    public static int llvmPtrSize() {
+    public int llvmPtrSize() {
         return 8;
     }
 
@@ -198,7 +198,7 @@ public class LLVMUtils {
         LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
                 v.debugInfo.diBuilder, new PointerPointer<>(), /* length */ 0);
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
-                v.debugInfo.diBuilder, v.debugInfo.createFile(), typeArray);
+                v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
         v.debugInfo.funcDebugInfo(func, name, name, funcDiType, 0);
 
         LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, func, "entry");
@@ -697,14 +697,9 @@ public class LLVMUtils {
             return 8; // Specified by Java.
         } else if (erased.isLongOrLess()) {
             PrimitiveType integral = erased.toPrimitive();
-            assert numBitsOfIntegralType(integral)
-                    % 8 == 0 : "integer bit count must be multiple of 8";
+            assert numBitsOfIntegralType(integral) % 8 == 0 : "integer bits must be multiple of 8";
             return numBitsOfIntegralType(integral) / 8;
-        } else if (erased.isNull()) {
-            return llvmPtrSize();
-        } else if (erased.isArray()) {
-            return llvmPtrSize();
-        } else if (erased.isClass()) {
+        } else if (erased.isNull() || erased.isArray() || erased.isClass()) {
             return llvmPtrSize();
         } else {
             throw new InternalCompilerError("Invalid type");

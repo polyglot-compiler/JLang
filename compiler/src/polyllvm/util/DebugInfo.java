@@ -15,6 +15,8 @@ import java.util.Deque;
 import java.util.HashMap;
 
 import static org.bytedeco.javacpp.LLVM.*;
+import static polyllvm.util.Constants.DEBUG_DWARF_VERSION;
+import static polyllvm.util.Constants.DEBUG_INFO_VERSION;
 
 /**
  * Created by Daniel on 2/24/17.
@@ -22,33 +24,31 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class DebugInfo {
     private final LLVMTranslator v;
     public final LLVMDIBuilderRef diBuilder;
-    public final LLVMMetadataRef compileUnit;
-    private Deque<LLVMMetadataRef> scopes;
+    private final String fileName;
+    private final String fileDir;
+    public final LLVMMetadataRef debugFile;
+    private final LLVMMetadataRef compileUnit;
+    private Deque<LLVMMetadataRef> scopes = new ArrayDeque<>();
+    private HashMap<Type, LLVMMetadataRef> typeCache = new HashMap<>();
 
-    private HashMap<Type, LLVMMetadataRef> typeMap = new HashMap<>();
-
-    public final String fileName;
-    public final String filePath;
-
-    public DebugInfo(LLVMTranslator v, LLVMModuleRef mod, String filePath) {
+    public DebugInfo(LLVMTranslator v, LLVMModuleRef mod, String path) {
         this.v = v;
-        this.diBuilder = LLVMNewDIBuilder(mod);
+        diBuilder = LLVMNewDIBuilder(mod);
 
-        File file = new File(filePath);
-        this.fileName = file.getName();
-        this.filePath = file.getParent();
+        File file = new File(path);
+        fileName = file.getName();
+        fileDir = file.getParent();
+        debugFile = LLVMDIBuilderCreateFile(diBuilder, fileName, fileDir);
 
-        this.compileUnit = LLVMDIBuilderCreateCompileUnit(diBuilder, DW_LANG_Java, fileName, this.filePath, "PolyLLVM", 0, "", 0);
-        this.scopes = new ArrayDeque<>();
+        compileUnit = LLVMDIBuilderCreateCompileUnit(
+                diBuilder, DW_LANG_Java, fileName, fileDir, "PolyLLVM", 0, "", 0);
 
-        String s = "Debug Info Version";
-        LLVMAddModuleFlag(mod, Warning, s, /*DEBUG_METADATA_VERSION*/ 3);
+        LLVMAddModuleFlag(mod, Warning, "Debug Info Version", DEBUG_INFO_VERSION);
 
-        BytePointer defaultTargetTriple = LLVMGetDefaultTargetTriple();
         //TODO: Make darwin check more robust : Triple(sys::getProcessTriple()).isOSDarwin()
-        if (defaultTargetTriple.getString().contains("darwin")) {
-            LLVMAddModuleFlag(mod, Warning, "Dwarf Version", 2);
-        }
+        BytePointer defaultTargetTriple = LLVMGetDefaultTargetTriple();
+        if (defaultTargetTriple.getString().contains("darwin"))
+            LLVMAddModuleFlag(mod, Warning, "Dwarf Version", DEBUG_DWARF_VERSION);
         LLVMDisposeMessage(defaultTargetTriple);
     }
 
@@ -68,18 +68,7 @@ public class DebugInfo {
     }
 
     public LLVMMetadataRef currentScope() {
-        LLVMMetadataRef scope;
-        if (scopes.isEmpty()) {
-            scope = compileUnit;
-        } else {
-            scope = scopes.peek();
-        }
-        assert scope != null;
-        return scope;
-    }
-
-    public LLVMMetadataRef createFile() {
-        return LLVMDIBuilderCreateFile(diBuilder, fileName, filePath);
+        return scopes.isEmpty() ? compileUnit : scopes.peek();
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -126,7 +115,7 @@ public class DebugInfo {
         Type t = f.type().type();
         LLVMMetadataRef paramVar = LLVMDIBuilderCreateParameterVariable(
                 diBuilder, currentScope(),
-                name, index, createFile(), p.line(),
+                name, index, debugFile, p.line(),
                 debugType(t), /*alwaysPreserve*/ 0, /*flags*/ 0);
         insertDeclareAtEnd(v, alloc, paramVar, p);
     }
@@ -137,14 +126,14 @@ public class DebugInfo {
         Type t = n.type().type();
         LLVMMetadataRef localVar = LLVMDIBuilderCreateAutoVariable(
                 diBuilder, currentScope(),
-                name, createFile(), p.line(),
+                name, debugFile, p.line(),
                 debugType(t), /*alwaysPreserve*/ 0, /*flags*/ 0, /*align*/ 0);
         insertDeclareAtEnd(v, alloc, localVar, p);
     }
 
     public void funcDebugInfo(ProcedureDecl n, LLVMValueRef funcRef) {
         ProcedureInstance pi = n.procedureInstance();
-        LLVMMetadataRef unit = createFile();
+        LLVMMetadataRef unit = debugFile;
         int line = n.position().line();
         LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
                 diBuilder, unit, n.name(), v.mangler.mangleProcName(pi), unit, line,
@@ -157,7 +146,7 @@ public class DebugInfo {
     public void funcDebugInfo(
             LLVMValueRef funcRef, String name, String linkageName,
             LLVMMetadataRef funcType, int line) {
-        LLVMMetadataRef unit = createFile();
+        LLVMMetadataRef unit = debugFile;
         LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
                 diBuilder, unit, name, linkageName, unit, line,
                 funcType, /*internalLinkage*/ 0, /*definition*/ 1,
@@ -172,28 +161,39 @@ public class DebugInfo {
 
     public LLVMMetadataRef debugType(Type t) {
         Type erased = v.utils.erasureLL(t);
-        if (typeMap.containsKey(erased)) {
-            return typeMap.get(erased);
+        if (typeCache.containsKey(erased)) {
+            return typeCache.get(erased);
         }
 
         LLVMMetadataRef debugType;
         if (erased.isBoolean() || erased.isLongOrLess() || erased.isFloat() || erased.isDouble()) {
             debugType = debugBasicType(erased);
-        } else if (erased.isNull()) {
-            debugType = LLVMDIBuilderCreatePointerType(diBuilder, LLVMDIBuilderCreateBasicType(diBuilder, erased.toString(), 64, DW_ATE_signed), v.utils.sizeOfType(erased)*8, v.utils.sizeOfType(erased)*8, "class");
-        } else if (erased.isArray()) {
-            debugType = LLVMDIBuilderCreateArrayType(diBuilder, v.utils.sizeOfType(erased), v.utils.sizeOfType(erased), debugType(erased.toArray().base()), null);
-        } else if (erased.isClass()) {
-            int line = erased.position().line() == -1 ? 0 : erased.position().line();
-            debugType = LLVMDIBuilderCreateStructType(diBuilder, currentScope(), v.utils.erasureLL(erased).toString(), createFile(),
-                    line, 0,0, /*Flags*/0 , erased.toClass().superType() == null ? null : debugType(erased.toClass().superType()), null);
+        }
+        else if (erased.isNull()) {
+            debugType = LLVMDIBuilderCreateBasicType(
+                    diBuilder, "null", 8 * v.utils.llvmPtrSize(), DW_ATE_address);
+        }
+        else if (erased.isArray()) {
+            int size = v.utils.sizeOfType(erased);
+            LLVMMetadataRef elemType = debugType(erased.toArray().base());
+            debugType = LLVMDIBuilderCreateArrayType(
+                    diBuilder, size, size, elemType, /*subscripts*/ null);
+        }
+        else if (erased.isClass()) {
+            LLVMMetadataRef superType = erased.toClass().superType() != null
+                    ? debugType(erased.toClass().superType())
+                    : null;
+            debugType = LLVMDIBuilderCreateStructType(
+                    diBuilder, currentScope(), erased.toString(), debugFile,
+                    erased.position().line(), /*TODO*/ 0, /*TODO*/ 0, /*flags*/0 ,
+                    superType, /*TODO*/ null);
+        }
+        else throw new InternalCompilerError("Cannot handle " + erased.getClass());
 
-        } else throw new InternalCompilerError("Cannot handle "+erased.getClass());
-        typeMap.put(erased, debugType);
+        typeCache.put(erased, debugType);
         return debugType;
 
     }
-
 
     private LLVMMetadataRef debugBasicType(Type t) {
         int encoding;
@@ -216,13 +216,11 @@ public class DebugInfo {
         return LLVMDIBuilderCreateSubroutineType(diBuilder, unit, typeArray);
     }
 
-
+    // TODO: Use this to limit variables to the correct scope.
     public void enterBlock(Block node) {
         LLVMMetadataRef lexicalBlockScope = LLVMDIBuilderCreateLexicalBlock(
-                diBuilder, currentScope(), createFile(),
+                diBuilder, currentScope(), debugFile,
                 node.position().line(), node.position().column());
         pushScope(lexicalBlockScope);
     }
 }
-
-
