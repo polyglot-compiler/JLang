@@ -41,6 +41,11 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     }
 
     @Override
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
+        return overrideTranslateLLVM(v);
+    }
+
+    @Override
     public Node overrideTranslateLLVM(LLVMTranslator v) {
         return null;
     }

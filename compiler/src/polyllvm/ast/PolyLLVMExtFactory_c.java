@@ -176,6 +176,16 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
+    protected Ext extDoImpl() {
+        return new PolyLLVMDoExt();
+    }
+
+    @Override
+    protected Ext extForImpl() {
+        return new PolyLLVMForExt();
+    }
+
+    @Override
     protected Ext extConditionalImpl() {
         return new PolyLLVMConditionalExt();
     }

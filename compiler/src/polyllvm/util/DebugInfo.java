@@ -95,7 +95,6 @@ public class DebugInfo {
     }
 
     public void setLocation(Node n) {
-        // TODO: Warn for unknown positions?
         LLVMMetadataRef scope = currentScope();
         assert scope != null && !scope.isNull();
         int line = n.position().line();

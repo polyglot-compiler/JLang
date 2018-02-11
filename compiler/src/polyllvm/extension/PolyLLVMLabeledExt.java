@@ -1,18 +1,14 @@
 package polyllvm.extension;
 
-import org.bytedeco.javacpp.LLVM.*;
-import polyglot.ast.Do;
-import polyglot.ast.For;
+import org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
 import polyglot.ast.Labeled;
 import polyglot.ast.Node;
-import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
 
-import java.lang.Override;
-
-import static org.bytedeco.javacpp.LLVM.*;
+import static org.bytedeco.javacpp.LLVM.LLVMBuildBr;
+import static org.bytedeco.javacpp.LLVM.LLVMPositionBuilderAtEnd;
 
 public class PolyLLVMLabeledExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -21,13 +17,12 @@ public class PolyLLVMLabeledExt extends PolyLLVMExt {
     public Node overrideTranslateLLVM(LLVMTranslator v) {
         Labeled n = (Labeled) node();
 
-        if (n instanceof For || n instanceof Do) {
-            throw new InternalCompilerError("The translation for labels assumes that " +
-                    "for-loops and do-while-loops have been normalized to while-loops, " +
-                    "since they could have initialization code that should not be run " +
-                    "after reaching a continue statement jumping to this label");
-        }
-
+        // Any statement can be labeled. We need to make sure that the translation of a labeled
+        // statement starts and ends at basic block boundaries so that break and continue statements
+        // work as expected. (This may only be relevant for Java blocks.)
+        //
+        // Note that some loop translations override the head block so that continue
+        // statements jump to the correct part of the loop, skipping initialization statements.
         LLVMBasicBlockRef head = v.utils.buildBlock(n.label() + ".head");
         LLVMBasicBlockRef end = v.utils.buildBlock(n.label() + ".end");
 
@@ -40,7 +35,6 @@ public class PolyLLVMLabeledExt extends PolyLLVMExt {
 
         v.utils.branchUnlessTerminated(end);
         LLVMPositionBuilderAtEnd(v.builder, end);
-
         return n;
     }
 }

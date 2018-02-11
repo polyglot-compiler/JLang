@@ -13,6 +13,8 @@ public interface PolyLLVMLang extends J7Lang {
 
     Node leaveTranslateLLVM(Node n, LLVMTranslator v);
 
+    Node overrideTranslateLLVM(Node parent, Node n, LLVMTranslator LLVMTranslator);
+
     Node overrideTranslateLLVM(Node n, LLVMTranslator LLVMTranslator);
 
     void translateLLVMConditional(Node n, LLVMTranslator v,

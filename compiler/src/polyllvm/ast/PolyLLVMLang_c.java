@@ -50,6 +50,11 @@ public class PolyLLVMLang_c extends J7Lang_c implements PolyLLVMLang {
     }
 
     @Override
+    public Node overrideTranslateLLVM(Node parent, Node n, LLVMTranslator v) {
+        return PolyLLVMOps(n).overrideTranslateLLVM(parent, v);
+    }
+
+    @Override
     public Node overrideTranslateLLVM(Node n, LLVMTranslator v) {
         return PolyLLVMOps(n).overrideTranslateLLVM(v);
     }

@@ -15,6 +15,8 @@ public interface PolyLLVMOps extends NodeOps {
 
     Node leaveTranslateLLVM(LLVMTranslator v);
 
+    Node overrideTranslateLLVM(Node parent, LLVMTranslator v);
+
     Node overrideTranslateLLVM(LLVMTranslator v);
 
     /**

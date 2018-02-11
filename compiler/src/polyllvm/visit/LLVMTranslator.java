@@ -127,6 +127,11 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     @Override
+    public Node override(Node parent, Node n) {
+        return lang().overrideTranslateLLVM(parent, n, this);
+    }
+
+    @Override
     public Node override(Node n) {
         return lang().overrideTranslateLLVM(n, this);
     }

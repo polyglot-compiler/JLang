@@ -16,10 +16,10 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
     @Override
     public Node overrideTranslateLLVM(LLVMTranslator v) {
         If n = (If) node();
-        LLVMBasicBlockRef ifEnd = v.utils.buildBlock("if_end");
-        LLVMBasicBlockRef ifTrue = v.utils.buildBlock("if_true");
+        LLVMBasicBlockRef ifEnd = v.utils.buildBlock("if.end");
+        LLVMBasicBlockRef ifTrue = v.utils.buildBlock("if.true");
         LLVMBasicBlockRef ifFalse = n.alternative() != null
-                ? v.utils.buildBlock("if_false")
+                ? v.utils.buildBlock("if.false")
                 : ifEnd;
 
         lang().translateLLVMConditional(n.cond(), v, ifTrue, ifFalse);
@@ -38,11 +38,10 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
         return n;
     }
 
-
     // Helper function used by other translations.
     static void buildIf(LLVMTranslator v, LLVMValueRef cond, Runnable builder) {
-        LLVMBasicBlockRef ifTrue = v.utils.buildBlock("if_true");
-        LLVMBasicBlockRef ifEnd = v.utils.buildBlock("if_end");
+        LLVMBasicBlockRef ifTrue = v.utils.buildBlock("if.true");
+        LLVMBasicBlockRef ifEnd = v.utils.buildBlock("if.end");
         LLVMBuildCondBr(v.builder, cond, ifTrue, ifEnd);
         LLVMPositionBuilderAtEnd(v.builder, ifTrue);
         builder.run();

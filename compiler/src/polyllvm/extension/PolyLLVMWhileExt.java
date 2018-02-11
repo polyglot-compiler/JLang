@@ -17,20 +17,23 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
     public Node overrideTranslateLLVM(LLVMTranslator v) {
         While n = (While) node();
 
-        LLVMBasicBlockRef head = v.utils.buildBlock("head");
-        LLVMBasicBlockRef body = v.utils.buildBlock("body");
-        LLVMBasicBlockRef end = v.utils.buildBlock("end");
-        v.pushLoop(head, end);
+        LLVMBasicBlockRef cond = v.utils.buildBlock("while.cond");
+        LLVMBasicBlockRef body = v.utils.buildBlock("while.body");
+        LLVMBasicBlockRef end = v.utils.buildBlock("while.end");
 
-        LLVMBuildBr(v.builder, head);
-        LLVMPositionBuilderAtEnd(v.builder, head);
+        v.pushLoop(cond, end);
+
+        // Conditional.
+        LLVMBuildBr(v.builder, cond);
+        LLVMPositionBuilderAtEnd(v.builder, cond);
         lang().translateLLVMConditional(n.cond(), v, body, end);
 
+        // Body.
         LLVMPositionBuilderAtEnd(v.builder, body);
-        v.visitEdge(n, n.body());
-        v.utils.branchUnlessTerminated(head);
-        LLVMPositionBuilderAtEnd(v.builder, end);
+        n.visitChild(n.body(), v);
+        v.utils.branchUnlessTerminated(cond);
 
+        LLVMPositionBuilderAtEnd(v.builder, end);
         v.popLoop();
         return n;
     }
