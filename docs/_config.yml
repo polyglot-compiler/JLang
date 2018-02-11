@@ -1,6 +1,6 @@
 kramdown:
   input: GFM
   hard_wrap: false
-project: "PolyLLVM"
+project: "polyllvm"
 github:
-  url: https://github.com/dbd64/PolyLLVM
+  url: https://github.com/gharrma/polyllvm

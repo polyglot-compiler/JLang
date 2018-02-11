@@ -16,10 +16,10 @@ Installation
 
 Note: PolyLLVM is not tested on Windows.
 
-Clone the [repo](https://github.com/dbd64/PolyLLVM) and build:
+Clone the [repo](https://github.com/gharrma/polyllvm) and build:
 
 ```
-$ git clone https://github.com/dbd64/PolyLLVM.git
+$ git clone https://github.com/gharrma/polyllvm.git
 $ cd PolyLLVM
 $ ant
 ```
