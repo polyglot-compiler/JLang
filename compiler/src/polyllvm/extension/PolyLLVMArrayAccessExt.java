@@ -62,15 +62,17 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
                         formalParams,
                         v.getCurrentClass().type(),
                         /*fromClient*/ true);
-                // TODO: Technically duplicates side-effects in n.index() if an exception is thrown.
-                //       Need to find a cleaner  way to generate exceptions from the compiler.
-                List<Expr> args = Collections.singletonList(n.index());
-                Expr newInstance = nf.New(pos, nf.CanonicalTypeNode(pos, exceptionType), args)
+
+                // We are careful here to reuse the translation of n.index() when throwing the
+                // exception, since if we re-translated n.index() we would duplicate side effects.
+                Expr newInstance = nf.New(
+                        pos, nf.CanonicalTypeNode(pos, exceptionType), Collections.emptyList())
                         .constructorInstance(constructor)
                         .type(exceptionType);
-                Throw throwOutOfBounds = nf.Throw(pos, newInstance);
-                throwOutOfBounds.visit(v);
-            } catch (SemanticException e){
+                PolyLLVMNewExt newExt = (PolyLLVMNewExt) PolyLLVMExt.ext(newInstance);
+                newExt.translateWithArgs(v, new LLVMValueRef[] {offset});
+                PolyLLVMThrowExt.buildThrow(v, v.getTranslation(newInstance));
+            } catch (SemanticException e) {
                 throw new InternalCompilerError(e);
             }
         });

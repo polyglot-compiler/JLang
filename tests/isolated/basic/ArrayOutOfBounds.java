@@ -7,8 +7,8 @@ public class ArrayOutOfBounds {
             for (int i = 0; i <= xs.length + 10; i++) {
                 System.out.println(xs[i]);
             }
-        } catch (ArrayIndexOutOfBoundsException e){
-            System.out.println("Correctly caught");
+        } catch (ArrayIndexOutOfBoundsException e) {
+            System.out.println("catch");
         }
 
         try {
@@ -16,7 +16,14 @@ public class ArrayOutOfBounds {
                 System.out.println(xs[i] = i+10);
             }
         } catch (ArrayIndexOutOfBoundsException e){
-            System.out.println("Correctly caught");
+            System.out.println("catch") ;
+        }
+
+        int x = 0;
+        try {
+            System.out.println(xs[--x]);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            System.out.println("catch " + x);
         }
     }
 }
