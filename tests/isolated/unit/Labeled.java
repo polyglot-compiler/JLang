@@ -1,6 +1,6 @@
 package unit;
 
-public class Label {
+class Labeled {
     public static void main(String[] args) {
         stmtlabel:
         System.out.println("stmtlabel");
@@ -29,6 +29,14 @@ public class Label {
                 System.out.println("switchlabel");
                 break;
         }
+
+        two: labels: for (int i = 0; i < 10; ++i) {
+            if (i < 3) continue labels;
+            if (i > 3) System.out.print(' ');
+            System.out.print(i);
+            if (i > 7) break two;
+        }
+        System.out.println();
 
         int i = 0;
         doloop: do {
