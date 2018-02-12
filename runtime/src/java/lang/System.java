@@ -2,7 +2,7 @@ package java.lang;
 
 public class System {
     // Placeholder until we have true JNI.
-    public static PrintStream out;
+    public static PrintStream out, err;
 
     public static class PrintStream {
 
@@ -44,6 +44,4 @@ public class System {
     public static native long currentTimeMillis();
     public static native long nanoTime();
     public static native int identityHashCode(Object x);
-
-
 }

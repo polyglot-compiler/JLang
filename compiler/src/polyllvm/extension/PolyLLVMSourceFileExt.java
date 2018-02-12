@@ -2,9 +2,9 @@ package polyllvm.extension;
 
 import org.bytedeco.javacpp.PointerPointer;
 import polyglot.ast.Node;
+import polyglot.main.Main;
 import polyglot.main.Options;
 import polyglot.types.TypeSystem;
-import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.PolyLLVMOptions;
 import polyllvm.ast.PolyLLVMExt;
@@ -38,13 +38,16 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         Map<String, LLVMValueRef> entryPoints = v.getEntryPoints();
         String entryPointClass = ((PolyLLVMOptions) Options.global).entryPointClass;
         if (entryPointClass != null) {
-            if (entryPoints.containsKey(entryPointClass)) {
-                buildEntryPoint(v, entryPoints.get(entryPointClass));
-            } else {
-                //TODO: Should this be a different error?
-                throw new InternalCompilerError("No entry point found for class " + entryPointClass);
-            }
-        } else if (!entryPoints.isEmpty()) {
+            if (!entryPoints.containsKey(entryPointClass))
+                throw new Main.TerminationException(
+                        "No entry point found for class " + entryPointClass);
+            buildEntryPoint(v, entryPoints.get(entryPointClass));
+        }
+        else if (entryPoints.size() > 1) {
+            throw new Main.TerminationException(
+                    "Multiple Java main functions found; please specify which to use");
+        }
+        else if (!entryPoints.isEmpty()) {
             buildEntryPoint(v, entryPoints.values().iterator().next());
         }
 

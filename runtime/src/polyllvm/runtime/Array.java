@@ -1,4 +1,4 @@
-package support;
+package polyllvm.runtime;
 
 /**
  * Constructs single- and multi-dimensional arrays, assisted by
@@ -6,14 +6,14 @@ package support;
  * from Java code, since we need the compiler to allocate the
  * correct amount of memory for an array instance.
  */
-public class Array {
-    private int len;
+class Array {
+    int len;
     // Array data is only visible to the compiler.
 
     /**
      * Single-dimensional arrays.
      */
-    private Array(int len) {
+    Array(int len) {
         // Note that entries have already been cleared,
         // since we use calloc to allocate memory.
         this.len = len;
@@ -23,7 +23,7 @@ public class Array {
      * Multi-dimensional arrays.
      * new Object[3][2][5] ==> new Array({3,2,5})
      */
-    private Array(int[] lens) {
+    Array(int[] lens) {
         this(lens[0]);
         initSubArrays(this, lens, 0, lens.length);
     }
@@ -31,8 +31,7 @@ public class Array {
     /**
      * Recursively initialize an array with `maxDepth` dimensions.
      */
-    private static void initSubArrays(Array arr, int[] lens,
-                                      int depth, int maxDepth) {
+    static void initSubArrays(Array arr, int[] lens, int depth, int maxDepth) {
         if (depth == maxDepth - 1) {
             // Elements already initialized to zero.
             return;

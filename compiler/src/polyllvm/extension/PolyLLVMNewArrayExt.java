@@ -80,7 +80,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
 
     private static ConstructorInstance getArrayConstructor(ReferenceType arrayType,
                                                            boolean multidimensional) {
-        // See the support.Array class implemented in the runtime.
+        // See the polyllvm.runtime.Array class implemented in the runtime.
         // Both array constructors have only one formal type; int for single-dimensional arrays,
         // and int[] for multidimensional arrays.
         for (MemberInstance member : arrayType.members()) {

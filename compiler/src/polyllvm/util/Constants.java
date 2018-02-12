@@ -10,7 +10,8 @@ import java.util.Set;
  */
 public class Constants {
     public static final String CALLOC = "GC_malloc";
-    public static final String ENTRY_TRAMPOLINE = "java_entry_point";
+    public static final String ENTRY_TRAMPOLINE =
+            "Java_polyllvm_runtime_MainWrapper_main___3Ljava_lang_String_2";
     public static final int LLVM_ADDR_SPACE = 0;
 
     public static final String PERSONALITY_FUNC = "__java_personality_v0";

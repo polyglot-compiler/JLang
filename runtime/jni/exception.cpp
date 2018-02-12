@@ -80,8 +80,8 @@ _Unwind_Exception *createUnwindException(jobject* jexception) {
 
 void throwUnwindException(_Unwind_Exception* exception) {
   _Unwind_RaiseException(exception);
-  printf("Aborting due to uncaught exception.\n");
-  fflush(stdout);
+  fprintf(stderr, "Aborting due to unsuccessful exception throw.\n");
+  fflush(stderr);
   abort();
 }
 

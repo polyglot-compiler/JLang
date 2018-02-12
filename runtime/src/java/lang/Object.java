@@ -17,8 +17,7 @@ public class Object {
     }
 
     public final Class getClass() {
-        // TODO
-        return null;
+        return new Class();
     }
 
     public int hashCode() {
@@ -36,7 +35,7 @@ public class Object {
 
     public String toString() {
         // TODO
-        return null;
+        return getClass().toString();
     }
 
     public final void wait(long x) throws InterruptedException {

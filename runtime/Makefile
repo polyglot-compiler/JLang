@@ -1,7 +1,7 @@
 BASE_DIR = ..
 POLYLLVMC_SRC = $(shell find $(BASE_DIR)/compiler/src -name "*.java")
 
-JAVA_SRC = $(shell find src -name "*.java" -not -path src/placeholder/*)
+JAVA_SRC = $(shell find src -name "*.java")
 JNI_SRC = $(shell find jni -name "*.cpp")
 
 JNI_LL = $(JNI_SRC:%.cpp=ll/%.ll)

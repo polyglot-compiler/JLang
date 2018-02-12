@@ -31,7 +31,7 @@ public class LLVMUtils {
 
     public ParsedClassType getArrayType() {
         try {
-            return (ParsedClassType) v.typeSystem().typeForName("support.Array");
+            return (ParsedClassType) v.typeSystem().typeForName("polyllvm.runtime.Array");
         } catch (SemanticException | ClassCastException e) {
             throw new InternalCompilerError("Could not load array type");
         }

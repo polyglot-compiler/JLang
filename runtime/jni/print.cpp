@@ -94,16 +94,16 @@ void Java_java_lang_System_PrintStream_println__D(jdouble n) {
 
 
 //TEMP: Remove when java library included properly.
-jarray* Java_support_Factory_createByteArray__I(jint len);
-jarray* Java_support_Factory_createObjectArray__I(jint len);
-jstring* Java_support_Factory_createString___3B(jarray* bytes);
+jarray* Java_polyllvm_runtime_Factory_createByteArray__I(jint len);
+jarray* Java_polyllvm_runtime_Factory_createObjectArray__I(jint len);
+jstring* Java_polyllvm_runtime_Factory_createString___3B(jarray* bytes);
 
 jstring* cstring_to_jstring(const char* cstr) {
     size_t len = strlen(cstr);
-    jarray* jargBytes = Java_support_Factory_createByteArray__I(len);
+    jarray* jargBytes = Java_polyllvm_runtime_Factory_createByteArray__I(len);
     for (int j = 0; j < len; ++j)
         ((int8_t*) &jargBytes->data)[j] = cstr[j];
-    jstring* jstr = Java_support_Factory_createString___3B(jargBytes);
+    jstring* jstr = Java_polyllvm_runtime_Factory_createString___3B(jargBytes);
     return jstr;
 }
 
