@@ -24,10 +24,11 @@ public class Loop {
         }
         System.out.println();
 
-        i = n;
+        i = n - 1;
         do {
             System.out.println("do-while");
-        } while (i < n);
+            ++i;
+        } while (i <= n);
 
         i = 0;
         do {

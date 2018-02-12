@@ -5,6 +5,7 @@ import org.bytedeco.javacpp.Pointer;
 import polyglot.ast.Node;
 import polyglot.ast.SourceFile;
 import polyglot.ext.jl5.visit.AutoBoxer;
+import polyglot.ext.jl5.visit.RemoveExtendedFors;
 import polyglot.ext.jl7.JL7Scheduler;
 import polyglot.ext.jl7.types.JL7TypeSystem;
 import polyglot.frontend.*;
@@ -55,7 +56,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
         Goal prep = new MultiGoal(
                 job,
                 new VisitorGoal(job, new AutoBoxer(job, ts, nf)),
-                //TODO: Translate these directly.
+                //TODO: Translate some of these directly.
                 new VisitorGoal(job, new InnerClassRemover(job, ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check classes.
                 new VisitorGoal(job, new ClassInitializerVisitor(job, ts, nf)),
@@ -63,8 +64,10 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
                 new VisitorGoal(job, new StringConversionVisitor(job, ts, nf)),
                 new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.
+                // TODO: Review RemoveExtendedFors, which has questionable behavior on debug info.
+                new VisitorGoal(job, new RemoveExtendedFors(job, ts, nf)),
                 new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf))
-                );
+        );
         try {
             prep.addPrerequisiteGoal(Serialized(job), this);
         } catch (CyclicDependencyException e) {
