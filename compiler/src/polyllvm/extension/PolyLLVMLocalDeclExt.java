@@ -15,7 +15,7 @@ public class PolyLLVMLocalDeclExt extends PolyLLVMExt {
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         LocalDecl n = (LocalDecl) node();
 
-        LLVMValueRef alloc = v.utils.buildAlloca(n.name(), v.utils.toLL(n.type().type()));
+        LLVMValueRef alloc = v.utils.buildAlloca(n.name(), v.utils.toLL(n.declType()));
         v.addAllocation(n.name(), alloc);
         v.debugInfo.createLocalVariable(v, n, alloc);
 

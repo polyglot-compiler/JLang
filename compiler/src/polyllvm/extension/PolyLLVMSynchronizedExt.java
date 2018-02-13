@@ -1,9 +1,13 @@
 package polyllvm.extension;
 
+import polyglot.ast.Node;
+import polyglot.util.InternalCompilerError;
 import polyllvm.ast.PolyLLVMExt;
+import polyllvm.visit.LLVMTranslator;
 
-/**
- * Created by Daniel on 2/27/17.
- */
 public class PolyLLVMSynchronizedExt extends PolyLLVMExt {
+    @Override
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
+        throw new InternalCompilerError("synchronized blocks unimplemented");
+    }
 }

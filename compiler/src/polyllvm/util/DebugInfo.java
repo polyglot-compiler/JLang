@@ -112,7 +112,7 @@ public class DebugInfo {
     public void createParamVariable(LLVMTranslator v, Formal f, int index, LLVMValueRef alloc) {
         String name = f.name();
         Position p = f.position();
-        Type t = f.type().type();
+        Type t = f.declType();
         LLVMMetadataRef paramVar = LLVMDIBuilderCreateParameterVariable(
                 diBuilder, currentScope(),
                 name, index, debugFile, p.line(),
@@ -123,7 +123,7 @@ public class DebugInfo {
     public void createLocalVariable(LLVMTranslator v, VarDecl n, LLVMValueRef alloc) {
         String name = n.name();
         Position p = n.position();
-        Type t = n.type().type();
+        Type t = n.declType();
         LLVMMetadataRef localVar = LLVMDIBuilderCreateAutoVariable(
                 diBuilder, currentScope(),
                 name, debugFile, p.line(),

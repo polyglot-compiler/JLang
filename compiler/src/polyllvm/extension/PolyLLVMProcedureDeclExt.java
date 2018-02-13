@@ -54,7 +54,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         for (int i = 0; i < n.formals().size(); ++i) {
             Formal formal = n.formals().get(i);
-            LLVMTypeRef typeRef = v.utils.toLL(formal.type().type());
+            LLVMTypeRef typeRef = v.utils.toLL(formal.declType());
 
             LLVMValueRef alloc = LLVMBuildAlloca(v.builder, typeRef, "arg." + formal.name());
             int idx = i + (pi.flags().isStatic() ? 0 : 1);

@@ -26,7 +26,7 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
             ReferenceType classType = v.getCurrentClass().type().toReference();
             FieldInstance fi = n.fieldInstance();
             String mangledName = v.mangler.mangleStaticFieldName(fi);
-            LLVMTypeRef type = v.utils.toLL(n.type().type());
+            LLVMTypeRef type = v.utils.toLL(n.declType());
             LLVMValueRef global = v.utils.getGlobal(v.mod, mangledName, type);
             if (n.init() == null) {
                 // LLVMConstNull will give zero for any type, including numeric and pointer types.

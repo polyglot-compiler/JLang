@@ -7,12 +7,13 @@ class Initializer {
     { System.out.println(i); }
     { System.out.println("After"); }
 
-    Initializer(int n) {
+    Initializer(int i) {
         System.out.println("Inner constructor");
+        System.out.println(i);
     }
 
     Initializer() {
-        this(0);
+        this(27);
         System.out.println("Outer constructor");
     }
 

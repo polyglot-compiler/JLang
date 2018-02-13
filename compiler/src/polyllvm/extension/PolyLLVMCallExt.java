@@ -57,7 +57,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         JL5MethodInstance origM = substM.base();
         LLVMValueRef x_recv = v.getTranslation(n.target());
         List<LLVMValueRef> x_args = n.arguments().stream()
-                .<LLVMValueRef> map(e -> v.getTranslation(e))
+                .<LLVMValueRef> map(v::getTranslation)
                 .collect(Collectors.toList());
         LLVMValueRef[] ll_args = CollectUtils.<LLVMValueRef> toArray(x_recv,
                 x_args, LLVMValueRef.class);

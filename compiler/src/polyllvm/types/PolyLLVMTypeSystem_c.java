@@ -1,13 +1,16 @@
 package polyllvm.types;
 
+import polyglot.ext.jl5.types.JL5MethodInstance;
+import polyglot.ext.jl5.types.JL5Subst;
+import polyglot.ext.jl5.types.JL5TypeSystem_c;
+import polyglot.ext.jl5.types.TypeVariable;
+import polyglot.ext.jl7.types.JL7TypeSystem_c;
+import polyglot.types.ReferenceType;
+import polyglot.types.Type;
+
 import java.util.*;
 
-import polyglot.ext.jl5.types.*;
-import polyglot.ext.jl7.types.JL7TypeSystem_c;
-import polyglot.types.*;
-
-public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c
-        implements PolyLLVMTypeSystem {
+public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTypeSystem {
 
     @Override
     public SubstMethodInstance substMethodInstance(JL5MethodInstance postSubst,

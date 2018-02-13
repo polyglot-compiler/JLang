@@ -9,23 +9,11 @@ import polyglot.visit.NodeVisitor;
 
 /**
  * Turn (almost) all implicit casts and type promotions into explicit casts.
- * <p>
- * Examples:
- * <p>
- * <table border="1">
- * <tr>
- * <th>Before</th>
- * <th>After</th>
- * </tr>
- * <tr>
- * <td>{@code char c = 1}</td>
- * <td>{@code char c = (char) 1}</td>
- * </tr>
- * <tr>
- * <td>{@code 1 + 2l}</td>
- * <td>{@code ((long) 1) + 2l}</td>
- * </tr>
- * </table>
+ * Example: `char c = 1` becomes `char c = (char) 1`.
+ * Example: `1 + 2l` becomes `((long) 1) + 2l`.
+ *
+ * Preserves typing, but mutates array initializer expressions to directly have the
+ * type that its parent expects.
  */
 public class MakeCastsExplicitVisitor extends AscriptionVisitor {
 
@@ -38,10 +26,6 @@ public class MakeCastsExplicitVisitor extends AscriptionVisitor {
             throws SemanticException {
         if (parent instanceof Cast) {
             // Avoid redundant casts.
-            return n;
-        } else if (n instanceof Field && parent instanceof FieldAssign) {
-            // The LHS of a FieldAssign cannot be a Cast. Plus there is no need
-            // to cast the LHS anyway.
             return n;
         } else {
             return super.leaveCall(parent, old, n, v);

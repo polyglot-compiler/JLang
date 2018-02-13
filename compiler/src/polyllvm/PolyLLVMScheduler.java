@@ -4,8 +4,6 @@ import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Pointer;
 import polyglot.ast.Node;
 import polyglot.ast.SourceFile;
-import polyglot.ext.jl5.visit.AutoBoxer;
-import polyglot.ext.jl5.visit.RemoveExtendedFors;
 import polyglot.ext.jl7.JL7Scheduler;
 import polyglot.ext.jl7.types.JL7TypeSystem;
 import polyglot.frontend.*;
@@ -16,7 +14,6 @@ import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
 import polyglot.util.InternalCompilerError;
 import polyglot.visit.InnerClassRemover;
-import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.util.MultiGoal;
 import polyllvm.visit.*;
@@ -55,17 +52,17 @@ public class PolyLLVMScheduler extends JL7Scheduler {
         PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
         Goal prep = new MultiGoal(
                 job,
-                new VisitorGoal(job, new AutoBoxer(job, ts, nf)),
-                //TODO: Translate some of these directly.
-                new VisitorGoal(job, new InnerClassRemover(job, ts, nf)),
-                new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check classes.
-                new VisitorGoal(job, new ClassInitializerVisitor(job, ts, nf)),
-                new VisitorGoal(job, new AssertionVisitor(job, ts, nf)),
-                new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check assignments.
+                // Visitor passes running after type checking must preserve type information.
+                // Note that running type check again after these passes can fail, for example
+                // because the type checker can disagree about the target of a field which has
+                // been moved by a desugar pass. That's ok; we trust our type information.
+                AutoBoxing(job),
+                RemoveExtendedFors(job),
+                // RemoveEnums(job), // TODO
+                new VisitorGoal(job, new InnerClassRemover(job, ts, nf)), // TODO: Dubious implementation.
                 new VisitorGoal(job, new StringConversionVisitor(job, ts, nf)),
-                new VisitorGoal(job, new TypeChecker(job, ts, nf)), // Re-type-check string ops.
-                // TODO: Review RemoveExtendedFors, which has questionable behavior on debug info.
-                new VisitorGoal(job, new RemoveExtendedFors(job, ts, nf)),
+                new VisitorGoal(job, new AssertionVisitor(job, ts, nf)),
+                new VisitorGoal(job, new ClassInitializerVisitor(job, ts, nf)),
                 new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf))
         );
         try {

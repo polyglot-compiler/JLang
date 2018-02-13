@@ -1,6 +1,5 @@
 package polyllvm.types;
 
-import polyglot.ext.jl5.types.JL5ConstructorInstance;
 import polyglot.ext.jl5.types.JL5MethodInstance;
 import polyglot.ext.jl5.types.JL5Subst;
 import polyglot.ext.jl7.types.JL7TypeSystem;

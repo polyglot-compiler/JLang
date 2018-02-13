@@ -9,6 +9,9 @@ import java.util.Set;
  * PolyLLVM constants for, e.g., important method names and array data layout.
  */
 public class Constants {
+    public static final String RUNTIME_PACKAGE = "polyllvm.runtime";
+    public static final String RUNTIME_HELPER = RUNTIME_PACKAGE + ".Helper";
+
     public static final String CALLOC = "GC_malloc";
     public static final String ENTRY_TRAMPOLINE =
             "Java_polyllvm_runtime_MainWrapper_main___3Ljava_lang_String_2";

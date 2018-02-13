@@ -2,19 +2,19 @@ package polyllvm.visit;
 
 import polyglot.ast.*;
 import polyglot.frontend.Job;
-import polyglot.types.MethodInstance;
 import polyglot.types.SemanticException;
 import polyglot.types.Type;
 import polyglot.types.TypeSystem;
 import polyglot.util.Position;
 import polyglot.visit.ContextVisitor;
 import polyglot.visit.NodeVisitor;
+import polyllvm.util.Constants;
 
 import java.util.Collections;
 
 /**
- * Converts string literals to constructor calls, makes string concatenation explicit,
- * and promotes the corresponding concatenation arguments to strings.
+ * Makes string concatenation explicit and promotes the corresponding concatenation
+ * arguments to strings. Preserves typing.
  */
 public class StringConversionVisitor extends ContextVisitor {
 
@@ -26,6 +26,7 @@ public class StringConversionVisitor extends ContextVisitor {
     public Node leaveCall(Node old, Node n, NodeVisitor v) throws SemanticException {
         Position pos = n.position();
         if (n instanceof Binary) {
+            // String conversions due to concatenation.
             Binary binary = (Binary) n;
             Expr l = binary.left(), r = binary.right();
             Type lt = l.type(), rt = r.type();
@@ -33,14 +34,15 @@ public class StringConversionVisitor extends ContextVisitor {
                 if (binary.operator().equals(Binary.ADD)) {
                     l = convertToString(l);
                     r = convertToString(r);
-                    MethodInstance mi = ts.findMethod(
-                            ts.String(),
-                            "concat",
-                            Collections.singletonList(ts.String()),
-                            context().currentClass(),
-                            /*fromClient*/ true);
+
+                    // Call String.concat(...)
                     return nf.Call(pos, l, nf.Id(pos, "concat"), r)
-                            .methodInstance(mi)
+                            .methodInstance(ts.findMethod(
+                                    ts.String(),
+                                    "concat",
+                                    Collections.singletonList(ts.String()),
+                                    context().currentClass(),
+                                    /*fromClient*/ true))
                             .type(ts.String());
                 }
             }
@@ -48,27 +50,40 @@ public class StringConversionVisitor extends ContextVisitor {
         return super.leave(old, n, v);
     }
 
-    private Expr convertToString(Expr e) {
+    private Expr convertToString(Expr e) throws SemanticException {
         Type t = e.type();
         Position pos = e.position();
-        if (t.typeEquals(ts.String())) {
-            return e;
-        }
-        else if (t.isNull()) {
+
+        if (t.isNull()) {
+            // Substitute "null".
             return nf.StringLit(pos, "null").type(ts.String());
         }
         else if (t.isPrimitive()) {
+            // Call String.valueOf(...)
             return nf.Call(pos, nf.CanonicalTypeNode(pos, ts.String()), nf.Id(pos, "valueOf"), e)
+                    .methodInstance(ts.findMethod(
+                            ts.String(),
+                            "valueOf",
+                            Collections.singletonList(e.type()),
+                            context().currentClass(),
+                            /*fromClient*/ true))
                     .type(ts.String());
         }
         else {
             assert t.isReference();
-            Expr toString = nf.Call(pos, e, nf.Id(pos, "toString")).type(ts.String());
-            Conditional nullCheck = nf.Conditional(pos,
-                    nf.Binary(pos, toString, Binary.EQ, nf.NullLit(pos).type(ts.String())).type(ts.Boolean()),
-                    nf.StringLit(pos, "null").type(ts.String()),
-                    toString);
-            return nullCheck;
+
+            // Call toString(...) in the runtime library, which will have the right semantics
+            // if e has a null value or if e.toString() has a null value.
+            Type helperType = ts.typeForName(Constants.RUNTIME_HELPER).toReference();
+            Receiver helperReceiver = nf.CanonicalTypeNode(pos, helperType);
+            return nf.Call(pos, helperReceiver, nf.Id(pos, "toString"), e)
+                    .methodInstance(ts.findMethod(
+                            helperType.toReference(),
+                            "toString",
+                            Collections.singletonList(ts.Object()),
+                            helperType.toClass(), // Lie to be able to access runtime helper.
+                            /*fromClient*/ true))
+                    .type(ts.String());
         }
     }
 }
