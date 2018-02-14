@@ -7,7 +7,6 @@ import polyglot.ast.SourceFile;
 import polyglot.ext.jl7.JL7Scheduler;
 import polyglot.ext.jl7.types.JL7TypeSystem;
 import polyglot.frontend.*;
-import polyglot.frontend.ExtensionInfo;
 import polyglot.frontend.goals.CodeGenerated;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
@@ -15,6 +14,7 @@ import polyglot.frontend.goals.VisitorGoal;
 import polyglot.util.InternalCompilerError;
 import polyglot.visit.InnerClassRemover;
 import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.MultiGoal;
 import polyllvm.visit.*;
 
@@ -46,25 +46,29 @@ public class PolyLLVMScheduler extends JL7Scheduler {
         return internGoal(g);
     }
 
+    /** Desugar passes which simplify LLVM translation. */
     public Goal PrepareForLLVMOutput(Job job) {
         ExtensionInfo extInfo = job.extensionInfo();
-        JL7TypeSystem ts = (JL7TypeSystem) extInfo.typeSystem();
+        PolyLLVMTypeSystem ts = (PolyLLVMTypeSystem) extInfo.typeSystem();
         PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
-        Goal prep = new MultiGoal(
-                job,
+        Goal[] goals = {
                 // Visitor passes running after type checking must preserve type information.
                 // Note that running type check again after these passes can fail, for example
                 // because the type checker can disagree about the target of a field which has
                 // been moved by a desugar pass. That's ok; we trust our type information.
                 AutoBoxing(job),
-                RemoveExtendedFors(job),
-                // RemoveEnums(job), // TODO
+                RemoveExtendedFors(job), // TODO: Dubious implementation (esp. debug info).
+                new VisitorGoal(job, new EnumVisitor(ts, nf)),
                 new VisitorGoal(job, new InnerClassRemover(job, ts, nf)), // TODO: Dubious implementation.
                 new VisitorGoal(job, new StringConversionVisitor(job, ts, nf)),
                 new VisitorGoal(job, new AssertionVisitor(job, ts, nf)),
                 new VisitorGoal(job, new ClassInitializerVisitor(job, ts, nf)),
+
+                // The explicit cast visitor should generally be run last, since the other
+                // visitors will not add explicit casts when creating nodes.
                 new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf))
-        );
+        };
+        Goal prep = new MultiGoal(job, goals);
         try {
             prep.addPrerequisiteGoal(Serialized(job), this);
         } catch (CyclicDependencyException e) {
@@ -88,6 +92,9 @@ public class PolyLLVMScheduler extends JL7Scheduler {
             if (!(ast instanceof SourceFile))
                 throw new InternalCompilerError("AST root should be a SourceFile");
             SourceFile sf = (SourceFile) ast;
+
+            // This is a good place to debug the output of desugar passes:
+            // new PrettyPrinter(lang()).printAst(ast, new OptimalCodeWriter(System.out, 80));
 
             LLVMContextRef context = LLVMContextCreate();
             LLVMModuleRef mod = LLVMModuleCreateWithNameInContext(sf.source().name(), context);

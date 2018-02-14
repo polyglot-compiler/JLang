@@ -21,6 +21,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
+    protected Ext extClassLitImpl() {
+        return new PolyLLVMClassLitExt();
+    }
+
+    @Override
     protected Ext extInstanceofImpl() {
         return new PolyLLVMInstanceofExt();
     }
@@ -113,6 +118,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     @Override
     protected Ext extCastImpl() {
         return new PolyLLVMCastExt();
+    }
+
+    @Override
+    protected Ext extEnumConstantDeclImpl() {
+        return new PolyLLVMDesugaredNodeExt();
     }
 
     @Override

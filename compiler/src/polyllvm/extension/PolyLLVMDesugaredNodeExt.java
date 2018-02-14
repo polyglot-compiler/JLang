@@ -11,6 +11,6 @@ public class PolyLLVMDesugaredNodeExt extends PolyLLVMExt {
 
     @Override
     public Node overrideTranslateLLVM(LLVMTranslator v) {
-        throw new InternalCompilerError(errorMsg);
+        throw new InternalCompilerError(errorMsg + ": " + node().getClass());
     }
 }

@@ -10,7 +10,7 @@ public class PolyLLVMOptions extends JL5Options {
 
     public String entryPointClass;
 
-    public PolyLLVMOptions(ExtensionInfo extension) {
+    public PolyLLVMOptions(PolyLLVMExtensionInfo extension) {
         super(extension);
         this.setOutputExtension("ll");
     }

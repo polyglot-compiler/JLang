@@ -4,7 +4,7 @@ public class Object {
 
     protected Object clone() throws CloneNotSupportedException {
         // TODO
-        return null;
+        return this;
     }
 
     public boolean equals(Object other) {

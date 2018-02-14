@@ -32,14 +32,14 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
         if (n.kind() == ConstructorCall.THIS) {
             thisArg = LLVMGetParam(v.currFn(), 0);
         } else if (n.kind() == ConstructorCall.SUPER) {
-            thisArg = LLVMBuildBitCast(v.builder, LLVMGetParam(v.currFn(), 0),
-                    v.utils.toLL(supc), "cast_to_super");
+            thisArg = LLVMBuildBitCast(
+                    v.builder, LLVMGetParam(v.currFn(), 0), v.utils.toLL(supc), "cast.super");
         } else {
-            throw new InternalCompilerError("Kind `" + n.kind()
-                    + "` of constructor call not handled: " + n);
+            throw new InternalCompilerError(n.kind().toString() + " not handled: " + n);
         }
 
         String mangledFuncName = v.mangler.mangleProcName(substC);
+
         LLVMTypeRef func_ty = v.utils.toLLFuncTy(supc, v.typeSystem().Void(),
                 v.utils.formalsErasureLL(substC));
         LLVMValueRef func = v.utils.getFunction(v.mod, mangledFuncName,
@@ -48,8 +48,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
                 v.typeSystem().Void(), substC.formalTypes());
         // Bitcast the function so that the formal types are the types that the
         // arguments were cast to by MakeCastsExplicitVisitor
-        func = LLVMBuildBitCast(v.builder, func,
-                v.utils.ptrTypeRef(func_ty_cast), "constructor_cast");
+        func = LLVMBuildBitCast(v.builder, func, v.utils.ptrTypeRef(func_ty_cast), "cast");
         LLVMValueRef[] args = Stream
                 .concat(Stream.of(thisArg),
                         n.arguments().stream().map(v::getTranslation))

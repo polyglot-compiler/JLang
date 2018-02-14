@@ -3,7 +3,7 @@ package polyllvm;
 /**
  * Main is the main program of the compiler extension.
  * It simply invokes Polyglot's main, passing in the extension's
- * ExtensionInfo.
+ * PolyLLVMExtensionInfo.
  */
 public class Main
 {
@@ -11,7 +11,7 @@ public class Main
       polyglot.main.Main polyglotMain = new polyglot.main.Main();
 
       try {
-          polyglotMain.start(args, new polyllvm.ExtensionInfo());
+          polyglotMain.start(args, new PolyLLVMExtensionInfo());
       }
       catch (polyglot.main.Main.TerminationException e) {
           System.err.println(e.getMessage());

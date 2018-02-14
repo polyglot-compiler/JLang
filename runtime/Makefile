@@ -38,4 +38,4 @@ runtime.o: runtime.ll
 
 .PHONY: clean
 clean:
-	rm -rf ll runtime.{ll,o}
+	rm -rf classes ll runtime.{ll,o}

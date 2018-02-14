@@ -4,7 +4,6 @@ import polyglot.ast.FieldDecl;
 import polyglot.ast.Lit;
 import polyglot.ast.Node;
 import polyglot.types.FieldInstance;
-import polyglot.types.ReferenceType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
@@ -23,7 +22,6 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
         // Only static fields require a translation here;
         // non-static field initializers are handled in constructors.
         if (n.flags().isStatic()) {
-            ReferenceType classType = v.getCurrentClass().type().toReference();
             FieldInstance fi = n.fieldInstance();
             String mangledName = v.mangler.mangleStaticFieldName(fi);
             LLVMTypeRef type = v.utils.toLL(n.declType());

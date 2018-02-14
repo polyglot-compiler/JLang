@@ -16,7 +16,7 @@ import polyllvm.types.PolyLLVMTypeSystem_c;
 /**
  * Extension information for polyllvm extension.
  */
-public class ExtensionInfo extends JL7ExtensionInfo {
+public class PolyLLVMExtensionInfo extends JL7ExtensionInfo {
     static {
         // force Topics to load
         @SuppressWarnings("unused")

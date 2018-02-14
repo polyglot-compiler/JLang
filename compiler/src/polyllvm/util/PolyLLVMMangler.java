@@ -66,8 +66,7 @@ public class PolyLLVMMangler {
         else if (et.isClass())
             return "L" + mangleQualifiedName(et.toClass()) + SEMICOLON_ESCAPE;
         else
-            throw new InternalCompilerError(
-                    "Unsupported type for mangling: " + et);
+            throw new InternalCompilerError("Unsupported type for mangling: " + et);
     }
 
     private String mangleName(String name) {
@@ -103,11 +102,9 @@ public class PolyLLVMMangler {
             return mangleProcName(mi.orig(), mi.name());
         } else if (pi instanceof ConstructorInstance) {
             ConstructorInstance ci = (ConstructorInstance) pi;
-            return mangleProcName(ci.orig(),
-                    ci.container().toClass().name());
+            return mangleProcName(ci.orig(), ci.container().toClass().name());
         } else {
-            throw new InternalCompilerError(
-                    "Unknown procedure type: " + pi.getClass());
+            throw new InternalCompilerError("Unknown procedure type: " + pi.getClass());
         }
     }
 

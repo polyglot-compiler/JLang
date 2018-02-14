@@ -13,7 +13,8 @@ class MainWrapper {
             main(args);
         } catch (Throwable e) {
             System.err.println(
-                "Terminating due to uncaught exception " + e.getClass());
+                "Terminating due to uncaught exception "
+                + e.getClass().toString());
         }
     }
 }
