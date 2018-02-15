@@ -107,7 +107,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
 
             // Verify.
             BytePointer error = new BytePointer((Pointer) null);
-            LLVMVerifyModule(mod, LLVMAbortProcessAction, error);
+            boolean verifySuccess = LLVMVerifyModule(mod, LLVMPrintMessageAction, error) == 0;
             LLVMDisposeMessage(error);
             error.setNull();
 
@@ -137,7 +137,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
             LLVMDisposeModule(mod);
             LLVMContextDispose(context);
 
-            return true;
+            return verifySuccess;
         }
     }
 

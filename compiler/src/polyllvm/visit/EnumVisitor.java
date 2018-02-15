@@ -80,33 +80,37 @@ public class EnumVisitor extends NodeVisitor {
         enumDecl = enumDecl.superClass(nf.CanonicalTypeNode(enumDecl.position(), ts.Enum()));
 
         // Translate constructor and constants.
-        ClassBody body = enumDecl.body();
-        List<ClassMember> members = new ArrayList<>(body.members());
-        for (int i = 0; i < members.size(); ++i) {
-            ClassMember m = members.get(i);
-            if (m instanceof ConstructorDecl)
-                m = translateEnumConstructor((ConstructorDecl) m);
-            if (m instanceof EnumConstantDecl)
-                m = translateEnumConstantDecl((EnumConstantDecl) m, enumDecl);
-            members.set(i, m);
+        List<FieldDecl> enumConstants = new ArrayList<>();
+        List<ClassMember> otherMembers = new ArrayList<>();
+        for (ClassMember m : enumDecl.body().members()) {
+            if (m instanceof EnumConstantDecl) {
+                enumConstants.add(translateEnumConstantDecl((EnumConstantDecl) m, enumDecl));
+            } else if (m instanceof ConstructorDecl) {
+                otherMembers.add(translateEnumConstructor((ConstructorDecl) m));
+            } else {
+                otherMembers.add(m);
+            }
         }
-        body = body.members(members);
 
-        // Add implicitly declared members.
-        body = addValuesField(body, enumDecl);
-        body = addValuesMethod(body, enumDecl);
-        body = addValueOfMethod(body, enumDecl);
+        // Add implicitly declared members. These must go directly after the enum
+        // constants for correct static initialization order.
+        List<ClassMember> members = new ArrayList<>(enumConstants);
+        members.add(buildValuesField(enumDecl));
+        members.add(buildValuesMethod(enumDecl));
+        members.add(buildValueOfMethod(enumDecl));
+        members.addAll(otherMembers);
+        enumDecl = enumDecl.body(enumDecl.body().members(members));
 
         // Update class type.
-        List<FieldInstance> fields = body.members().stream()
+        List<FieldInstance> fields = enumDecl.body().members().stream()
                 .filter((m) -> m instanceof FieldDecl)
                 .map((m) -> ((FieldDecl) m).fieldInstance())
                 .collect(Collectors.toList());
-        List<ConstructorInstance> constructors = body.members().stream()
+        List<ConstructorInstance> constructors = enumDecl.body().members().stream()
                 .filter((m) -> m instanceof ConstructorDecl)
                 .map((m) -> ((ConstructorDecl) m).constructorInstance())
                 .collect(Collectors.toList());
-        List<MethodInstance> methods = body.members().stream()
+        List<MethodInstance> methods = enumDecl.body().members().stream()
                 .filter((m) -> m instanceof MethodDecl)
                 .map((m) -> ((MethodDecl) m).methodInstance())
                 .collect(Collectors.toList());
@@ -114,7 +118,7 @@ public class EnumVisitor extends NodeVisitor {
         enumDecl.type().setConstructors(constructors);
         enumDecl.type().setMethods(methods);
 
-        return enumDecl.body(body);
+        return enumDecl;
     }
 
     /** Adds two new arguments for the name and ordinal, and hands those to the Enum super class. */
@@ -189,7 +193,7 @@ public class EnumVisitor extends NodeVisitor {
     }
 
     /** private static final T[] values = {decl1, decl2, ...}; */
-    private ClassBody addValuesField(ClassBody body, ClassDecl enumDecl) {
+    private FieldDecl buildValuesField(ClassDecl enumDecl) {
         Position pos = enumDecl.position();
 
         // Collect enum constants.
@@ -203,14 +207,13 @@ public class EnumVisitor extends NodeVisitor {
 
         // Create field.
         Expr init = nf.ArrayInit(pos, decls).type(ts.arrayOf(enumDecl.type()));
-        FieldDecl fd = tnf.FieldDecl(
+        return tnf.FieldDecl(
                 pos, "values", ts.arrayOf(enumDecl.type()), enumDecl.type(), init,
                 Flags.NONE.Private().Static().Final());
-        return body.addMember(fd);
     }
 
     /** public static T[] values() { return (T[]) T.values.clone(); } */
-    private ClassBody addValuesMethod(ClassBody body, ClassDecl enumDecl) {
+    private MethodDecl buildValuesMethod(ClassDecl enumDecl) {
         Position pos = enumDecl.position();
 
         // Find field.
@@ -224,14 +227,13 @@ public class EnumVisitor extends NodeVisitor {
         Return ret = nf.Return(pos, cast);
 
         // Declare method.
-        MethodDecl md = tnf.MethodDecl(
+        return tnf.MethodDecl(
                 pos, "values", enumDecl.type(), ts.arrayOf(enumDecl.type()),
                 Collections.emptyList(), nf.Block(pos, ret), Flags.NONE.Public().Static().Final());
-        return body.addMember(md);
     }
 
     /** public static T valueOf(String s) { return (T) Enum.valueOf(T.class, s); } */
-    private ClassBody addValueOfMethod(ClassBody body, ClassDecl enumDecl) {
+    private MethodDecl buildValueOfMethod(ClassDecl enumDecl) {
         Position pos = enumDecl.position();
 
         // Call Enum.valueOf(...).
@@ -248,10 +250,9 @@ public class EnumVisitor extends NodeVisitor {
 
         // Declare method.
         Formal formal = tnf.Formal(pos, "s", ts.String(), Flags.NONE);
-        MethodDecl md = tnf.MethodDecl(
+        return tnf.MethodDecl(
                 pos, "valueOf", enumDecl.type(), enumDecl.type(), Collections.singletonList(formal),
                 nf.Block(pos, ret), Flags.NONE.Public().Static().Final());
-        return body.addMember(md);
     }
 
     private ConstructorInstance updateFormals(ConstructorInstance ci, List<Type> formalTypes) {

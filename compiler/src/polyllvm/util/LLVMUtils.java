@@ -203,8 +203,6 @@ public class LLVMUtils {
 
         LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, func, "entry");
         LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func, "body");
-        LLVMPositionBuilderAtEnd(v.builder, entry);
-        LLVMBuildBr(v.builder, body);
         LLVMPositionBuilderAtEnd(v.builder, body);
 
         // We use `counter` as the ctor priority to help ensure that static initializers
@@ -223,6 +221,11 @@ public class LLVMUtils {
         v.addCtor(res);
 
         LLVMBuildRetVoid(v.builder);
+
+        // Connect entry to body after all alloca instructions.
+        LLVMPositionBuilderAtEnd(v.builder, entry);
+        LLVMBuildBr(v.builder, body);
+
         v.debugInfo.popScope();
     }
 
