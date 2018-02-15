@@ -12,7 +12,10 @@ import polyglot.util.Position;
 import polyglot.visit.NodeVisitor;
 import polyllvm.util.TypedNodeFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -35,19 +38,26 @@ public class EnumVisitor extends NodeVisitor {
 
     @Override
     public Node leave(Node parent, Node old, Node n, NodeVisitor v) {
+
+        // Enum declaration.
         if (n instanceof ClassDecl && JL5Flags.isEnum(((ClassDecl) n).flags())) {
-            // Enum declaration.
             return translateEnumDecl((ClassDecl) n);
         }
-        if (n instanceof EnumConstant && parent instanceof Switch) {
-            // Enum constant in a switch expression.
-            assert ((Switch) parent).expr() == n;
-            return translateEnumSwitchExpr((EnumConstant) n);
-        }
+
+        // Enum constant in a switch case.
         if (n instanceof EnumConstant && parent instanceof Case) {
-            // Enum constant in a switch case.
             return translateEnumCase((EnumConstant) n);
         }
+
+        // Enum expression in a switch.
+        boolean isEnumExpr = n instanceof Expr
+                && ((Expr) n).type().isClass()
+                && JL5Flags.isEnum(((Expr) n).type().toClass().flags());
+        if (isEnumExpr && parent instanceof Switch) {
+            assert ((Switch) parent).expr() == n;
+            return translateEnumSwitchExpr((Expr) n);
+        }
+
         return n;
     }
 
@@ -57,9 +67,9 @@ public class EnumVisitor extends NodeVisitor {
     }
 
     /** Convert an enum switch expression to a call to {@link Enum#ordinal()}. */
-    private Expr translateEnumSwitchExpr(EnumConstant ec) {
+    private Expr translateEnumSwitchExpr(Expr expr) {
         return tnf.Call(
-                ec.position(), ec, "ordinal", ts.Enum(), ts.Int(),
+                expr.position(), expr, "ordinal", ts.Enum(), ts.Int(),
                 Flags.NONE.Public().Final());
     }
 
