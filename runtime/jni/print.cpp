@@ -147,6 +147,20 @@ jstring* Java_java_lang_String_valueOf__J(jlong n) {
     return cstring_to_jstring(str);
 }
 
+jstring* Java_java_lang_String_valueOf__F(jfloat n) {
+    size_t len = 50; // Overestimate.
+    char str[len];
+    sprintf(str, "%f", n);
+    return cstring_to_jstring(str);
+}
+
+jstring* Java_java_lang_String_valueOf__D(jdouble n) {
+    size_t len = 50; // Overestimate.
+    char str[len];
+    sprintf(str, "%f", n);
+    return cstring_to_jstring(str);
+}
+
 void Java_java_lang_System_PrintStream_flush__() {
     fflush(stdout);
 }

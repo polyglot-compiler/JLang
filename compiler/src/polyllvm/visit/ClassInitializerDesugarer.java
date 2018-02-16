@@ -77,8 +77,7 @@ public class ClassInitializerDesugarer extends ContextVisitor {
             Field field = (Field) nf.Field(pos, receiver, id)
                     .fieldInstance(fd.fieldInstance())
                     .type(fd.declType());
-            Expr copy = (Expr) fd.init().copy();
-            Assign assign = (Assign) nf.FieldAssign(pos, field, Assign.ASSIGN, copy)
+            Assign assign = (Assign) nf.FieldAssign(pos, field, Assign.ASSIGN, fd.init())
                     .type(field.type());
             Eval eval = nf.Eval(pos, assign);
             initCode = initCode.append(eval);
@@ -90,7 +89,7 @@ public class ClassInitializerDesugarer extends ContextVisitor {
                 Initializer init = (Initializer) member;
                 if (init.flags().isStatic())
                     continue;
-                initCode = initCode.append((Stmt) init.body().copy());
+                initCode = initCode.append(init.body());
             }
         }
 

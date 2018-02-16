@@ -56,17 +56,22 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // Note that running type check again after these passes can fail, for example
                 // because the type checker can disagree about the target of a field which has
                 // been moved by a desugar pass. That's ok; we trust our type information.
-                AutoBoxing(job),
-                RemoveExtendedFors(job), // TODO: Dubious implementation (esp. debug info).
+                new VisitorGoal(job, new EnhancedForDesugarer(ts, nf)),
                 new VisitorGoal(job, new EnumDesugarer(ts, nf)),
                 new VisitorGoal(job, new InnerClassRemover(job, ts, nf)), // TODO: Dubious implementation.
                 new VisitorGoal(job, new StringConversionVisitor(job, ts, nf)),
                 new VisitorGoal(job, new AssertDesugarer(job, ts, nf)),
                 new VisitorGoal(job, new ClassInitializerDesugarer(job, ts, nf)),
+                AutoBoxing(job),
 
                 // The explicit cast visitor should generally be run last, since the other
                 // visitors will not add explicit casts when creating nodes.
-                new VisitorGoal(job, new ExplicitCastsVisitor(job, ts, nf))
+                new VisitorGoal(job, new ExplicitCastsVisitor(job, ts, nf)),
+
+                // The desugar passes above may have introduced node aliases in the AST.
+                // Instead of carefully place .copy() calls in the desugar passes, we remove
+                // all node aliases afterward.
+                new VisitorGoal(job, new RemoveNodeAliases())
         };
         Goal prep = new MultiGoal(job, goals);
         try {

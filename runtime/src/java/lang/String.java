@@ -60,5 +60,6 @@ public final class String {
     public static native String valueOf(long i);
     public static native String valueOf(boolean i);
     public static native String valueOf(char i);
-
+    public static native String valueOf(float i);
+    public static native String valueOf(double i);
 }

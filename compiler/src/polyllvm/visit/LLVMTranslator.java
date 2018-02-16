@@ -154,6 +154,10 @@ public class LLVMTranslator extends NodeVisitor {
      * Add the translation from n -> lln
      */
     public void addTranslation(Node n, Object lln) {
+        // TODO
+//        if (translations.containsKey(n))
+//            throw new InternalCompilerError("Already translated " + n.getClass() + ": " + n + "\n" +
+//                    "This may indicate an AST node appearing twice in the AST without copy()");
         translations.put(n, lln);
     }
 
@@ -760,10 +764,9 @@ public class LLVMTranslator extends NodeVisitor {
         assert recvTy != null;
 
         if (isArrayOrPlainClass(recvTy)) {
-            int index = fieldIndexInObj(recvTy, fi);
-            return index;
-
-        } else if (recvTy instanceof TypeVariable
+            return fieldIndexInObj(recvTy, fi);
+        }
+        else if (recvTy instanceof TypeVariable
                 || recvTy instanceof WildCardType) {
             ReferenceType container = fi.container();
             assert isArrayOrPlainClass(container);

@@ -79,7 +79,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         // Recurse to children.
         LLVMPositionBuilderAtEnd(v.builder, body);
-        n.visitChildren(v);
+        n = (ProcedureDecl) lang().visitChildren(n, v);
 
         // Add void return if necessary.
         LLVMBasicBlockRef block = LLVMGetInsertBlock(v.builder);

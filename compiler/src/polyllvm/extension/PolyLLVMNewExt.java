@@ -32,8 +32,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
     }
 
     public void translateWithSize(LLVMTranslator v, LLVMValueRef size) {
-        New n = (New) node();
-        n.visitChildren(v);
+        New n = (New) lang().visitChildren(node(), v);
         LLVMValueRef[] args = n.arguments().stream()
                 .map(v::getTranslation)
                 .toArray(LLVMValueRef[]::new);

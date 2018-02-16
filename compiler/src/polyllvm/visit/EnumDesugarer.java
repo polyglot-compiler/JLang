@@ -22,9 +22,9 @@ import java.util.stream.Collectors;
  */
 public class EnumDesugarer extends NodeVisitor {
 
-    protected JL5TypeSystem ts;
-    protected JL5NodeFactory nf;
-    private TypedNodeFactory tnf;
+    private final JL5TypeSystem ts;
+    private final JL5NodeFactory nf;
+    private final TypedNodeFactory tnf;
 
     public EnumDesugarer(JL5TypeSystem ts, JL5NodeFactory nf) {
         super(nf.lang());
@@ -122,8 +122,10 @@ public class EnumDesugarer extends NodeVisitor {
 
         // Add two new formals to the constructor declaration.
         List<Formal> formals = new ArrayList<>();
-        formals.add(tnf.Formal(pos, name, ts.String(), Flags.NONE));
-        formals.add(tnf.Formal(pos, ordinal, ts.Int(), Flags.NONE));
+        Formal strFormal = tnf.Formal(pos, name, ts.String(), Flags.NONE);
+        Formal intFormal = tnf.Formal(pos, ordinal, ts.Int(), Flags.NONE);
+        formals.add(strFormal);
+        formals.add(intFormal);
         formals.addAll(n.formals());
         n = (ConstructorDecl) n.formals(formals);
 
@@ -135,8 +137,8 @@ public class EnumDesugarer extends NodeVisitor {
         // Supply the constructor call with the new arguments.
         ConstructorCall.Kind kind = ConstructorCall.SUPER;
         List<Expr> args = new ArrayList<>();
-        args.add(tnf.Local(pos, name, ts.String(), Flags.NONE));
-        args.add(tnf.Local(pos, ordinal, ts.Int(), Flags.NONE));
+        args.add(tnf.Local(pos, strFormal));
+        args.add(tnf.Local(pos, intFormal));
 
         // If there is already a constructor call, subsume it.
         LinkedList<Stmt> oldStmts = new LinkedList<>(n.body().statements());
@@ -193,7 +195,7 @@ public class EnumDesugarer extends NodeVisitor {
                 .filter((fi) -> fi instanceof EnumInstance)
                 .map((fi) -> {
                     EnumInstance ei = (EnumInstance) fi;
-                    return tnf.Field(pos, ei.name(), ei.type(), enumDecl.type());
+                    return tnf.StaticField(pos, ei.name(), ei.type(), enumDecl.type());
                 })
                 .collect(Collectors.toList());
 
@@ -209,7 +211,7 @@ public class EnumDesugarer extends NodeVisitor {
         Position pos = enumDecl.position();
 
         // Find field.
-        Field f = tnf.Field(pos, "values", ts.arrayOf(enumDecl.type()), enumDecl.type());
+        Field f = tnf.StaticField(pos, "values", ts.arrayOf(enumDecl.type()), enumDecl.type());
 
         // Clone, cast, and return
         Call call = tnf.Call(pos, f, "clone", ts.Object(), ts.Object());
@@ -226,18 +228,19 @@ public class EnumDesugarer extends NodeVisitor {
     private MethodDecl buildValueOfMethod(ClassDecl enumDecl) {
         Position pos = enumDecl.position();
 
+        Formal formal = tnf.Formal(pos, "s", ts.String(), Flags.NONE);
+
         // Call Enum.valueOf(...).
         ClassLit clazz = tnf.ClassLit(pos, enumDecl.type());
-        Local arg = tnf.Local(pos, "s", ts.String(), Flags.NONE);
+        Local s = tnf.Local(pos, formal);
         ClassType container = enumDecl.type().superType().toClass();
-        Call call = tnf.StaticCall(pos, "valueOf", container, enumDecl.type(), clazz, arg);
+        Call call = tnf.StaticCall(pos, "valueOf", container, enumDecl.type(), clazz, s);
 
         // Cast and return.
         Cast cast = tnf.Cast(pos, enumDecl.type(), call);
         Return ret = nf.Return(pos, cast);
 
         // Declare method.
-        Formal formal = tnf.Formal(pos, "s", ts.String(), Flags.NONE);
         return tnf.MethodDecl(
                 pos, "valueOf", enumDecl.type(), enumDecl.type(), Collections.singletonList(formal),
                 nf.Block(pos, ret), Flags.NONE.Public().Static().Final());

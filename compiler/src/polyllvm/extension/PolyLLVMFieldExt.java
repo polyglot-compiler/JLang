@@ -1,6 +1,5 @@
 package polyllvm.extension;
 
-import polyglot.ast.Expr;
 import polyglot.ast.Field;
 import polyglot.ast.Node;
 import polyglot.ast.Receiver;
@@ -38,7 +37,7 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
             return v.utils.getGlobal(v.mod, mangledGlobalName, elemType);
         } else {
             LLVMValueRef x_target = v.getTranslation(target);
-            int offset = v.fieldInfo(((Expr) target).type().toReference(), fi);
+            int offset = v.fieldInfo(target.type().toReference(), fi);
             // Make sure the LLVM type of the receiver object is not opaque
             // before GEP occurs
             v.utils.toLL(target.type());

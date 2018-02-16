@@ -39,10 +39,18 @@ public class TypedNodeFactory {
                 .fieldInstance(fi);
     }
 
-    public Field Field(Position pos, String name, Type type, ClassType container) {
+    public Field StaticField(Position pos, String name, Type type, ReferenceType container) {
+        return Field(pos, nf.CanonicalTypeNode(pos, container), name, type, container);
+    }
+
+    public Field Field(
+            Position pos, Receiver receiver, String name, Type type, ReferenceType container) {
+        // We lie and tell the type system that fromClass == container since we want to bypass
+        // visibility checks. If container is not a class type, we instead use Object.
+        ClassType fromClass = container.isClass() ? container.toClass() : ts.Object();
         try {
-            FieldInstance fi = ts.findField(container, name, container, /*fromClient*/ true);
-            return (Field) nf.Field(pos, nf.CanonicalTypeNode(pos, container), nf.Id(pos, name))
+            FieldInstance fi = ts.findField(container, name, fromClass, /*fromClient*/ true);
+            return (Field) nf.Field(pos, receiver, nf.Id(pos, name))
                     .fieldInstance(fi)
                     .type(type);
         } catch (SemanticException e) {
@@ -55,15 +63,14 @@ public class TypedNodeFactory {
                 .localInstance(ts.localInstance(pos, flags, type, name));
     }
 
-    public LocalDecl LocalDecl(Position pos, String name, Type type, Flags flags) {
-        return nf.LocalDecl(pos, flags, nf.CanonicalTypeNode(pos, type), nf.Id(pos, name))
+    public LocalDecl LocalDecl(Position pos, String name, Type type, Expr init, Flags flags) {
+        return nf.LocalDecl(pos, flags, nf.CanonicalTypeNode(pos, type), nf.Id(pos, name), init)
                 .localInstance(ts.localInstance(pos, flags, type, name));
     }
 
-    public Local Local(Position pos, String name, Type type, Flags flags) {
-        return (Local) nf.Local(pos, nf.Id(pos, name))
-                .localInstance(ts.localInstance(pos, flags, type, name))
-                .type(type);
+    public Local Local(Position pos, VarDecl vd) {
+        LocalInstance li = vd.localInstance();
+        return (Local) nf.Local(pos, nf.Id(pos, li.name())).localInstance(li).type(li.type());
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

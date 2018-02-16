@@ -16,6 +16,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
+import static polyllvm.util.Constants.RUNTIME_ARRAY;
 
 /**
  * Helper methods for building common LLVM types and IR instructions. This
@@ -31,7 +32,7 @@ public class LLVMUtils {
 
     public ParsedClassType getArrayType() {
         try {
-            return (ParsedClassType) v.typeSystem().typeForName("polyllvm.runtime.Array");
+            return (ParsedClassType) v.typeSystem().typeForName(RUNTIME_ARRAY);
         } catch (SemanticException | ClassCastException e) {
             throw new InternalCompilerError("Could not load array type");
         }
@@ -341,9 +342,9 @@ public class LLVMUtils {
         else if (jt.isVoid())
             return LLVMVoidTypeInContext(v.context);
         else if (jt.isFloat())
-            return LLVMFloatType();
+            return LLVMFloatTypeInContext(v.context);
         else if (jt.isDouble())
-            return LLVMDoubleType();
+            return LLVMDoubleTypeInContext(v.context);
         else if (jt.isNull())
             return llvmBytePtr();
         else if (jt.isReference())

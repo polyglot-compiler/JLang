@@ -64,19 +64,24 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
                 else {
                     // Truncation.
                     v.addTranslation(n, LLVMBuildTrunc(v.builder, exprRef, castTypeRef, "cast"));
-
                 }
-            } else if (exprType.isLongOrLess()) {
+            }
+            else if (exprType.isLongOrLess()) {
                 // Integral primitive to floating point primitive.
                 // TODO: Should sitofp know about float vs. double?
                 v.addTranslation(n, LLVMBuildSIToFP(v.builder, exprRef, castTypeRef, "cast"));
-            } else if (exprType.isFloat() && castType.isDouble()) {
+            }
+            else if (exprType.isFloat() && castType.isDouble()) {
                 // Float to double.
                 v.addTranslation(n, LLVMBuildFPExt(v.builder, exprRef, castTypeRef, "cast"));
-
-            } else {
-                // TODO: Handle casts from double to float?
-                throw new InternalCompilerError("Unhandled cast: " + n);
+            }
+            else {
+                // TODO: Handle all casts specified by JLS.
+                if (exprType.isFloat() && castType.isInt()) {
+                    // Temporary case.
+                    v.addTranslation(n, LLVMBuildFPToSI(v.builder, exprRef, castTypeRef, "cast"));
+                }
+                else throw new InternalCompilerError("Unhandled cast: " + n);
             }
         }
         else if (!castType.isPrimitive() && !exprType.isPrimitive()) {
@@ -101,7 +106,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
                                 v.getCurrentClass().type(),
                                 /*fromClient*/ true
                         );
-                    } catch (SemanticException e){
+                    } catch (SemanticException e) {
                         throw new InternalCompilerError(e);
                     }
                     Expr classCastException = nf.New(pos, exceptionType, new ArrayList<>())
