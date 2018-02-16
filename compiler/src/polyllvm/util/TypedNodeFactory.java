@@ -1,9 +1,9 @@
 package polyllvm.util;
 
 import polyglot.ast.*;
-import polyglot.ext.jl5.types.JL5MethodInstance;
 import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.types.*;
+import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 
 import java.util.Arrays;
@@ -12,12 +12,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Helper methods for creating typed(!) nodes.
- * Handles generics.
+ * Helper methods for creating typed nodes. Handles generics.
  *
- * This is used in PolyLLVM, so we don't care about the following.
- * - exception types on method instances
- * - javadoc nodes
+ * This is used in PolyLLVM, so we don't care about (for example)
+ * exception types on method instances
  */
 public class TypedNodeFactory {
     protected final JL5TypeSystem ts;
@@ -33,16 +31,23 @@ public class TypedNodeFactory {
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     public FieldDecl FieldDecl(
-            Position pos, String name, Type type, ReferenceType container, Expr init, Flags flags) {
+            Position pos, String name, Type type, ParsedClassType container,
+            Expr init, Flags flags) {
+        FieldInstance fi = ts.fieldInstance(pos, container, flags, type, name);
+        container.addField(fi);
         return nf.FieldDecl(pos, flags, nf.CanonicalTypeNode(pos, type), nf.Id(pos, name), init)
-                .fieldInstance(ts.fieldInstance(pos, container, flags, type, name));
+                .fieldInstance(fi);
     }
 
-    public Field Field(
-            Position pos, String name, Type type, ReferenceType container, Flags flags) {
-        return (Field) nf.Field(pos, nf.CanonicalTypeNode(pos, container), nf.Id(pos, name))
-                .fieldInstance(ts.fieldInstance(pos, container, flags, type, name))
-                .type(type);
+    public Field Field(Position pos, String name, Type type, ClassType container) {
+        try {
+            FieldInstance fi = ts.findField(container, name, container, /*fromClient*/ true);
+            return (Field) nf.Field(pos, nf.CanonicalTypeNode(pos, container), nf.Id(pos, name))
+                    .fieldInstance(fi)
+                    .type(type);
+        } catch (SemanticException e) {
+            throw new InternalCompilerError(e);
+        }
     }
 
     public Formal Formal(Position pos, String name, Type type, Flags flags) {
@@ -66,47 +71,64 @@ public class TypedNodeFactory {
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     public MethodDecl MethodDecl(
-            Position pos, String name, ReferenceType container, Type returnType,
+            Position pos, String name, ParsedClassType container, Type returnType,
             List<Formal> formals, Block body, Flags flags) {
         List<Type> argTypes = formals.stream().map(Formal::declType).collect(Collectors.toList());
+        MethodInstance mi = ts.methodInstance(
+                pos, container, flags, returnType, name, argTypes,
+                Collections.emptyList());  // PolyLLVM does not care about exn types.
+        container.addMethod(mi);
         return nf.MethodDecl(
                 pos, flags, nf.CanonicalTypeNode(pos, returnType), nf.Id(pos, name), formals,
                 Collections.emptyList(), // PolyLLVM does not care about exn types.
                 body, /*javaDoc*/ null)
-                .methodInstance(ts.methodInstance(
-                        pos, container, flags, returnType, name, argTypes,
-                        Collections.emptyList())); // PolyLLVM does not care about exn types.
+                .methodInstance(mi);
     }
 
     public Call StaticCall(
-            Position pos, String name, ReferenceType container, Type returnType,
-            Flags flags, Expr... args) {
-        return Call(
-                pos, nf.CanonicalTypeNode(pos, container), name,
-                container, returnType, flags, args);
+            Position pos, String name, ClassType container, Type returnType, Expr... args) {
+        return Call(pos, nf.CanonicalTypeNode(pos, container), name, container, returnType, args);
     }
 
     public Call Call(
-            Position pos, Receiver receiver, String name, ReferenceType container, Type returnType,
-            Flags flags, Expr... args) {
+            Position pos, Receiver receiver, String name, ClassType container,
+            Type returnType, Expr... args) {
         List<Type> argTypes = Arrays.stream(args).map(Expr::type).collect(Collectors.toList());
-        JL5MethodInstance mi = (JL5MethodInstance) ts.methodInstance(
-                pos, container, flags, returnType, name, argTypes, Collections.emptyList());
-        mi = ts.methodCallValid(mi, mi.name(), argTypes, /*actualTypeArgs*/ null, returnType);
-        assert mi != null;
-        return (Call) nf.Call(pos, receiver, nf.Id(pos, name), args)
-                .methodInstance(mi)
-                .type(returnType);
+        try {
+            MethodInstance mi = ts.findMethod(
+                    container, name, argTypes, /*actualTypeArgs*/ null, container,
+                    returnType, /*fromClient*/ true);
+            return (Call) nf.Call(pos, receiver, nf.Id(pos, name), args)
+                    .methodInstance(mi)
+                    .type(returnType);
+        } catch (SemanticException e) {
+            throw new InternalCompilerError(e);
+        }
     }
 
     public ConstructorCall ConstructorCall(
-            Position pos, ConstructorCall.Kind kind, ClassType container,
-            Flags flags, Expr... args) {
+            Position pos, ConstructorCall.Kind kind, ClassType container, Expr... args) {
         List<Type> argTypes = Arrays.stream(args).map(Expr::type).collect(Collectors.toList());
-        return nf.ConstructorCall(pos, kind, Arrays.asList(args))
-                .constructorInstance(ts.constructorInstance(
-                        pos, container, flags, argTypes,
-                        Collections.emptyList())); // PolyLLVM does not care about exn types.
+        try {
+            ConstructorInstance ci = ts.findConstructor(
+                    container, argTypes, /*actualTypeArgs*/ null, container, /*fromClient*/ true);
+            return nf.ConstructorCall(pos, kind, Arrays.asList(args)).constructorInstance(ci);
+        } catch (SemanticException e) {
+            throw new InternalCompilerError(e);
+        }
+    }
+
+    public New New(Position pos, ClassType type, Expr... args) {
+        List<Type> argTypes = Arrays.stream(args).map(Expr::type).collect(Collectors.toList());
+        try {
+            ConstructorInstance ci = ts.findConstructor(
+                    type, argTypes, /*actualTypeArgs*/ null, type, /*fromClient*/ true);
+            return (New) nf.New(pos, nf.CanonicalTypeNode(pos, type), Arrays.asList(args))
+                    .constructorInstance(ci)
+                    .type(type);
+        } catch (SemanticException e) {
+            throw new InternalCompilerError(e);
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -117,7 +139,8 @@ public class TypedNodeFactory {
         return (Cast) nf.Cast(pos, nf.CanonicalTypeNode(pos, type), expr).type(type);
     }
 
-    public ClassLit ClassLit(Position pos, Type type) {
-        return (ClassLit) nf.ClassLit(pos, nf.CanonicalTypeNode(pos, type)).type(ts.Class());
+    public ClassLit ClassLit(Position pos, ReferenceType type) {
+        Type classType = ts.Class(pos, type);
+        return (ClassLit) nf.ClassLit(pos, nf.CanonicalTypeNode(pos, type)).type(classType);
     }
 }

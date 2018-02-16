@@ -42,7 +42,7 @@ public class ClassInitializerVisitor extends ContextVisitor {
         ConstructorDecl cd = (ConstructorDecl) n;
 
         // Check for a call to another constructor.
-        Block initCode = nf.Block(n.position(   ));
+        Block initCode = nf.Block(n.position());
         if (!cd.body().statements().isEmpty()) {
             // The JLS ensures that a constructor call will be the first statement
             // in a constructor body, if any.

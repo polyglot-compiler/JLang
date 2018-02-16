@@ -1,16 +1,19 @@
 package polyllvm.visit;
 
-import polyglot.ast.*;
+import polyglot.ast.Binary;
+import polyglot.ast.Expr;
+import polyglot.ast.Node;
+import polyglot.ast.NodeFactory;
+import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.frontend.Job;
+import polyglot.types.ClassType;
 import polyglot.types.SemanticException;
 import polyglot.types.Type;
-import polyglot.types.TypeSystem;
 import polyglot.util.Position;
 import polyglot.visit.ContextVisitor;
 import polyglot.visit.NodeVisitor;
 import polyllvm.util.Constants;
-
-import java.util.Collections;
+import polyllvm.util.TypedNodeFactory;
 
 /**
  * Makes string concatenation explicit and promotes the corresponding concatenation
@@ -18,8 +21,11 @@ import java.util.Collections;
  */
 public class StringConversionVisitor extends ContextVisitor {
 
-    public StringConversionVisitor(Job job, TypeSystem ts, NodeFactory nf) {
+    private final TypedNodeFactory tnf;
+
+    public StringConversionVisitor(Job job, JL5TypeSystem ts, NodeFactory nf) {
         super(job, ts, nf);
+        tnf = new TypedNodeFactory(ts, nf);
     }
 
     @Override
@@ -32,18 +38,10 @@ public class StringConversionVisitor extends ContextVisitor {
             Type lt = l.type(), rt = r.type();
             if (lt.typeEquals(ts.String()) || rt.typeEquals(ts.String())) {
                 if (binary.operator().equals(Binary.ADD)) {
+                    // Call String.concat(...)
                     l = convertToString(l);
                     r = convertToString(r);
-
-                    // Call String.concat(...)
-                    return nf.Call(pos, l, nf.Id(pos, "concat"), r)
-                            .methodInstance(ts.findMethod(
-                                    ts.String(),
-                                    "concat",
-                                    Collections.singletonList(ts.String()),
-                                    context().currentClass(),
-                                    /*fromClient*/ true))
-                            .type(ts.String());
+                    return tnf.Call(pos, l, "concat", ts.String(), ts.String(), r);
                 }
             }
         }
@@ -60,30 +58,15 @@ public class StringConversionVisitor extends ContextVisitor {
         }
         else if (t.isPrimitive()) {
             // Call String.valueOf(...)
-            return nf.Call(pos, nf.CanonicalTypeNode(pos, ts.String()), nf.Id(pos, "valueOf"), e)
-                    .methodInstance(ts.findMethod(
-                            ts.String(),
-                            "valueOf",
-                            Collections.singletonList(e.type()),
-                            context().currentClass(),
-                            /*fromClient*/ true))
-                    .type(ts.String());
+            return tnf.StaticCall(pos, "valueOf", ts.String(), ts.String(), e);
         }
         else {
             assert t.isReference();
 
             // Call toString(...) in the runtime library, which will have the right semantics
             // if e has a null value or if e.toString() has a null value.
-            Type helperType = ts.typeForName(Constants.RUNTIME_HELPER).toReference();
-            Receiver helperReceiver = nf.CanonicalTypeNode(pos, helperType);
-            return nf.Call(pos, helperReceiver, nf.Id(pos, "toString"), e)
-                    .methodInstance(ts.findMethod(
-                            helperType.toReference(),
-                            "toString",
-                            Collections.singletonList(ts.Object()),
-                            helperType.toClass(), // Lie to be able to access runtime helper.
-                            /*fromClient*/ true))
-                    .type(ts.String());
+            ClassType helperType = ts.typeForName(Constants.RUNTIME_HELPER).toClass();
+            return tnf.StaticCall(pos, "toString", helperType, ts.String(), e);
         }
     }
 }

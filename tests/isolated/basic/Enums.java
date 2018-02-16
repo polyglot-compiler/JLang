@@ -3,7 +3,7 @@ package basic;
 class Enums {
 
     enum Num {
-        ONE, TWO(2), THREE(3, "Hi");
+        ONE, TWO((short) 2), THREE(3, "Hi");
 
         public static int count;
         public final int val;
