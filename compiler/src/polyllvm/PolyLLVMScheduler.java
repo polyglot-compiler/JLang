@@ -58,15 +58,15 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // been moved by a desugar pass. That's ok; we trust our type information.
                 AutoBoxing(job),
                 RemoveExtendedFors(job), // TODO: Dubious implementation (esp. debug info).
-                new VisitorGoal(job, new EnumVisitor(ts, nf)),
+                new VisitorGoal(job, new EnumDesugarer(ts, nf)),
                 new VisitorGoal(job, new InnerClassRemover(job, ts, nf)), // TODO: Dubious implementation.
                 new VisitorGoal(job, new StringConversionVisitor(job, ts, nf)),
-                new VisitorGoal(job, new AssertionVisitor(job, ts, nf)),
-                new VisitorGoal(job, new ClassInitializerVisitor(job, ts, nf)),
+                new VisitorGoal(job, new AssertDesugarer(job, ts, nf)),
+                new VisitorGoal(job, new ClassInitializerDesugarer(job, ts, nf)),
 
                 // The explicit cast visitor should generally be run last, since the other
                 // visitors will not add explicit casts when creating nodes.
-                new VisitorGoal(job, new MakeCastsExplicitVisitor(job, ts, nf))
+                new VisitorGoal(job, new ExplicitCastsVisitor(job, ts, nf))
         };
         Goal prep = new MultiGoal(job, goals);
         try {
