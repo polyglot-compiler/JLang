@@ -304,10 +304,9 @@ public class LLVMUtils {
      * Return a pointer to the first element in a Java array.
      */
     public LLVMValueRef buildJavaArrayBase(LLVMValueRef arr, Type elemType) {
-        LLVMValueRef baseRaw = v.utils.buildStructGEP(arr, 0,
-                Constants.ARR_ELEM_OFFSET);
+        LLVMValueRef baseRaw = v.utils.buildStructGEP(arr, 0, Constants.ARR_ELEM_OFFSET);
         LLVMTypeRef ptrType = v.utils.ptrTypeRef(v.utils.toLL(elemType, false));
-        return LLVMBuildCast(v.builder, LLVMBitCast, baseRaw, ptrType, "cast");
+        return LLVMBuildBitCast(v.builder, baseRaw, ptrType, "cast");
     }
 
     /**

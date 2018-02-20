@@ -2,7 +2,6 @@ package polyllvm.extension;
 
 import polyglot.ast.*;
 import polyglot.types.Type;
-import polyglot.util.CollectionUtil;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
@@ -10,12 +9,11 @@ import polyllvm.visit.LLVMTranslator;
 
 import java.util.List;
 
-import static org.bytedeco.javacpp.LLVM.*;
+import static org.bytedeco.javacpp.LLVM.LLVMBuildStore;
+import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
 
 public class PolyLLVMArrayInitExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
-
-
 
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
@@ -34,12 +32,10 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
             elemType = v.typeSystem().Null();
         }
 
-        Expr one = nf.IntLit(n.position(), IntLit.INT, elements.size())
-                         .type(v.typeSystem().Int());
-        one.visit(v);
-        List<Expr> dims = CollectionUtil.list(one);
-
-        New newArray = PolyLLVMNewArrayExt.translateNewArray(v, nf, dims, elemType, n.position());
+        Expr len = (Expr) nf.IntLit(n.position(), IntLit.INT, elements.size())
+                .type(v.typeSystem().Int())
+                .visit(v);
+        New newArray = PolyLLVMNewArrayExt.translateNewArray(v, nf, len, elemType, n.position());
         LLVMValueRef array = v.getTranslation(newArray);
 
         if (!elements.isEmpty()) {

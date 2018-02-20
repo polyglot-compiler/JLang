@@ -12,6 +12,7 @@ public class Constants {
     public static final String RUNTIME_PACKAGE = "polyllvm.runtime";
     public static final String RUNTIME_HELPER = RUNTIME_PACKAGE + ".Helper";
     public static final String RUNTIME_ARRAY = RUNTIME_PACKAGE + ".Array";
+    public static final String RUNTIME_ARRAY_TYPE = RUNTIME_ARRAY + ".Type";
 
     public static final String CALLOC = "GC_malloc";
     public static final String ENTRY_TRAMPOLINE =

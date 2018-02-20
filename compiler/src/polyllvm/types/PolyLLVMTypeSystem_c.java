@@ -5,10 +5,12 @@ import polyglot.ext.jl5.types.JL5Subst;
 import polyglot.ext.jl5.types.JL5TypeSystem_c;
 import polyglot.ext.jl5.types.TypeVariable;
 import polyglot.ext.jl7.types.JL7TypeSystem_c;
-import polyglot.types.ReferenceType;
-import polyglot.types.Type;
+import polyglot.types.*;
+import polyglot.util.InternalCompilerError;
 
 import java.util.*;
+
+import static polyllvm.util.Constants.RUNTIME_ARRAY;
 
 public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTypeSystem {
 

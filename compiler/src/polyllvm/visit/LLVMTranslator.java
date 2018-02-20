@@ -155,9 +155,9 @@ public class LLVMTranslator extends NodeVisitor {
      */
     public void addTranslation(Node n, Object lln) {
         // TODO
-//        if (translations.containsKey(n))
-//            throw new InternalCompilerError("Already translated " + n.getClass() + ": " + n + "\n" +
-//                    "This may indicate an AST node appearing twice in the AST without copy()");
+        // if (translations.containsKey(n))
+        //    throw new InternalCompilerError("Already translated " + n.getClass() + ": " + n + "\n" +
+        //            "This may indicate an AST node appearing twice in the AST without copy()");
         translations.put(n, lln);
     }
 
