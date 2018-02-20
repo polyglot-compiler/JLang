@@ -154,10 +154,10 @@ public class LLVMTranslator extends NodeVisitor {
      * Add the translation from n -> lln
      */
     public void addTranslation(Node n, Object lln) {
-        // TODO
-        // if (translations.containsKey(n))
-        //    throw new InternalCompilerError("Already translated " + n.getClass() + ": " + n + "\n" +
-        //            "This may indicate an AST node appearing twice in the AST without copy()");
+        if (translations.containsKey(n))
+            throw new InternalCompilerError("Already translated " + n.getClass() + ": " + n + "\n" +
+                    "This may indicate an AST node appearing twice in the AST without copy(),\n" +
+                    "or a node visited twice during translation.");
         translations.put(n, lln);
     }
 

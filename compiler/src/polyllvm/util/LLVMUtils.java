@@ -121,8 +121,8 @@ public class LLVMUtils {
         return ptrTypeRef(LLVMInt8TypeInContext(v.context));
     }
 
-    public LLVMTypeRef intType(int numBytes) {
-        return LLVMIntTypeInContext(v.context, numBytes);
+    public LLVMTypeRef intType(int numBits) {
+        return LLVMIntTypeInContext(v.context, numBits);
     }
 
     public LLVMTypeRef ptrTypeRef(LLVMTypeRef elemType) {

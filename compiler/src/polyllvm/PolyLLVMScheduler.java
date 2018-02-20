@@ -68,11 +68,6 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // The explicit cast visitor should generally be run last, since the other
                 // visitors will not add explicit casts when creating nodes.
                 new VisitorGoal(job, new ExplicitCastsVisitor(job, ts, nf)),
-
-                // The desugar passes above may have introduced node aliases in the AST.
-                // Instead of carefully place .copy() calls in the desugar passes, we remove
-                // all node aliases afterward.
-                new VisitorGoal(job, new RemoveNodeAliases())
         };
         Goal prep = new MultiGoal(job, goals);
         try {

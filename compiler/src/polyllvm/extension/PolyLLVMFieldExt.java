@@ -19,7 +19,7 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
     public Node overrideTranslateLLVM(LLVMTranslator v) {
         Field n = (Field) node();
         LLVMValueRef ptr = translateAsLValue(v); // Emits debug info.
-        LLVMValueRef load = LLVMBuildLoad(v.builder, ptr, "load_field");
+        LLVMValueRef load = LLVMBuildLoad(v.builder, ptr, "load." + n.name());
         v.addTranslation(n, load);
         return super.leaveTranslateLLVM(v);
     }
@@ -38,11 +38,10 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
         } else {
             LLVMValueRef x_target = v.getTranslation(target);
             int offset = v.fieldInfo(target.type().toReference(), fi);
-            // Make sure the LLVM type of the receiver object is not opaque
-            // before GEP occurs
+            // Make sure the LLVM type of the receiver object is not opaque before GEP occurs.
             v.utils.toLL(target.type());
             LLVMValueRef val = v.utils.buildStructGEP(x_target, 0, offset);
-            // bitcast needed due to potential mismatch introduced by erasure
+            // Bitcast needed due to potential mismatch introduced by erasure.
             return v.utils.toBitcastL(val, n.type());
         }
     }

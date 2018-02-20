@@ -3,6 +3,7 @@ package polyllvm.extension;
 import polyglot.ast.Catch;
 import polyglot.ast.Node;
 import polyglot.ast.Try;
+import polyglot.visit.DeepCopy;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
@@ -242,7 +243,8 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                 LLVMBasicBlockRef dest = entry.getKey();
                 LLVMBasicBlockRef head = entry.getValue();
                 LLVMPositionBuilderAtEnd(v.builder, head);
-                n.visitChild(n.finallyBlock(), v);
+                Node finallyBlockDeepCopy = n.visitChild(n.finallyBlock(), new DeepCopy(lang()));
+                n.visitChild(finallyBlockDeepCopy, v);
                 v.utils.branchUnlessTerminated(dest);
             }
         }

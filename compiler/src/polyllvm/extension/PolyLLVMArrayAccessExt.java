@@ -1,9 +1,9 @@
 package polyllvm.extension;
 
-import polyglot.ast.*;
+import polyglot.ast.ArrayAccess;
+import polyglot.ast.Node;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.Constants;
@@ -31,9 +31,7 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
     public LLVMValueRef translateAsLValue(LLVMTranslator v) {
         // Return a pointer to the appropriate element in the array, and emit a bounds check.
         ArrayAccess n = (ArrayAccess) node();
-        NodeFactory nf = v.nodeFactory();
         TypeSystem ts = v.typeSystem();
-        Position pos = n.position();
 
         n.array().visit(v);
         n.index().visit(v);
@@ -65,13 +63,9 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
 
                 // We are careful here to reuse the translation of n.index() when throwing the
                 // exception, since if we re-translated n.index() we would duplicate side effects.
-                Expr newInstance = nf.New(
-                        pos, nf.CanonicalTypeNode(pos, exceptionType), Collections.emptyList())
-                        .constructorInstance(constructor)
-                        .type(exceptionType);
-                PolyLLVMNewExt newExt = (PolyLLVMNewExt) PolyLLVMExt.ext(newInstance);
-                newExt.translateWithArgs(v, new LLVMValueRef[] {offset});
-                PolyLLVMThrowExt.buildThrow(v, v.getTranslation(newInstance));
+                LLVMValueRef newInstance = PolyLLVMNewExt.translateWithArgs(
+                        v, new LLVMValueRef[] {offset}, constructor);
+                PolyLLVMThrowExt.buildThrow(v, newInstance);
             } catch (SemanticException e) {
                 throw new InternalCompilerError(e);
             }

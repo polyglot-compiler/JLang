@@ -16,7 +16,11 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
-    private LLVMValueRef mallocSize(LLVMTranslator v, ConstructorInstance ci) {
+    /**
+     * Returns the default size needed to instantiate a given class.
+     * Only array instances will deviate from this default.
+     */
+    private static LLVMValueRef mallocSize(LLVMTranslator v, ConstructorInstance ci) {
         // TODO: This assumes all fields require one word.
         int bytes = v.utils.llvmPtrSize()
                 * (v.objFields(ci.container()).size() + /*header*/ Constants.OBJECT_FIELDS_OFFSET);
@@ -24,32 +28,26 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
     }
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
         New n = (New) node();
         ConstructorInstance ci = n.constructorInstance();
-        translateWithSize(v, mallocSize(v, ci));
-        return super.leaveTranslateLLVM(v);
-    }
-
-    public void translateWithSize(LLVMTranslator v, LLVMValueRef size) {
-        New n = (New) lang().visitChildren(node(), v);
         LLVMValueRef[] args = n.arguments().stream()
                 .map(v::getTranslation)
                 .toArray(LLVMValueRef[]::new);
-        translateWithArgsAndSize(v, args, size);
+        v.addTranslation(n, translateWithArgsAndSize(v, args, mallocSize(v, ci), ci));
+        return super.leaveTranslateLLVM(v);
     }
 
-    public void translateWithArgs(LLVMTranslator v, LLVMValueRef[] args) {
-        New n = (New) node();
-        ConstructorInstance ci = n.constructorInstance();
-        translateWithArgsAndSize(v, args, mallocSize(v, ci));
+    /** Translate with specified arguments and the default size. */
+    public static LLVMValueRef translateWithArgs(
+            LLVMTranslator v, LLVMValueRef[] args, ConstructorInstance ci) {
+        return translateWithArgsAndSize(v, args, mallocSize(v, ci), ci);
     }
 
-    public void translateWithArgsAndSize(LLVMTranslator v, LLVMValueRef[] args, LLVMValueRef size) {
-        New n = (New) node();
-
-        ConstructorInstance substC = n.constructorInstance();
-        ReferenceType clazz = substC.container();
+    /** Translate with specified arguments and size. */
+    public static LLVMValueRef translateWithArgsAndSize(
+            LLVMTranslator v, LLVMValueRef[] args, LLVMValueRef size, ConstructorInstance ci) {
+        ReferenceType clazz = ci.container();
 
         // Allocate space for the new object.
         LLVMValueRef calloc = LLVMGetNamedFunction(v.mod, Constants.CALLOC);
@@ -64,17 +62,17 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         LLVMBuildStore(v.builder, dvGlobal, gep);
 
         // Call the constructor function
-        String mangledFuncName = v.mangler.mangleProcName(substC);
+        String mangledFuncName = v.mangler.mangleProcName(ci);
 
         LLVMTypeRef func_ty = v.utils.toLLFuncTy(
-                clazz, v.typeSystem().Void(), v.utils.formalsErasureLL(substC));
+                clazz, v.typeSystem().Void(), v.utils.formalsErasureLL(ci));
         LLVMValueRef func = v.utils.getFunction(v.mod, mangledFuncName, func_ty);
 
         // Bitcast the function so that the formal types are the types that
         // the arguments were cast to by ExplicitCastsVisitor. It is
         // needed due to potential mismatch between the types caused by erasure.
         LLVMTypeRef funcTyCast = v.utils.toLLFuncTy(
-                clazz, v.typeSystem().Void(), substC.formalTypes());
+                clazz, v.typeSystem().Void(), ci.formalTypes());
         func = LLVMBuildBitCast(v.builder, func, v.utils.ptrTypeRef(funcTyCast), "cast");
 
         LLVMValueRef[] llvmArgs = Stream.concat(
@@ -82,6 +80,6 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
                 .toArray(LLVMValueRef[]::new);
         v.utils.buildProcCall(func, llvmArgs);
 
-        v.addTranslation(n, objCast);
+        return objCast;
     }
 }

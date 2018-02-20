@@ -118,10 +118,10 @@ public class EnhancedForDesugarer extends NodeVisitor {
 
         // Condition: it.hasNext()
         Local it = tnf.Local(pos, itDecl);
-        Call hasNextCall = tnf.Call(pos, it, "hasNext", itT, ts.Boolean());
+        Call hasNextCall = tnf.Call(pos, copy(it), "hasNext", itT, ts.Boolean());
 
         // Loop.
-        Call nextCall = tnf.Call(pos, it, "next", itT, castT);
+        Call nextCall = tnf.Call(pos, copy(it), "next", itT, castT);
         Cast cast = tnf.Cast(pos, castT, nextCall);
         LocalDecl next = ef.decl().init(cast);
         Block body = nf.Block(pos, next, ef.body());
@@ -148,15 +148,15 @@ public class EnhancedForDesugarer extends NodeVisitor {
         List<ForInit> forInit = Collections.singletonList(iDecl);
 
         // Condition: i < arr.length
-        Field len = tnf.Field(pos, a, "length", ts.Int(), exprT);
-        Expr cond = nf.Binary(pos, it, Binary.LT, len).type(ts.Boolean());
+        Field len = tnf.Field(pos, copy(a), "length", ts.Int(), exprT);
+        Expr cond = nf.Binary(pos, copy(it), Binary.LT, len).type(ts.Boolean());
 
         // Update: i++
-        Unary inc = (Unary) nf.Unary(pos, it, Unary.POST_INC).type(ts.Int());
+        Unary inc = (Unary) nf.Unary(pos, copy(it), Unary.POST_INC).type(ts.Int());
         List<ForUpdate> update = Collections.singletonList(nf.Eval(pos, inc));
 
         // Loop.
-        LocalDecl next = n.decl().init(nf.ArrayAccess(pos, a, it).type(iteratedT));
+        LocalDecl next = n.decl().init(nf.ArrayAccess(pos, copy(a), copy(it)).type(iteratedT));
         Stmt loop = nf.For(pos, forInit, cond, update, nf.Block(pos, next, n.body()));
         Stmt labeled = addLabels(pos, loop, labels);
 
@@ -167,5 +167,11 @@ public class EnhancedForDesugarer extends NodeVisitor {
         for (int i = labels.size() - 1; i >= 0; --i)
             stmt = nf.Labeled(pos, nf.Id(pos, labels.get(i)), stmt);
         return stmt;
+    }
+
+    /** Helper method to help prevent node aliasing. */
+    @SuppressWarnings("unchecked")
+    private static <T> T copy(Node n) {
+        return (T) n.copy();
     }
 }

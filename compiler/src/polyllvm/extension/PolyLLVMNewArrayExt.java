@@ -1,12 +1,11 @@
 package polyllvm.extension;
 
-import polyglot.ast.*;
+import polyglot.ast.NewArray;
+import polyglot.ast.Node;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
-import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
@@ -21,27 +20,24 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         NewArray n = (NewArray) node();
-        PolyLLVMNodeFactory nf = v.nodeFactory();
 
+        LLVMValueRef res;
         if (n.init() != null) {
-            v.addTranslation(n, v.getTranslation(n.init()));
+            // Steal the translation of the initializer.
+            res = v.getTranslation(n.init());
         }
         else {
             if (n.dims().size() > 1)
                 throw new InternalCompilerError("Multidimensional arrays should be desugared");
-            Expr len = n.dims().get(0);
-            New newArray = translateNewArray(v, nf, len, n.type().toArray().base(), n.position());
-            v.addTranslation(n, v.getTranslation(newArray));
+            LLVMValueRef len = v.getTranslation(n.dims().get(0));
+            res = translateNewArray(v, len, n.type().toArray().base());
         }
 
+        v.addTranslation(n, res);
         return super.leaveTranslateLLVM(v);
     }
 
-    public static New translateNewArray(LLVMTranslator v,
-                                        PolyLLVMNodeFactory nf,
-                                        Expr len,
-                                        Type baseType,
-                                        Position pos) {
+    public static LLVMValueRef translateNewArray(LLVMTranslator v, LLVMValueRef len, Type elemT) {
         ClassType arrType = v.utils.getArrayType();
         TypeSystem ts = v.typeSystem();
         ConstructorInstance arrayConstructor;
@@ -51,23 +47,16 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         } catch (SemanticException e) {
             throw new InternalCompilerError(e);
         }
-        int sizeOfType = v.utils.sizeOfType(baseType);
+        int sizeOfType = v.utils.sizeOfType(elemT);
 
-        CanonicalTypeNode newTypeNode = nf.CanonicalTypeNode(pos, arrType);
-        New newArray = (New) nf.New(pos, newTypeNode, Collections.singletonList(len))
-                           .constructorInstance(arrayConstructor)
-                           .type(arrType);
-
-        LLVMValueRef arrLen =  v.getTranslation(len);
         LLVMTypeRef i64 = LLVMInt64TypeInContext(v.context);
-        LLVMValueRef arrLen64 = LLVMBuildSExt(v.builder, arrLen, i64, "arr_len");
+        LLVMValueRef arrLen64 = LLVMBuildSExt(v.builder, len, i64, "arr.len");
         LLVMValueRef elemSize = LLVMConstInt(i64, sizeOfType, /*sign-extend*/ 0);
         LLVMValueRef contentSize = LLVMBuildMul(v.builder, elemSize, arrLen64, "mul");
         LLVMValueRef headerSize = LLVMConstInt(i64, ARR_ELEM_OFFSET * v.utils.llvmPtrSize(), /*sign-extend*/ 0);
         LLVMValueRef size = LLVMBuildAdd(v.builder, headerSize, contentSize, "size");
 
-        PolyLLVMNewExt ext = (PolyLLVMNewExt) PolyLLVMExt.ext(newArray);
-        ext.translateWithSize(v, size);
-        return newArray;
+        LLVMValueRef[] arg = {len};
+        return PolyLLVMNewExt.translateWithArgsAndSize(v, arg, size, arrayConstructor);
     }
 }
