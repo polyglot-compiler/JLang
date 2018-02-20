@@ -3,16 +3,18 @@ package polyllvm.visit;
 import polyglot.ast.*;
 import polyglot.ext.jl5.ast.EnumConstant;
 import polyglot.ext.jl5.ast.EnumConstantDecl;
-import polyglot.ext.jl5.ast.JL5NodeFactory;
 import polyglot.ext.jl5.types.EnumInstance;
 import polyglot.ext.jl5.types.JL5Flags;
-import polyglot.ext.jl5.types.JL5TypeSystem;
+import polyglot.frontend.Job;
 import polyglot.types.*;
 import polyglot.util.Position;
-import polyglot.visit.NodeVisitor;
-import polyllvm.util.TypedNodeFactory;
+import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.types.PolyLLVMTypeSystem;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -20,21 +22,14 @@ import java.util.stream.Collectors;
  * {@link polyglot.ext.jl5.visit.RemoveEnums}, but heavily modified for PolyLLVM.
  * Preserves typing.
  */
-public class DesugarEnums extends NodeVisitor {
+public class DesugarEnums extends DesugarVisitor {
 
-    private final JL5TypeSystem ts;
-    private final JL5NodeFactory nf;
-    private final TypedNodeFactory tnf;
-
-    public DesugarEnums(JL5TypeSystem ts, JL5NodeFactory nf) {
-        super(nf.lang());
-        this.ts = ts;
-        this.nf = nf;
-        this.tnf = new TypedNodeFactory(ts, nf);
+    public DesugarEnums(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
+        super(job, ts, nf);
     }
 
     @Override
-    public Node leave(Node parent, Node old, Node n, NodeVisitor v) {
+    public Node leaveDesugar(Node parent, Node n) {
 
         // Enum declaration.
         if (n instanceof ClassDecl && JL5Flags.isEnum(((ClassDecl) n).flags())) {

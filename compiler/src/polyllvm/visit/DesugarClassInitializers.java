@@ -2,12 +2,11 @@ package polyllvm.visit;
 
 import polyglot.ast.*;
 import polyglot.frontend.Job;
-import polyglot.types.Context;
 import polyglot.types.SemanticException;
-import polyglot.types.TypeSystem;
 import polyglot.util.Position;
-import polyglot.visit.ContextVisitor;
 import polyglot.visit.NodeVisitor;
+import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.types.PolyLLVMTypeSystem;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -17,28 +16,27 @@ import java.util.List;
  * Builds class initializers at the top of each constructor.
  * Preserves typing.
  */
-public class DesugarClassInitializers extends ContextVisitor {
+public class DesugarClassInitializers extends DesugarVisitor {
     private Deque<ClassDecl> classes = new ArrayDeque<>();
 
-    public DesugarClassInitializers(Job job, TypeSystem ts, NodeFactory nf) {
+    public DesugarClassInitializers(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, ts, nf);
     }
 
     @Override
-    protected NodeVisitor enterCall(Node n) throws SemanticException {
+    public NodeVisitor enterDesugar(Node n) throws SemanticException {
         if (n instanceof ClassDecl)
             classes.addLast((ClassDecl) n);
-        return super.enterCall(n);
+        return super.enterDesugar(n);
     }
 
     @Override
-    protected Node leaveCall(Node n) throws SemanticException {
+    public Node leaveDesugar(Node n) throws SemanticException {
         if (n instanceof ClassDecl)
             classes.removeLast();
         if (!(n instanceof ConstructorDecl))
-            return super.leaveCall(n);
+            return super.leaveDesugar(n);
 
-        Context c = context();
         ConstructorDecl cd = (ConstructorDecl) n;
 
         // Check for a call to another constructor.
@@ -52,7 +50,7 @@ public class DesugarClassInitializers extends ContextVisitor {
                 if (call.kind().equals(ConstructorCall.THIS)) {
                     // Avoid duplicating initializer side-effects; the other
                     // constructor will handle initialization.
-                    return super.leaveCall(n);
+                    return super.leaveDesugar(n);
                 } else if (call.kind().equals(ConstructorCall.SUPER)) {
                     // Initialization code should go after the call to super.
                     initCode = initCode.append(firstStmt);
@@ -73,7 +71,7 @@ public class DesugarClassInitializers extends ContextVisitor {
                 continue;
             Id id = nf.Id(pos, fd.name());
             Special receiver = (Special) nf.Special(pos, Special.THIS)
-                    .type(c.currentClass());
+                    .type(classes.getLast().type());
             Field field = (Field) nf.Field(pos, receiver, id)
                     .fieldInstance(fd.fieldInstance())
                     .type(fd.declType());

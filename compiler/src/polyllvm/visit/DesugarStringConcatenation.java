@@ -3,33 +3,27 @@ package polyllvm.visit;
 import polyglot.ast.Binary;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
-import polyglot.ast.NodeFactory;
-import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.frontend.Job;
 import polyglot.types.ClassType;
 import polyglot.types.SemanticException;
 import polyglot.types.Type;
 import polyglot.util.Position;
-import polyglot.visit.ContextVisitor;
-import polyglot.visit.NodeVisitor;
+import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.Constants;
-import polyllvm.util.TypedNodeFactory;
 
 /**
  * Makes string concatenation explicit and promotes the corresponding concatenation
  * arguments to strings. Preserves typing.
  */
-public class DesugarStringConcatenation extends ContextVisitor {
+public class DesugarStringConcatenation extends DesugarVisitor {
 
-    private final TypedNodeFactory tnf;
-
-    public DesugarStringConcatenation(Job job, JL5TypeSystem ts, NodeFactory nf) {
+    public DesugarStringConcatenation(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, ts, nf);
-        tnf = new TypedNodeFactory(ts, nf);
     }
 
     @Override
-    public Node leaveCall(Node old, Node n, NodeVisitor v) throws SemanticException {
+    public Node leaveDesugar(Node n) throws SemanticException {
         Position pos = n.position();
         if (n instanceof Binary) {
             // String conversions due to concatenation.
@@ -45,7 +39,7 @@ public class DesugarStringConcatenation extends ContextVisitor {
                 }
             }
         }
-        return super.leave(old, n, v);
+        return super.leaveDesugar(n);
     }
 
     private Expr convertToString(Expr e) throws SemanticException {

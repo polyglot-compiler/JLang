@@ -3,33 +3,28 @@ package polyllvm.visit;
 import polyglot.ast.Assert;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
-import polyglot.ast.NodeFactory;
-import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.frontend.Job;
 import polyglot.main.Options;
 import polyglot.types.ClassType;
 import polyglot.types.SemanticException;
 import polyglot.util.Position;
-import polyglot.visit.ContextVisitor;
+import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.Constants;
-import polyllvm.util.TypedNodeFactory;
 
 /**
  * Replaces assert statements with a check and a throw.
  * Preserves typing.
  */
-public class DesugarAsserts extends ContextVisitor {
+public class DesugarAsserts extends DesugarVisitor {
 
-    private final TypedNodeFactory tnf;
-
-    public DesugarAsserts(Job job, JL5TypeSystem ts, NodeFactory nf) {
+    public DesugarAsserts(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, ts, nf);
-        tnf = new TypedNodeFactory(ts, nf);
     }
 
-    protected Node leaveCall(Node n) throws SemanticException {
+    public Node leaveDesugar(Node n) throws SemanticException {
         if (!(n instanceof Assert))
-            return super.leaveCall(n);
+            return super.leaveDesugar(n);
 
         if (!Options.global.assertions) {
             // Assertions are disabled.

@@ -4,13 +4,12 @@ import polyglot.ast.*;
 import polyglot.ext.jl5.ast.ExtendedFor;
 import polyglot.ext.jl5.types.JL5ParsedClassType;
 import polyglot.ext.jl5.types.JL5SubstClassType;
-import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.ext.jl5.types.TypeVariable;
+import polyglot.frontend.Job;
 import polyglot.types.*;
-import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
-import polyglot.visit.NodeVisitor;
-import polyllvm.util.TypedNodeFactory;
+import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.types.PolyLLVMTypeSystem;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,17 +20,11 @@ import java.util.List;
  * {@link polyglot.ext.jl5.visit.RemoveExtendedFors}, but heavily modified for PolyLLVM
  * (e.g., in order to preserve debug information).
  */
-public class DesugarEnhancedFors extends NodeVisitor {
-    private final JL5TypeSystem ts;
-    private final NodeFactory nf;
-    private final TypedNodeFactory tnf;
+public class DesugarEnhancedFors extends DesugarVisitor {
     private int varCount = 0;
 
-    public DesugarEnhancedFors(JL5TypeSystem ts, NodeFactory nf) {
-        super(nf.lang());
-        this.ts = ts;
-        this.nf = nf;
-        tnf = new TypedNodeFactory(ts, nf);
+    public DesugarEnhancedFors(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
+        super(job, ts, nf);
     }
 
     private String freshName(String desc) {
@@ -40,11 +33,11 @@ public class DesugarEnhancedFors extends NodeVisitor {
     }
 
     @Override
-    public Node leave(Node parent, Node old, Node n, NodeVisitor v) {
+    public Node leaveDesugar(Node parent, Node n) throws SemanticException {
 
         // We must collect labels before translating, so wait until we're at the topmost label.
         if (parent instanceof Labeled)
-            return super.leave(parent, old, n, v);
+            return super.leaveDesugar(parent, n);
 
         // Collect and remove labels (there may be several chained together).
         List<String> labels = new ArrayList<>();
@@ -57,19 +50,15 @@ public class DesugarEnhancedFors extends NodeVisitor {
 
         if (unlabeled instanceof ExtendedFor) {
             ExtendedFor ef = (ExtendedFor) unlabeled;
-            try {
-                if (ef.expr().type().isArray()) {
-                    return translateForArray(ef, labels);
-                } else {
-                    Stmt loop = translateForIterable(ef);
-                    return addLabels(loop.position(), loop, labels);
-                }
-            } catch (SemanticException e) {
-                throw new InternalCompilerError(e);
+            if (ef.expr().type().isArray()) {
+                return translateForArray(ef, labels);
+            } else {
+                Stmt loop = translateForIterable(ef);
+                return addLabels(loop.position(), loop, labels);
             }
         }
 
-        return super.leave(parent, old, n, v);
+        return super.leaveDesugar(parent, n);
     }
 
     // L1,...,Ln: for (T x: e) { ... }

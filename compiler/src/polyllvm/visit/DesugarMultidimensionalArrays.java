@@ -1,15 +1,15 @@
 package polyllvm.visit;
 
 import polyglot.ast.*;
+import polyglot.frontend.Job;
 import polyglot.types.ClassType;
 import polyglot.types.ReferenceType;
 import polyglot.types.SemanticException;
 import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
-import polyglot.visit.NodeVisitor;
+import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
-import polyllvm.util.TypedNodeFactory;
 
 import static polyllvm.util.Constants.RUNTIME_ARRAY;
 import static polyllvm.util.Constants.RUNTIME_ARRAY_TYPE;
@@ -18,28 +18,17 @@ import static polyllvm.util.Constants.RUNTIME_ARRAY_TYPE;
  * Desugars multidimensional arrays into a runtime call, which in turn builds the multidimensional
  * array by recursively building and initializing single dimensional arrays.
  */
-public class DesugarMultidimensionalArrays extends NodeVisitor {
-    private final PolyLLVMTypeSystem ts;
-    private final NodeFactory nf;
-    private final TypedNodeFactory tnf;
+public class DesugarMultidimensionalArrays extends DesugarVisitor {
 
-    public DesugarMultidimensionalArrays(PolyLLVMTypeSystem ts, NodeFactory nf) {
-        super(nf.lang());
-        this.ts = ts;
-        this.nf = nf;
-        tnf = new TypedNodeFactory(ts, nf);
+    public DesugarMultidimensionalArrays(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
+        super(job, ts, nf);
     }
 
     @Override
-    public Node leave(Node old, Node n, NodeVisitor v) {
-        if (n instanceof NewArray) {
-            try {
-                return translateMultidimensionalArray((NewArray) n);
-            } catch (SemanticException e) {
-                throw new InternalCompilerError(e);
-            }
-        }
-        return super.leave(old, n, v);
+    public Node leaveDesugar(Node n) throws SemanticException {
+        if (n instanceof NewArray)
+            return translateMultidimensionalArray((NewArray) n);
+        return super.leaveDesugar(n);
     }
 
     private Expr translateMultidimensionalArray(NewArray na) throws SemanticException {
