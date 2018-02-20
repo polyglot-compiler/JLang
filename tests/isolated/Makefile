@@ -40,7 +40,7 @@ output: $(OUTPUT)
 
 $(CLASSES): $(SRCS)
 	@echo "Compiling $(words $?) tests with javac"
-	@javac -cp $(RUNTIME)/classes $?
+	@javac -source 7 -cp $(RUNTIME)/classes $?
 	@touch $(CLASSES)
 
 %.sol: %.class
