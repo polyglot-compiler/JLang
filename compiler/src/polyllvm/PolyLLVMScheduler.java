@@ -63,6 +63,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 new VisitorGoal(job, new DesugarAsserts(job, ts, nf)),
                 new VisitorGoal(job, new DesugarClassInitializers(job, ts, nf)),
                 new VisitorGoal(job, new DesugarMultidimensionalArrays(job, ts, nf)),
+                new VisitorGoal(job, new DesugarVarargs(job, ts, nf)),
                 AutoBoxing(job),
 
                 // The explicit cast visitor should generally be run last, since the other
