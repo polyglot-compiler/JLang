@@ -78,4 +78,4 @@ clean: $(addprefix clean-, $(EXT))
 clean-%:
 	find . -name "*.$*" -delete
 clean-dSYM:
-	rm -rf *.dSYM basic/*.dSYM unit/*.dSYM
+	rm -rf *.dSYM
