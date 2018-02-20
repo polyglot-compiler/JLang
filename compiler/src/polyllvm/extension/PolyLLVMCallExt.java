@@ -77,7 +77,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
             func_ptr = LLVMBuildLoad(v.builder, func_ptr_ptr,
                     "load_method_ptr");
             // Bitcast the function so that the formal types are the types that
-            // the arguments were cast to by ExplicitCastsVisitor. It is
+            // the arguments were cast to by InsertExplicitCasts. It is
             // needed due to potential mismatch between the types caused by
             // erasure.
             LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(recvTy,
@@ -115,7 +115,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                     offset_local // method index
             );
             // Bitcast the function so that the formal types are the types that
-            // the arguments were cast to by ExplicitCastsVisitor. It is
+            // the arguments were cast to by InsertExplicitCasts. It is
             // needed due to potential mismatch between the types caused by
             // erasure.
             LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(intf,
@@ -147,7 +147,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         LLVMValueRef func_ptr = v.utils.getFunction(v.mod, func_name,
                 func_type);
         // Bitcast the function so that the formal types are the types that the
-        // arguments were cast to by ExplicitCastsVisitor. It is needed due
+        // arguments were cast to by InsertExplicitCasts. It is needed due
         // to potential mismatch between the types caused by erasure.
         LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(substM.returnType(),
                 substM.formalTypes());
@@ -181,7 +181,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
         LLVMValueRef func_ptr = v.utils.getFunction(v.mod, func_name, func_ty);
         // Bitcast the function so that the formal types are the types that the
-        // arguments were cast to by ExplicitCastsVisitor. It is needed due
+        // arguments were cast to by InsertExplicitCasts. It is needed due
         // to potential mismatch between the types caused by erasure.
         LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(
                 n.target().type().toReference(), substM.returnType(),

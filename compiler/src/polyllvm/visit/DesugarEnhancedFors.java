@@ -21,13 +21,13 @@ import java.util.List;
  * {@link polyglot.ext.jl5.visit.RemoveExtendedFors}, but heavily modified for PolyLLVM
  * (e.g., in order to preserve debug information).
  */
-public class EnhancedForDesugarer extends NodeVisitor {
+public class DesugarEnhancedFors extends NodeVisitor {
     private final JL5TypeSystem ts;
     private final NodeFactory nf;
     private final TypedNodeFactory tnf;
     private int varCount = 0;
 
-    public EnhancedForDesugarer(JL5TypeSystem ts, NodeFactory nf) {
+    public DesugarEnhancedFors(JL5TypeSystem ts, NodeFactory nf) {
         super(nf.lang());
         this.ts = ts;
         this.nf = nf;

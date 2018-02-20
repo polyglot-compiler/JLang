@@ -15,9 +15,9 @@ import polyglot.visit.NodeVisitor;
  * Preserves typing, but mutates array initializer expressions to directly have the
  * type that its parent expects.
  */
-public class ExplicitCastsVisitor extends AscriptionVisitor {
+public class InsertExplicitCasts extends AscriptionVisitor {
 
-    public ExplicitCastsVisitor(Job job, TypeSystem ts, NodeFactory nf) {
+    public InsertExplicitCasts(Job job, TypeSystem ts, NodeFactory nf) {
         super(job, ts, nf);
     }
 

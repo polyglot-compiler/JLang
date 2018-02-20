@@ -17,10 +17,10 @@ import java.util.List;
  * Builds class initializers at the top of each constructor.
  * Preserves typing.
  */
-public class ClassInitializerDesugarer extends ContextVisitor {
+public class DesugarClassInitializers extends ContextVisitor {
     private Deque<ClassDecl> classes = new ArrayDeque<>();
 
-    public ClassInitializerDesugarer(Job job, TypeSystem ts, NodeFactory nf) {
+    public DesugarClassInitializers(Job job, TypeSystem ts, NodeFactory nf) {
         super(job, ts, nf);
     }
 

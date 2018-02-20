@@ -18,11 +18,11 @@ import polyllvm.util.TypedNodeFactory;
  * Replaces assert statements with a check and a throw.
  * Preserves typing.
  */
-public class AssertDesugarer extends ContextVisitor {
+public class DesugarAsserts extends ContextVisitor {
 
     private final TypedNodeFactory tnf;
 
-    public AssertDesugarer(Job job, JL5TypeSystem ts, NodeFactory nf) {
+    public DesugarAsserts(Job job, JL5TypeSystem ts, NodeFactory nf) {
         super(job, ts, nf);
         tnf = new TypedNodeFactory(ts, nf);
     }

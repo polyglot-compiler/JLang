@@ -19,11 +19,11 @@ import polyllvm.util.TypedNodeFactory;
  * Makes string concatenation explicit and promotes the corresponding concatenation
  * arguments to strings. Preserves typing.
  */
-public class StringConversionVisitor extends ContextVisitor {
+public class DesugarStringConcatenation extends ContextVisitor {
 
     private final TypedNodeFactory tnf;
 
-    public StringConversionVisitor(Job job, JL5TypeSystem ts, NodeFactory nf) {
+    public DesugarStringConcatenation(Job job, JL5TypeSystem ts, NodeFactory nf) {
         super(job, ts, nf);
         tnf = new TypedNodeFactory(ts, nf);
     }

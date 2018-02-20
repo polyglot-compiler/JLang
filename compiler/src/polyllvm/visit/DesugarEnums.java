@@ -20,13 +20,13 @@ import java.util.stream.Collectors;
  * {@link polyglot.ext.jl5.visit.RemoveEnums}, but heavily modified for PolyLLVM.
  * Preserves typing.
  */
-public class EnumDesugarer extends NodeVisitor {
+public class DesugarEnums extends NodeVisitor {
 
     private final JL5TypeSystem ts;
     private final JL5NodeFactory nf;
     private final TypedNodeFactory tnf;
 
-    public EnumDesugarer(JL5TypeSystem ts, JL5NodeFactory nf) {
+    public DesugarEnums(JL5TypeSystem ts, JL5NodeFactory nf) {
         super(nf.lang());
         this.ts = ts;
         this.nf = nf;
