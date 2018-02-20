@@ -95,7 +95,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         LLVMTypeRef structType = v.utils.structType(LLVMInt32TypeInContext(v.context), funcPtrType, voidPtr);
         LLVMTypeRef ctorVarType = LLVMArrayType(structType, ctors.length);
         String ctorVarName = Constants.CTOR_VAR_NAME;
-        LLVMValueRef ctorGlobal = v.utils.getGlobal(v.mod, ctorVarName, ctorVarType);
+        LLVMValueRef ctorGlobal = v.utils.getGlobal(ctorVarName, ctorVarType);
         LLVMSetLinkage(ctorGlobal, LLVMAppendingLinkage);
 
         LLVMValueRef arr = v.utils.buildConstArray(structType, ctors);

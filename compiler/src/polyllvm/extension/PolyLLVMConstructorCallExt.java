@@ -42,7 +42,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
 
         LLVMTypeRef func_ty = v.utils.toLLFuncTy(supc, v.typeSystem().Void(),
                 v.utils.formalsErasureLL(substC));
-        LLVMValueRef func = v.utils.getFunction(v.mod, mangledFuncName,
+        LLVMValueRef func = v.utils.getFunction(mangledFuncName,
                 func_ty);
         LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(supc,
                 v.typeSystem().Void(), substC.formalTypes());

@@ -13,6 +13,7 @@ import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.extension.ClassObjects;
 import polyllvm.extension.PolyLLVMTryExt.ExceptionFrame;
+import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.Constants;
 import polyllvm.util.DebugInfo;
 import polyllvm.util.LLVMUtils;
@@ -146,8 +147,8 @@ public class LLVMTranslator extends NodeVisitor {
     /**
      * Get the Type System used by the compiler
      */
-    public JL7TypeSystem typeSystem() {
-        return (JL7TypeSystem) ts;
+    public PolyLLVMTypeSystem typeSystem() {
+        return (PolyLLVMTypeSystem) ts;
     }
 
     /**

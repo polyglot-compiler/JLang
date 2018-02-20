@@ -42,7 +42,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 ? v.utils.toLLFuncTy(retType, formalTypes)
                 : v.utils.toLLFuncTy(target, retType, formalTypes);
 
-        LLVMValueRef funcRef = v.utils.getFunction(v.mod, v.mangler.mangleProcName(pi), funcType);
+        LLVMValueRef funcRef = v.utils.getFunction(v.mangler.mangleProcName(pi), funcType);
         v.debugInfo.funcDebugInfo(n, funcRef);
 
         // Note that the entry block is reserved exclusively for alloca instructions

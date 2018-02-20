@@ -36,7 +36,7 @@ public final class ClassObjects {
      *            indicates whether to initialize the global variable
      */
     public LLVMValueRef toTypeIdentity(ReferenceType rt, boolean extern) {
-        LLVMValueRef global = v.utils.getGlobal(v.mod,
+        LLVMValueRef global = v.utils.getGlobal(
                 v.mangler.typeIdentityId(v.utils.erasureLL(rt)),
                 classIdVarTypeRef());
         if (!extern) {
@@ -69,7 +69,7 @@ public final class ClassObjects {
                 /* sign-extend */ 0);
         LLVMValueRef classObjStruct = v.utils.buildConstStruct(numSupertypes, classObjPtrsArr);
 
-        LLVMValueRef global = v.utils.getGlobal(v.mod,
+        LLVMValueRef global = v.utils.getGlobal(
                 v.mangler.classObjName(rt), LLVMTypeOf(classObjStruct));
         LLVMSetExternallyInitialized(global, 0);
         LLVMSetInitializer(global, classObjStruct);

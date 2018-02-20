@@ -21,7 +21,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         StringLit n = (StringLit) node();
         char[] chars = n.value().toCharArray();
 
-        ParsedClassType arrayType = v.utils.getArrayType();
+        ParsedClassType arrayType = v.typeSystem().Array();
         LLVMValueRef dvGlobal = v.utils.toCDVGlobal(arrayType);
         LLVMValueRef length = LLVMConstInt(v.utils.intType(32), chars.length, /*sign-extend*/ 0);
         List<LLVMValueRef> charTranslated = new ArrayList<>();
@@ -40,7 +40,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         LLVMValueRef charArray = v.utils.buildConstStruct(structBody);
         String reduce = intStream(n.value().getBytes()).mapToObj(b -> b + "_").reduce("", (s1, s2) -> s1 + s2);
         String charVarName = "_char_arr_" + reduce;
-        LLVMValueRef stringLit = v.utils.getGlobal(v.mod, charVarName, LLVMTypeOf(charArray));
+        LLVMValueRef stringLit = v.utils.getGlobal(charVarName, LLVMTypeOf(charArray));
         LLVMSetLinkage(stringLit, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringLit, charArray);
 
@@ -51,7 +51,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
 
         LLVMValueRef string = v.utils.buildConstStruct(stringLitBody);
         String stringVarName = "_string_lit_" + reduce;
-        LLVMValueRef stringVar = v.utils.getGlobal(v.mod, stringVarName, LLVMTypeOf(string));
+        LLVMValueRef stringVar = v.utils.getGlobal(stringVarName, LLVMTypeOf(string));
         LLVMSetLinkage(stringVar, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringVar, string);
 

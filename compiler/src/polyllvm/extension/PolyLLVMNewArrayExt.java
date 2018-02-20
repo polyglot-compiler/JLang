@@ -38,7 +38,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
     }
 
     public static LLVMValueRef translateNewArray(LLVMTranslator v, LLVMValueRef len, Type elemT) {
-        ClassType arrType = v.utils.getArrayType();
+        ClassType arrType = v.typeSystem().Array();
         TypeSystem ts = v.typeSystem();
         ConstructorInstance arrayConstructor;
         try {

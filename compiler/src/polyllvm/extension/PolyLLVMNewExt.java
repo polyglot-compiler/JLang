@@ -66,7 +66,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         LLVMTypeRef func_ty = v.utils.toLLFuncTy(
                 clazz, v.typeSystem().Void(), v.utils.formalsErasureLL(ci));
-        LLVMValueRef func = v.utils.getFunction(v.mod, mangledFuncName, func_ty);
+        LLVMValueRef func = v.utils.getFunction(mangledFuncName, func_ty);
 
         // Bitcast the function so that the formal types are the types that
         // the arguments were cast to by InsertExplicitCasts. It is

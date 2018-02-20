@@ -102,7 +102,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                     v.utils.llvmBytePtr(), // void*
                     LLVMInt32TypeInContext(v.context) // int
             );
-            LLVMValueRef get_intf_method_func = v.utils.getFunction(v.mod,
+            LLVMValueRef get_intf_method_func = v.utils.getFunction(
                     "__getInterfaceMethod", get_intf_method_func_ty);
             LLVMValueRef offset_local = LLVMConstInt(
                     LLVMInt32TypeInContext(v.context), dispInfo.methodIndex(),
@@ -144,7 +144,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         String func_name = v.mangler.mangleProcName(substM);
         LLVMTypeRef func_type = v.utils.toLLFuncTy(v.utils.retErasureLL(substM),
                 v.utils.formalsErasureLL(substM));
-        LLVMValueRef func_ptr = v.utils.getFunction(v.mod, func_name,
+        LLVMValueRef func_ptr = v.utils.getFunction(func_name,
                 func_type);
         // Bitcast the function so that the formal types are the types that the
         // arguments were cast to by InsertExplicitCasts. It is needed due
@@ -179,7 +179,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                         n.arguments().stream().map(v::getTranslation))
                 .toArray(LLVMValueRef[]::new);
 
-        LLVMValueRef func_ptr = v.utils.getFunction(v.mod, func_name, func_ty);
+        LLVMValueRef func_ptr = v.utils.getFunction(func_name, func_ty);
         // Bitcast the function so that the formal types are the types that the
         // arguments were cast to by InsertExplicitCasts. It is needed due
         // to potential mismatch between the types caused by erasure.
@@ -202,7 +202,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
         LLVMTypeRef func_ty = v.utils.toLLFuncTy(substM.container(),
                 v.utils.retErasureLL(substM), v.utils.formalsErasureLL(substM));
-        LLVMValueRef func_ptr = v.utils.getFunction(v.mod,
+        LLVMValueRef func_ptr = v.utils.getFunction(
                 v.mangler.mangleProcName(substM), func_ty);
 
         LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(

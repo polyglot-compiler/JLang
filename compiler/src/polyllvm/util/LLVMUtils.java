@@ -1,7 +1,6 @@
 package polyllvm.util;
 
 import org.bytedeco.javacpp.PointerPointer;
-import polyglot.ast.Node;
 import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.ext.jl5.types.RawClass;
 import polyglot.ext.jl5.types.inference.LubType;
@@ -16,7 +15,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
-import static polyllvm.util.Constants.RUNTIME_ARRAY;
 
 /**
  * Helper methods for building common LLVM types and IR instructions. This
@@ -28,14 +26,6 @@ public class LLVMUtils {
 
     public LLVMUtils(LLVMTranslator v) {
         this.v = v;
-    }
-
-    public ParsedClassType getArrayType() {
-        try {
-            return (ParsedClassType) v.typeSystem().typeForName(RUNTIME_ARRAY);
-        } catch (SemanticException | ClassCastException e) {
-            throw new InternalCompilerError("Could not load array type");
-        }
     }
 
     /**
@@ -52,7 +42,7 @@ public class LLVMUtils {
         if (t instanceof LubType) {
             t = ((LubType) t).calculateLub();
         } else if (t.isArray()) {
-            t = getArrayType();
+            t = v.typeSystem().Array();
         }
         Type jErasure = v.typeSystem().erasureType(t);
         assert jErasure.isPrimitive() || jErasure.isNull()
@@ -188,13 +178,13 @@ public class LLVMUtils {
      * knows to prevent the ctor from running.) Ctor functions will run in the
      * order that they are built.
      */
-    public void buildCtor(Node n, Supplier<LLVMValueRef> ctor) {
+    public void buildCtor(Supplier<LLVMValueRef> ctor) {
         LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context));
         LLVMTypeRef voidPtr = v.utils.llvmBytePtr();
 
         int counter = v.incCtorCounter();
         String name = "ctor." + counter;
-        LLVMValueRef func = v.utils.getFunction(v.mod, name, funcType);
+        LLVMValueRef func = v.utils.getFunction(name, funcType);
         LLVMSetLinkage(func, LLVMPrivateLinkage);
         LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
                 v.debugInfo.diBuilder, new PointerPointer<>(), /* length */ 0);
@@ -262,11 +252,10 @@ public class LLVMUtils {
      * given module. If the function is not in the module, it gets declared in
      * the module before returned.
      */
-    public LLVMValueRef getFunction(LLVMModuleRef mod, String functionName,
-            LLVMTypeRef functionType) {
-        LLVMValueRef func = LLVMGetNamedFunction(mod, functionName);
+    public LLVMValueRef getFunction(String functionName, LLVMTypeRef functionType) {
+        LLVMValueRef func = LLVMGetNamedFunction(v.mod, functionName);
         if (func == null)
-            func = LLVMAddFunction(mod, functionName, functionType);
+            func = LLVMAddFunction(v.mod, functionName, functionType);
         return func;
     }
 
@@ -279,10 +268,10 @@ public class LLVMUtils {
      * If the global is already in the module, return it, otherwise add it to
      * the module and return it.
      */
-    public LLVMValueRef getGlobal(LLVMModuleRef mod, String globalName, LLVMTypeRef globalType) {
-        LLVMValueRef global = LLVMGetNamedGlobal(mod, globalName);
+    public LLVMValueRef getGlobal(String globalName, LLVMTypeRef globalType) {
+        LLVMValueRef global = LLVMGetNamedGlobal(v.mod, globalName);
         if (global == null)
-            global = LLVMAddGlobal(mod, globalType, globalName);
+            global = LLVMAddGlobal(v.mod, globalType, globalName);
         return global;
     }
 
@@ -389,7 +378,7 @@ public class LLVMUtils {
 
         int numOfSlots = Constants.OBJECT_FIELDS_OFFSET + fields.size();
         boolean isArray = jt.isArray()
-                || (jt.isClass() && jt.toClass().typeEquals(getArrayType()));
+                || (jt.isClass() && jt.toClass().typeEquals(v.typeSystem().Array()));
         if (isArray)
             numOfSlots += 1;
         LLVMTypeRef[] res = new LLVMTypeRef[numOfSlots];
@@ -411,7 +400,7 @@ public class LLVMUtils {
      * @param jt The Java type (not required to be erasure)
      */
     public LLVMValueRef toCDVGlobal(ReferenceType jt) {
-        return getGlobal(v.mod, v.mangler.cdvGlobalId(jt), toCDVTy(jt));
+        return getGlobal(v.mangler.cdvGlobalId(jt), toCDVTy(jt));
     }
 
     /**
@@ -464,7 +453,7 @@ public class LLVMUtils {
      *            The Java class type (not required to be erasure)
      */
     public LLVMValueRef toIDVGlobal(ClassType intf, ReferenceType clazz) {
-        return getGlobal(v.mod, v.mangler.idvGlobalId(intf, clazz), toIDVTy(intf));
+        return getGlobal(v.mangler.idvGlobalId(intf, clazz), toIDVTy(intf));
     }
 
     /**
@@ -534,17 +523,17 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef toIDVArrGlobal(ReferenceType clazz, int length) {
-        return getGlobal(v.mod, v.mangler.idvArrGlobalId(clazz),
+        return getGlobal(v.mangler.idvArrGlobalId(clazz),
                 LLVMArrayType(llvmBytePtr(), length));
     }
 
     public LLVMValueRef toIDVIdArrGlobal(ReferenceType clazz, int length) {
-        return getGlobal(v.mod, v.mangler.idvIdArrGlobalId(clazz),
+        return getGlobal(v.mangler.idvIdArrGlobalId(clazz),
                 LLVMArrayType(llvmBytePtr(), length));
     }
 
     public LLVMValueRef toIDVIdHashArrGlobal(ReferenceType clazz, int length) {
-        return getGlobal(v.mod, v.mangler.idvIdHashArrGlobalId(clazz),
+        return getGlobal(v.mangler.idvIdHashArrGlobalId(clazz),
                 LLVMArrayType(LLVMInt32TypeInContext(v.context), length));
     }
 
@@ -575,7 +564,7 @@ public class LLVMUtils {
         for (MethodInstance jm : jms) {
             LLVMTypeRef castFrom = toLLFuncTy(jm.container(), jm.returnType(), jm.formalTypes());
             LLVMTypeRef castTo = toLLFuncTy(jt, jm.returnType(), jm.formalTypes());
-            LLVMValueRef llm = getFunction(v.mod, v.mangler.mangleProcName(jm), castFrom);
+            LLVMValueRef llm = getFunction(v.mangler.mangleProcName(jm), castFrom);
             LLVMValueRef cast = LLVMConstBitCast(llm, ptrTypeRef(castTo));
             res[idx++] = cast;
         }
@@ -612,7 +601,7 @@ public class LLVMUtils {
             MethodInstance cdvM = cdvMethods.get(idxC);
             LLVMTypeRef cdvM_LLTy = toLLFuncTy(clazz, cdvM.returnType(),
                     cdvM.formalTypes());
-            LLVMValueRef funcVal = getFunction(v.mod,
+            LLVMValueRef funcVal = getFunction(
                     v.mangler.mangleProcName(cdvM), cdvM_LLTy);
             // Cast funcVal to the method signature used by IDV
             MethodInstance idvM = idvMethods.get(idxI);

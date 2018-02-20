@@ -21,9 +21,9 @@ public class PolyLLVMThrowExt extends PolyLLVMExt {
 
     /** Throw the given Java throwable instance  */
     public static void buildThrow(LLVMTranslator v, LLVMValueRef throwable) {
-        LLVMValueRef createExnFun = v.utils.getFunction(v.mod, Constants.CREATE_EXCEPTION,
+        LLVMValueRef createExnFun = v.utils.getFunction(Constants.CREATE_EXCEPTION,
                 v.utils.functionType(v.utils.llvmBytePtr(), v.utils.llvmBytePtr()));
-        LLVMValueRef throwExnFunc = v.utils.getFunction(v.mod, Constants.THROW_EXCEPTION,
+        LLVMValueRef throwExnFunc = v.utils.getFunction(Constants.THROW_EXCEPTION,
                 v.utils.functionType(LLVMVoidTypeInContext(v.context), v.utils.llvmBytePtr()));
         LLVMValueRef cast = LLVMBuildBitCast(v.builder, throwable, v.utils.llvmBytePtr(), "cast");
         LLVMValueRef exn = v.utils.buildFunCall(createExnFun, cast);

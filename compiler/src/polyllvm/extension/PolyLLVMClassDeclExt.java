@@ -96,10 +96,10 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                     v.utils.llvmBytePtr(), // void*[]
                     v.utils.llvmBytePtr() // it*[]
             );
-            LLVMValueRef create_idv_ht_func = v.utils.getFunction(v.mod,
+            LLVMValueRef create_idv_ht_func = v.utils.getFunction(
                     "__createInterfaceTables", create_idv_ht_func_type);
             int capacity = v.utils.idvCapacity(numOfIntfs);
-            v.utils.buildCtor(node, () -> {
+            v.utils.buildCtor(() -> {
                 v.utils.buildProcCall(create_idv_ht_func,
                         v.utils.buildCastToBytePtr(cdv_global),
                         LLVMConstInt(LLVMInt32TypeInContext(v.context),

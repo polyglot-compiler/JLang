@@ -14,7 +14,7 @@ public class PolyLLVMInitializerExt extends PolyLLVMExt {
         Initializer n = (Initializer) node();
         // Non-static initializers are handled by the constructors.
         if (n.flags().isStatic()) {
-            v.utils.buildCtor(n, () -> {
+            v.utils.buildCtor(() -> {
                 n.body().visit(v);
                 return null;
             });

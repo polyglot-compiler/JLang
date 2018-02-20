@@ -27,7 +27,7 @@ public class PolyLLVMInstanceofExt extends PolyLLVMExt {
         LLVMTypeRef bytePtrType = v.utils.ptrTypeRef(v.utils.intType(8));
         LLVMValueRef objBitcast = LLVMBuildBitCast(v.builder, obj, bytePtrType, "cast_obj");
         LLVMTypeRef funcType = v.utils.functionType(v.utils.intType(1), bytePtrType, bytePtrType);
-        LLVMValueRef function = v.utils.getFunction(v.mod, "instanceof", funcType);
+        LLVMValueRef function = v.utils.getFunction("instanceof", funcType);
         return v.utils.buildFunCall(function, objBitcast, compTypeIdVar);
     }
 }

@@ -34,7 +34,7 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
         if (n.flags().isStatic()) {
             String mangledGlobalName = v.mangler.mangleStaticFieldName(fi);
             LLVMTypeRef elemType = v.utils.toLL(n.type());
-            return v.utils.getGlobal(v.mod, mangledGlobalName, elemType);
+            return v.utils.getGlobal(mangledGlobalName, elemType);
         } else {
             LLVMValueRef x_target = v.getTranslation(target);
             int offset = v.fieldInfo(target.type().toReference(), fi);

@@ -20,6 +20,15 @@ public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTyp
         return new SubstMethodInstance_c(postSubst, preSubst, subst);
     }
 
+    @Override
+    public ParsedClassType Array() {
+        try {
+            return (ParsedClassType) typeForName(RUNTIME_ARRAY);
+        } catch (SemanticException | ClassCastException e) {
+            throw new InternalCompilerError("Could not load array type");
+        }
+    }
+
     /**
      * This overriding refines the return type to {@link SubstMethodInstance}.
      *

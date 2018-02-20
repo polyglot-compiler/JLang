@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  * Helper methods for creating typed nodes. Handles generics.
  *
  * This is used in PolyLLVM, so we don't care about (for example)
- * exception types on method instances
+ * exception types on method instances.
  */
 public class TypedNodeFactory {
     protected final JL5TypeSystem ts;

@@ -109,15 +109,15 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         // Useful functions, types, and constants.
         LLVMValueRef nullBytePtr = LLVMConstPointerNull(v.utils.llvmBytePtr());
         LLVMValueRef personalityFunc = v.utils.getFunction(
-                v.mod, Constants.PERSONALITY_FUNC,
+                Constants.PERSONALITY_FUNC,
                 v.utils.functionType(LLVMInt32TypeInContext(v.context)));
         LLVMValueRef extractJavaExnFunc = v.utils.getFunction(
-                v.mod, Constants.EXTRACT_EXCEPTION,
+                Constants.EXTRACT_EXCEPTION,
                 v.utils.functionType(v.utils.llvmBytePtr(), v.utils.llvmBytePtr()));
         LLVMTypeRef bytePtr = v.utils.structType(
                 v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context)),
                 LLVMInt32TypeInContext(v.context));
-        LLVMValueRef throwExnFunc = v.utils.getFunction(v.mod, Constants.THROW_EXCEPTION,
+        LLVMValueRef throwExnFunc = v.utils.getFunction(Constants.THROW_EXCEPTION,
                 v.utils.functionType(LLVMVoidTypeInContext(v.context), v.utils.llvmBytePtr()));
 
         // Useful blocks, null if not needed.
