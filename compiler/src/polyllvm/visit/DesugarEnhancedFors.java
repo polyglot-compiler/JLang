@@ -137,7 +137,7 @@ public class DesugarEnhancedFors extends DesugarVisitor {
         List<ForInit> forInit = Collections.singletonList(iDecl);
 
         // Condition: i < arr.length
-        Field len = tnf.Field(pos, copy(a), "length", ts.Int(), exprT);
+        Field len = tnf.Field(pos, copy(a), "length");
         Expr cond = nf.Binary(pos, copy(it), Binary.LT, len).type(ts.Boolean());
 
         // Update: i++

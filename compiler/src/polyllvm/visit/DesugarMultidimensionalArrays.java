@@ -52,7 +52,7 @@ public class DesugarMultidimensionalArrays extends DesugarVisitor {
             leafType = na.type().toArray().ultimateBase();
         }
         String leafTypeStr = getLeafTypeString(leafType);
-        Field leafTypeField = tnf.StaticField(pos, leafTypeStr, leafTypeEnum, leafTypeEnum);
+        Field leafTypeField = tnf.StaticField(pos, leafTypeStr, leafTypeEnum);
         ArrayInit lens = (ArrayInit) nf.ArrayInit(pos, na.dims()).type(ts.arrayOf(ts.Int()));
         return tnf.StaticCall(pos, "createMultidimensional", arrType, arrType, leafTypeField, lens);
     }

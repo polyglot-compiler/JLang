@@ -39,20 +39,20 @@ public class TypedNodeFactory {
                 .fieldInstance(fi);
     }
 
-    public Field StaticField(Position pos, String name, Type type, ReferenceType container) {
-        return Field(pos, nf.CanonicalTypeNode(pos, container), name, type, container);
+    public Field StaticField(Position pos, String name, ReferenceType container) {
+        return Field(pos, nf.CanonicalTypeNode(pos, container), name);
     }
 
-    public Field Field(
-            Position pos, Receiver receiver, String name, Type type, ReferenceType container) {
+    public Field Field(Position pos, Receiver receiver, String name) {
         // We lie and tell the type system that fromClass == container since we want to bypass
         // visibility checks. If container is not a class type, we instead use Object.
+        ReferenceType container = receiver.type().toReference();
         ClassType fromClass = container.isClass() ? container.toClass() : ts.Object();
         try {
             FieldInstance fi = ts.findField(container, name, fromClass, /*fromClient*/ true);
             return (Field) nf.Field(pos, receiver, nf.Id(pos, name))
                     .fieldInstance(fi)
-                    .type(type);
+                    .type(fi.type());
         } catch (SemanticException e) {
             throw new InternalCompilerError(e);
         }
@@ -92,6 +92,20 @@ public class TypedNodeFactory {
                 .methodInstance(mi);
     }
 
+    public ConstructorDecl ConstructorDecl(
+            Position pos, ParsedClassType container, List<Formal> formals, Block body) {
+        List<Type> argTypes = formals.stream().map(Formal::declType).collect(Collectors.toList());
+        Flags flags = Flags.NONE; // Constructor flags not important for PolyLLVM.
+        ConstructorInstance ci = ts.constructorInstance(
+                pos, container, flags, argTypes,
+                Collections.emptyList()); // PolyLLVM does not care about exn types.
+        container.addConstructor(ci);
+        return nf.ConstructorDecl(
+                pos, flags, nf.Id(pos, container.name()),
+                formals, Collections.emptyList(), body, /*javaDoc*/ null)
+                .constructorInstance(ci);
+    }
+
     public Call StaticCall(
             Position pos, String name, ClassType container, Type returnType, Expr... args) {
         return Call(pos, nf.CanonicalTypeNode(pos, container), name, container, returnType, args);
@@ -114,12 +128,12 @@ public class TypedNodeFactory {
     }
 
     public ConstructorCall ConstructorCall(
-            Position pos, ConstructorCall.Kind kind, ClassType container, Expr... args) {
-        List<Type> argTypes = Arrays.stream(args).map(Expr::type).collect(Collectors.toList());
+            Position pos, ConstructorCall.Kind kind, ClassType container, List<Expr> args) {
+        List<Type> argTypes = args.stream().map(Expr::type).collect(Collectors.toList());
         try {
             ConstructorInstance ci = ts.findConstructor(
                     container, argTypes, /*actualTypeArgs*/ null, container, /*fromClient*/ true);
-            return nf.ConstructorCall(pos, kind, Arrays.asList(args)).constructorInstance(ci);
+            return nf.ConstructorCall(pos, kind, args).constructorInstance(ci);
         } catch (SemanticException e) {
             throw new InternalCompilerError(e);
         }
@@ -149,5 +163,10 @@ public class TypedNodeFactory {
     public ClassLit ClassLit(Position pos, ReferenceType type) {
         Type classType = ts.Class(pos, type);
         return (ClassLit) nf.ClassLit(pos, nf.CanonicalTypeNode(pos, type)).type(classType);
+    }
+
+    public Eval EvalAssign(Position pos, Expr target, Expr val) {
+        Assign assign = (Assign) nf.Assign(pos, target, Assign.ASSIGN, val).type(target.type());
+        return nf.Eval(pos, assign);
     }
 }

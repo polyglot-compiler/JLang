@@ -150,8 +150,7 @@ public class DesugarEnums extends DesugarVisitor {
         ClassType container = kind == ConstructorCall.THIS
                 ? enumDecl.type()
                 : enumDecl.type().superType().toClass();
-        ConstructorCall cc = tnf.ConstructorCall(
-                n.body().position(), kind, container, args.toArray(new Expr[args.size()]));
+        ConstructorCall cc = tnf.ConstructorCall(n.body().position(), kind, container, args);
 
         // Add the constructor call to the body.
         List<Stmt> stmts = new ArrayList<>();
@@ -190,7 +189,7 @@ public class DesugarEnums extends DesugarVisitor {
                 .filter((fi) -> fi instanceof EnumInstance)
                 .map((fi) -> {
                     EnumInstance ei = (EnumInstance) fi;
-                    return tnf.StaticField(pos, ei.name(), ei.type(), enumDecl.type());
+                    return tnf.StaticField(pos, ei.name(), enumDecl.type());
                 })
                 .collect(Collectors.toList());
 
@@ -206,7 +205,7 @@ public class DesugarEnums extends DesugarVisitor {
         Position pos = enumDecl.position();
 
         // Find field.
-        Field f = tnf.StaticField(pos, "values", ts.arrayOf(enumDecl.type()), enumDecl.type());
+        Field f = tnf.StaticField(pos, "values", enumDecl.type());
 
         // Clone, cast, and return
         Call call = tnf.Call(pos, f, "clone", ts.Object(), ts.Object());
