@@ -157,10 +157,4 @@ public class DesugarEnhancedFors extends DesugarVisitor {
             stmt = nf.Labeled(pos, nf.Id(pos, labels.get(i)), stmt);
         return stmt;
     }
-
-    /** Helper method to help prevent node aliasing. */
-    @SuppressWarnings("unchecked")
-    private static <T> T copy(Node n) {
-        return (T) n.copy();
-    }
 }
