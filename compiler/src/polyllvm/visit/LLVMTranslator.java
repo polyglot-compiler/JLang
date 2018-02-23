@@ -47,11 +47,20 @@ public class LLVMTranslator extends NodeVisitor {
         return ctorCounter++;
     }
 
+    private static class FunctionContext {
+        LLVMValueRef fn;
+        Map<String, LLVMValueRef> vars = new HashMap<>();
+
+        FunctionContext(LLVMValueRef fn) {
+            this.fn = fn;
+        }
+    }
+
     /** A stack of all enclosing functions. */
-    private Deque<LLVMValueRef> functions = new ArrayDeque<>();
+    private Deque<FunctionContext> functions = new ArrayDeque<>();
 
     public void pushFn(LLVMValueRef fn) {
-        functions.push(fn);
+        functions.push(new FunctionContext(fn));
     }
 
     public void popFn() {
@@ -59,7 +68,18 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     public LLVMValueRef currFn() {
-        return functions.peek();
+        return functions.peek().fn;
+    }
+
+    public void addAllocation(String var, LLVMValueRef v) {
+        functions.peek().vars.put(var, v);
+    }
+
+    public LLVMValueRef getLocalVariable(String var) {
+        LLVMValueRef allocation = functions.peek().vars.get(var);
+        if (allocation == null)
+            throw new InternalCompilerError("Local variable " + var + " has no allocation");
+        return allocation;
     }
 
     /** A list of all potential entry points (i.e., Java main functions). */
@@ -513,27 +533,6 @@ public class LLVMTranslator extends NodeVisitor {
             types.add(t);
             return true;
         }
-    }
-
-    /*
-     * Functions for generating loads and stores from stack allocated variables
-     * (including arguments)
-     */
-    private Map<String, LLVMValueRef> allocations = new HashMap<>();
-
-    public void addAllocation(String var, LLVMValueRef v) {
-        allocations.put(var, v);
-    }
-
-    public LLVMValueRef getLocalVariable(String var) {
-        LLVMValueRef allocation = allocations.get(var);
-        if (allocation == null)
-            throw new InternalCompilerError("Local variable " + var + " has no allocation");
-        return allocation;
-    }
-
-    public void clearAllocations() {
-        allocations.clear();
     }
 
     ////////////////////////////////////////////////////////////////////////////

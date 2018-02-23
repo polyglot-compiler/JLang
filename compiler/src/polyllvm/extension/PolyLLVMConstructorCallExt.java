@@ -23,6 +23,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
         ReferenceType supc = substC.container();
 
         if (n.qualifier() != null) {
+            // TODO
             throw new InternalCompilerError(
                     "Qualifier on this not supported yet (Java spec 15.8.4)");
         }

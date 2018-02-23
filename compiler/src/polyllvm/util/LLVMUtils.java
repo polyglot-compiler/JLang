@@ -179,6 +179,7 @@ public class LLVMUtils {
      * order that they are built.
      */
     public void buildCtor(Supplier<LLVMValueRef> ctor) {
+        LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
         LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context));
         LLVMTypeRef voidPtr = v.utils.llvmBytePtr();
 
@@ -218,6 +219,7 @@ public class LLVMUtils {
         LLVMBuildBr(v.builder, body);
 
         v.debugInfo.popScope();
+        LLVMPositionBuilderAtEnd(v.builder, prevBlock);
     }
 
     /**

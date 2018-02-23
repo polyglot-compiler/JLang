@@ -173,7 +173,7 @@ public class DesugarEnums extends DesugarVisitor {
 
         // Declare the field and initializer; recycle the enum instance.
         EnumInstance ei = n.enumInstance();
-        Expr init = tnf.New(pos, enumDecl.type(), args.toArray(new Expr[args.size()]));
+        Expr init = tnf.New(pos, enumDecl.type(), args);
         return nf.FieldDecl(
                 pos, ei.flags(), nf.CanonicalTypeNode(pos, ei.type()),
                 nf.Id(pos, ei.name()), init, /*javaDoc*/ null)

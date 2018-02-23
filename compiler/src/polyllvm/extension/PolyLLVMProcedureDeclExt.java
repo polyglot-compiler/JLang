@@ -24,6 +24,8 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
     @Override
     public Node overrideTranslateLLVM(LLVMTranslator v) {
+        LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
+
         ProcedureDecl n = (ProcedureDecl) node();
         TypeSystem ts = v.typeSystem();
         ProcedureInstance pi = n.procedureInstance();
@@ -44,6 +46,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         LLVMValueRef funcRef = v.utils.getFunction(v.mangler.mangleProcName(pi), funcType);
         v.debugInfo.funcDebugInfo(n, funcRef);
+        v.pushFn(funcRef);
 
         // Note that the entry block is reserved exclusively for alloca instructions
         // and parameter initialization. Children translations will insert alloca instructions
@@ -74,7 +77,6 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             v.addEntryPoint(funcRef, className);
         }
 
-        v.pushFn(funcRef);
         v.addTranslation(n, funcRef);
 
         // Recurse to children.
@@ -97,9 +99,10 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         LLVMPositionBuilderAtEnd(v.builder, entry);
         LLVMBuildBr(v.builder, body);
 
-        v.clearAllocations();
         v.popFn();
         v.debugInfo.popScope();
+
+        LLVMPositionBuilderAtEnd(v.builder, prevBlock);
         return n;
     }
 }

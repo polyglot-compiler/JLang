@@ -69,7 +69,10 @@ public class TypedNodeFactory {
     }
 
     public Local Local(Position pos, VarDecl vd) {
-        LocalInstance li = vd.localInstance();
+        return Local(pos, vd.localInstance());
+    }
+
+    public Local Local(Position pos, LocalInstance li) {
         return (Local) nf.Local(pos, nf.Id(pos, li.name())).localInstance(li).type(li.type());
     }
 
@@ -139,12 +142,12 @@ public class TypedNodeFactory {
         }
     }
 
-    public New New(Position pos, ClassType type, Expr... args) {
-        List<Type> argTypes = Arrays.stream(args).map(Expr::type).collect(Collectors.toList());
+    public New New(Position pos, ClassType type, List<Expr> args) {
+        List<Type> argTypes = args.stream().map(Expr::type).collect(Collectors.toList());
         try {
             ConstructorInstance ci = ts.findConstructor(
                     type, argTypes, /*actualTypeArgs*/ null, type, /*fromClient*/ true);
-            return (New) nf.New(pos, nf.CanonicalTypeNode(pos, type), Arrays.asList(args))
+            return (New) nf.New(pos, nf.CanonicalTypeNode(pos, type), args)
                     .constructorInstance(ci)
                     .type(type);
         } catch (SemanticException e) {
@@ -168,5 +171,9 @@ public class TypedNodeFactory {
     public Eval EvalAssign(Position pos, Expr target, Expr val) {
         Assign assign = (Assign) nf.Assign(pos, target, Assign.ASSIGN, val).type(target.type());
         return nf.Eval(pos, assign);
+    }
+
+    public Special This(Position pos, ReferenceType container) {
+        return (Special) nf.This(pos, nf.CanonicalTypeNode(pos, container)).type(container);
     }
 }

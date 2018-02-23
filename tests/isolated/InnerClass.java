@@ -35,6 +35,12 @@ class InnerClass {
         }
     }
 
+    class Strange extends Inner.InnerInner {
+        Strange() {
+            new InnerClass().new Inner("strange").super();
+        }
+    }
+
     Inner createInner(final String param) {
         final String localVar = "local var";
 
@@ -77,5 +83,7 @@ class InnerClass {
 
         StaticLocal local = new StaticLocal();
         local.printFields();
+
+        new InnerClass().new Strange().printFields();
     }
 }

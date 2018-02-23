@@ -16,10 +16,9 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         Special n = (Special) node();
 
-        if (n.qualifier() != null) {
-            // TODO
-            throw new InternalCompilerError("Qualifier on this not supported yet (JLS 15.8.4): " + n);
-        }
+        if (n.qualifier() != null)
+            if (!v.getCurrentClass().type().typeEquals(n.qualifier().type().toClass()))
+                throw new InternalCompilerError("Qualified this should have been desugared: " + n);
 
         LLVMValueRef thisPtr = LLVMGetParam(v.currFn(), 0);
         if (n.kind() == Special.THIS) {

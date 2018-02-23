@@ -12,7 +12,6 @@ import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
 import polyglot.util.InternalCompilerError;
-import polyglot.visit.InnerClassRemover;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.MultiGoal;
@@ -56,9 +55,9 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // Note that running type check again after these passes can fail, for example
                 // because the type checker can disagree about the target of a field which has
                 // been moved by a desugar pass. That's ok; we trust our type information.
+                new DesugarLocalClasses(job, ts, nf),
                 new VisitorGoal(job, new DesugarEnhancedFors(job, ts, nf)),
                 new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
-                new VisitorGoal(job, new InnerClassRemover(job, ts, nf)), // TODO: Dubious implementation.
                 new VisitorGoal(job, new DesugarStringConcatenation(job, ts, nf)),
                 new VisitorGoal(job, new DesugarAsserts(job, ts, nf)),
                 new VisitorGoal(job, new DesugarClassInitializers(job, ts, nf)),

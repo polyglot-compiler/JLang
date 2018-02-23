@@ -35,7 +35,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
     }
 
     @Override
-    public Node override(Node parent, Node n) {
+    public final Node override(Node parent, Node n) {
         try {
             return overrideDesugar(parent, n);
         } catch (SemanticException e) {
@@ -44,7 +44,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
     }
 
     @Override
-    public Node override(Node n) {
+    public final Node override(Node n) {
         throw new InternalCompilerError("Should not be called");
     }
 
@@ -211,7 +211,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
                 // Initialize this.f = f;
                 Position pos = f.position();
                 Local arg = tnf.Local(pos, f);
-                Special thisClass = (Special) nf.This(pos).type(container);
+                Special thisClass = tnf.This(pos, container);
                 Field field = tnf.Field(pos, thisClass, f.name());
                 stmts.add(tnf.EvalAssign(pos, field, arg));
             });
