@@ -8,7 +8,6 @@ import polyglot.frontend.goals.AbstractGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
 import polyglot.types.*;
-import polyglot.util.Position;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
@@ -26,7 +25,7 @@ import static polyllvm.visit.DeclareCaptures.CAPTURE_PREFIX;
  * (1) The {@link DeclareCaptures} visitor
  *     - determines which local variables are captured by which classes,
  *     - declares "capture fields" to store these captures, and
- *     - initializes these fields using arguments prepended to each constructor.
+ *     - initializes these fields using "capture formals" prepended to each constructor.
  *
  * (2) The {@link SubstituteCaptures} visitor
  *     - translates captured local variable accesses to field accesses, and
@@ -187,7 +186,7 @@ class DeclareCaptures extends DesugarVisitor {
                 // Pop local class.
                 localClasses.remove(localClasses.size() - 1);
 
-                // Declare and initialize captures.
+                // Declare and initialize capture fields.
                 List<FieldDecl> fields = captures.get(ct).stream()
                         .map((li) -> tnf.FieldDecl(
                                 li.position(), CAPTURE_PREFIX + li.name(), li.type(),
@@ -212,6 +211,9 @@ class SubstituteCaptures extends DesugarVisitor {
     /** Stack of local classes enclosing the current position of the visitor. */
     private final Deque<ClassType> localClasses = new ArrayDeque<>();
 
+    /** Stack of constructors enclosing the current position of the visitor. */
+    private final Deque<ConstructorDecl> constructors = new ArrayDeque<>();
+
     SubstituteCaptures(
             Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf, CaptureContext captures) {
         super(job, ts, nf);
@@ -224,9 +226,26 @@ class SubstituteCaptures extends DesugarVisitor {
         LocalInstance li = l.localInstance().orig();
         for (ClassType ct : localClasses) {
             if (captures.get(ct).contains(li)) {
-                Position pos = l.position();
-                Special receiver = tnf.This(pos, ct);
-                return tnf.Field(pos, receiver, CAPTURE_PREFIX + li.name());
+                String captureName = CAPTURE_PREFIX + li.name();
+
+                // If we are inside a constructor, try to use a capture formal rather than the
+                // capture field. This ensures that capture fields are not accessed in the
+                // constructor before they are initialized.
+                if (!constructors.isEmpty()) {
+                    ConstructorDecl ctor = constructors.peek();
+                    if (ctor.constructorInstance().container().typeEquals(ct)) {
+                        List<Formal> captureFormals = ctor.formals().stream()
+                                .filter((f) -> f.name().equals(captureName))
+                                .collect(Collectors.toList());
+                        assert captureFormals.size() == 1;
+                        Formal captureFormal = captureFormals.get(0);
+                        return tnf.Local(l.position(), captureFormal);
+                    }
+                }
+
+                // Otherwise, use the capture field.
+                Special receiver = tnf.This(l.position(), ct);
+                return tnf.Field(l.position(), receiver, captureName);
             }
         }
         return l;
@@ -243,25 +262,36 @@ class SubstituteCaptures extends DesugarVisitor {
     @Override
     public NodeVisitor enterDesugar(Node n) throws SemanticException {
 
+        // Push local class.
         if (n instanceof ClassDecl) {
             ClassDecl cd = (ClassDecl) n;
             if (cd.type().isLocal()) {
-                // Push local class.
                 localClasses.push(cd.type());
             }
         }
+
+        // Push constructor declaration.
+        if (n instanceof ConstructorDecl) {
+            constructors.push((ConstructorDecl) n);
+        }
+
         return super.enterDesugar(n);
     }
 
     @Override
     public Node leaveDesugar(Node n) throws SemanticException {
 
+        // Pop local class.
         if (n instanceof ClassDecl) {
             ClassDecl cd = (ClassDecl) n;
             if (cd.type().isLocal()) {
-                // Pop local class.
                 localClasses.remove();
             }
+        }
+
+        // Pop constructor declaration.
+        if (n instanceof ConstructorDecl) {
+            constructors.pop();
         }
 
         // Map local variables to capture fields when possible.
