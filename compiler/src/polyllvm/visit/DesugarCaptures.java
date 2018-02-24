@@ -19,13 +19,29 @@ import java.util.stream.Collectors;
 
 import static polyllvm.visit.DeclareCaptures.CAPTURE_PREFIX;
 
-/** Converts captured local variable accesses to field accesses. */
-public class DesugarLocalClasses extends AbstractGoal {
+/**
+ * Converts captured local variable accesses to field accesses.
+ * This occurs in two passes:
+ *
+ * (1) The {@link DeclareCaptures} visitor
+ *     - determines which local variables are captured by which classes,
+ *     - declares "capture fields" to store these captures, and
+ *     - initializes these fields using arguments prepended to each constructor.
+ *
+ * (2) The {@link SubstituteCaptures} visitor
+ *     - translates captured local variable accesses to field accesses, and
+ *     - prepends capture arguments to super constructor calls and {@code new} expressions.
+ *
+ * Passes (1) and (2) could not be combined into one pass, because there could be an
+ * expression of the form {@code new C(...)} inside the body C, and we can't know
+ * which captures to prepend as arguments until we've finished visiting C in its entirety.
+ */
+public class DesugarCaptures extends AbstractGoal {
     private final Goal declare, substitute;
 
-    public DesugarLocalClasses(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
+    public DesugarCaptures(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, "Desugar local classes");
-        CaptureContext captures = new CaptureContext(); // Share capture context.
+        CaptureContext captures = new CaptureContext(); // Shared capture context.
         declare = new VisitorGoal(job, new DeclareCaptures(job, ts, nf, captures));
         substitute = new VisitorGoal(job, new SubstituteCaptures(job, ts, nf, captures));
     }
@@ -36,7 +52,10 @@ public class DesugarLocalClasses extends AbstractGoal {
     }
 }
 
-/** A capture context maps class types to captured local variable instances. */
+/**
+ * A capture context maps class types to captured local variable instances.
+ * Uses {@link LocalInstance#orig()} to ensure that equality works as expected.
+ */
 class CaptureContext {
     private final Map<ClassType, Set<LocalInstance>> captures = new HashMap<>();
 
@@ -45,15 +64,42 @@ class CaptureContext {
     }
 
     void add(ClassType ct, LocalInstance li) {
-        get(ct).add(li);
+        get(ct).add(li.orig());
     }
 }
 
+/**
+ * Collects captured local variables and declares constructor-initialized capture fields.
+ * A variable might be captured by a class C if it is
+ * - referenced directly within C,
+ * - captured by another class that is being instantiated within C through {@code new}, or
+ * - captured by a superclass of C.
+ *
+ * Collecting captures in the face of arbitrary nesting and inheritance can get complicated.
+ * We maintain a couple invariants:
+ *
+ * - Local variables are captured by the outermost class possible.
+ *   That is, if a class C is nested within a class O, and C accesses a captured local variable x
+ *   declared before O, then C will not capture x directly; instead, it will access x through its
+ *   enclosing instance of O.
+ *
+ * - A corollary of the above is that *only* local classes can have captures.
+ *   (Recall that local classes are those immediately enclosed by a code block.)
+ *   Member classes nested inside local classes will always defer to their enclosing instance.
+ */
 class DeclareCaptures extends DesugarVisitor {
     static final String CAPTURE_PREFIX = "capture$";
-    private final List<ClassType> localClasses = new ArrayList<>();
-    private final Map<LocalInstance, Integer> captureNestingLevels = new HashMap<>();
     private final CaptureContext captures;
+
+    /** Stack of local classes enclosing the current position of the visitor. */
+    private final List<ClassType> localClasses = new ArrayList<>();
+
+    /**
+     * Maps local variable declarations to the number of enclosing local classes.
+     * This is used to enforce that local variables are captured by the outermost class possible.
+     */
+    private final Map<LocalInstance, Integer> localClassNestingLevels = new HashMap<>();
+
 
     DeclareCaptures(
             Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf, CaptureContext captures) {
@@ -62,27 +108,29 @@ class DeclareCaptures extends DesugarVisitor {
     }
 
     /**
-     * Capture the given local variable in the outermost local class possible,
+     * Capture the given local variable in the outermost local class possible (if any),
      * relative to the current position of the visitor in the AST.
      */
     private void tryCapture(LocalInstance li) {
-        int nestingLevel = captureNestingLevels.get(li);
+        int nestingLevel = localClassNestingLevels.get(li);
         if (nestingLevel < localClasses.size()) {
             ClassType captureClass = localClasses.get(nestingLevel);
             captures.add(captureClass, li);
         }
     }
 
-    /** Capture all variables captured by the given class and its superclasses. */
+    /** Capture all variables captured by the given class. */
     private void captureTransitive(ClassType classType) {
+        // Worried about querying captures on an unvisited class? There are three cases.
+        // (1) If classType is a local class not enclosing this one, then it is already visited
+        //     (due to scoping rules).
+        // (2) If classType is a local class enclosing this one, then we don't need its captures;
+        //     they're already available through nesting.
+        // (3) Otherwise, classType is not a local class, and it might not have been visited yet
+        //     (e.g., non-static member classes can be referenced before they're declared). But
+        //     then it has no captures of its own---only its superclasses may. So we traverse its
+        //     superclasses below just in case.
         captures.get(classType.toClass()).forEach(this::tryCapture);
-
-        // Worried about querying captures on an unvisited class? There are two cases.
-        // (1) If classType is a local class, then it is already visited (due to scoping rules).
-        // (2) Otherwise, classType might not have been visited yet (e.g., non-static member classes
-        //     can be referenced before they're declared). But then it has no captures of its
-        //     own---only its superclasses may. So we traverse its superclasses here just in case,
-        //     possibly duplicating work.
         Type superType = classType.superType();
         if (superType != null) {
             captureTransitive(superType.toClass());
@@ -95,19 +143,18 @@ class DeclareCaptures extends DesugarVisitor {
         if (n instanceof ClassDecl) {
             ClassDecl cd = (ClassDecl) n;
             if (cd.type().isLocal()) {
-
                 // Push local class.
                 localClasses.add(cd.type());
-
-                // Transitively capture the captures of all superclasses.
-                captureTransitive(cd.type());
             }
+
+            // Transitively capture the captures of all superclasses.
+            captureTransitive(cd.type());
         }
 
         // Map variable declarations to local class nesting level.
         if (n instanceof VarDecl) {
             VarDecl vd = (VarDecl) n;
-            captureNestingLevels.put(vd.localInstance().orig(), localClasses.size());
+            localClassNestingLevels.put(vd.localInstance().orig(), localClasses.size());
         }
 
         // Capture local variables when applicable.
@@ -155,9 +202,15 @@ class DeclareCaptures extends DesugarVisitor {
     }
 }
 
+/**
+ * Translates captures to field accesses, and updates super constructor calls and {@code new}
+ * expressions in order to initialize capture fields.
+ */
 class SubstituteCaptures extends DesugarVisitor {
-    private final List<ClassType> localClasses = new ArrayList<>();
     private final CaptureContext captures;
+
+    /** Stack of local classes enclosing the current position of the visitor. */
+    private final Deque<ClassType> localClasses = new ArrayDeque<>();
 
     SubstituteCaptures(
             Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf, CaptureContext captures) {
@@ -167,6 +220,7 @@ class SubstituteCaptures extends DesugarVisitor {
 
     /** Translate a local variable to a capture field, if necessary. */
     private Expr translateLocal(Local l) {
+        // Recall that we've maintained that l is captured by at most one enclosing class.
         LocalInstance li = l.localInstance().orig();
         for (ClassType ct : localClasses) {
             if (captures.get(ct).contains(li)) {
@@ -180,7 +234,7 @@ class SubstituteCaptures extends DesugarVisitor {
 
     /** Returns a list of expressions to initialize the capture fields of the given class. */
     private List<Expr> buildCaptureArgs(ClassType container) {
-        return captures.get(container.toClass()).stream()
+        return captures.get(container).stream()
                 .map((li) -> tnf.Local(li.position(), li))
                 .map(this::translateLocal)
                 .collect(Collectors.toList());
@@ -193,7 +247,7 @@ class SubstituteCaptures extends DesugarVisitor {
             ClassDecl cd = (ClassDecl) n;
             if (cd.type().isLocal()) {
                 // Push local class.
-                localClasses.add(cd.type());
+                localClasses.push(cd.type());
             }
         }
         return super.enterDesugar(n);
@@ -206,7 +260,7 @@ class SubstituteCaptures extends DesugarVisitor {
             ClassDecl cd = (ClassDecl) n;
             if (cd.type().isLocal()) {
                 // Pop local class.
-                localClasses.remove(localClasses.size() - 1);
+                localClasses.remove();
             }
         }
 
