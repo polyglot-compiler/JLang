@@ -123,14 +123,6 @@ public abstract class DesugarVisitor extends NodeVisitor {
         });
     }
 
-    /** Helper method for update class members. */
-    ClassDecl prependMembers(ClassDecl cd, List<? extends ClassMember> newMembers) {
-        List<ClassMember> members = new ArrayList<>();
-        members.addAll(newMembers);
-        members.addAll(cd.body().members());
-        return cd.body(cd.body().members(members));
-    }
-
     /**
      * Prepend formals to all constructors and constructor calls of a given class.
      * Of course, this does not update instantiations through new nor super constructor calls.
@@ -161,7 +153,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
             List<Stmt> stmts = new ArrayList<>(body.statements());
             if (!stmts.isEmpty() && stmts.get(0) instanceof ConstructorCall) {
                 ConstructorCall cc = (ConstructorCall) stmts.get(0);
-                if (cc.kind() == ConstructorCall.THIS) {
+                if (cc.kind().equals(ConstructorCall.THIS)) {
                     List<Local> extraArgs = ctor.formals().subList(0, extraFormals.size()).stream()
                             .map((extraFormal) -> tnf.Local(extraFormal.position(), extraFormal))
                             .collect(Collectors.toList());
@@ -187,7 +179,10 @@ public abstract class DesugarVisitor extends NodeVisitor {
     ClassDecl prependConstructorInitializedFields(ClassDecl cd, List<FieldDecl> fields) {
 
         // Add field declarations.
-        cd = prependMembers(cd, fields);
+        List<ClassMember> members = new ArrayList<>();
+        members.addAll(fields);
+        members.addAll(cd.body().members());
+        cd = cd.body(cd.body().members(members));
 
         // Prepend formals to constructors.
         List<Formal> formals = fields.stream()
@@ -203,7 +198,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
             if (oldStmts.peek() instanceof ConstructorCall) {
                 // Make sure the constructor call remains the first statement.
                 ConstructorCall cc = (ConstructorCall) oldStmts.remove();
-                if (cc.kind() == ConstructorCall.THIS)
+                if (cc.kind().equals(ConstructorCall.THIS))
                     return ctor; // The other constructor will initialize the fields.
                 stmts.add(cc);
             }

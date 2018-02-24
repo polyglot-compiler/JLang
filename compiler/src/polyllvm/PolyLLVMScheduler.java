@@ -95,7 +95,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
             SourceFile sf = (SourceFile) ast;
 
             // This is a good place to debug the output of desugar passes:
-            // new PrettyPrinter(lang()).printAst(ast, new OptimalCodeWriter(System.out, 80));
+            // new PrettyPrinter(lang()).printAst(ast, new OptimalCodeWriter(System.out, 120));
 
             LLVMContextRef context = LLVMContextCreate();
             LLVMModuleRef mod = LLVMModuleCreateWithNameInContext(sf.source().name(), context);

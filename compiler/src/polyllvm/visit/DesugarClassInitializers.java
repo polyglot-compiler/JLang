@@ -51,8 +51,9 @@ public class DesugarClassInitializers extends DesugarVisitor {
                     // Avoid duplicating initializer side-effects; the other
                     // constructor will handle initialization.
                     return super.leaveDesugar(n);
-                } else if (call.kind().equals(ConstructorCall.SUPER)) {
+                } else  {
                     // Initialization code should go after the call to super.
+                    assert call.kind().equals(ConstructorCall.SUPER);
                     initCode = initCode.append(firstStmt);
                     List<Stmt> stmts = cd.body().statements();
                     Block sansSuper = cd.body().statements(stmts.subList(1, stmts.size()));
@@ -69,16 +70,10 @@ public class DesugarClassInitializers extends DesugarVisitor {
             Position pos = fd.position();
             if (fd.flags().isStatic() || fd.init() == null)
                 continue;
-            Id id = nf.Id(pos, fd.name());
-            Special receiver = (Special) nf.Special(pos, Special.THIS)
-                    .type(classes.getLast().type());
-            Field field = (Field) nf.Field(pos, receiver, id)
-                    .fieldInstance(fd.fieldInstance())
-                    .type(fd.declType());
-            Assign assign = (Assign) nf.FieldAssign(pos, field, Assign.ASSIGN, fd.init())
-                    .type(field.type());
-            Eval eval = nf.Eval(pos, assign);
-            initCode = initCode.append(eval);
+            Special receiver = tnf.This(pos, classes.getLast().type());
+            Field field = tnf.Field(pos, receiver, fd.name());
+            Stmt assign = tnf.EvalAssign(pos, field, fd.init());
+            initCode = initCode.append(assign);
         }
 
         // Build initialization blocks.

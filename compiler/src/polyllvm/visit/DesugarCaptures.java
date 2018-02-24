@@ -314,7 +314,7 @@ class SubstituteCaptures extends DesugarVisitor {
         // Supply extra arguments to super constructor calls as well.
         if (n instanceof ConstructorCall) {
             ConstructorCall cc = (ConstructorCall) n;
-            if (cc.kind() == ConstructorCall.SUPER) {
+            if (cc.kind().equals(ConstructorCall.SUPER)) {
                 ClassType container = cc.constructorInstance().container().toClass();
                 if (container.isLocal()) {
                     List<Expr> args = new ArrayList<>();
