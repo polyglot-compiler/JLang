@@ -176,4 +176,8 @@ public class TypedNodeFactory {
     public Special This(Position pos, ReferenceType container) {
         return (Special) nf.This(pos, nf.CanonicalTypeNode(pos, container)).type(container);
     }
+
+    public Special UnqualifiedThis(Position pos, ReferenceType container) {
+        return (Special) nf.This(pos).type(container);
+    }
 }

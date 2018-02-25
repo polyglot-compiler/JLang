@@ -13,12 +13,10 @@ import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.TypedNodeFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /** A visitor convenient for desugar passes. Rethrows semantic exceptions, for example. */
 public abstract class DesugarVisitor extends NodeVisitor {
@@ -107,6 +105,16 @@ public abstract class DesugarVisitor extends NodeVisitor {
         return (T) n.copy();
     }
 
+    /** Helper method for concatenating lists */
+    <U> List<U> concat(List<? extends U> a, List<? extends U> b) {
+        List<U> res = new ArrayList<>();
+        Stream.of(a, b).forEach(res::addAll);
+        return res;
+    }
+    <U, T extends U> List<U> concat(T t, List<? extends U> l) {
+        return concat(Collections.singletonList(t), l);
+    }
+
     /** Helper method for updating class members. */
     ClassDecl mapMembers(ClassDecl cd, Function<ClassMember, ClassMember> f) {
         List<ClassMember> members = new ArrayList<>(cd.body().members());
@@ -141,9 +149,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
             List<Formal> extraFormalCopies = extraFormals.stream()
                     .map((f) -> tnf.Formal(f.position(), f.name(), f.declType(), f.flags()))
                     .collect(Collectors.toList());
-            List<Formal> formals = new ArrayList<>();
-            formals.addAll(extraFormalCopies);
-            formals.addAll(ctor.formals());
+            List<Formal> formals = concat(extraFormalCopies, ctor.formals());
             return tnf.ConstructorDecl(ctor.position(), container, formals, ctor.body());
         });
 
@@ -157,9 +163,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
                     List<Local> extraArgs = ctor.formals().subList(0, extraFormals.size()).stream()
                             .map((extraFormal) -> tnf.Local(extraFormal.position(), extraFormal))
                             .collect(Collectors.toList());
-                    List<Expr> args = new ArrayList<>();
-                    args.addAll(extraArgs);
-                    args.addAll(cc.arguments());
+                    List<Expr> args = concat(extraArgs, cc.arguments());
                     cc = tnf.ConstructorCall(cc.position(), cc.kind(), container, args);
                 }
                 stmts.set(0, cc);
@@ -179,9 +183,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
     ClassDecl prependConstructorInitializedFields(ClassDecl cd, List<FieldDecl> fields) {
 
         // Add field declarations.
-        List<ClassMember> members = new ArrayList<>();
-        members.addAll(fields);
-        members.addAll(cd.body().members());
+        List<ClassMember> members = concat(fields, cd.body().members());
         cd = cd.body(cd.body().members(members));
 
         // Prepend formals to constructors.
@@ -206,7 +208,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
                 // Initialize this.f = f;
                 Position pos = f.position();
                 Local arg = tnf.Local(pos, f);
-                Special thisClass = tnf.This(pos, container);
+                Special thisClass = tnf.UnqualifiedThis(pos, container);
                 Field field = tnf.Field(pos, thisClass, f.name());
                 stmts.add(tnf.EvalAssign(pos, field, arg));
             });

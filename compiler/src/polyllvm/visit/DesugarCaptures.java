@@ -129,7 +129,7 @@ class DeclareCaptures extends DesugarVisitor {
         //     (e.g., non-static member classes can be referenced before they're declared). But
         //     then it has no captures of its own---only its superclasses may. So we traverse its
         //     superclasses below just in case.
-        captures.get(classType.toClass()).forEach(this::tryCapture);
+        captures.get(classType).forEach(this::tryCapture);
         Type superType = classType.superType();
         if (superType != null) {
             captureTransitive(superType.toClass());
@@ -304,9 +304,7 @@ class SubstituteCaptures extends DesugarVisitor {
             New nw = (New) n;
             ReferenceType container = nw.constructorInstance().container();
             if (container.isClass() && container.toClass().isLocal()) {
-                List<Expr> args = new ArrayList<>();
-                args.addAll(buildCaptureArgs(container.toClass()));
-                args.addAll(nw.arguments());
+                List<Expr> args = concat(buildCaptureArgs(container.toClass()), nw.arguments());
                 n = tnf.New(nw.position(), container.toClass(), args);
             }
         }
@@ -317,9 +315,7 @@ class SubstituteCaptures extends DesugarVisitor {
             if (cc.kind().equals(ConstructorCall.SUPER)) {
                 ClassType container = cc.constructorInstance().container().toClass();
                 if (container.isLocal()) {
-                    List<Expr> args = new ArrayList<>();
-                    args.addAll(buildCaptureArgs(container));
-                    args.addAll(cc.arguments());
+                    List<Expr> args = concat(buildCaptureArgs(container), cc.arguments());
                     n = tnf.ConstructorCall(cc.position(), cc.kind(), container, args);
                 }
             }

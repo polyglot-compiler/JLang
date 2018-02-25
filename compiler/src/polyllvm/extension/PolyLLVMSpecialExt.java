@@ -17,8 +17,7 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
         Special n = (Special) node();
 
         if (n.qualifier() != null)
-            if (!v.getCurrentClass().type().typeEquals(n.qualifier().type().toClass()))
-                throw new InternalCompilerError("Qualified this should have been desugared: " + n);
+            throw new InternalCompilerError("Qualified this should have been desugared");
 
         LLVMValueRef thisPtr = LLVMGetParam(v.currFn(), 0);
         if (n.kind() == Special.THIS) {

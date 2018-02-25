@@ -55,14 +55,15 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // Note that running type check again after these passes can fail, for example
                 // because the type checker can disagree about the target of a field which has
                 // been moved by a desugar pass. That's ok; we trust our type information.
-                new DesugarCaptures(job, ts, nf),
+                new VisitorGoal(job, new DesugarClassInitializers(job, ts, nf)),
                 new VisitorGoal(job, new DesugarEnhancedFors(job, ts, nf)),
                 new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
                 new VisitorGoal(job, new DesugarStringConcatenation(job, ts, nf)),
                 new VisitorGoal(job, new DesugarAsserts(job, ts, nf)),
-                new VisitorGoal(job, new DesugarClassInitializers(job, ts, nf)),
                 new VisitorGoal(job, new DesugarMultidimensionalArrays(job, ts, nf)),
                 new VisitorGoal(job, new DesugarVarargs(job, ts, nf)),
+                new DesugarCaptures(job, ts, nf),
+                new DesugarInnerClasses(job, ts, nf), // Must run after DesugarCaptures.
                 AutoBoxing(job),
 
                 // The explicit cast visitor should generally be run last, since the other
