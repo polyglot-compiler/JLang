@@ -8,6 +8,7 @@ import polyglot.frontend.goals.AbstractGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
 import polyglot.types.*;
+import polyglot.util.Pair;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
@@ -23,6 +24,7 @@ import static polyllvm.visit.DeclareCaptures.CAPTURE_PREFIX;
  * This occurs in two passes:
  *
  * (1) The {@link DeclareCaptures} visitor
+ *     - updates the names of local classes to ensure that qualified names are unique,
  *     - determines which local variables are captured by which classes,
  *     - declares "capture fields" to store these captures, and
  *     - initializes these fields using "capture formals" prepended to each constructor.
@@ -35,10 +37,10 @@ import static polyllvm.visit.DeclareCaptures.CAPTURE_PREFIX;
  * expression of the form {@code new C(...)} inside the body C, and we can't know
  * which captures to prepend as arguments until we've finished visiting C in its entirety.
  */
-public class DesugarCaptures extends AbstractGoal {
+public class DesugarLocalClasses extends AbstractGoal {
     private final Goal declare, substitute;
 
-    public DesugarCaptures(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
+    public DesugarLocalClasses(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, "Desugar local classes");
         CaptureContext captures = new CaptureContext(); // Shared capture context.
         declare = new VisitorGoal(job, new DeclareCaptures(job, ts, nf, captures));
@@ -99,6 +101,12 @@ class DeclareCaptures extends DesugarVisitor {
      */
     private final Map<LocalInstance, Integer> localClassNestingLevels = new HashMap<>();
 
+    /**
+     * Maps (enclosing class, local class name) pairs to increasing integers.
+     * This is used to make sure that the qualified names of local classes are unique.
+     */
+    private final Map<Pair<ClassType, String>, Integer> localClassNameCount = new HashMap<>();
+
 
     DeclareCaptures(
             Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf, CaptureContext captures) {
@@ -140,14 +148,24 @@ class DeclareCaptures extends DesugarVisitor {
     public NodeVisitor enterDesugar(Node n) throws SemanticException {
 
         if (n instanceof ClassDecl) {
-            ClassDecl cd = (ClassDecl) n;
-            if (cd.type().isLocal()) {
+            ParsedClassType type = ((ClassDecl) n).type();
+            if (type.isLocal()) {
+
                 // Push local class.
-                localClasses.add(cd.type());
+                localClasses.add(type);
+
+                // Update the count of local classes with this same name.
+                // Update the name of this local class to ensure unique qualified name.
+                ClassType enclosing = type.outer();
+                Pair<ClassType, String> countKey = new Pair<>(enclosing, type.name());
+                int count = localClassNameCount.getOrDefault(countKey, 0);
+                ++count;
+                type.name(count + type.name());
+                localClassNameCount.put(countKey, count);
             }
 
             // Transitively capture the captures of all superclasses.
-            captureTransitive(cd.type());
+            captureTransitive(type);
         }
 
         // Map variable declarations to local class nesting level.
