@@ -3,10 +3,6 @@ package polyllvm.ast;
 import polyglot.ext.jl7.ast.JL7NodeFactory;
 
 /**
- * NodeFactory for polyllvm extension.
+ * NodeFactory for the PolyLLVM extension.
  */
-public interface PolyLLVMNodeFactory extends JL7NodeFactory {
-
-    // Factory method for Extension factory
-    PolyLLVMExtFactory PolyLLVMExtFactory();
-}
+public interface PolyLLVMNodeFactory extends JL7NodeFactory {}

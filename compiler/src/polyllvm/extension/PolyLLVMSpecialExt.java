@@ -17,18 +17,14 @@ public class PolyLLVMSpecialExt extends PolyLLVMExt {
         Special n = (Special) node();
 
         if (n.qualifier() != null)
-            throw new InternalCompilerError("Qualified this should have been desugared");
+            throw new InternalCompilerError(
+                    "Qualified this should have been desugared by the DesugarInnerClasses visitor");
+        if (n.kind().equals(Special.SUPER))
+            throw new InternalCompilerError(
+                    "super should have been desugared by the DesugarInnerClasses visitor");
+        assert n.kind().equals(Special.THIS);
 
-        LLVMValueRef thisPtr = LLVMGetParam(v.currFn(), 0);
-        if (n.kind() == Special.THIS) {
-            v.addTranslation(n, thisPtr);
-        }
-        else if (n.kind() == Special.SUPER) {
-            LLVMTypeRef type = v.utils.toLL(n.type());
-            LLVMValueRef to_super = LLVMBuildBitCast(v.builder, thisPtr, type, "cast_to_super");
-            v.addTranslation(n, to_super);
-        }
-
+        v.addTranslation(n, LLVMGetParam(v.currFn(), 0));
         return super.leaveTranslateLLVM(v);
     }
 }

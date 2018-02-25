@@ -68,10 +68,9 @@ class DeclareEnclosingInstances extends DesugarVisitor {
         if (n instanceof ClassDecl) {
             ClassDecl cd = (ClassDecl) n;
             ParsedClassType container = cd.type();
-            if (container.isInnerClass()) {
-                ClassType outer = container.outer();
+            if (container.isInnerClass() && container.hasEnclosingInstance(container.outer())) {
                 FieldDecl field = tnf.FieldDecl(
-                        cd.position(), ENCLOSING_STR, outer,
+                        cd.position(), ENCLOSING_STR, container.outer(),
                         container, /*init*/ null, Flags.FINAL);
                 // Most of the rewriting happens in this helper function.
                 cd = prependConstructorInitializedFields(cd, Collections.singletonList(field));
@@ -177,11 +176,14 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
             New nw = (New) n;
             Type container = nw.constructorInstance().container();
             if (container.isClass() && container.toClass().isInnerClass()) {
-                Expr enclosing = nw.qualifier() != null
-                        ? nw.qualifier()
-                        : getEnclosingInstance(nw.position(), container.toClass().outer());
-                List<Expr> args = concat(enclosing, nw.arguments());
-                n = tnf.New(nw.position(), nw.type().toClass(), args);
+                ClassType outer = container.toClass().outer();
+                if (container.toClass().hasEnclosingInstance(outer)) {
+                    Expr enclosing = nw.qualifier() != null
+                            ? nw.qualifier()
+                            : getEnclosingInstance(nw.position(), outer);
+                    List<Expr> args = concat(enclosing, nw.arguments());
+                    n = tnf.New(nw.position(), nw.type().toClass(), args);
+                }
             }
         }
 
@@ -190,11 +192,13 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
             ConstructorCall cc = (ConstructorCall) n;
             ClassType container = cc.constructorInstance().container().toClass();
             if (cc.kind().equals(ConstructorCall.SUPER) && container.isInnerClass()) {
-                Expr enclosing = cc.qualifier() != null
-                        ? cc.qualifier()
-                        : getEnclosingInstance(cc.position(), container.outer());
-                List<Expr> args = concat(enclosing, cc.arguments());
-                n = tnf.ConstructorCall(cc.position(), cc.kind(), container, args);
+                if (container.hasEnclosingInstance(container.outer())) {
+                    Expr enclosing = cc.qualifier() != null
+                            ? cc.qualifier()
+                            : getEnclosingInstance(cc.position(), container.outer());
+                    List<Expr> args = concat(enclosing, cc.arguments());
+                    n = tnf.ConstructorCall(cc.position(), cc.kind(), container, args);
+                }
             }
         }
 
@@ -206,7 +210,6 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
                     : classes.peek().type();
             Expr res = getEnclosingInstance(s.position(), enclosingType);
             if (s.kind().equals(Special.SUPER))
-                // TODO: Method dispatch still broken here.
                 res = tnf.Cast(n.position(), res.type().toClass().superType(), res);
             n = res;
         }

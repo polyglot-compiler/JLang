@@ -5,6 +5,8 @@ import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
+import polyllvm.ast.PolyLLVMExt;
+import polyllvm.extension.PolyLLVMCallExt;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -122,9 +124,11 @@ public class TypedNodeFactory {
             MethodInstance mi = ts.findMethod(
                     container, name, argTypes, /*actualTypeArgs*/ null, container,
                     returnType, /*fromClient*/ true);
-            return (Call) nf.Call(pos, receiver, nf.Id(pos, name), args)
+            Call c = (Call) nf.Call(pos, receiver, nf.Id(pos, name), args)
                     .methodInstance(mi)
                     .type(returnType);
+            PolyLLVMCallExt ext = (PolyLLVMCallExt) PolyLLVMExt.ext(c);
+            return ext.determineIfDirect(c);
         } catch (SemanticException e) {
             throw new InternalCompilerError(e);
         }

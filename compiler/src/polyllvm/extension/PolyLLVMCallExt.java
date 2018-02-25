@@ -6,10 +6,11 @@ import polyglot.ast.Call;
 import polyglot.ast.Node;
 import polyglot.ast.Special;
 import polyglot.ext.jl5.types.JL5MethodInstance;
-import polyglot.types.ClassType;
-import polyglot.types.MethodInstance;
-import polyglot.types.ReferenceType;
+import polyglot.types.*;
+import polyglot.util.Copy;
 import polyglot.util.SerialVersionUID;
+import polyglot.visit.TypeChecker;
+import polyllvm.ast.PolyLLVMExt;
 import polyllvm.types.SubstMethodInstance;
 import polyllvm.util.CollectUtils;
 import polyllvm.util.Constants;
@@ -26,18 +27,56 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
+    /**
+     * Indicates whether this call can be dispatched directly, without using a dispatch table.
+     * This is set to true to optimize calls when possible, and also to ensure that
+     * direct calls remain direct after desugar transformations (e.g., qualified super
+     * can be desugared to field accesses, so the fact that the call is direct is otherwise lost).
+     */
+    private boolean direct = false;
+
+    @SuppressWarnings("WeakerAccess")
+    public Call determineIfDirect(Call c) {
+        PolyLLVMCallExt ext = (PolyLLVMCallExt) PolyLLVMExt.ext(c);
+        if (ext.direct) return c; // Should always remain direct once set.
+
+        boolean direct = false;
+
+        // Calls through super are direct.
+        if (c.target() instanceof Special)
+            if (((Special) c.target()).kind().equals(Special.SUPER))
+                direct = true;
+
+        // Calls to private or final methods are direct.
+        Flags flags = c.methodInstance().flags();
+        if (flags.isPrivate() || flags.isFinal())
+            direct = true;
+
+        // Copy and return.
+        if (!direct) return c;
+        if (c == node) {
+            c = Copy.Util.copy(c);
+            ext = (PolyLLVMCallExt) PolyLLVMExt.ext(c);
+        }
+        ext.direct = true;
+        return c;
+    }
+
+    @Override
+    public Node typeCheck(TypeChecker tc) throws SemanticException {
+        Call c = (Call) super.typeCheck(tc);
+        return determineIfDirect(c);
+    }
+
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         Call n = node();
         MethodInstance mi = n.methodInstance();
 
-        if (n.target() instanceof Special
-                && ((Special) n.target()).kind().equals(Special.SUPER)) {
-            translateSuperCall(v);
-        } else if (mi.flags().isStatic()) {
+        if (mi.flags().isStatic()) {
             translateStaticCall(v);
-        } else if (mi.flags().isPrivate() || mi.flags().isFinal()) {
-            translateFinalMethodCall(v);
+        } else if (direct) {
+            translateDirectNonStaticCall(v);
         } else {
             translateNonStaticCall(v);
         }
@@ -59,7 +98,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         List<LLVMValueRef> x_args = n.arguments().stream()
                 .<LLVMValueRef> map(v::getTranslation)
                 .collect(Collectors.toList());
-        LLVMValueRef[] ll_args = CollectUtils.<LLVMValueRef> toArray(x_recv,
+        LLVMValueRef[] ll_args = CollectUtils.toArray(x_recv,
                 x_args, LLVMValueRef.class);
         LLVMValueRef func_ptr;
 
@@ -163,7 +202,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         v.addTranslation(n, val);
     }
 
-    private void translateFinalMethodCall(LLVMTranslator v) {
+    private void translateDirectNonStaticCall(LLVMTranslator v) {
         Call n = node();
         MethodInstance substM = n.methodInstance();
 
@@ -195,33 +234,4 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
             v.addTranslation(n, v.utils.buildFunCall(func_ptr, x_args));
         }
     }
-
-    private void translateSuperCall(LLVMTranslator v) {
-        Call n = node();
-        MethodInstance substM = n.methodInstance();
-
-        LLVMTypeRef func_ty = v.utils.toLLFuncTy(substM.container(),
-                v.utils.retErasureLL(substM), v.utils.formalsErasureLL(substM));
-        LLVMValueRef func_ptr = v.utils.getFunction(
-                v.mangler.mangleProcName(substM), func_ty);
-
-        LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(
-                v.getCurrentClass().type(), substM.returnType(),
-                substM.formalTypes());
-        func_ptr = LLVM.LLVMBuildBitCast(
-                v.builder, func_ptr, v.utils.ptrTypeRef(func_ty_cast), "cast");
-
-        LLVMValueRef x_this = LLVMGetParam(v.currFn(), 0);
-        LLVMValueRef[] x_args = Stream
-                .concat(Stream.of(x_this),
-                        n.arguments().stream().map(v::getTranslation))
-                .toArray(LLVMValueRef[]::new);
-
-        if (substM.returnType().isVoid()) {
-            v.addTranslation(n, v.utils.buildProcCall(func_ptr, x_args));
-        } else {
-            v.addTranslation(n, v.utils.buildFunCall(func_ptr, x_args));
-        }
-    }
-
 }
