@@ -583,7 +583,7 @@ public class LLVMUtils {
      *             {@code clazz}
      * @param clazz the non-abstract Java class type
      */
-    public LLVMValueRef[] toIDVSlots(ClassType intf, ParsedClassType clazz) {
+    public LLVMValueRef[] toIDVSlots(ClassType intf, ClassType clazz) {
         List<MethodInstance> cdvMethods = v.cdvMethods(erasureLL(clazz));
         List<MethodInstance> idvMethods = v.idvMethods(erasureLL(intf));
         int idvSize = idvMethods.size();

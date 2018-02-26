@@ -146,14 +146,22 @@ public class TypedNodeFactory {
         }
     }
 
-    public New New(Position pos, ClassType type, List<Expr> args) {
+    public New New(Position pos, ClassType type, Expr outer, List<Expr> args, ClassBody body) {
         List<Type> argTypes = args.stream().map(Expr::type).collect(Collectors.toList());
         try {
             ConstructorInstance ci = ts.findConstructor(
                     type, argTypes, /*actualTypeArgs*/ null, type, /*fromClient*/ true);
-            return (New) nf.New(pos, nf.CanonicalTypeNode(pos, type), args)
+            New res = (New) nf.New(pos, outer, nf.CanonicalTypeNode(pos, type), args, body)
                     .constructorInstance(ci)
                     .type(type);
+            if (body != null) {
+                if (!(type instanceof ParsedClassType))
+                    throw new InternalCompilerError(
+                            "Trying to create new anonymous instance without parsed class type");
+                res = res.anonType((ParsedClassType) type);
+            }
+            return res;
+
         } catch (SemanticException e) {
             throw new InternalCompilerError(e);
         }

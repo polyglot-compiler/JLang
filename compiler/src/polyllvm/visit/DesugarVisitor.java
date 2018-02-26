@@ -20,40 +20,57 @@ import java.util.stream.Stream;
 
 /** A visitor convenient for desugar passes. Rethrows semantic exceptions, for example. */
 public abstract class DesugarVisitor extends NodeVisitor {
-    protected Job job;
-    protected PolyLLVMTypeSystem ts;
-    protected PolyLLVMNodeFactory nf;
-    protected TypedNodeFactory tnf;
+    protected final Job job;
+    protected final PolyLLVMTypeSystem ts;
+    protected final PolyLLVMNodeFactory nf;
+    protected final TypedNodeFactory tnf;
+
+    /** Convenience stack of enclosing classes (including anonymous classes). */
+    protected final Deque<ClassType> classes = new ArrayDeque<>();
+
+    /** Convenience stack of enclosing constructors. */
+    protected final Deque<ConstructorDecl> constructors = new ArrayDeque<>();
 
     DesugarVisitor(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(nf.lang());
+        this.job = job;
         this.ts = ts;
         this.nf = nf;
         tnf = new TypedNodeFactory(ts, nf);
     }
 
-    @Override
-    public final Node override(Node parent, Node n) {
-        try {
-            return overrideDesugar(parent, n);
-        } catch (SemanticException e) {
-            throw new InternalCompilerError(e);
+    private ParsedClassType getClassType(Node n) {
+        assert n instanceof ClassDecl || n instanceof New;
+        if (n instanceof ClassDecl) {
+            return ((ClassDecl) n).type();
+        } else {
+            return (ParsedClassType) ((New) n).type().toClass();
         }
     }
 
     @Override
-    public final Node override(Node n) {
-        throw new InternalCompilerError("Should not be called");
-    }
-
-    @Override
     public final NodeVisitor enter(Node parent, Node n) {
+
+        // Push and enter class type.
+        if (n instanceof ClassBody) {
+            ClassBody cb = (ClassBody) n;
+            ParsedClassType ct = getClassType(parent);
+            classes.push(ct);
+            enterClassBody(ct, cb);
+        }
+
+        // Pop constructor.
+        if (n instanceof ConstructorDecl) {
+            constructors.push((ConstructorDecl) n);
+        }
+
         try {
             enterDesugar(parent, n);
         } catch (SemanticException e) {
             throw new InternalCompilerError(e);
         }
-        return this;
+
+        return super.enter(n);
     }
 
     @Override
@@ -63,11 +80,27 @@ public abstract class DesugarVisitor extends NodeVisitor {
 
     @Override
     public final Node leave(Node parent, Node old, Node n, NodeVisitor v) {
+
         try {
-            return leaveDesugar(parent, n);
+            n = leaveDesugar(parent, n);
         } catch (SemanticException e) {
             throw new InternalCompilerError(e);
         }
+
+        // Pop constructor.
+        if (n instanceof ConstructorDecl) {
+            constructors.pop();
+        }
+
+        // Pop and leave class type.
+        if (n instanceof ClassBody) {
+            ClassBody cb = (ClassBody) n;
+            ParsedClassType ct = getClassType(parent);
+            classes.pop();
+            n = leaveClassBody(ct, cb);
+        }
+
+        return super.leave(old, n, v);
     }
 
     @Override
@@ -75,27 +108,25 @@ public abstract class DesugarVisitor extends NodeVisitor {
         throw new InternalCompilerError("Should not be called");
     }
 
-    public Node overrideDesugar(Node Parent, Node n) throws SemanticException {
-        return overrideDesugar(n);
+    /** Convenience method that unifies class declaration bodies and anonymous class bodies. */
+    protected void enterClassBody(ParsedClassType ct, ClassBody body) {}
+
+    protected void enterDesugar(Node parent, Node n) throws SemanticException {
+        enterDesugar(n);
     }
 
-    public Node overrideDesugar(Node n) throws SemanticException {
-        return null;
+    protected void enterDesugar(Node n) throws SemanticException {}
+
+    /** Convenience method that unifies class declaration bodies and anonymous class bodies. */
+    protected ClassBody leaveClassBody(ParsedClassType ct, ClassBody cb) {
+        return cb;
     }
 
-    public NodeVisitor enterDesugar(Node parent, Node n) throws SemanticException {
-        return enterDesugar(n);
-    }
-
-    public NodeVisitor enterDesugar(Node n) throws SemanticException {
-        return this;
-    }
-
-    public Node leaveDesugar(Node parent, Node n) throws SemanticException {
+    protected Node leaveDesugar(Node parent, Node n) throws SemanticException {
         return leaveDesugar(n);
     }
 
-    public Node leaveDesugar(Node n) throws SemanticException {
+    protected Node leaveDesugar(Node n) throws SemanticException {
         return n;
     }
 
@@ -116,15 +147,15 @@ public abstract class DesugarVisitor extends NodeVisitor {
     }
 
     /** Helper method for updating class members. */
-    ClassDecl mapMembers(ClassDecl cd, Function<ClassMember, ClassMember> f) {
-        List<ClassMember> members = new ArrayList<>(cd.body().members());
+    ClassBody mapMembers(ClassBody cb, Function<ClassMember, ClassMember> f) {
+        List<ClassMember> members = new ArrayList<>(cb.members());
         for (int i = 0; i < members.size(); ++i)
             members.set(i, f.apply(members.get(i)));
-        return cd.body(cd.body().members(members));
+        return cb.members(members);
     }
 
-    ClassDecl mapConstructors(ClassDecl cd, Function<ConstructorDecl, ConstructorDecl> f) {
-        return mapMembers(cd, (m) -> {
+    ClassBody mapConstructors(ClassBody cb, Function<ConstructorDecl, ConstructorDecl> f) {
+        return mapMembers(cb, (m) -> {
             if (m instanceof ConstructorDecl)
                 return f.apply((ConstructorDecl) m);
             else return m;
@@ -135,26 +166,27 @@ public abstract class DesugarVisitor extends NodeVisitor {
      * Prepend formals to all constructors and constructor calls of a given class.
      * Of course, this does not update instantiations through new nor super constructor calls.
      */
-    ClassDecl prependConstructorFormals(ClassDecl cd, List<Formal> extraFormals) {
+    ClassBody prependConstructorFormals(
+            ParsedClassType ct, ClassBody cb, List<Formal> extraFormals) {
+
         if (extraFormals.isEmpty())
-            return cd;
+            return cb;
 
         // Clear previous constructor instances.
-        ParsedClassType container = cd.type();
-        container.setConstructors(Collections.emptyList());
+        ct.setConstructors(Collections.emptyList());
 
         // Update constructor declarations and create new constructor instances.
-        cd = mapConstructors(cd, (ctor) -> {
+        cb = mapConstructors(cb, (ctor) -> {
             // We construct new formals so they don't alias each other.
             List<Formal> extraFormalCopies = extraFormals.stream()
                     .map((f) -> tnf.Formal(f.position(), f.name(), f.declType(), f.flags()))
                     .collect(Collectors.toList());
             List<Formal> formals = concat(extraFormalCopies, ctor.formals());
-            return tnf.ConstructorDecl(ctor.position(), container, formals, ctor.body());
+            return tnf.ConstructorDecl(ctor.position(), ct, formals, ctor.body());
         });
 
         // Now that constructor instances are updated, we can update constructor calls too.
-        cd = mapConstructors(cd, (ctor) -> {
+        cb = mapConstructors(cb, (ctor) -> {
             Block body = ctor.body();
             List<Stmt> stmts = new ArrayList<>(body.statements());
             if (!stmts.isEmpty() && stmts.get(0) instanceof ConstructorCall) {
@@ -164,7 +196,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
                             .map((extraFormal) -> tnf.Local(extraFormal.position(), extraFormal))
                             .collect(Collectors.toList());
                     List<Expr> args = concat(extraArgs, cc.arguments());
-                    cc = tnf.ConstructorCall(cc.position(), cc.kind(), container, args);
+                    cc = tnf.ConstructorCall(cc.position(), cc.kind(), ct, args);
                 }
                 stmts.set(0, cc);
             }
@@ -172,7 +204,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
             return (ConstructorDecl) ctor.body(body);
         });
 
-        return cd;
+        return cb;
     }
 
     /**
@@ -180,21 +212,21 @@ public abstract class DesugarVisitor extends NodeVisitor {
      * constructors, and initializes the fields with those formals.
      * Of course, this does not update instantiations through new nor super constructor calls.
      */
-    ClassDecl prependConstructorInitializedFields(ClassDecl cd, List<FieldDecl> fields) {
+    ClassBody prependConstructorInitializedFields(
+            ParsedClassType ct, ClassBody cb, List<FieldDecl> fields) {
 
         // Add field declarations.
-        List<ClassMember> members = concat(fields, cd.body().members());
-        cd = cd.body(cd.body().members(members));
+        List<ClassMember> members = concat(fields, cb.members());
+        cb = cb.members(members);
 
         // Prepend formals to constructors.
         List<Formal> formals = fields.stream()
                 .map((f) -> tnf.Formal(f.position(), f.name(), f.declType(), Flags.FINAL))
                 .collect(Collectors.toList());
-        cd = prependConstructorFormals(cd, formals);
+        cb = prependConstructorFormals(ct, cb, formals);
 
         // Initialize fields.
-        ClassType container = cd.type();
-        cd = mapConstructors(cd, (ctor) -> {
+        cb = mapConstructors(cb, (ctor) -> {
             List<Stmt> stmts = new ArrayList<>();
             LinkedList<Stmt> oldStmts = new LinkedList<>(ctor.body().statements());
             if (oldStmts.peek() instanceof ConstructorCall) {
@@ -208,7 +240,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
                 // Initialize this.f = f;
                 Position pos = f.position();
                 Local arg = tnf.Local(pos, f);
-                Special thisClass = tnf.UnqualifiedThis(pos, container);
+                Special thisClass = tnf.UnqualifiedThis(pos, ct);
                 Field field = tnf.Field(pos, thisClass, f.name());
                 stmts.add(tnf.EvalAssign(pos, field, arg));
             });
@@ -216,6 +248,6 @@ public abstract class DesugarVisitor extends NodeVisitor {
             return (ConstructorDecl) ctor.body(ctor.body().statements(stmts));
         });
 
-        return cd;
+        return cb;
     }
 }

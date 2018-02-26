@@ -7,9 +7,9 @@ import polyglot.types.ParsedClassType;
 
 public interface PolyLLVMTypeSystem extends JL7TypeSystem {
 
+    ParsedClassType Array();
+
     SubstMethodInstance substMethodInstance(JL5MethodInstance postSubst,
             JL5MethodInstance preSubst, JL5Subst subst);
-
-    ParsedClassType Array();
 
 }

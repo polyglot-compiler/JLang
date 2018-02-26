@@ -10,15 +10,15 @@ import polyglot.util.SerialVersionUID;
 /**
  * See {@link SubstMethodInstance}.
  */
-public class SubstMethodInstance_c extends JL5MethodInstance_c
+public class PolyLLVMSubstMethodInstance_c extends JL5MethodInstance_c
         implements SubstMethodInstance {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     final protected JL5MethodInstance base;
     final protected JL5Subst subst;
 
-    public SubstMethodInstance_c(JL5MethodInstance postSubst,
-            JL5MethodInstance preSubst, JL5Subst subst) {
+    public PolyLLVMSubstMethodInstance_c(JL5MethodInstance postSubst,
+                                         JL5MethodInstance preSubst, JL5Subst subst) {
         super((JL5TypeSystem) postSubst.typeSystem(), postSubst.position(),
                 postSubst.container(), postSubst.flags(),
                 postSubst.returnType(), postSubst.name(),

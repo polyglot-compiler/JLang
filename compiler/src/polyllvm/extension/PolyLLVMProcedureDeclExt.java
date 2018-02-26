@@ -39,7 +39,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         List<Type> formalTypes = n.formals().stream()
                 .map(Formal::declType)
                 .collect(Collectors.toList());
-        ReferenceType target = v.getCurrentClass().type().toReference();
+        ReferenceType target = pi.container();
         LLVMTypeRef funcType = pi.flags().isStatic()
                 ? v.utils.toLLFuncTy(retType, formalTypes)
                 : v.utils.toLLFuncTy(target, retType, formalTypes);

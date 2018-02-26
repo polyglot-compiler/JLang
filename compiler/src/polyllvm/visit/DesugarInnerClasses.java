@@ -9,14 +9,11 @@ import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
 import polyglot.types.*;
 import polyglot.util.Position;
-import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.MultiGoal;
 
-import java.util.ArrayDeque;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -63,22 +60,17 @@ class DeclareEnclosingInstances extends DesugarVisitor {
     }
 
     @Override
-    public Node leaveDesugar(Node n) throws SemanticException {
+    public ClassBody leaveClassBody(ParsedClassType ct, ClassBody cb) {
 
-        if (n instanceof ClassDecl) {
-            ClassDecl cd = (ClassDecl) n;
-            ParsedClassType container = cd.type();
-            if (container.isInnerClass() && container.hasEnclosingInstance(container.outer())) {
-                FieldDecl field = tnf.FieldDecl(
-                        cd.position(), ENCLOSING_STR, container.outer(),
-                        container, /*init*/ null, Flags.FINAL);
-                // Most of the rewriting happens in this helper function.
-                cd = prependConstructorInitializedFields(cd, Collections.singletonList(field));
-            }
-            n = cd;
+        if (ct.isInnerClass() && ct.hasEnclosingInstance(ct.outer())) {
+            FieldDecl field = tnf.FieldDecl(
+                    cb.position(), ENCLOSING_STR, ct.outer(),
+                    ct, /*init*/ null, Flags.FINAL);
+            // Most of the rewriting happens in this helper function.
+            cb = prependConstructorInitializedFields(ct, cb, Collections.singletonList(field));
         }
 
-        return super.leaveDesugar(n);
+        return super.leaveClassBody(ct, cb);
     }
 }
 
@@ -88,12 +80,6 @@ class DeclareEnclosingInstances extends DesugarVisitor {
  * expressions to field accesses through enclosing instances.
  */
 class SubstituteEnclosingInstances extends DesugarVisitor {
-
-    /** Stack of enclosing classes. */
-    private final Deque<ClassDecl> classes = new ArrayDeque<>();
-
-    /** Stack of enclosing constructors. */
-    private final Deque<ConstructorDecl> constructors = new ArrayDeque<>();
 
     // The translation proceeds as follows. See JLS 7th Ed. 8.1.3 for terminology.
     // - Update super constructor calls and {@code new} expressions.
@@ -118,7 +104,7 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
 
     /** Return the enclosing instance of the specified type with respect to the current class. */
     private Expr getEnclosingInstance(Position pos, ClassType targetType) {
-        ClassType currClass = classes.peek().type();
+        ClassType currClass = classes.peek();
 
         // If we are inside a constructor, try to use an enclosing instance formal rather than the
         // enclosing instance field. This ensures that enclosing instance fields are not accessed
@@ -134,7 +120,6 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
                 Local enclosing = tnf.Local(enclosingFormal.position(), enclosingFormal);
                 return getEnclosingInstance(enclosing, targetType);
             }
-
         }
 
         // Otherwise, look for an enclosing instance through enclosing instance fields.
@@ -143,33 +128,7 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
     }
 
     @Override
-    public NodeVisitor enterDesugar(Node n) throws SemanticException {
-
-        // Push class.
-        if (n instanceof ClassDecl) {
-            classes.push((ClassDecl) n);
-        }
-
-        // Push constructor.
-        if (n instanceof ConstructorDecl) {
-            constructors.push((ConstructorDecl) n);
-        }
-
-        return super.enterDesugar(n);
-    }
-
-    @Override
     public Node leaveDesugar(Node n) throws SemanticException {
-
-        // Pop class.
-        if (n instanceof ClassDecl) {
-            classes.pop();
-        }
-
-        // Pop constructor.
-        if (n instanceof ConstructorDecl) {
-            constructors.pop();
-        }
 
         // Pass enclosing instance to {@code new} expressions.
         if (n instanceof New) {
@@ -178,11 +137,12 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
             if (container.isClass() && container.toClass().isInnerClass()) {
                 ClassType outer = container.toClass().outer();
                 if (container.toClass().hasEnclosingInstance(outer)) {
+                    Position pos = nw.position();
                     Expr enclosing = nw.qualifier() != null
                             ? nw.qualifier()
-                            : getEnclosingInstance(nw.position(), outer);
+                            : getEnclosingInstance(pos, outer);
                     List<Expr> args = concat(enclosing, nw.arguments());
-                    n = tnf.New(nw.position(), nw.type().toClass(), args);
+                    n = tnf.New(pos, nw.type().toClass(), /*outer*/ null, args, nw.body());
                 }
             }
         }
@@ -207,7 +167,7 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
             Special s = (Special) n;
             ClassType enclosingType = s.qualifier() != null
                     ? s.qualifier().type().toClass()
-                    : classes.peek().type();
+                    : classes.peek();
             Expr res = getEnclosingInstance(s.position(), enclosingType);
             if (s.kind().equals(Special.SUPER))
                 res = tnf.Cast(n.position(), res.type().toClass().superType(), res);
