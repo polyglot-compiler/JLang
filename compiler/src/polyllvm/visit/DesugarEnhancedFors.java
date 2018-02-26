@@ -137,7 +137,7 @@ public class DesugarEnhancedFors extends DesugarVisitor {
         List<ForInit> forInit = Collections.singletonList(iDecl);
 
         // Condition: i < arr.length
-        Field len = tnf.Field(pos, copy(a), "length", ts.Int(), exprT);
+        Field len = tnf.Field(pos, copy(a), "length");
         Expr cond = nf.Binary(pos, copy(it), Binary.LT, len).type(ts.Boolean());
 
         // Update: i++
@@ -156,11 +156,5 @@ public class DesugarEnhancedFors extends DesugarVisitor {
         for (int i = labels.size() - 1; i >= 0; --i)
             stmt = nf.Labeled(pos, nf.Id(pos, labels.get(i)), stmt);
         return stmt;
-    }
-
-    /** Helper method to help prevent node aliasing. */
-    @SuppressWarnings("unchecked")
-    private static <T> T copy(Node n) {
-        return (T) n.copy();
     }
 }

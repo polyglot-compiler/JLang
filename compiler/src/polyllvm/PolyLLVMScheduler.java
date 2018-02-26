@@ -5,14 +5,12 @@ import org.bytedeco.javacpp.Pointer;
 import polyglot.ast.Node;
 import polyglot.ast.SourceFile;
 import polyglot.ext.jl7.JL7Scheduler;
-import polyglot.ext.jl7.types.JL7TypeSystem;
 import polyglot.frontend.*;
 import polyglot.frontend.goals.CodeGenerated;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
 import polyglot.util.InternalCompilerError;
-import polyglot.visit.InnerClassRemover;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.MultiGoal;
@@ -53,17 +51,34 @@ public class PolyLLVMScheduler extends JL7Scheduler {
         PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
         Goal[] goals = {
                 // Visitor passes running after type checking must preserve type information.
-                // Note that running type check again after these passes can fail, for example
-                // because the type checker can disagree about the target of a field which has
-                // been moved by a desugar pass. That's ok; we trust our type information.
+                // However, running type check again after these passes can fail, for example
+                // because the type checker could complain about visibility issues. That's ok.
+
+                // Future desugar passes assume that anonymous classes have constructors and names.
+                new VisitorGoal(job, new NameLocalClasses(job, ts, nf)),
+                new VisitorGoal(job, new DeclareExplicitAnonCtors(job, ts, nf)),
+
+                // Future desugar passes assume that class initialization code exists
+                // within class constructors.
+                new VisitorGoal(job, new DesugarClassInitializers(job, ts, nf)),
+
+                // These desugar passes simplify various language constructs.
+                // Their order should not matter, but future desugar desugar passes
+                // must not create the constructs that these remove.
                 new VisitorGoal(job, new DesugarEnhancedFors(job, ts, nf)),
                 new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
-                new VisitorGoal(job, new InnerClassRemover(job, ts, nf)), // TODO: Dubious implementation.
                 new VisitorGoal(job, new DesugarStringConcatenation(job, ts, nf)),
                 new VisitorGoal(job, new DesugarAsserts(job, ts, nf)),
-                new VisitorGoal(job, new DesugarClassInitializers(job, ts, nf)),
                 new VisitorGoal(job, new DesugarMultidimensionalArrays(job, ts, nf)),
                 new VisitorGoal(job, new DesugarVarargs(job, ts, nf)),
+
+                // Translates captures to field accesses.
+                new DesugarLocalClasses(job, ts, nf),
+
+                // Translates accesses to enclosing instances. Future desugar passes
+                // should not create qualified Special nodes.
+                new DesugarInnerClasses(job, ts, nf),
+
                 AutoBoxing(job),
 
                 // The explicit cast visitor should generally be run last, since the other
@@ -89,19 +104,20 @@ public class PolyLLVMScheduler extends JL7Scheduler {
         public boolean run() {
             ExtensionInfo extInfo = goal.job().extensionInfo();
             PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
-            JL7TypeSystem ts = (JL7TypeSystem) extInfo.typeSystem();
+            PolyLLVMTypeSystem ts = (PolyLLVMTypeSystem) extInfo.typeSystem();
             Node ast = goal.job().ast();
             if (!(ast instanceof SourceFile))
                 throw new InternalCompilerError("AST root should be a SourceFile");
             SourceFile sf = (SourceFile) ast;
 
             // This is a good place to debug the output of desugar passes:
-            // new PrettyPrinter(lang()).printAst(ast, new OptimalCodeWriter(System.out, 80));
+            // new PrettyPrinter(lang()).printAst(ast, new OptimalCodeWriter(System.out, 120));
 
             LLVMContextRef context = LLVMContextCreate();
             LLVMModuleRef mod = LLVMModuleCreateWithNameInContext(sf.source().name(), context);
             LLVMBuilderRef builder = LLVMCreateBuilderInContext(context);
-            LLVMTranslator translator = new LLVMTranslator(sf.source().path(), context, mod, builder, nf, ts);
+            LLVMTranslator translator = new LLVMTranslator(
+                    sf.source().path(), context, mod, builder, nf, ts);
 
             ast.visit(translator);
 
@@ -144,7 +160,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
     }
 
     private static class LLVMOutputGoal extends CodeGenerated {
-        LLVMOutputGoal(Job job) {
+        private LLVMOutputGoal(Job job) {
             super(job);
         }
 

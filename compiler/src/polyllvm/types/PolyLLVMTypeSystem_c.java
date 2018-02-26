@@ -1,10 +1,8 @@
 package polyllvm.types;
 
-import polyglot.ext.jl5.types.JL5MethodInstance;
-import polyglot.ext.jl5.types.JL5Subst;
-import polyglot.ext.jl5.types.JL5TypeSystem_c;
-import polyglot.ext.jl5.types.TypeVariable;
+import polyglot.ext.jl5.types.*;
 import polyglot.ext.jl7.types.JL7TypeSystem_c;
+import polyglot.frontend.Source;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 
@@ -15,9 +13,9 @@ import static polyllvm.util.Constants.RUNTIME_ARRAY;
 public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTypeSystem {
 
     @Override
-    public SubstMethodInstance substMethodInstance(JL5MethodInstance postSubst,
-            JL5MethodInstance preSubst, JL5Subst subst) {
-        return new SubstMethodInstance_c(postSubst, preSubst, subst);
+    public SubstMethodInstance substMethodInstance(
+            JL5MethodInstance postSubst, JL5MethodInstance preSubst, JL5Subst subst) {
+        return new PolyLLVMSubstMethodInstance_c(postSubst, preSubst, subst);
     }
 
     @Override
@@ -32,8 +30,7 @@ public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTyp
     /**
      * This overriding refines the return type to {@link SubstMethodInstance}.
      *
-     * @see JL5TypeSystem_c#methodCallValid(JL5MethodInstance, String, List,
-     *      List, Type)
+     * @see JL5TypeSystem_c#methodCallValid(JL5MethodInstance, String, List, List, Type)
      */
     @Override
     public SubstMethodInstance methodCallValid(JL5MethodInstance mi,
@@ -97,4 +94,8 @@ public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTyp
         }
     }
 
+    @Override
+    public ParsedClassType createClassType(LazyClassInitializer init, Source fromSource) {
+        return new PolyLLVMParsedClassType_c(this, init, fromSource);
+    }
 }

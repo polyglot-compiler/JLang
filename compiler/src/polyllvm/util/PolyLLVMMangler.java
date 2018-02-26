@@ -45,22 +45,14 @@ public class PolyLLVMMangler {
      */
     private String typeSignature(Type t) {
         Type et = v.typeSystem().erasureType(t);
-        if (et.isBoolean())
-            return "Z";
-        else if (et.isByte())
-            return "B";
-        else if (et.isChar())
-            return "C";
-        else if (et.isShort())
-            return "S";
-        else if (et.isInt())
-            return "I";
-        else if (et.isLong())
-            return "J";
-        else if (et.isFloat())
-            return "F";
-        else if (et.isDouble())
-            return "D";
+        if      (et.isBoolean()) return "Z";
+        else if (et.isByte())    return "B";
+        else if (et.isChar())    return "C";
+        else if (et.isShort())   return "S";
+        else if (et.isInt())     return "I";
+        else if (et.isLong())    return "J";
+        else if (et.isFloat())   return "F";
+        else if (et.isDouble())  return "D";
         else if (et.isArray())
             return BRACKET_ESCAPE + typeSignature(et.toArray().base());
         else if (et.isClass())
@@ -137,10 +129,10 @@ public class PolyLLVMMangler {
     }
 
     public String idvGlobalId(ClassType intf, ReferenceType clazz) {
-        String intfStr = v.utils.erasureLL(intf).toString();
-        String clazzStr = v.utils.erasureLL(clazz).toString();
-        return ENV_PREFIX + "_" + intfStr.length() + intfStr + "_"
-                + clazzStr.length() + clazzStr + "_" + IDV_STR;
+        return ENV_PREFIX +
+                "_" + mangleQualifiedName(intf) +
+                "_" + mangleQualifiedName(clazz) +
+                "_" + IDV_STR;
     }
 
     public String cdvTyName(ReferenceType t) {

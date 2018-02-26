@@ -22,10 +22,8 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
         ConstructorInstance substC = n.constructorInstance();
         ReferenceType supc = substC.container();
 
-        if (n.qualifier() != null) {
-            throw new InternalCompilerError(
-                    "Qualifier on this not supported yet (Java spec 15.8.4)");
-        }
+        if (n.qualifier() != null)
+            throw new InternalCompilerError("Qualified ctor call should have been desugared");
 
         LLVMValueRef thisArg;
 

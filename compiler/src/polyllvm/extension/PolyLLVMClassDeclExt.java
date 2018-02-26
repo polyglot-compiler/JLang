@@ -18,32 +18,38 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public LLVMTranslator enterTranslateLLVM(LLVMTranslator v) {
-        v.enterClass((ClassDecl) node());
-        return super.enterTranslateLLVM(v);
-    }
-
-    @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         ClassDecl n = (ClassDecl) node();
-        assert !n.type().flags().isInterface(); // cannot be an interface
+        ParsedClassType ty = n.type();
+        if (ty.flags().isInterface()) {
+            // An interface need only establish its identity.
+            v.classObjs.toTypeIdentity(ty, /*extern*/ false);
+        } else {
+            initClassDataStructures(ty, v);
+        }
+        return super.leaveTranslateLLVM(v);
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    public static void initClassDataStructures(ClassType ct, LLVMTranslator v) {
+        assert !ct.flags().isInterface(); // Interfaces don't have these data structures.
 
         // Initialize the type identity
-        v.classObjs.toTypeIdentity(n.type(), /* extern */ false);
-        v.classObjs.classObjRef(n.type());
+        v.classObjs.toTypeIdentity(ct, /*extern*/ false);
+        v.classObjs.classObjRef(ct);
 
-        List<ClassType> interfaces = v.allInterfaces(n.type());
+        List<ClassType> interfaces = v.allInterfaces(ct);
 
-        if (!n.flags().isAbstract()) {
+        if (!ct.flags().isAbstract()) {
             // Initialize the CDV global
-            LLVMValueRef cdvGlobal = v.utils.toCDVGlobal(n.type());
-            LLVMValueRef[] cdvSlots = v.utils.toCDVSlots(n.type());
-            LLVMTypeRef cdvType = v.utils.toCDVTy(n.type());
+            LLVMValueRef cdvGlobal = v.utils.toCDVGlobal(ct);
+            LLVMValueRef[] cdvSlots = v.utils.toCDVSlots(ct);
+            LLVMTypeRef cdvType = v.utils.toCDVTy(ct);
             LLVMValueRef init = v.utils.buildNamedConstStruct(cdvType, cdvSlots);
             LLVMSetInitializer(cdvGlobal, init);
         }
 
-        if (!n.type().flags().isAbstract() && !interfaces.isEmpty()) {
+        if (!ct.flags().isAbstract() && !interfaces.isEmpty()) {
             int numOfIntfs = interfaces.size();
             LLVMValueRef[] intf_id_hashes = new LLVMValueRef[numOfIntfs];
             LLVMValueRef[] intf_ids = new LLVMValueRef[numOfIntfs];
@@ -62,8 +68,8 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 intf_ids[i] = intf_id_global;
 
                 LLVMTypeRef idvType = v.utils.toIDVTy(it);
-                LLVMValueRef idvGlobal = v.utils.toIDVGlobal(it, n.type());
-                LLVMValueRef[] idvMethods = v.utils.toIDVSlots(it, n.type());
+                LLVMValueRef idvGlobal = v.utils.toIDVGlobal(it, ct);
+                LLVMValueRef[] idvMethods = v.utils.toIDVSlots(it, ct);
                 LLVMValueRef init = v.utils.buildNamedConstStruct(idvType, idvMethods);
                 LLVMSetInitializer(idvGlobal, init);
                 intfTables[i] = LLVMBuildBitCast(
@@ -72,13 +78,13 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
 
             // Set up the hash table that points to the interface dispatch
             // vectors
-            LLVMValueRef cdv_global = v.utils.toCDVGlobal(n.type());
-            LLVMValueRef idv_arr_global = v.utils.toIDVArrGlobal(n.type(),
+            LLVMValueRef cdv_global = v.utils.toCDVGlobal(ct);
+            LLVMValueRef idv_arr_global = v.utils.toIDVArrGlobal(ct,
                     numOfIntfs);
-            LLVMValueRef idv_id_arr_global = v.utils.toIDVIdArrGlobal(n.type(),
+            LLVMValueRef idv_id_arr_global = v.utils.toIDVIdArrGlobal(ct,
                     numOfIntfs);
             LLVMValueRef idv_id_hash_arr_global = v.utils
-                    .toIDVIdHashArrGlobal(n.type(), numOfIntfs);
+                    .toIDVIdHashArrGlobal(ct, numOfIntfs);
 
             LLVMSetInitializer(idv_arr_global, v.utils
                     .buildConstArray(v.utils.llvmBytePtr(), intfTables));
@@ -114,20 +120,5 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 return null;
             });
         }
-
-        v.leaveClass();
-        return super.leaveTranslateLLVM(v);
-    }
-
-    @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
-        ClassDecl n = (ClassDecl) node();
-        ParsedClassType ty = n.type();
-        if (ty.flags().isInterface()) {
-            // An interface need only establish its identity.
-            v.classObjs.toTypeIdentity(ty, /* extern */ false);
-            return n;
-        }
-        return super.overrideTranslateLLVM(v);
     }
 }

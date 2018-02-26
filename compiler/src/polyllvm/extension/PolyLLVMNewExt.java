@@ -4,10 +4,12 @@ import polyglot.ast.New;
 import polyglot.ast.Node;
 import polyglot.types.ConstructorInstance;
 import polyglot.types.ReferenceType;
+import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
+import java.lang.Override;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
@@ -30,6 +32,14 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         New n = (New) node();
+        if (n.qualifier() != null)
+            throw new InternalCompilerError("Qualifier should have been desugared");
+
+        // This is an anonymous class! Initialize class data structures.
+        if (n.body() != null) {
+            PolyLLVMClassDeclExt.initClassDataStructures(n.type().toClass(), v);
+        }
+
         ConstructorInstance ci = n.constructorInstance();
         LLVMValueRef[] args = n.arguments().stream()
                 .map(v::getTranslation)

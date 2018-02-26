@@ -103,7 +103,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
                         constructor = ts.findConstructor(
                                 ts.ClassCastException(),
                                 new ArrayList<>(),
-                                v.getCurrentClass().type(),
+                                ts.Object(),
                                 /*fromClient*/ true
                         );
                     } catch (SemanticException e) {

@@ -2,14 +2,12 @@ package polyllvm.visit;
 
 import polyglot.ast.*;
 import polyglot.frontend.Job;
-import polyglot.types.SemanticException;
+import polyglot.types.ParsedClassType;
 import polyglot.util.Position;
-import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -17,81 +15,61 @@ import java.util.List;
  * Preserves typing.
  */
 public class DesugarClassInitializers extends DesugarVisitor {
-    private Deque<ClassDecl> classes = new ArrayDeque<>();
 
     public DesugarClassInitializers(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, ts, nf);
     }
 
     @Override
-    public NodeVisitor enterDesugar(Node n) throws SemanticException {
-        if (n instanceof ClassDecl)
-            classes.addLast((ClassDecl) n);
-        return super.enterDesugar(n);
-    }
+    public ClassBody leaveClassBody(ParsedClassType ct, ClassBody cb) {
+        List<ClassMember> members = cb.members();
 
-    @Override
-    public Node leaveDesugar(Node n) throws SemanticException {
-        if (n instanceof ClassDecl)
-            classes.removeLast();
-        if (!(n instanceof ConstructorDecl))
-            return super.leaveDesugar(n);
+        cb = mapConstructors(cb, (ctor) -> {
+            List<Stmt> stmts = new LinkedList<>();
+            LinkedList<Stmt> oldStmts = new LinkedList<>(ctor.body().statements());
 
-        ConstructorDecl cd = (ConstructorDecl) n;
-
-        // Check for a call to another constructor.
-        Block initCode = nf.Block(n.position());
-        if (!cd.body().statements().isEmpty()) {
-            // The JLS ensures that a constructor call will be the first statement
-            // in a constructor body, if any.
-            Stmt firstStmt = cd.body().statements().iterator().next();
-            if (firstStmt instanceof ConstructorCall) {
-                ConstructorCall call = (ConstructorCall) firstStmt;
+            // Check for a call to another constructor.
+            // The JLS ensures that a constructor call will be the first statement.
+            if (oldStmts.peek() instanceof ConstructorCall) {
+                ConstructorCall call = (ConstructorCall) oldStmts.pop();
                 if (call.kind().equals(ConstructorCall.THIS)) {
                     // Avoid duplicating initializer side-effects; the other
                     // constructor will handle initialization.
-                    return super.leaveDesugar(n);
-                } else if (call.kind().equals(ConstructorCall.SUPER)) {
-                    // Initialization code should go after the call to super.
-                    initCode = initCode.append(firstStmt);
-                    List<Stmt> stmts = cd.body().statements();
-                    Block sansSuper = cd.body().statements(stmts.subList(1, stmts.size()));
-                    cd = (ConstructorDecl) cd.body(sansSuper);
+                    return ctor;
+                }
+                // Keep the constructor call at the beginning.
+                stmts.add(call);
+            }
+
+            // Create class initialization code for this constructor.
+            for (ClassMember member : members) {
+
+                // Build initialization assignments for each initialized non-static field.
+                if (member instanceof FieldDecl) {
+                    FieldDecl fd = (FieldDecl) member;
+                    Position pos = fd.position();
+                    if (fd.flags().isStatic() || fd.init() == null)
+                        continue;
+                    Special receiver = tnf.UnqualifiedThis(pos, ct);
+                    Field field = tnf.Field(pos, receiver, fd.name());
+                    Stmt assign = tnf.EvalAssign(pos, field, fd.init());
+                    stmts.add(assign);
+                }
+
+                // Build initialization blocks.
+                if (member instanceof Initializer) {
+                    Initializer init = (Initializer) member;
+                    if (init.flags().isStatic())
+                        continue;
+                    stmts.add(init.body());
                 }
             }
-        }
 
-        // Build initialization assignments for each initialized non-static field.
-        for (ClassMember member : classes.getLast().body().members()) {
-            if (!(member instanceof FieldDecl))
-                continue;
-            FieldDecl fd = (FieldDecl) member;
-            Position pos = fd.position();
-            if (fd.flags().isStatic() || fd.init() == null)
-                continue;
-            Id id = nf.Id(pos, fd.name());
-            Special receiver = (Special) nf.Special(pos, Special.THIS)
-                    .type(classes.getLast().type());
-            Field field = (Field) nf.Field(pos, receiver, id)
-                    .fieldInstance(fd.fieldInstance())
-                    .type(fd.declType());
-            Assign assign = (Assign) nf.FieldAssign(pos, field, Assign.ASSIGN, fd.init())
-                    .type(field.type());
-            Eval eval = nf.Eval(pos, assign);
-            initCode = initCode.append(eval);
-        }
+            // Add back remaining constructor code.
+            stmts.addAll(oldStmts);
+            return (ConstructorDecl) ctor.body(ctor.body().statements(stmts));
+        });
 
-        // Build initialization blocks.
-        for (ClassMember member : classes.getLast().body().members()) {
-            if (member instanceof Initializer) {
-                Initializer init = (Initializer) member;
-                if (init.flags().isStatic())
-                    continue;
-                initCode = initCode.append(init.body());
-            }
-        }
-
-        Block newBody = cd.body().prepend(initCode);
-        return cd.body(newBody);
+        return super.leaveClassBody(ct, cb);
     }
 }

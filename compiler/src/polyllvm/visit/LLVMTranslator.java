@@ -1,7 +1,6 @@
 package polyllvm.visit;
 
 import org.bytedeco.javacpp.LLVM.*;
-import polyglot.ast.ClassDecl;
 import polyglot.ast.Node;
 import polyglot.ext.jl5.types.*;
 import polyglot.ext.jl7.types.JL7TypeSystem;
@@ -14,10 +13,7 @@ import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.extension.ClassObjects;
 import polyllvm.extension.PolyLLVMTryExt.ExceptionFrame;
 import polyllvm.types.PolyLLVMTypeSystem;
-import polyllvm.util.Constants;
-import polyllvm.util.DebugInfo;
-import polyllvm.util.LLVMUtils;
-import polyllvm.util.PolyLLVMMangler;
+import polyllvm.util.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -27,11 +23,11 @@ import java.util.stream.Collectors;
  */
 public class LLVMTranslator extends NodeVisitor {
 
-    private PolyLLVMNodeFactory nf;
-    private TypeSystem ts;
+    public final PolyLLVMNodeFactory nf;
+    public final PolyLLVMTypeSystem ts;
+    public final TypedNodeFactory tnf;
 
     private Map<Node, Object> translations = new LinkedHashMap<>();
-    private Deque<ClassDecl> classes = new ArrayDeque<>();
 
     public final LLVMContextRef context;
     public final LLVMModuleRef mod;
@@ -47,11 +43,20 @@ public class LLVMTranslator extends NodeVisitor {
         return ctorCounter++;
     }
 
+    private static class FunctionContext {
+        LLVMValueRef fn;
+        Map<String, LLVMValueRef> vars = new HashMap<>();
+
+        FunctionContext(LLVMValueRef fn) {
+            this.fn = fn;
+        }
+    }
+
     /** A stack of all enclosing functions. */
-    private Deque<LLVMValueRef> functions = new ArrayDeque<>();
+    private Deque<FunctionContext> functions = new ArrayDeque<>();
 
     public void pushFn(LLVMValueRef fn) {
-        functions.push(fn);
+        functions.push(new FunctionContext(fn));
     }
 
     public void popFn() {
@@ -59,7 +64,18 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     public LLVMValueRef currFn() {
-        return functions.peek();
+        return functions.peek().fn;
+    }
+
+    public void addAllocation(String var, LLVMValueRef v) {
+        functions.peek().vars.put(var, v);
+    }
+
+    public LLVMValueRef getLocalVariable(String var) {
+        LLVMValueRef allocation = functions.peek().vars.get(var);
+        if (allocation == null)
+            throw new InternalCompilerError("Local variable " + var + " has no allocation");
+        return allocation;
     }
 
     /** A list of all potential entry points (i.e., Java main functions). */
@@ -89,7 +105,7 @@ public class LLVMTranslator extends NodeVisitor {
 
     public LLVMTranslator(String filePath, LLVMContextRef context,
             LLVMModuleRef mod, LLVMBuilderRef builder, PolyLLVMNodeFactory nf,
-            JL7TypeSystem ts) {
+            PolyLLVMTypeSystem ts) {
         super(nf.lang());
         this.context = context;
         this.mod = mod;
@@ -100,6 +116,7 @@ public class LLVMTranslator extends NodeVisitor {
         this.mangler = new PolyLLVMMangler(this);
         this.nf = nf;
         this.ts = ts;
+        this.tnf = new TypedNodeFactory(ts, nf);
     }
 
     @Override
@@ -171,27 +188,6 @@ public class LLVMTranslator extends NodeVisitor {
         if (res == null)
             throw new InternalCompilerError("Null translation of " + n.getClass() + ": " + n);
         return res;
-    }
-
-    /**
-     * Remove the current class from the stack of classes being visited
-     */
-    public void leaveClass() {
-        classes.pop();
-    }
-
-    /**
-     * Set {@code n} as the new current class
-     */
-    public void enterClass(ClassDecl n) {
-        classes.push(n);
-    }
-
-    /**
-     * Return the current class
-     */
-    public ClassDecl getCurrentClass() {
-        return classes.peek();
     }
 
     /**
@@ -513,27 +509,6 @@ public class LLVMTranslator extends NodeVisitor {
             types.add(t);
             return true;
         }
-    }
-
-    /*
-     * Functions for generating loads and stores from stack allocated variables
-     * (including arguments)
-     */
-    private Map<String, LLVMValueRef> allocations = new HashMap<>();
-
-    public void addAllocation(String var, LLVMValueRef v) {
-        allocations.put(var, v);
-    }
-
-    public LLVMValueRef getLocalVariable(String var) {
-        LLVMValueRef allocation = allocations.get(var);
-        if (allocation == null)
-            throw new InternalCompilerError("Local variable " + var + " has no allocation");
-        return allocation;
-    }
-
-    public void clearAllocations() {
-        allocations.clear();
     }
 
     ////////////////////////////////////////////////////////////////////////////

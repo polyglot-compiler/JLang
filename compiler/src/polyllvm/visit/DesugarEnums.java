@@ -6,15 +6,14 @@ import polyglot.ext.jl5.ast.EnumConstantDecl;
 import polyglot.ext.jl5.types.EnumInstance;
 import polyglot.ext.jl5.types.JL5Flags;
 import polyglot.frontend.Job;
-import polyglot.types.*;
+import polyglot.types.ClassType;
+import polyglot.types.Flags;
+import polyglot.types.ParsedClassType;
 import polyglot.util.Position;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -30,11 +29,6 @@ public class DesugarEnums extends DesugarVisitor {
 
     @Override
     public Node leaveDesugar(Node parent, Node n) {
-
-        // Enum declaration.
-        if (n instanceof ClassDecl && JL5Flags.isEnum(((ClassDecl) n).flags())) {
-            return translateEnumDecl((ClassDecl) n);
-        }
 
         // Enum constant in a switch case.
         if (n instanceof EnumConstant && parent instanceof Case) {
@@ -65,186 +59,139 @@ public class DesugarEnums extends DesugarVisitor {
     }
 
     /** Convert enum declaration to class declaration. */
-    private Node translateEnumDecl(ClassDecl enumDecl) {
+    @Override
+    public ClassBody leaveClassBody(ParsedClassType ct, ClassBody cb) {
+        if (!JL5Flags.isEnum(ct.flags()))
+            return cb;
 
-        // Mutate constructor instances to include arguments for the enum name and ordinal.
-        // This ensures that any constructor calls we create later will resolve correctly.
-        enumDecl.type().setConstructors(
-                enumDecl.type().constructors().stream()
-                        .map((ci) -> {
-                            List<Type> formals = new ArrayList<>();
-                            formals.add(ts.String()); // Name.
-                            formals.add(ts.Int()); // Ordinal.
-                            formals.addAll(ci.formalTypes());
-                            return updateFormals(ci, formals);
-                        })
-                        .collect(Collectors.toList()));
+        // Prepend name and ordinal to each constructor.
+        List<Formal> formals = Arrays.asList(
+                tnf.Formal(cb.position(), "enum$name", ts.String(), Flags.FINAL),
+                tnf.Formal(cb.position(), "enum$ordinal", ts.Int(), Flags.FINAL));
+        cb = prependConstructorFormals(ct, cb, formals);
 
-        List<ClassMember> members = new ArrayList<>(enumDecl.body().members());
+        // Include name and ordinal in super constructor calls.
+        ClassType enumClass = ct.toClass().superType().toClass();
+        cb = mapConstructors(cb, (ctor) -> {
+            LinkedList<Stmt> stmts = new LinkedList<>(ctor.body().statements());
+            ConstructorCall oldCC = stmts.peek() instanceof ConstructorCall
+                    ? (ConstructorCall) stmts.pop()
+                    : null;
 
-        // Translate constructors and enum constants.
-        List<FieldDecl> enumConstants = new ArrayList<>();
-        for (int i = 0; i < members.size(); ++i) {
-            ClassMember m = members.get(i);
-            if (m instanceof ConstructorDecl)
-                m = translateEnumConstructor((ConstructorDecl) m, enumDecl);
-            if (m instanceof EnumConstantDecl) {
-                m = translateEnumConstantDecl((EnumConstantDecl) m, enumDecl);
-                enumConstants.add((FieldDecl) m);
+            if (oldCC == null || oldCC.kind().equals(ConstructorCall.SUPER)) {
+                // Create super constructor call with name and ordinal as arguments.
+                List<Expr> locals = ctor.formals().stream()
+                        .limit(formals.size())
+                        .map((f) -> tnf.Local(f.position(), f))
+                        .collect(Collectors.toList());
+                ConstructorCall newCC = tnf.ConstructorCall(
+                        ctor.position(), ConstructorCall.SUPER, enumClass, locals);
+                stmts.push(newCC);
+                return (ConstructorDecl) ctor.body(ctor.body().statements(stmts));
             }
-            members.set(i, m);
-        }
+            else {
+                // No super constructor call; constructor remains unchanged.
+                return ctor;
+            }
+        });
+
+        // Convert enum constant declarations into static fields, and
+        // include name and ordinal in the corresponding initializers.
+        cb = mapMembers(cb, (m) -> {
+            if (!(m instanceof EnumConstantDecl))
+                return m;
+
+            EnumConstantDecl cd = (EnumConstantDecl) m;
+            Position pos = cd.position();
+
+            // Add the name and ordinal to the constructor call.
+            List<Expr> args = new ArrayList<>();
+            args.add(nf.StringLit(pos, cd.name().id()).type(ts.String()));
+            args.add(nf.IntLit(pos, IntLit.INT, cd.ordinal()).type(ts.Int()));
+            args.addAll(cd.args());
+
+            // Declare the field and initializer. We are careful to recycle the enum instance
+            // since it is already part of the class type.
+            EnumInstance ei = cd.enumInstance();
+            Expr init = tnf.New(pos, ct, /*outer*/ null, args, /*body*/ null);
+            return nf.FieldDecl(
+                    pos, ei.flags(), nf.CanonicalTypeNode(pos, ei.type()),
+                    nf.Id(pos, ei.name()), init, /*javaDoc*/ null)
+                    .fieldInstance(ei);
+        });
+
 
         // Add implicitly declared members. These must go directly after the enum
         // constants for correct static initialization order.
-        // Recall that enum constants are required to be at the beginning of the class body.
-        int numConstants = enumConstants.size();
-        members.add(numConstants, buildValuesField(enumDecl));
-        members.add(numConstants, buildValuesMethod(enumDecl));
-        members.add(numConstants, buildValueOfMethod(enumDecl));
+        int numConstants = (int) ct.fields().stream()
+                .filter((fi) -> fi instanceof EnumInstance)
+                .count();
+        List<ClassMember> members = new ArrayList<>(cb.members());
+        members.add(numConstants, buildValuesField(ct));
+        members.add(numConstants, buildValuesMethod(ct));
+        members.add(numConstants, buildValueOfMethod(ct));
+        cb = cb.members(members);
 
-        // Update class body.
-        enumDecl = enumDecl.body(enumDecl.body().members(members));
-
-        return enumDecl;
-    }
-
-    /** Adds two new arguments for the name and ordinal, and hands those to the Enum super class. */
-    private ConstructorDecl translateEnumConstructor(ConstructorDecl n, ClassDecl enumDecl) {
-        Position pos = n.position();
-        String name = "enum$name";
-        String ordinal = "enum$ordinal";
-
-        // Add two new formals to the constructor declaration.
-        List<Formal> formals = new ArrayList<>();
-        Formal strFormal = tnf.Formal(pos, name, ts.String(), Flags.NONE);
-        Formal intFormal = tnf.Formal(pos, ordinal, ts.Int(), Flags.NONE);
-        formals.add(strFormal);
-        formals.add(intFormal);
-        formals.addAll(n.formals());
-        n = (ConstructorDecl) n.formals(formals);
-
-        // Update the associated constructor instance.
-        // Note that the constructor instance in the enum type should already have been updated.
-        List<Type> formTypes = formals.stream().map(Formal::declType).collect(Collectors.toList());
-        n = n.constructorInstance(updateFormals(n.constructorInstance(), formTypes));
-
-        // Supply the constructor call with the new arguments.
-        ConstructorCall.Kind kind = ConstructorCall.SUPER;
-        List<Expr> args = new ArrayList<>();
-        args.add(tnf.Local(pos, strFormal));
-        args.add(tnf.Local(pos, intFormal));
-
-        // If there is already a constructor call, subsume it.
-        LinkedList<Stmt> oldStmts = new LinkedList<>(n.body().statements());
-        if (oldStmts.peek() instanceof ConstructorCall) {
-            ConstructorCall cc = (ConstructorCall) oldStmts.remove();
-            if (cc.kind() == ConstructorCall.THIS) {
-                kind = cc.kind();
-                args.addAll(cc.arguments());
-            } else {
-                // PolyLLVM seems to insert phony calls to super(null, 0), so we just remove it.
-            }
-        }
-
-        ClassType container = kind == ConstructorCall.THIS
-                ? enumDecl.type()
-                : enumDecl.type().superType().toClass();
-        ConstructorCall cc = tnf.ConstructorCall(
-                n.body().position(), kind, container, args.toArray(new Expr[args.size()]));
-
-        // Add the constructor call to the body.
-        List<Stmt> stmts = new ArrayList<>();
-        stmts.add(cc);
-        stmts.addAll(oldStmts);
-        n = (ConstructorDecl) n.body(n.body().statements(stmts));
-
-        return n;
-    }
-
-    // Convert an enum constant to a static field.
-    private FieldDecl translateEnumConstantDecl(EnumConstantDecl n, ClassDecl enumDecl) {
-        Position pos = n.position();
-
-        // Add the name and ordinal to the constructor call.
-        List<Expr> args = new ArrayList<>();
-        args.add(nf.StringLit(pos, n.name().id()).type(ts.String()));
-        args.add(nf.IntLit(pos, IntLit.INT, n.ordinal()).type(ts.Int()));
-        args.addAll(n.args());
-
-        // Declare the field and initializer; recycle the enum instance.
-        EnumInstance ei = n.enumInstance();
-        Expr init = tnf.New(pos, enumDecl.type(), args.toArray(new Expr[args.size()]));
-        return nf.FieldDecl(
-                pos, ei.flags(), nf.CanonicalTypeNode(pos, ei.type()),
-                nf.Id(pos, ei.name()), init, /*javaDoc*/ null)
-                .fieldInstance(ei);
+        return super.leaveClassBody(ct, cb);
     }
 
     /** private static final T[] values = {decl1, decl2, ...}; */
-    private FieldDecl buildValuesField(ClassDecl enumDecl) {
-        Position pos = enumDecl.position();
+    private FieldDecl buildValuesField(ParsedClassType enumType) {
+        Position pos = enumType.position();
 
         // Collect enum constants.
-        List<Expr> decls = enumDecl.type().fields().stream()
+        List<Expr> decls = enumType.fields().stream()
                 .filter((fi) -> fi instanceof EnumInstance)
                 .map((fi) -> {
                     EnumInstance ei = (EnumInstance) fi;
-                    return tnf.StaticField(pos, ei.name(), ei.type(), enumDecl.type());
+                    return tnf.StaticField(pos, ei.name(), enumType);
                 })
                 .collect(Collectors.toList());
 
         // Create field.
-        Expr init = nf.ArrayInit(pos, decls).type(ts.arrayOf(enumDecl.type()));
+        Expr init = nf.ArrayInit(pos, decls).type(ts.arrayOf(enumType));
         return tnf.FieldDecl(
-                pos, "values", ts.arrayOf(enumDecl.type()), enumDecl.type(), init,
+                pos, "values", ts.arrayOf(enumType), enumType, init,
                 Flags.NONE.Private().Static().Final());
     }
 
     /** public static T[] values() { return (T[]) T.values.clone(); } */
-    private MethodDecl buildValuesMethod(ClassDecl enumDecl) {
-        Position pos = enumDecl.position();
+    private MethodDecl buildValuesMethod(ParsedClassType enumType) {
+        Position pos = enumType.position();
 
         // Find field.
-        Field f = tnf.StaticField(pos, "values", ts.arrayOf(enumDecl.type()), enumDecl.type());
+        Field f = tnf.StaticField(pos, "values", enumType);
 
         // Clone, cast, and return
         Call call = tnf.Call(pos, f, "clone", ts.Object(), ts.Object());
-        Cast cast = tnf.Cast(pos, ts.arrayOf(enumDecl.type()), call);
+        Cast cast = tnf.Cast(pos, ts.arrayOf(enumType), call);
         Return ret = nf.Return(pos, cast);
 
         // Declare method.
         return tnf.MethodDecl(
-                pos, "values", enumDecl.type(), ts.arrayOf(enumDecl.type()),
+                pos, "values", enumType, ts.arrayOf(enumType),
                 Collections.emptyList(), nf.Block(pos, ret), Flags.NONE.Public().Static().Final());
     }
 
     /** public static T valueOf(String s) { return (T) Enum.valueOf(T.class, s); } */
-    private MethodDecl buildValueOfMethod(ClassDecl enumDecl) {
-        Position pos = enumDecl.position();
+    private MethodDecl buildValueOfMethod(ParsedClassType enumType) {
+        Position pos = enumType.position();
 
         Formal formal = tnf.Formal(pos, "s", ts.String(), Flags.NONE);
 
         // Call Enum.valueOf(...).
-        ClassLit clazz = tnf.ClassLit(pos, enumDecl.type());
+        ClassLit clazz = tnf.ClassLit(pos, enumType);
         Local s = tnf.Local(pos, formal);
-        ClassType container = enumDecl.type().superType().toClass();
-        Call call = tnf.StaticCall(pos, "valueOf", container, enumDecl.type(), clazz, s);
+        ClassType container = enumType.superType().toClass();
+        Call call = tnf.StaticCall(pos, "valueOf", container, enumType, clazz, s);
 
         // Cast and return.
-        Cast cast = tnf.Cast(pos, enumDecl.type(), call);
+        Cast cast = tnf.Cast(pos, enumType, call);
         Return ret = nf.Return(pos, cast);
 
         // Declare method.
         return tnf.MethodDecl(
-                pos, "valueOf", enumDecl.type(), enumDecl.type(), Collections.singletonList(formal),
+                pos, "valueOf", enumType, enumType, Collections.singletonList(formal),
                 nf.Block(pos, ret), Flags.NONE.Public().Static().Final());
-    }
-
-    private ConstructorInstance updateFormals(ConstructorInstance ci, List<Type> formalTypes) {
-        // We are careful to update the "original" constructor instance as well.
-        ci = ci.formalTypes(formalTypes);
-        ci.setDeclaration(ci.orig().formalTypes(formalTypes));
-        return ci;
     }
 }

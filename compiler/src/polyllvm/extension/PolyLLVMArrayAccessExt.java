@@ -58,7 +58,7 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
                 ConstructorInstance constructor = ts.findConstructor(
                         exceptionType,
                         formalParams,
-                        v.getCurrentClass().type(),
+                        ts.Object(),
                         /*fromClient*/ true);
 
                 // We are careful here to reuse the translation of n.index() when throwing the
