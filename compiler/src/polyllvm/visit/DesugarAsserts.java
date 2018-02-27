@@ -1,6 +1,7 @@
 package polyllvm.visit;
 
 import polyglot.ast.Assert;
+import polyglot.ast.Call;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyglot.frontend.Job;
@@ -39,6 +40,7 @@ public class DesugarAsserts extends DesugarVisitor {
                 : new Expr[] { a.cond(), a.errorMessage() };
 
         ClassType helper = ts.typeForName(Constants.RUNTIME_HELPER).toClass();
-        return tnf.StaticCall(pos, "assertHelper", helper, ts.Void(), args);
+        Call call = tnf.StaticCall(pos, "assertHelper", helper, ts.Void(), args);
+        return nf.Eval(call.position(), call);
     }
 }

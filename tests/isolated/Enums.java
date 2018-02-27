@@ -1,11 +1,20 @@
 class Enums {
 
     enum Num {
-        ONE, TWO((short) 2), THREE(3, "Hi");
+        ONE,
+        TWO((short) 2, "Hi"),
+        THREE(3, "Hi") {
+            String override = "Override";
+            @Override
+            void printMyGreeting() {
+                System.out.println(override);
+            }
+        };
 
         public static int count;
         public final int val;
         private final String greeting;
+        public int mutable = 1;
 
         Num() {
             this(1);
@@ -40,7 +49,13 @@ class Enums {
         System.out.println(Num.ONE.val);
         System.out.println(Num.TWO.val);
         System.out.println("total " + Num.count);
+        Num.ONE.printMyGreeting();
+        Num.TWO.printMyGreeting();
         Num.THREE.printMyGreeting();
+
+        System.out.println(Num.THREE.mutable++);
+        System.out.println(Num.THREE.mutable++);
+        System.out.println(Num.ONE.mutable + 2);
 
         // Switch statements.
         switch (Num.TWO) {

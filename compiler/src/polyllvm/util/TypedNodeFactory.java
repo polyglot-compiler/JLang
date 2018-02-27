@@ -146,6 +146,10 @@ public class TypedNodeFactory {
         }
     }
 
+    /**
+     * Assumes that {@link polyllvm.visit.DeclareExplicitAnonCtors} has already declared
+     * explicit constructors for anonymous classes.
+     */
     public New New(Position pos, ClassType type, Expr outer, List<Expr> args, ClassBody body) {
         List<Type> argTypes = args.stream().map(Expr::type).collect(Collectors.toList());
         try {

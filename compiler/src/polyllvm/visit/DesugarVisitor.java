@@ -1,6 +1,7 @@
 package polyllvm.visit;
 
 import polyglot.ast.*;
+import polyglot.ext.jl5.ast.EnumConstantDecl;
 import polyglot.frontend.Job;
 import polyglot.types.ClassType;
 import polyglot.types.Flags;
@@ -39,12 +40,22 @@ public abstract class DesugarVisitor extends NodeVisitor {
         tnf = new TypedNodeFactory(ts, nf);
     }
 
-    private ParsedClassType getClassType(Node n) {
-        assert n instanceof ClassDecl || n instanceof New;
-        if (n instanceof ClassDecl) {
-            return ((ClassDecl) n).type();
-        } else {
-            return (ParsedClassType) ((New) n).type().toClass();
+    /**
+     * Retrieves the class type from the parent node of a class body.
+     * The parent could be a class declaration, anonymous class, or an anonymous enum constant.
+     */
+    private ParsedClassType getClassType(Node parent) {
+        if (parent instanceof ClassDecl) {
+            return ((ClassDecl) parent).type();
+        }
+        else if (parent instanceof New) {
+            return (ParsedClassType) ((New) parent).type().toClass();
+        }
+        else if (parent instanceof EnumConstantDecl) {
+            return ((EnumConstantDecl) parent).type();
+        }
+        else {
+            throw new InternalCompilerError("Unhandled class body container: " + parent.getClass());
         }
     }
 
@@ -162,6 +173,20 @@ public abstract class DesugarVisitor extends NodeVisitor {
         });
     }
 
+    /** Given a constructor declaration, transforms its `this` or `super` constructor call. */
+    ConstructorDecl mapConstructorCall(
+            ConstructorDecl cd, Function<ConstructorCall, ConstructorCall> f) {
+        Block body = cd.body();
+        List<Stmt> stmts = new ArrayList<>(body.statements());
+        if (!stmts.isEmpty() && stmts.get(0) instanceof ConstructorCall) {
+            ConstructorCall cc = (ConstructorCall) stmts.get(0);
+            cc = f.apply(cc);
+            stmts.set(0, cc);
+        }
+        body = body.statements(stmts);
+        return (ConstructorDecl) cd.body(body);
+    }
+
     /**
      * Prepend formals to all constructors and constructor calls of a given class.
      * Of course, this does not update instantiations through new nor super constructor calls.
@@ -185,24 +210,20 @@ public abstract class DesugarVisitor extends NodeVisitor {
             return tnf.ConstructorDecl(ctor.position(), ct, formals, ctor.body());
         });
 
-        // Now that constructor instances are updated, we can update constructor calls too.
-        cb = mapConstructors(cb, (ctor) -> {
-            Block body = ctor.body();
-            List<Stmt> stmts = new ArrayList<>(body.statements());
-            if (!stmts.isEmpty() && stmts.get(0) instanceof ConstructorCall) {
-                ConstructorCall cc = (ConstructorCall) stmts.get(0);
+        // Now that constructor instances are updated, we can update `this` constructor calls too.
+        cb = mapConstructors(cb, (ctor) ->
+            mapConstructorCall(ctor, (cc) -> {
                 if (cc.kind().equals(ConstructorCall.THIS)) {
                     List<Local> extraArgs = ctor.formals().subList(0, extraFormals.size()).stream()
                             .map((extraFormal) -> tnf.Local(extraFormal.position(), extraFormal))
                             .collect(Collectors.toList());
                     List<Expr> args = concat(extraArgs, cc.arguments());
-                    cc = tnf.ConstructorCall(cc.position(), cc.kind(), ct, args);
+                    return tnf.ConstructorCall(cc.position(), cc.kind(), ct, args);
+                } else {
+                    return cc;
                 }
-                stmts.set(0, cc);
-            }
-            body = body.statements(stmts);
-            return (ConstructorDecl) ctor.body(body);
-        });
+            })
+        );
 
         return cb;
     }

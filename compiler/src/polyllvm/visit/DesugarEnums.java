@@ -65,10 +65,10 @@ public class DesugarEnums extends DesugarVisitor {
             return cb;
 
         // Prepend name and ordinal to each constructor.
-        List<Formal> formals = Arrays.asList(
+        List<Formal> extraFormals = Arrays.asList(
                 tnf.Formal(cb.position(), "enum$name", ts.String(), Flags.FINAL),
                 tnf.Formal(cb.position(), "enum$ordinal", ts.Int(), Flags.FINAL));
-        cb = prependConstructorFormals(ct, cb, formals);
+        cb = prependConstructorFormals(ct, cb, extraFormals);
 
         // Include name and ordinal in super constructor calls.
         ClassType enumClass = ct.toClass().superType().toClass();
@@ -81,7 +81,7 @@ public class DesugarEnums extends DesugarVisitor {
             if (oldCC == null || oldCC.kind().equals(ConstructorCall.SUPER)) {
                 // Create super constructor call with name and ordinal as arguments.
                 List<Expr> locals = ctor.formals().stream()
-                        .limit(formals.size())
+                        .limit(extraFormals.size())
                         .map((f) -> tnf.Local(f.position(), f))
                         .collect(Collectors.toList());
                 ConstructorCall newCC = tnf.ConstructorCall(
@@ -97,12 +97,32 @@ public class DesugarEnums extends DesugarVisitor {
 
         // Convert enum constant declarations into static fields, and
         // include name and ordinal in the corresponding initializers.
+        // Updates to constructors must precede this.
         cb = mapMembers(cb, (m) -> {
             if (!(m instanceof EnumConstantDecl))
                 return m;
 
             EnumConstantDecl cd = (EnumConstantDecl) m;
             Position pos = cd.position();
+
+            // If there is an anonymous class here, update its super constructor calls.
+            if (cd.body() != null) {
+                ClassBody body = cd.body();
+                ParsedClassType anonType = cd.type();
+                body = prependConstructorFormals(anonType, body, extraFormals);
+                body = mapConstructors(body, (ctor) ->
+                    mapConstructorCall(ctor, (cc) -> {
+                        assert cc.kind().equals(ConstructorCall.SUPER);
+                        List<Expr> extraArgs = ctor.formals().stream()
+                                .limit(extraFormals.size())
+                                .map((f) -> tnf.Local(f.position(), f))
+                                .collect(Collectors.toList());
+                        List<Expr> args = concat(extraArgs, cc.arguments());
+                        return tnf.ConstructorCall(cc.position(), cc.kind(), ct, args);
+                    })
+                );
+                cd = cd.body(body);
+            }
 
             // Add the name and ordinal to the constructor call.
             List<Expr> args = new ArrayList<>();
@@ -113,7 +133,7 @@ public class DesugarEnums extends DesugarVisitor {
             // Declare the field and initializer. We are careful to recycle the enum instance
             // since it is already part of the class type.
             EnumInstance ei = cd.enumInstance();
-            Expr init = tnf.New(pos, ct, /*outer*/ null, args, /*body*/ null);
+            Expr init = tnf.New(pos, cd.type(), /*outer*/ null, args, cd.body());
             return nf.FieldDecl(
                     pos, ei.flags(), nf.CanonicalTypeNode(pos, ei.type()),
                     nf.Id(pos, ei.name()), init, /*javaDoc*/ null)
@@ -177,7 +197,7 @@ public class DesugarEnums extends DesugarVisitor {
     private MethodDecl buildValueOfMethod(ParsedClassType enumType) {
         Position pos = enumType.position();
 
-        Formal formal = tnf.Formal(pos, "s", ts.String(), Flags.NONE);
+        Formal formal = tnf.Formal(pos, "s", ts.String(), Flags.FINAL);
 
         // Call Enum.valueOf(...).
         ClassLit clazz = tnf.ClassLit(pos, enumType);
