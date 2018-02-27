@@ -2,6 +2,7 @@ package polyllvm.extension;
 
 import polyglot.ast.Local;
 import polyglot.ast.Node;
+import polyglot.types.LocalInstance;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
@@ -24,6 +25,7 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
     @Override
     public LLVMValueRef translateAsLValue(LLVMTranslator v) {
         Local n = (Local) node();
-        return v.getLocalVariable(n.name());
+        LocalInstance li = n.localInstance().orig();
+        return v.getTranslation(li);
     }
 }

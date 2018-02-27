@@ -187,15 +187,20 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                         v.builder, LLVMIntEQ, catchSel, typeId, "catch.matches");
                 LLVMBuildCondBr(v.builder, matches, catchBlock, catchNext);
 
-                // Build catch block.
+
+                // Declare catch block formal.
                 LLVMPositionBuilderAtEnd(v.builder, catchBlock);
                 LLVMTypeRef exnType = v.utils.toLL(cb.catchType().toReference());
                 LLVMValueRef exnVar = v.utils.buildAlloca(cb.formal().name(), exnType);
+                v.addTranslation(cb.formal().localInstance().orig(), exnVar);
                 v.debugInfo.createLocalVariable(v, cb.formal(), exnVar);
-                v.addAllocation(cb.formal().name(), exnVar);
+
+                // Initialize catch block formal.
                 LLVMValueRef jexn = v.utils.buildFunCall(extractJavaExnFunc, catchExn);
                 LLVMValueRef castJExn = LLVMBuildBitCast(v.builder, jexn, exnType, "cast");
                 LLVMBuildStore(v.builder, castJExn, exnVar);
+
+                // Build catch block.
                 n.visitChild(cb, v);
                 v.utils.branchUnlessTerminated(frame.getFinallyBlockBranchingTo(end));
 

@@ -28,10 +28,7 @@ public class PolyLLVMConditionalExt extends PolyLLVMExt {
             LLVMPositionBuilderAtEnd(v.builder, block);
             v.visitEdge(n, expr);
             LLVMBuildStore(v.builder, v.getTranslation(expr), conditionalTemp);
-            LLVMBasicBlockRef blockEnd = LLVMGetInsertBlock(v.builder);
-            if (LLVMGetBasicBlockTerminator(blockEnd) == null) {
-                LLVMBuildBr(v.builder, ifEnd);
-            }
+            v.utils.branchUnlessTerminated(ifEnd);
         };
 
         emitBlock.accept(ifTrue, n.consequent());

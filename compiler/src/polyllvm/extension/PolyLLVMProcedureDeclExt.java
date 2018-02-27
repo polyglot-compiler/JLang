@@ -47,6 +47,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         LLVMValueRef funcRef = v.utils.getFunction(v.mangler.mangleProcName(pi), funcType);
         v.debugInfo.funcDebugInfo(n, funcRef);
         v.pushFn(funcRef);
+        v.addTranslation(n, funcRef);
 
         // Note that the entry block is reserved exclusively for alloca instructions
         // and parameter initialization. Children translations will insert alloca instructions
@@ -55,16 +56,17 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, funcRef, "body");
         LLVMPositionBuilderAtEnd(v.builder, entry);
 
+        // Initialize formals.
         for (int i = 0; i < n.formals().size(); ++i) {
             Formal formal = n.formals().get(i);
+            LocalInstance li = formal.localInstance().orig();
             LLVMTypeRef typeRef = v.utils.toLL(formal.declType());
+            LLVMValueRef alloca = v.utils.buildAlloca(formal.name(), typeRef);
+            v.addTranslation(li, alloca);
+            v.debugInfo.createParamVariable(v, formal, i, alloca);
 
-            LLVMValueRef alloc = LLVMBuildAlloca(v.builder, typeRef, "arg." + formal.name());
             int idx = i + (pi.flags().isStatic() ? 0 : 1);
-            LLVMBuildStore(v.builder, LLVMGetParam(funcRef, idx), alloc);
-            v.addAllocation(formal.name(), alloc);
-
-            v.debugInfo.createParamVariable(v, formal, i, alloc);
+            LLVMBuildStore(v.builder, LLVMGetParam(funcRef, idx), alloca);
         }
 
         // Register as entry point if applicable.
@@ -76,8 +78,6 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             String className = (n.procedureInstance()).container().toString();
             v.addEntryPoint(funcRef, className);
         }
-
-        v.addTranslation(n, funcRef);
 
         // Recurse to children.
         LLVMPositionBuilderAtEnd(v.builder, body);

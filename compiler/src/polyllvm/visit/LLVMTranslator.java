@@ -22,12 +22,12 @@ import java.util.stream.Collectors;
  * Translates Java into LLVM IR.
  */
 public class LLVMTranslator extends NodeVisitor {
+    protected final PolyLLVMNodeFactory nf;
+    protected final PolyLLVMTypeSystem ts;
+    protected final TypedNodeFactory tnf;
 
-    public final PolyLLVMNodeFactory nf;
-    public final PolyLLVMTypeSystem ts;
-    public final TypedNodeFactory tnf;
-
-    private Map<Node, Object> translations = new LinkedHashMap<>();
+    // Note: using pointer equality here!
+    private Map<Object, Object> translations = new IdentityHashMap<>();
 
     public final LLVMContextRef context;
     public final LLVMModuleRef mod;
@@ -43,40 +43,14 @@ public class LLVMTranslator extends NodeVisitor {
         return ctorCounter++;
     }
 
-    private static class FunctionContext {
-        LLVMValueRef fn;
-        Map<String, LLVMValueRef> vars = new HashMap<>();
-
-        FunctionContext(LLVMValueRef fn) {
-            this.fn = fn;
-        }
-    }
-
     /** A stack of all enclosing functions. */
-    private Deque<FunctionContext> functions = new ArrayDeque<>();
+    private Deque<LLVMValueRef> functions = new ArrayDeque<>();
 
-    public void pushFn(LLVMValueRef fn) {
-        functions.push(new FunctionContext(fn));
-    }
+    public void pushFn(LLVMValueRef fn) { functions.push(fn); }
 
-    public void popFn() {
-        functions.pop();
-    }
+    public void popFn() { functions.pop(); }
 
-    public LLVMValueRef currFn() {
-        return functions.peek().fn;
-    }
-
-    public void addAllocation(String var, LLVMValueRef v) {
-        functions.peek().vars.put(var, v);
-    }
-
-    public LLVMValueRef getLocalVariable(String var) {
-        LLVMValueRef allocation = functions.peek().vars.get(var);
-        if (allocation == null)
-            throw new InternalCompilerError("Local variable " + var + " has no allocation");
-        return allocation;
-    }
+    public LLVMValueRef currFn() { return functions.peek(); }
 
     /** A list of all potential entry points (i.e., Java main functions). */
     private Map<String, LLVMValueRef> entryPoints = new HashMap<>();
@@ -154,36 +128,26 @@ public class LLVMTranslator extends NodeVisitor {
         return lang().overrideTranslateLLVM(n, this);
     }
 
-    /**
-     * Get the node factory used by the compiler to create new nodes
-     */
     public PolyLLVMNodeFactory nodeFactory() {
         return nf;
     }
 
-    /**
-     * Get the Type System used by the compiler
-     */
     public PolyLLVMTypeSystem typeSystem() {
-        return (PolyLLVMTypeSystem) ts;
+        return ts;
     }
 
-    /**
-     * Add the translation from n -> lln
-     */
-    public void addTranslation(Node n, Object lln) {
+    /** Add the translation from a Polyglot node to LLVM IR. */
+    public void addTranslation(Object n, Object ll) {
         if (translations.containsKey(n))
             throw new InternalCompilerError("Already translated " + n.getClass() + ": " + n + "\n" +
                     "This may indicate an AST node appearing twice in the AST without copy(),\n" +
                     "or a node visited twice during translation.");
-        translations.put(n, lln);
+        translations.put(n, ll);
     }
 
-    /**
-     * Return the translation for {@code n}.
-     */
+    /** Return the translation for a Polyglot node. */
     @SuppressWarnings("unchecked")
-    public <T> T getTranslation(Node n) {
+    public <T> T getTranslation(Object n) {
         T res = (T) translations.get(n);
         if (res == null)
             throw new InternalCompilerError("Null translation of " + n.getClass() + ": " + n);
@@ -191,7 +155,6 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     /**
-     * @param mi
      * @return
      *         <ul>
      *         <li>the greatest uninstantiated superclass type that declares
