@@ -21,15 +21,9 @@ import java.util.List;
  * (e.g., in order to preserve debug information).
  */
 public class DesugarEnhancedFors extends DesugarVisitor {
-    private int varCount = 0;
 
     public DesugarEnhancedFors(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, ts, nf);
-    }
-
-    private String freshName(String desc) {
-        // We assume that no other visitor creates variable names clashing with these.
-        return "extfor$" + desc + "$" + varCount++;
     }
 
     @Override
@@ -100,9 +94,8 @@ public class DesugarEnhancedFors extends DesugarVisitor {
         }
 
         // Initializer: Iterator<T> it = e.iterator()
-        String itName = freshName("it");
         Call itCall = tnf.Call(pos, ef.expr(), "iterator", exprT, itT);
-        LocalDecl itDecl = tnf.LocalDecl(pos, itName, itT, itCall, Flags.NONE);
+        LocalDecl itDecl = tnf.TempSSA(pos, "it", itT, itCall);
         List<ForInit> forInit = Collections.singletonList(itDecl);
 
         // Condition: it.hasNext()
@@ -127,12 +120,12 @@ public class DesugarEnhancedFors extends DesugarVisitor {
 
         // Array alias.
         ReferenceType exprT = n.expr().type().toReference();
-        LocalDecl aDecl = tnf.LocalDecl(pos, freshName("arr"), exprT, n.expr(), Flags.FINAL);
+        LocalDecl aDecl = tnf.TempSSA(pos, "arr", exprT, n.expr());
         Local a = tnf.Local(pos, aDecl);
 
         // Initializer: int i = 0
         Expr zero = nf.IntLit(pos, IntLit.INT, 0).type(ts.Int());
-        LocalDecl iDecl = tnf.LocalDecl(pos, freshName("it"), ts.Int(), zero, Flags.NONE);
+        LocalDecl iDecl = tnf.TempVar(pos, "it", ts.Int(), zero);
         Local it = tnf.Local(pos, iDecl);
         List<ForInit> forInit = Collections.singletonList(iDecl);
 

@@ -62,6 +62,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             LocalInstance li = formal.localInstance().orig();
             LLVMTypeRef typeRef = v.utils.toLL(formal.declType());
             LLVMValueRef alloca = v.utils.buildAlloca(formal.name(), typeRef);
+
             v.addTranslation(li, alloca);
             v.debugInfo.createParamVariable(v, formal, i, alloca);
 

@@ -5,6 +5,7 @@ import polyglot.ext.jl7.types.JL7TypeSystem_c;
 import polyglot.frontend.Source;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
+import polyglot.util.Position;
 
 import java.util.*;
 
@@ -25,6 +26,17 @@ public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTyp
         } catch (SemanticException | ClassCastException e) {
             throw new InternalCompilerError("Could not load array type");
         }
+    }
+
+    @Override
+    public PolyLLVMLocalInstance localInstance(Position pos, Flags flags, Type type, String name) {
+        return localInstance(pos, flags, type, name, /*isTemp*/ false, /*isSSA*/ false);
+    }
+
+    @Override
+    public PolyLLVMLocalInstance localInstance(
+            Position pos, Flags flags, Type type, String name, boolean isTemp, boolean isSSA) {
+        return new PolyLLVMLocalInstance_c(this, pos, flags, type, name, isTemp, isSSA);
     }
 
     /**

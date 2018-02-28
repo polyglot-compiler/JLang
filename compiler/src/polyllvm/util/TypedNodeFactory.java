@@ -1,12 +1,13 @@
 package polyllvm.util;
 
 import polyglot.ast.*;
-import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyllvm.ast.PolyLLVMExt;
+import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.extension.PolyLLVMCallExt;
+import polyllvm.types.PolyLLVMTypeSystem;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -20,10 +21,10 @@ import java.util.stream.Collectors;
  * exception types on method instances.
  */
 public class TypedNodeFactory {
-    protected final JL5TypeSystem ts;
-    protected final NodeFactory nf;
+    protected final PolyLLVMTypeSystem ts;
+    protected final PolyLLVMNodeFactory nf;
 
-    public TypedNodeFactory(JL5TypeSystem ts, NodeFactory nf) {
+    public TypedNodeFactory(PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         this.ts = ts;
         this.nf = nf;
     }
@@ -65,9 +66,20 @@ public class TypedNodeFactory {
                 .localInstance(ts.localInstance(pos, flags, type, name));
     }
 
-    public LocalDecl LocalDecl(Position pos, String name, Type type, Expr init, Flags flags) {
+    public LocalDecl TempVar(Position pos, String name, Type type, Expr init) {
+        return Temp(pos, name, type, init, Flags.NONE, /*isSSA*/ false);
+    }
+
+    public LocalDecl TempSSA(Position pos, String name, Type type, Expr init) {
+        if (init == null)
+            throw new InternalCompilerError("SSA temporaries must have an init expression");
+        return Temp(pos, name, type, init, Flags.FINAL, /*isSSA*/ true);
+    }
+
+    private LocalDecl Temp(
+            Position pos, String name, Type type, Expr init, Flags flags, boolean isSSA) {
         return nf.LocalDecl(pos, flags, nf.CanonicalTypeNode(pos, type), nf.Id(pos, name), init)
-                .localInstance(ts.localInstance(pos, flags, type, name));
+                .localInstance(ts.localInstance(pos, flags, type, name, /*isTemp*/ true, isSSA));
     }
 
     public Local Local(Position pos, VarDecl vd) {
