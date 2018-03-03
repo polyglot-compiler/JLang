@@ -4,6 +4,7 @@ import polyglot.ast.*;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
+import polyllvm.ast.ESeq;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.extension.PolyLLVMCallExt;
@@ -29,9 +30,9 @@ public class TypedNodeFactory {
         this.nf = nf;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Formals and variables.
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     public FieldDecl FieldDecl(
             Position pos, String name, Type type, ParsedClassType container,
@@ -70,10 +71,10 @@ public class TypedNodeFactory {
         return Temp(pos, name, type, init, Flags.NONE, /*isSSA*/ false);
     }
 
-    public LocalDecl TempSSA(Position pos, String name, Type type, Expr init) {
+    public LocalDecl TempSSA(String name, Expr init) {
         if (init == null)
             throw new InternalCompilerError("SSA temporaries must have an init expression");
-        return Temp(pos, name, type, init, Flags.FINAL, /*isSSA*/ true);
+        return Temp(init.position(), "temp", init.type(), init, Flags.FINAL, /*isSSA*/ true);
     }
 
     private LocalDecl Temp(
@@ -90,9 +91,9 @@ public class TypedNodeFactory {
         return (Local) nf.Local(pos, nf.Id(pos, li.name())).localInstance(li).type(li.type());
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Methods and constructors.
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     public MethodDecl MethodDecl(
             Position pos, String name, ParsedClassType container, Type returnType,
@@ -183,11 +184,12 @@ public class TypedNodeFactory {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Misc
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    public Cast Cast(Position pos, Type type, Expr expr) {
+    public Cast Cast(Expr expr, Type type) {
+        Position pos = expr.position();
         return (Cast) nf.Cast(pos, nf.CanonicalTypeNode(pos, type), expr).type(type);
     }
 
@@ -207,5 +209,39 @@ public class TypedNodeFactory {
 
     public Special UnqualifiedThis(Position pos, ReferenceType container) {
         return (Special) nf.This(pos).type(container);
+    }
+
+    public Instanceof InstanceOf(Expr expr, ReferenceType type) {
+        Position pos = expr.position();
+        CanonicalTypeNode typeNode = nf.CanonicalTypeNode(pos, type);
+        return (Instanceof) nf.Instanceof(pos, expr, typeNode).type(ts.Boolean());
+    }
+
+    public If If(Expr cond, Stmt consequent) {
+        assert cond.type().typeEquals(ts.Boolean());
+        return nf.If(cond.position(), cond, consequent);
+    }
+
+    public ESeq ESeq(List<Stmt> statements, Expr expr) {
+        return (ESeq) nf.ESeq(expr.position(), statements, expr).type(expr.type());
+    }
+
+    public Throw Throw(Position pos, ClassType t) {
+        assert t.isSubtype(ts.Throwable());
+        New exn = New(pos, t, /*outer*/ null, /*args*/ Collections.emptyList(), /*body*/ null);
+        return nf.Throw(pos, exn);
+    }
+
+    public Unary Not(Expr expr) {
+        assert expr.type().typeEquals(ts.Boolean());
+        return (Unary) nf.Unary(expr.position(), Unary.NOT, expr).type(ts.Boolean());
+    }
+
+    public Type typeForName(String name) {
+        try {
+            return ts.typeForName(name);
+        } catch (SemanticException e) {
+            throw new InternalCompilerError(e);
+        }
     }
 }

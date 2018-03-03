@@ -1,9 +1,13 @@
 package polyllvm.ast;
 
-import polyglot.ast.*;
+import polyglot.ast.Ext;
+import polyglot.ast.Lang;
+import polyglot.ast.Node;
+import polyglot.ast.NodeOps;
 import polyglot.ext.jl7.ast.J7Lang_c;
 import polyglot.util.InternalCompilerError;
 import polyllvm.visit.LLVMTranslator;
+import polyllvm.visit.DesugarLocally;
 
 import static org.bytedeco.javacpp.LLVM.LLVMBasicBlockRef;
 import static org.bytedeco.javacpp.LLVM.LLVMValueRef;
@@ -22,6 +26,7 @@ public class PolyLLVMLang_c extends J7Lang_c implements PolyLLVMLang {
         throw new InternalCompilerError("Impossible to reach");
     }
 
+
     protected PolyLLVMLang_c() {
     }
 
@@ -39,8 +44,12 @@ public class PolyLLVMLang_c extends J7Lang_c implements PolyLLVMLang {
     }
 
     @Override
-    public LLVMTranslator enterTranslateLLVM(Node n,
-                                             LLVMTranslator v) {
+    public Node desugar(Node n, DesugarLocally v) {
+        return PolyLLVMOps(n).desugar(v);
+    }
+
+    @Override
+    public LLVMTranslator enterTranslateLLVM(Node n, LLVMTranslator v) {
         return PolyLLVMOps(n).enterTranslateLLVM(v);
     }
 
@@ -52,11 +61,6 @@ public class PolyLLVMLang_c extends J7Lang_c implements PolyLLVMLang {
     @Override
     public Node overrideTranslateLLVM(Node parent, Node n, LLVMTranslator v) {
         return PolyLLVMOps(n).overrideTranslateLLVM(parent, v);
-    }
-
-    @Override
-    public Node overrideTranslateLLVM(Node n, LLVMTranslator v) {
-        return PolyLLVMOps(n).overrideTranslateLLVM(v);
     }
 
     @Override

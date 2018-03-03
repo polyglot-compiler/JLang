@@ -2,7 +2,6 @@ package polyllvm.extension;
 
 import polyglot.ast.Field;
 import polyglot.ast.Node;
-import polyglot.ast.Receiver;
 import polyglot.types.FieldInstance;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
@@ -16,7 +15,7 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         Field n = (Field) node();
         LLVMValueRef ptr = translateAsLValue(v); // Emits debug info.
         LLVMValueRef load = LLVMBuildLoad(v.builder, ptr, "load." + n.name());
@@ -27,19 +26,18 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
     @Override
     public LLVMValueRef translateAsLValue(LLVMTranslator v) {
         Field n = (Field) node();
-        Receiver target = n.target();
         FieldInstance fi = n.fieldInstance();
-        target.visit(v);
+        n.visitChild(n.target(), v);
 
         if (n.flags().isStatic()) {
             String mangledGlobalName = v.mangler.mangleStaticFieldName(fi);
             LLVMTypeRef elemType = v.utils.toLL(n.type());
             return v.utils.getGlobal(mangledGlobalName, elemType);
         } else {
-            LLVMValueRef x_target = v.getTranslation(target);
-            int offset = v.fieldInfo(target.type().toReference(), fi);
+            LLVMValueRef x_target = v.getTranslation(n.target());
+            int offset = v.fieldInfo(n.target().type().toReference(), fi);
             // Make sure the LLVM type of the receiver object is not opaque before GEP occurs.
-            v.utils.toLL(target.type());
+            v.utils.toLL(n.target().type());
             LLVMValueRef val = v.utils.buildStructGEP(x_target, 0, offset);
             // Bitcast needed due to potential mismatch introduced by erasure.
             return v.utils.toBitcastL(val, n.type());

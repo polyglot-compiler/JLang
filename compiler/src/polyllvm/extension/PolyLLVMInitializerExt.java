@@ -10,7 +10,7 @@ public class PolyLLVMInitializerExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         Initializer n = (Initializer) node();
         // Non-static initializers are handled by the constructors.
         if (n.flags().isStatic()) {

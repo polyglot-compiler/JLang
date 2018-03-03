@@ -1,17 +1,20 @@
 package polyllvm.ast;
 
-import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.Ext;
 import polyglot.ast.Ext_c;
 import polyglot.ast.Node;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.visit.LLVMTranslator;
+import polyllvm.visit.DesugarLocally;
+
+import java.lang.Override;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     private static final long serialVersionUID = SerialVersionUID.generate();
+
 
     public static PolyLLVMExt ext(Node n) {
         Ext e = n.ext();
@@ -31,6 +34,11 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     }
 
     @Override
+    public Node desugar(DesugarLocally v) {
+        return node();
+    }
+
+    @Override
     public LLVMTranslator enterTranslateLLVM(LLVMTranslator v) {
         return v;
     }
@@ -42,18 +50,13 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
 
     @Override
     public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
-        return overrideTranslateLLVM(v);
-    }
-
-    @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
         return null;
     }
 
     @Override
     public void translateLLVMConditional(LLVMTranslator v,
-                                         LLVM.LLVMBasicBlockRef trueBlock,
-                                         LLVM.LLVMBasicBlockRef falseBlock) {
+                                         LLVMBasicBlockRef trueBlock,
+                                         LLVMBasicBlockRef falseBlock) {
         Node n = v.visitEdge(null, node());
         LLVMBuildCondBr(v.builder, v.getTranslation(n), trueBlock, falseBlock);
     }

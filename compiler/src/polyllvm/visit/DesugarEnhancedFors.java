@@ -6,12 +6,15 @@ import polyglot.ext.jl5.types.JL5ParsedClassType;
 import polyglot.ext.jl5.types.JL5SubstClassType;
 import polyglot.ext.jl5.types.TypeVariable;
 import polyglot.frontend.Job;
-import polyglot.types.*;
+import polyglot.types.ClassType;
+import polyglot.types.ReferenceType;
+import polyglot.types.SemanticException;
+import polyglot.types.Type;
 import polyglot.util.Position;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -27,37 +30,21 @@ public class DesugarEnhancedFors extends DesugarVisitor {
     }
 
     @Override
-    public Node leaveDesugar(Node parent, Node n) throws SemanticException {
+    public Node leaveDesugar(Node n) throws SemanticException {
 
-        // We must collect labels before translating, so wait until we're at the topmost label.
-        if (parent instanceof Labeled)
-            return super.leaveDesugar(parent, n);
-
-        // Collect and remove labels (there may be several chained together).
-        List<String> labels = new ArrayList<>();
-        Node unlabeled = n;
-        while (unlabeled instanceof Labeled) {
-            Labeled labeled = (Labeled) unlabeled;
-            labels.add(labeled.label());
-            unlabeled = labeled.statement();
+        if (n instanceof ExtendedFor) {
+            ExtendedFor ef = (ExtendedFor) n;
+            return ef.expr().type().isArray()
+                    ? translateForArray(ef)
+                    : translateForIterable(ef);
         }
 
-        if (unlabeled instanceof ExtendedFor) {
-            ExtendedFor ef = (ExtendedFor) unlabeled;
-            if (ef.expr().type().isArray()) {
-                return translateForArray(ef, labels);
-            } else {
-                Stmt loop = translateForIterable(ef);
-                return addLabels(loop.position(), loop, labels);
-            }
-        }
-
-        return super.leaveDesugar(parent, n);
+        return super.leaveDesugar(n);
     }
 
-    // L1,...,Ln: for (T x: e) { ... }
+    // for (T x: e) { ... }
     // --->
-    // L1,...,Ln: for (Iterator<T> it = e.iterator(); it.hasNext(); ) { T x = it.next(); ... }
+    // for (Iterator<T> it = e.iterator(); it.hasNext(); ) { T x = it.next(); ... }
     private Stmt translateForIterable(ExtendedFor ef) throws SemanticException {
         Position pos = ef.position();
 
@@ -95,7 +82,7 @@ public class DesugarEnhancedFors extends DesugarVisitor {
 
         // Initializer: Iterator<T> it = e.iterator()
         Call itCall = tnf.Call(pos, ef.expr(), "iterator", exprT, itT);
-        LocalDecl itDecl = tnf.TempSSA(pos, "it", itT, itCall);
+        LocalDecl itDecl = tnf.TempSSA("temp.it", itCall);
         List<ForInit> forInit = Collections.singletonList(itDecl);
 
         // Condition: it.hasNext()
@@ -104,30 +91,31 @@ public class DesugarEnhancedFors extends DesugarVisitor {
 
         // Loop.
         Call nextCall = tnf.Call(pos, copy(it), "next", itT, castT);
-        Cast cast = tnf.Cast(pos, castT, nextCall);
+        Cast cast = tnf.Cast(nextCall, castT);
         LocalDecl next = ef.decl().init(cast);
         Block body = nf.Block(pos, next, ef.body());
         return nf.For(pos, forInit, hasNextCall, Collections.emptyList(), body);
     }
 
-    // L1,...,Ln: for (T x : e) { ... }
+    // for (T x : e) { ... }
     // --->
-    // T[] a = e; L1,...,Ln: for (int i = 0; i < a.length; i++) { T x = a[i]; ... }
-    private Stmt translateForArray(ExtendedFor n, List<String> labels) {
+    // for (T[] a = e, int i = 0; i < a.length; i++) { T x = a[i]; ... }
+    private Stmt translateForArray(ExtendedFor n) {
         Position pos = n.position();
 
         Type iteratedT = n.decl().declType();
 
-        // Array alias.
-        ReferenceType exprT = n.expr().type().toReference();
-        LocalDecl aDecl = tnf.TempSSA(pos, "arr", exprT, n.expr());
+        // Array alias: T[] a = e;
+        LocalDecl aDecl = tnf.TempSSA("temp.a", n.expr());
         Local a = tnf.Local(pos, aDecl);
 
-        // Initializer: int i = 0
+        // Iterator: int i = 0.
         Expr zero = nf.IntLit(pos, IntLit.INT, 0).type(ts.Int());
         LocalDecl iDecl = tnf.TempVar(pos, "it", ts.Int(), zero);
         Local it = tnf.Local(pos, iDecl);
-        List<ForInit> forInit = Collections.singletonList(iDecl);
+
+        // Init.
+        List<ForInit> forInit = Arrays.asList(aDecl, iDecl);
 
         // Condition: i < arr.length
         Field len = tnf.Field(pos, copy(a), "length");
@@ -139,15 +127,6 @@ public class DesugarEnhancedFors extends DesugarVisitor {
 
         // Loop.
         LocalDecl next = n.decl().init(nf.ArrayAccess(pos, copy(a), copy(it)).type(iteratedT));
-        Stmt loop = nf.For(pos, forInit, cond, update, nf.Block(pos, next, n.body()));
-        Stmt labeled = addLabels(pos, loop, labels);
-
-        return nf.Block(pos, aDecl, labeled);
-    }
-
-    private Stmt addLabels(Position pos, Stmt stmt, List<String> labels) {
-        for (int i = labels.size() - 1; i >= 0; --i)
-            stmt = nf.Labeled(pos, nf.Id(pos, labels.get(i)), stmt);
-        return stmt;
+        return nf.For(pos, forInit, cond, update, nf.Block(pos, next, n.body()));
     }
 }

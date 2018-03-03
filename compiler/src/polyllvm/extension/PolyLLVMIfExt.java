@@ -14,7 +14,7 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         If n = (If) node();
         LLVMBasicBlockRef ifEnd = v.utils.buildBlock("if.end");
         LLVMBasicBlockRef ifTrue = v.utils.buildBlock("if.true");

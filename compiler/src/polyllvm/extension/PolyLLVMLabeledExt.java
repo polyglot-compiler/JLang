@@ -14,7 +14,7 @@ public class PolyLLVMLabeledExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         Labeled n = (Labeled) node();
 
         // Any statement can be labeled. We need to make sure that the translation of a labeled

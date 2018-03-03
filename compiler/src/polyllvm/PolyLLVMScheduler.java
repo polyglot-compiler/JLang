@@ -67,7 +67,6 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // must not create the constructs that these remove.
                 new VisitorGoal(job, new DesugarEnhancedFors(job, ts, nf)),
                 new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
-                new VisitorGoal(job, new DesugarStringConcatenation(job, ts, nf)),
                 new VisitorGoal(job, new DesugarAsserts(job, ts, nf)),
                 new VisitorGoal(job, new DesugarMultidimensionalArrays(job, ts, nf)),
                 new VisitorGoal(job, new DesugarVarargs(job, ts, nf)),
@@ -79,11 +78,12 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // should not create qualified Special nodes.
                 new DesugarInnerClasses(job, ts, nf),
 
-                AutoBoxing(job),
+                // We add explicit casts toward the end, since previous visitors are not
+                // careful about adding explicit casts when creating nodes.
+                new VisitorGoal(job, new DesugarImplicitConversions(job, ts, nf)),
 
-                // The explicit cast visitor should generally be run last, since the other
-                // visitors will not add explicit casts when creating nodes.
-                new VisitorGoal(job, new InsertExplicitCasts(job, ts, nf)),
+                // Local desugar transformations should be applied last.
+                new VisitorGoal(job, new DesugarLocally(job, ts, nf))
         };
         Goal prep = new MultiGoal(job, goals);
         try {
@@ -117,7 +117,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
             LLVMModuleRef mod = LLVMModuleCreateWithNameInContext(sf.source().name(), context);
             LLVMBuilderRef builder = LLVMCreateBuilderInContext(context);
             LLVMTranslator translator = new LLVMTranslator(
-                    sf.source().path(), context, mod, builder, nf, ts);
+                    sf.source().path(), context, mod, builder, ts, nf);
 
             ast.visit(translator);
 
@@ -155,7 +155,9 @@ public class PolyLLVMScheduler extends JL7Scheduler {
             LLVMDisposeModule(mod);
             LLVMContextDispose(context);
 
-            return verifySuccess;
+            if (!verifySuccess)
+                throw new InternalCompilerError("The LLVM verifier found an issue in " + outPath);
+            return true;
         }
     }
 

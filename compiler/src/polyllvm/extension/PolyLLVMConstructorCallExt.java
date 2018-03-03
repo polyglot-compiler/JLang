@@ -45,7 +45,7 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
         LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(supc,
                 v.typeSystem().Void(), substC.formalTypes());
         // Bitcast the function so that the formal types are the types that the
-        // arguments were cast to by InsertExplicitCasts
+        // arguments were cast to by DesugarImplicitConversions
         func = LLVMBuildBitCast(v.builder, func, v.utils.ptrTypeRef(func_ty_cast), "cast");
         LLVMValueRef[] args = Stream
                 .concat(Stream.of(thisArg),

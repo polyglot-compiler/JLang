@@ -3,10 +3,12 @@ package polyllvm.extension;
 import polyglot.ast.Binary;
 import polyglot.ast.Binary.*;
 import polyglot.ast.Node;
+import polyglot.types.ClassType;
 import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
+import polyllvm.visit.DesugarLocally;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
@@ -18,7 +20,21 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node desugar(DesugarLocally v) {
+        Binary n = (Binary) node();
+
+        // Desugar string concatenation into a method call.
+        ClassType strT = v.ts.String();
+        if (n.operator().equals(Binary.ADD) && n.type().typeEquals(strT)) {
+            assert n.left().type().typeEquals(strT) && n.right().type().typeEquals(strT);
+            return v.tnf.Call(n.position(), n.left(), "concat", strT, strT, n.right());
+        }
+
+        return super.desugar(v);
+    }
+
+    @Override
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         Binary n = (Binary) node();
         Type resType = n.type();
         Operator op = n.operator();
@@ -29,7 +45,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
             return n;
         }
 
-        return super.overrideTranslateLLVM(v);
+        return super.overrideTranslateLLVM(parent, v);
     }
 
     @Override

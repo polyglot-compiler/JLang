@@ -22,9 +22,9 @@ import java.util.stream.Collectors;
  * Translates Java into LLVM IR.
  */
 public class LLVMTranslator extends NodeVisitor {
-    protected final PolyLLVMNodeFactory nf;
-    protected final PolyLLVMTypeSystem ts;
-    protected final TypedNodeFactory tnf;
+    public final PolyLLVMNodeFactory nf;
+    public final PolyLLVMTypeSystem ts;
+    public final TypedNodeFactory tnf;
 
     // Note: using pointer equality here!
     private Map<Object, Object> translations = new IdentityHashMap<>();
@@ -77,9 +77,10 @@ public class LLVMTranslator extends NodeVisitor {
         return ListUtil.copy(ctors, false);
     }
 
-    public LLVMTranslator(String filePath, LLVMContextRef context,
-            LLVMModuleRef mod, LLVMBuilderRef builder, PolyLLVMNodeFactory nf,
-            PolyLLVMTypeSystem ts) {
+    public LLVMTranslator(
+            String filePath, LLVMContextRef context,
+            LLVMModuleRef mod, LLVMBuilderRef builder,
+            PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(nf.lang());
         this.context = context;
         this.mod = mod;
@@ -98,14 +99,22 @@ public class LLVMTranslator extends NodeVisitor {
         // Switch the debug location to that of the child node.
         LLVMValueRef prevDebugLoc = debugInfo.getLocation();
         debugInfo.setLocation(child);
-        N res = super.visitEdge(parent, child);
+
+        child = super.visitEdge(parent, child);
+
+        // Restore debug location.
         debugInfo.setLocation(prevDebugLoc);
-        return res;
+        return child;
     }
 
     @Override
     public PolyLLVMLang lang() {
         return (PolyLLVMLang) super.lang();
+    }
+
+    @Override
+    public Node override(Node parent, Node n) {
+        return lang().overrideTranslateLLVM(parent, n, this);
     }
 
     @Override
@@ -116,16 +125,6 @@ public class LLVMTranslator extends NodeVisitor {
     @Override
     public Node leave(Node old, Node n, NodeVisitor v) {
         return lang().leaveTranslateLLVM(n, this);
-    }
-
-    @Override
-    public Node override(Node parent, Node n) {
-        return lang().overrideTranslateLLVM(parent, n, this);
-    }
-
-    @Override
-    public Node override(Node n) {
-        return lang().overrideTranslateLLVM(n, this);
     }
 
     public PolyLLVMNodeFactory nodeFactory() {

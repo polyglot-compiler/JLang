@@ -79,8 +79,8 @@ public class ESeq_c extends Expr_c implements ESeq {
 
     private Block blockEquivalent() {
         List<Stmt> stmtsAndExpr = new ArrayList<>(statements());
-        stmtsAndExpr.add(new Eval_c(position(), expr(), ext()));
-        return new Block_c(position(), stmtsAndExpr, ext());
+        stmtsAndExpr.add(new Eval_c(position(), expr(), new PolyLLVMExt()));
+        return new Block_c(position(), stmtsAndExpr, new PolyLLVMExt());
     }
 
     @Override

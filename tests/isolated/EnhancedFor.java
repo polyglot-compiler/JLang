@@ -13,6 +13,17 @@ class EnhancedFor {
         xs = new int[] {1, 2, 3, 4, 5};
         print(xs);
 
+        label: for (int x : xs) {
+            while (true) {
+                if (x < 3)
+                    continue label;
+                if (x > 3)
+                    break label;
+                System.out.println(x);
+                break;
+            }
+        }
+
         for (Integer i : new Counter(3)) {
             System.out.println(i);
         }

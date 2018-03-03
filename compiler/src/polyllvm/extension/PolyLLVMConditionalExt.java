@@ -13,7 +13,7 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMConditionalExt extends PolyLLVMExt {
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         Conditional n = (Conditional) node();
 
         LLVMValueRef conditionalTemp = v.utils.buildAlloca("cond.temp", v.utils.toLL(n.type()));
