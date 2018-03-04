@@ -48,12 +48,6 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         return super.leaveTranslateLLVM(v);
     }
 
-    /** Translate with specified arguments and the default size. */
-    public static LLVMValueRef translateWithArgs(
-            LLVMTranslator v, LLVMValueRef[] args, ConstructorInstance ci) {
-        return translateWithArgsAndSize(v, args, mallocSize(v, ci), ci);
-    }
-
     /** Translate with specified arguments and size. */
     public static LLVMValueRef translateWithArgsAndSize(
             LLVMTranslator v, LLVMValueRef[] args, LLVMValueRef size, ConstructorInstance ci) {

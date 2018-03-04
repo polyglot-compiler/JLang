@@ -2,7 +2,6 @@ package polyllvm.visit;
 
 import polyglot.ast.*;
 import polyglot.frontend.Job;
-import polyglot.types.SemanticException;
 import polyglot.types.Type;
 import polyglot.types.TypeSystem;
 import polyglot.visit.AscriptionVisitor;
@@ -31,8 +30,7 @@ public class DesugarImplicitConversions extends AscriptionVisitor {
     }
 
     @Override
-    protected Node leaveCall(Node parent, Node old, Node n, NodeVisitor v)
-            throws SemanticException {
+    protected Node leaveCall(Node parent, Node old, Node n, NodeVisitor v) {
 
         if (n instanceof Expr) {
             Expr e = (Expr) n;
@@ -43,17 +41,35 @@ public class DesugarImplicitConversions extends AscriptionVisitor {
         return n;
     }
 
-    protected Expr ascribe(Node parent, Expr e, Type toType) throws SemanticException {
+    protected ConversionContext computeConversionContext(Node parent, Type toType) {
+        if (parent instanceof ProcedureCall) {
+            return ConversionContext.METHOD_INVOCATION;
+        }
+        else if (parent instanceof Binary
+                && ((Binary) parent).operator().equals(Binary.ADD)
+                && toType.typeEquals(ts.String())) {
+            return ConversionContext.STRING_CONCAT;
+        }
+        else if (parent instanceof Binary || parent instanceof Unary) {
+            return ConversionContext.NUMERIC_PROMOTION;
+        }
+        else {
+            // Assume all others are assignment conversions.
+            return ConversionContext.ASSIGNMENT;
+        }
+    }
+
+    protected Expr ascribe(Node parent, Expr e, Type toType) {
         TypeSystem ts = typeSystem();
 
         if (toType.isVoid()) {
             // No cast necessary.
-            return super.ascribe(e, toType);
+            return e;
         }
 
         if (parent instanceof Cast) {
             // Already an explicit cast here.
-            return super.ascribe(e, toType);
+            return e;
         }
 
         if (e instanceof ArrayInit) {
@@ -65,26 +81,11 @@ public class DesugarImplicitConversions extends AscriptionVisitor {
         }
 
         // Determine the conversion context.
-        ConversionContext context;
-        if (parent instanceof ProcedureCall) {
-            context = ConversionContext.METHOD_INVOCATION;
-        }
-        else if (parent instanceof Binary
-                && ((Binary) parent).operator().equals(Binary.ADD)
-                && toType.typeEquals(ts.String())) {
-            context = ConversionContext.STRING_CONCAT;
-        }
-        else if (parent instanceof Binary || parent instanceof Unary) {
-            context = ConversionContext.NUMERIC_PROMOTION;
-        }
-        else {
-            // Assume all others are assignment conversions.
-            context = ConversionContext.ASSIGNMENT;
-        }
+        ConversionContext context = computeConversionContext(parent, toType);
 
         if (!context.equals(ConversionContext.STRING_CONCAT) && e.type().typeEquals(toType)) {
             // Avoid adding redundant casts.
-            return super.ascribe(e, toType);
+            return e;
         }
 
         Cast cast = tnf.Cast(e, toType);

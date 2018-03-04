@@ -1,12 +1,14 @@
 package polyllvm.ast;
 
 import polyglot.ast.*;
-import polyglot.types.Type;
 import polyglot.util.CodeWriter;
 import polyglot.util.CollectionUtil;
 import polyglot.util.ListUtil;
 import polyglot.util.Position;
-import polyglot.visit.*;
+import polyglot.visit.CFGBuilder;
+import polyglot.visit.NodeVisitor;
+import polyglot.visit.PrettyPrinter;
+import polyglot.visit.TypeChecker;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,13 +36,6 @@ public class ESeq_c extends Expr_c implements ESeq {
     @Override
     public Expr expr() {
         return expr;
-    }
-
-    @Override
-    public Type childExpectedType(Expr child, AscriptionVisitor av) {
-        if (child == expr)
-            return av.toType();
-        return super.childExpectedType(child, av);
     }
 
     protected <N extends ESeq_c> N statements(N n, List<Stmt> statements) {

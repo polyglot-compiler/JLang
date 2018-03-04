@@ -1,5 +1,6 @@
 package polyllvm.extension;
 
+import polyglot.ast.AmbAssign;
 import polyglot.ast.Assign;
 import polyglot.ast.Binary;
 import polyglot.ast.Node;
@@ -7,12 +8,25 @@ import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
+import polyllvm.visit.DesugarLocally;
 import polyllvm.visit.LLVMTranslator;
+
+import java.lang.Override;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
 public class PolyLLVMAssignExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
+
+    @Override
+    public Node desugar(DesugarLocally v) {
+        // We desugar all assigns into Ambiguous assigns so that the children are
+        // not constrained to specific node types when desugaring.
+        Assign n = (Assign) node();
+        if (!(n instanceof AmbAssign))
+            return v.nf.AmbAssign(n.position(), n.left(), n.operator(), n.right());
+        return super.desugar(v);
+    }
 
     @Override
     public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {

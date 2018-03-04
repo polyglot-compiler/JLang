@@ -3,7 +3,9 @@ package polyllvm.visit;
 import polyglot.ast.Node;
 import polyglot.frontend.Job;
 import polyglot.util.InternalCompilerError;
+import polyglot.util.OptimalCodeWriter;
 import polyglot.visit.NodeVisitor;
+import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
@@ -79,10 +81,16 @@ public class DesugarLocally extends NodeVisitor {
         // Desugar until fixed point.
         int count = 0;
         while (true) {
-            if (++count > 1000)
-                throw new InternalCompilerError(
+            if (++count > 1000) {
+                System.err.println(
                         "Desugar transformations should not take nearly this long to reach a " +
-                                "fixed point; is this not a finite lattice?");
+                                "fixed point.\nIs this not a finite lattice?");
+                System.err.println("Printing the current state of the node to be desugared.");
+                new PrettyPrinter(lang()).printAst(n, new OptimalCodeWriter(System.err, 120));
+                System.err.println();
+                throw new InternalCompilerError("Aborting due to failed desugar transformation.");
+            }
+
             Node prev = n;
 
             // We model implicit conversions as a desugar transformation.

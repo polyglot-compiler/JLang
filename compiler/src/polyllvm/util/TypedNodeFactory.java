@@ -228,7 +228,7 @@ public class TypedNodeFactory {
 
     public Throw Throw(Position pos, ClassType t, List<Expr> args) {
         assert t.isSubtype(ts.Throwable());
-        New exn = New(pos, t, /*outer*/ null, /*args*/ Collections.emptyList(), /*body*/ null);
+        New exn = New(pos, t, /*outer*/ null, args, /*body*/ null);
         return nf.Throw(pos, exn);
     }
 
