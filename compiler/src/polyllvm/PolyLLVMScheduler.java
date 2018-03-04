@@ -62,16 +62,13 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // within class constructors.
                 new VisitorGoal(job, new DesugarClassInitializers(job, ts, nf)),
 
-                // These desugar passes simplify various language constructs.
-                // Their order should not matter, but future desugar desugar passes
-                // must not create the constructs that these remove.
+                // Translate enums to normal classes.
                 new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
-                new VisitorGoal(job, new DesugarMultidimensionalArrays(job, ts, nf)),
 
-                // Translates captures to field accesses.
+                // Translate captures to field accesses.
                 new DesugarLocalClasses(job, ts, nf),
 
-                // Translates accesses to enclosing instances. Future desugar passes
+                // Translate accesses to enclosing instances. Future desugar passes
                 // should not create qualified Special nodes.
                 new DesugarInnerClasses(job, ts, nf),
 
