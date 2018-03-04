@@ -226,7 +226,7 @@ public class TypedNodeFactory {
         return (ESeq) nf.ESeq(expr.position(), statements, expr).type(expr.type());
     }
 
-    public Throw Throw(Position pos, ClassType t) {
+    public Throw Throw(Position pos, ClassType t, List<Expr> args) {
         assert t.isSubtype(ts.Throwable());
         New exn = New(pos, t, /*outer*/ null, /*args*/ Collections.emptyList(), /*body*/ null);
         return nf.Throw(pos, exn);

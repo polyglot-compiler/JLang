@@ -66,7 +66,6 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // Their order should not matter, but future desugar desugar passes
                 // must not create the constructs that these remove.
                 new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
-                new VisitorGoal(job, new DesugarAsserts(job, ts, nf)),
                 new VisitorGoal(job, new DesugarMultidimensionalArrays(job, ts, nf)),
                 new VisitorGoal(job, new DesugarVarargs(job, ts, nf)),
 

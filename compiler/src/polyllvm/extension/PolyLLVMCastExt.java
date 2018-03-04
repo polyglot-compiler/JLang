@@ -14,6 +14,7 @@ import polyllvm.visit.DesugarLocally;
 
 import java.lang.Override;
 import java.util.Arrays;
+import java.util.Collections;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -170,7 +171,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             DesugarLocally v, Expr e, ReferenceType from, ReferenceType to) {
         Position pos = e.position();
         LocalDecl val = v.tnf.TempSSA("castExpr", e);
-        Throw throwExn = v.tnf.Throw(pos, v.ts.ClassCastException());
+        Throw throwExn = v.tnf.Throw(pos, v.ts.ClassCastException(), Collections.emptyList());
         Instanceof check = v.tnf.InstanceOf(v.tnf.Local(pos, val), to);
         If guard = v.tnf.If(v.tnf.Not(check), throwExn);
         Cast cast = v.tnf.Cast(v.tnf.Local(pos, val), to);
