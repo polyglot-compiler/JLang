@@ -1,52 +1,55 @@
-package polyllvm.visit;
+package polyllvm.extension;
 
 import polyglot.ast.*;
 import polyglot.ext.jl5.ast.ExtendedFor;
 import polyglot.ext.jl5.types.JL5ParsedClassType;
 import polyglot.ext.jl5.types.JL5SubstClassType;
 import polyglot.ext.jl5.types.TypeVariable;
-import polyglot.frontend.Job;
 import polyglot.types.ClassType;
 import polyglot.types.ReferenceType;
 import polyglot.types.SemanticException;
 import polyglot.types.Type;
+import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
+import polyllvm.ast.PolyLLVMExt;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
+import polyllvm.util.TypedNodeFactory;
+import polyllvm.visit.DesugarLocally;
+import polyllvm.visit.LLVMTranslator;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Translates enhanced for-loops into normal for-loops (JLS 14.14.2). Derived from
- * {@link polyglot.ext.jl5.visit.RemoveExtendedFors}, but heavily modified for PolyLLVM
- * (e.g., in order to preserve debug information).
- */
-public class DesugarEnhancedFors extends DesugarVisitor {
+/** Enhanced for-loops are desugared into normal for-loops. */
+public class PolyLLVMExtendedForExt extends PolyLLVMExt {
 
-    public DesugarEnhancedFors(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
-        super(job, ts, nf);
+    @Override
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
+        throw new InternalCompilerError("Enhanced for-loops should have been desugared");
     }
 
     @Override
-    public Node leaveDesugar(Node n) throws SemanticException {
-
-        if (n instanceof ExtendedFor) {
-            ExtendedFor ef = (ExtendedFor) n;
-            return ef.expr().type().isArray()
-                    ? translateForArray(ef)
-                    : translateForIterable(ef);
+    public Node desugar(DesugarLocally v) {
+        ExtendedFor n = (ExtendedFor) node();
+        try {
+            return n.expr().type().isArray()
+                ? translateForArray(n, v)
+                : translateForIterable(n, v);
+        } catch (SemanticException e) {
+            throw new InternalCompilerError(e);
         }
-
-        return super.leaveDesugar(n);
     }
 
     // for (T x: e) { ... }
     // --->
     // for (Iterator<T> it = e.iterator(); it.hasNext(); ) { T x = it.next(); ... }
-    private Stmt translateForIterable(ExtendedFor ef) throws SemanticException {
+    private Stmt translateForIterable(ExtendedFor ef, DesugarLocally v) throws SemanticException {
         Position pos = ef.position();
+        PolyLLVMTypeSystem ts = v.ts;
+        PolyLLVMNodeFactory nf = v.nf;
+        TypedNodeFactory tnf = v.tnf;
 
         assert ef.expr().type().isClass();
         ClassType exprT = ef.expr().type().toClass();
@@ -82,7 +85,7 @@ public class DesugarEnhancedFors extends DesugarVisitor {
 
         // Initializer: Iterator<T> it = e.iterator()
         Call itCall = tnf.Call(pos, ef.expr(), "iterator", exprT, itT);
-        LocalDecl itDecl = tnf.TempSSA("temp.it", itCall);
+        LocalDecl itDecl = tnf.TempSSA("it", itCall);
         List<ForInit> forInit = Collections.singletonList(itDecl);
 
         // Condition: it.hasNext()
@@ -100,13 +103,16 @@ public class DesugarEnhancedFors extends DesugarVisitor {
     // for (T x : e) { ... }
     // --->
     // for (T[] a = e, int i = 0; i < a.length; i++) { T x = a[i]; ... }
-    private Stmt translateForArray(ExtendedFor n) {
+    private Stmt translateForArray(ExtendedFor n, DesugarLocally v) {
         Position pos = n.position();
+        PolyLLVMTypeSystem ts = v.ts;
+        PolyLLVMNodeFactory nf = v.nf;
+        TypedNodeFactory tnf = v.tnf;
 
         Type iteratedT = n.decl().declType();
 
         // Array alias: T[] a = e;
-        LocalDecl aDecl = tnf.TempSSA("temp.a", n.expr());
+        LocalDecl aDecl = tnf.TempSSA("a", n.expr());
         Local a = tnf.Local(pos, aDecl);
 
         // Iterator: int i = 0.
@@ -126,7 +132,8 @@ public class DesugarEnhancedFors extends DesugarVisitor {
         List<ForUpdate> update = Collections.singletonList(nf.Eval(pos, inc));
 
         // Loop.
-        LocalDecl next = n.decl().init(nf.ArrayAccess(pos, copy(a), copy(it)).type(iteratedT));
+        Expr aAccess = nf.ArrayAccess(pos, copy(a), copy(it)).type(iteratedT);
+        LocalDecl next = n.decl().init(aAccess);
         return nf.For(pos, forInit, cond, update, nf.Block(pos, next, n.body()));
     }
 }

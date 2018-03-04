@@ -14,15 +14,22 @@ import polyllvm.util.TypedNodeFactory;
  * {@link polyllvm.ast.PolyLLVMOps#desugar(DesugarLocally)} method
  * until a fixed point is reached.
  *
- * These desugar transformations can only rely on information available to each node
- * in isolation. In return for this constraint, we can be sure that desugar
+ * These desugar transformations can only rely on information available to the node
+ * in isolation, and nodes cannot assume that their children have been desugared.
+ * In return for these constraint, we can be sure that desugar
  * transformations compose well, and we can apply them all in one visitor pass.
+ * This is not just for efficiency; it frees us from worrying about the particular
+ * order in which we apply simple desugar transformations, and it makes it
+ * easy for extensions for override desugar transformations for particular nodes.
+ *
  * More involved desugar transformations (such as {@link DesugarLocalClasses})
  * need their own visitors.
  *
- * A great example is array accesses: {@code a[i]} can be desugared to an
+ * One example is array accesses: {@code a[i]} can be desugared to an
  * {@link polyllvm.ast.ESeq} of the form
- * {@code if (i < 0 || a >= a.length) then throw new ClassCastException else a[i]}
+ * {@code if (i < 0 || a >= a.length) then throw new ClassCastException() else a[i]}.
+ * In this case, the generated expression {@code a[i]} must be marked to indicate that
+ * it is now guarded by array index check---otherwise we would desugar infinitely.
  */
 public class DesugarLocally extends NodeVisitor {
     public final Job job;
@@ -30,13 +37,24 @@ public class DesugarLocally extends NodeVisitor {
     public final PolyLLVMNodeFactory nf;
     public final TypedNodeFactory tnf;
 
+    /**
+     * This is an {@link polyglot.visit.AscriptionVisitor} that uses the child expected
+     * type of a node to add explicit casts where an implicit conversion takes place.
+     * We intertwine its traversal of the AST with this one since we model
+     * implicit conversions as a desugar transformation.
+     */
+    protected DesugarImplicitConversions implicitConversions;
+
     public DesugarLocally(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(nf.lang());
         this.job = job;
         this.ts = ts;
         this.nf = nf;
         this.tnf = new TypedNodeFactory(ts, nf);
+        implicitConversions = new DesugarImplicitConversions(job, ts, nf);
     }
+
+
 
     @Override
     public PolyLLVMLang lang() {
@@ -44,28 +62,64 @@ public class DesugarLocally extends NodeVisitor {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <N extends Node> N visitEdge(Node parent, N child) {
-        // Desugar until fixed point, then recurse to children.
+    public NodeVisitor begin() {
+        implicitConversions = (DesugarImplicitConversions) implicitConversions.begin();
+        return super.begin();
+    }
+
+    /**
+     * Desugar until fixed point.
+     * The parent has already been desugared, but the children of this node have not.
+     */
+    @Override
+    public Node override(Node parent, Node n) {
+        DesugarImplicitConversions prevImplicitConversions = implicitConversions;
+        implicitConversions = (DesugarImplicitConversions) prevImplicitConversions.enter(parent, n);
+
+        // Desugar until fixed point.
         int count = 0;
-        Node prev;
-        do {
+        while (true) {
             if (++count > 1000)
                 throw new InternalCompilerError(
                         "Desugar transformations should not take nearly this long to reach a " +
                                 "fixed point; is this not a finite lattice?");
-            prev = child;
-            child = (N) lang().desugar(child, this);
-        } while (child != prev);
-        return super.visitEdge(parent, child);
-    }
+            Node prev = n;
 
-    @Override
-    public Node leave(Node old, Node n, NodeVisitor v) {
+            // We model implicit conversions as a desugar transformation.
+            //
+            // We want to allow desugar transformation to assume that their children
+            // are already converted to their expected type, yet we also want to allow
+            // desugar transformations to rewrite nodes in a way that (safely) changes the
+            // expected type of a child. (Consider, for example, rewriting a node into
+            // a runtime library call that takes in a generic Object argument.) Thus we
+            // convert all children to the correct type on every iteration.
+            n = lang().visitChildren(n, new NodeVisitor(nf.lang()) {
+                @Override
+                public Node override(Node parent, Node n) {
+                    // We explicitly avoid recursion here since we only care about
+                    // converting the immediate children.
+                    DesugarImplicitConversions entered =
+                            (DesugarImplicitConversions) implicitConversions.enter(parent, n);
+                    return implicitConversions.leave(parent, n, n, entered);
+                }
+            });
+
+            n = lang().desugar(n, this);
+            if (n == prev) {
+                break;
+            }
+        }
+
+        // Recurse to children.
+        n = lang().visitChildren(n, this);
+
+        // Check that desugar transformations do not depend on their children being desugared.
         if (lang().desugar(n, this) != n)
             throw new InternalCompilerError(
                     "The desugar fixed point reached for this node should not be " +
                             "affected by desugaring its children");
-        return super.leave(old, n, v);
+
+        implicitConversions = prevImplicitConversions;
+        return n;
     }
 }

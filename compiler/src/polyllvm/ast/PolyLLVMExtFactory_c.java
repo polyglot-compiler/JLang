@@ -57,7 +57,7 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
 
     @Override
     protected Ext extExtendedForImpl() {
-        return new PolyLLVMDesugaredNodeExt();
+        return new PolyLLVMExtendedForExt();
     }
 
     @Override

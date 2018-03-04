@@ -74,7 +74,7 @@ public class TypedNodeFactory {
     public LocalDecl TempSSA(String name, Expr init) {
         if (init == null)
             throw new InternalCompilerError("SSA temporaries must have an init expression");
-        return Temp(init.position(), "temp", init.type(), init, Flags.FINAL, /*isSSA*/ true);
+        return Temp(init.position(), name, init.type(), init, Flags.FINAL, /*isSSA*/ true);
     }
 
     private LocalDecl Temp(

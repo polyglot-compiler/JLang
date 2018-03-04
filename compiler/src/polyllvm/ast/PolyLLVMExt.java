@@ -65,4 +65,10 @@ public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     public LLVMValueRef translateAsLValue(LLVMTranslator v) {
         throw new InternalCompilerError("Unable to translate to lvalue: " + node());
     }
+
+    /** Helper method for copying nodes. Recall that nodes must not alias each other in the AST. */
+    @SuppressWarnings("unchecked")
+    protected <T> T copy(Node n) {
+        return (T) n.copy();
+    }
 }

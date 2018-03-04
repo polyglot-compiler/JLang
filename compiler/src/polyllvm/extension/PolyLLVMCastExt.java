@@ -18,9 +18,9 @@ import java.util.Arrays;
 import static org.bytedeco.javacpp.LLVM.*;
 
 /**
- * Read JLS SE 7, Chapter 5, Conversions and Promotions.
- * Each subsection title (e.g., 5.1.1) specifying a conversion is searchable
- * in comments here.
+ * We use cast nodes to model both explicit user-added casts and implicit conversions.
+ * Read JLS SE 7, Chapter 5, Conversions and Promotions. Each subsection title
+ * specifying a conversion (e.g., 5.1.1) is searchable in comments here.
  *
  * TODO: We are not kind where Java is kind (i.e., defined behavior for underflow/overflow/NaN).
  *
@@ -42,7 +42,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         EXPLICIT_CAST,     // Explicit user-added cast.
         STRING_CONCAT,     // Implicit string conversion due to string concatenation.
         NUMERIC_PROMOTION, // Implicit numeric promotion due to numeric operator.
-        BITCAST,           // Compiler-generated bitcast.
+        GUARDED_BITCAST,   // Compiler-generated bitcast.
     }
 
     private ConversionContext context = ConversionContext.EXPLICIT_CAST;
@@ -80,8 +80,8 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         if (from.typeEquals(to))
             return n.expr();
 
-        // Bitcast (probably following a compiler-inserted instanceof check).
-        if (context.equals(ConversionContext.BITCAST))
+        // Bitcast (following a compiler-inserted instanceof check).
+        if (context.equals(ConversionContext.GUARDED_BITCAST))
             return super.desugar(v);
 
         // 5.1.7 Boxing Conversion.
@@ -125,7 +125,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             // 5.1.6 Narrowing Reference Conversion (already guarded by instanceof check).
             // 5.1.9 Unchecked Conversion (irrelevant after erasure).
             // 5.1.10 Capture Conversion (irrelevant after erasure).
-            assert from.isSubtype(to) || context.equals(ConversionContext.BITCAST);
+            assert from.isSubtype(to) || context.equals(ConversionContext.GUARDED_BITCAST);
             res = LLVMBuildBitCast(v.builder, e, llT, "cast");
         }
         else {
@@ -151,6 +151,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             // This may be followed by a widening reference conversion.
             ClassType wrapType = v.ts.wrapperClassOfPrimitive(from);
             Call wrap = v.tnf.StaticCall(pos, "valueOf", wrapType, wrapType, e);
+            assert wrapType.isSubtype(to);
             return v.tnf.Cast(wrap, to);
         }
     }
@@ -168,12 +169,12 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
     protected Node narrowingReferenceConversion(
             DesugarLocally v, Expr e, ReferenceType from, ReferenceType to) {
         Position pos = e.position();
-        LocalDecl val = v.tnf.TempSSA("temp.cast.expr", e);
+        LocalDecl val = v.tnf.TempSSA("castExpr", e);
         Throw throwExn = v.tnf.Throw(pos, v.ts.ClassCastException());
         Instanceof check = v.tnf.InstanceOf(v.tnf.Local(pos, val), to);
         If guard = v.tnf.If(v.tnf.Not(check), throwExn);
         Cast cast = v.tnf.Cast(v.tnf.Local(pos, val), to);
-        Cast bitcast = context(cast, ConversionContext.BITCAST);
+        Cast bitcast = context(cast, ConversionContext.GUARDED_BITCAST);
         return v.tnf.ESeq(Arrays.asList(val, guard), bitcast);
     }
 
@@ -206,8 +207,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             // if e has a null value or if e.toString() has a null value.
             // This is needed even for String types, since they could be null.
             ClassType helperType = v.tnf.typeForName(Constants.RUNTIME_HELPER).toClass();
-            Cast cast = v.tnf.Cast(e, v.ts.Object()); // TODO: It's inconvenient that local desugar transformations must add explicit casts.
-            return v.tnf.StaticCall(pos, "toString", helperType, v.ts.String(), cast);
+            return v.tnf.StaticCall(pos, "toString", helperType, v.ts.String(), e);
         }
     }
 

@@ -43,7 +43,7 @@ public class DesugarImplicitConversions extends AscriptionVisitor {
         return n;
     }
 
-    public Expr ascribe(Node parent, Expr e, Type toType) throws SemanticException {
+    protected Expr ascribe(Node parent, Expr e, Type toType) throws SemanticException {
         TypeSystem ts = typeSystem();
 
         if (toType.isVoid()) {
@@ -67,18 +67,18 @@ public class DesugarImplicitConversions extends AscriptionVisitor {
         // Determine the conversion context.
         ConversionContext context;
         if (parent instanceof ProcedureCall) {
-            // Method invocation conversion.
             context = ConversionContext.METHOD_INVOCATION;
-        } else if (parent instanceof Binary
+        }
+        else if (parent instanceof Binary
                 && ((Binary) parent).operator().equals(Binary.ADD)
                 && toType.typeEquals(ts.String())) {
-            // String conversion.
             context = ConversionContext.STRING_CONCAT;
-        } else if (parent instanceof Binary || parent instanceof Unary) {
-            // Numeric promotion.
+        }
+        else if (parent instanceof Binary || parent instanceof Unary) {
             context = ConversionContext.NUMERIC_PROMOTION;
-        } else {
-            // Assignment conversion (all others).
+        }
+        else {
+            // Assume all others are assignment conversions.
             context = ConversionContext.ASSIGNMENT;
         }
 
