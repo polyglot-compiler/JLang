@@ -86,12 +86,12 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             return super.desugar(v);
 
         // 5.1.7 Boxing Conversion.
-        if (from.isPrimitive() && to.isReference())
-            return boxingConversion(v, n.expr(), from.toPrimitive(), to.toReference());
+        if (from.isPrimitive() && to.isClass())
+            return boxingConversion(v, n.expr(), from.toPrimitive(), to.toClass());
 
         // 5.1.8 Unboxing Conversion.
-        if (from.isReference() && to.isPrimitive())
-            return unboxingConversion(v, n.expr(), from.toReference(), to.toPrimitive());
+        if (from.isClass() && to.isPrimitive())
+            return unboxingConversion(v, n.expr(), from.toClass(), to.toPrimitive());
 
         // 5.1.4 Widening and Narrowing Primitive Conversion.
         if (from.isByte() && to.isChar())
@@ -139,14 +139,14 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
 
     /** Convert primitive value to boxed value. */
     protected Node boxingConversion(
-            DesugarLocally v, Expr e, PrimitiveType from, ReferenceType to) {
+            DesugarLocally v, Expr e, PrimitiveType from, ClassType to) {
 
         Position pos = e.position();
         if (v.ts.isPrimitiveWrapper(to)) {
             // Convert directly to wrapper type.
             // This may be preceded by a primitive narrowing conversion (e.g., `Byte b = 1;`).
             Expr primCast = v.tnf.Cast(e, v.ts.primitiveTypeOfWrapper(to));
-            return v.tnf.StaticCall(pos, "valueOf", to.toClass(), to, primCast);
+            return v.tnf.StaticCall(pos, "valueOf", to, to, primCast);
         } else {
             // Convert to wrapper type.
             // This may be followed by a widening reference conversion.
@@ -159,11 +159,11 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
 
     /** Convert boxed value to primitive value. */
     protected Node unboxingConversion(
-            DesugarLocally v, Expr e, ReferenceType from, PrimitiveType to) {
+            DesugarLocally v, Expr e, ClassType from, PrimitiveType to) {
 
         assert v.ts.isPrimitiveWrapper(from);
         String valueMethod = to.name() + "Value";
-        return v.tnf.Call(e.position(), e, valueMethod, from.toClass(), to);
+        return v.tnf.Call(e.position(), e, valueMethod, from, to);
     }
 
     /** Down cast. */

@@ -67,7 +67,6 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // must not create the constructs that these remove.
                 new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
                 new VisitorGoal(job, new DesugarMultidimensionalArrays(job, ts, nf)),
-                new VisitorGoal(job, new DesugarVarargs(job, ts, nf)),
 
                 // Translates captures to field accesses.
                 new DesugarLocalClasses(job, ts, nf),
