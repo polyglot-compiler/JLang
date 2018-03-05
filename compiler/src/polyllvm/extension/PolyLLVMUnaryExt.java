@@ -1,14 +1,13 @@
 package polyllvm.extension;
 
-import polyglot.ast.Binary;
-import polyglot.ast.Expr;
-import polyglot.ast.Node;
-import polyglot.ast.Unary;
+import polyglot.ast.*;
 import polyglot.ast.Unary.*;
-import polyglot.types.Type;
+import polyglot.types.SemanticException;
 import polyglot.util.InternalCompilerError;
+import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
+import polyllvm.visit.DesugarLocally;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
@@ -21,55 +20,63 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
-        // Override for increment operations on lvalues (++, --, etc.).
+    public Node desugar(DesugarLocally v) {
         Unary n = (Unary) node();
-        Operator op = n.operator();
-        if (!Arrays.asList(PRE_INC, PRE_DEC, POST_INC, POST_DEC).contains(op))
-            return super.overrideTranslateLLVM(parent, v); // Translate other operations normally.
 
+        // Desugar increment/decrement into ESeq nodes with a Binary child.
+        if (Arrays.asList(PRE_INC, PRE_DEC, POST_INC, POST_DEC).contains(n.operator()))
+            return desugarIncOrDec(n, v);
+
+        return super.desugar(v);
+    }
+
+    protected Node desugarIncOrDec(Unary n, DesugarLocally v) {
+        Position pos = n.position();
+        Operator op = n.operator();
         boolean pre = op.equals(PRE_INC) || op.equals(PRE_DEC);
         boolean inc = op.equals(PRE_INC) || op.equals(POST_INC);
-        boolean integral = n.expr().type().isLongOrLess();
+
+        // Get the address and value of the expression.
+        LocalDecl ptrFlat = v.tnf.TempSSA("lvalue", v.tnf.AddressOf(n.expr()));
+        Local ptr = v.tnf.Local(pos, ptrFlat);
+        LocalDecl ptrLoadedFlat = v.tnf.TempSSA("load", v.tnf.Load(copy(ptr)));
+        Local ptrLoaded = v.tnf.Local(pos, ptrLoadedFlat);
+
+        // Compute the binop.
         Binary.Operator binop = inc ? Binary.ADD : Binary.SUB;
-        Type type = n.expr().type();
-        LLVMTypeRef typeRef = v.utils.toLL(type);
+        IntLit one = (IntLit) v.nf.IntLit(pos, IntLit.INT, 1).type(v.ts.Int());
+        Binary bin = v.nf.Binary(pos, copy(ptrLoaded), binop, one);
+        try {
+            // Numeric promotion. (Should result in a numeric type.)
+            bin = (Binary) bin.type(v.ts.promote(bin.left().type(), bin.right().type()));
+            assert bin.type().isNumeric();
+        } catch (SemanticException e) {
+            throw new InternalCompilerError(e);
+        }
 
-        // Get lvalue.
-        LLVMValueRef exprPtr = lang().translateAsLValue(n.expr(), v);
+        // Store the result and return the correct value.
+        LocalDecl resFlat = v.tnf.TempSSA("res", bin);
+        Local res = v.tnf.Local(pos, resFlat);
+        Stmt update = v.tnf.EvalAssign(pos, copy(ptr), copy(res));
+        Expr val = pre ? copy(res) : copy(ptrLoaded);
 
-        // Increment and store.
-        LLVMValueRef one = integral
-                ? LLVMConstInt(typeRef, 1, /*sign-extend*/ 0)
-                : LLVMConstReal(typeRef, 1.);
-        LLVMValueRef exprRef = LLVMBuildLoad(v.builder, exprPtr, "load");
-        LLVMValueRef newVal
-                = PolyLLVMBinaryExt.computeBinop(v.builder, binop, exprRef, one, type, type);
-        LLVMBuildStore(v.builder, newVal, exprPtr);
-
-        // Choose old or new value.
-        LLVMValueRef translation = pre ? newVal : exprRef;
-        v.addTranslation(n, translation);
-
-        return n;
+        return v.tnf.ESeq(Arrays.asList(ptrFlat, ptrLoadedFlat, resFlat, update), val);
     }
 
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         Unary n = (Unary) node();
-        Type t = n.type();
         Operator op = n.operator();
-        Expr expr = n.expr();
-        LLVMValueRef exprRef = v.getTranslation(expr);
-        LLVMTypeRef typeRef = v.utils.toLL(expr.type());
+        LLVMValueRef exprRef = v.getTranslation(n.expr());
+        LLVMTypeRef typeRef = v.utils.toLL(n.expr().type());
 
         LLVMValueRef translation;
         if (op.equals(BIT_NOT)) {
-            LLVMValueRef negOne = LLVMConstInt(typeRef, -1, /* sign-extend */ 0);
-            translation = LLVMBuildXor(v.builder, exprRef, negOne, "bit_not");
+            LLVMValueRef negOne = LLVMConstInt(typeRef, -1, /*sign-extend*/ 0);
+            translation = LLVMBuildXor(v.builder, exprRef, negOne, "bit.not");
         }
         else if (op.equals(NEG)) {
-            translation = t.isLongOrLess()
+            translation = n.type().isLongOrLess()
                     ? LLVMBuildNeg (v.builder, exprRef, "neg")
                     : LLVMBuildFNeg(v.builder, exprRef, "neg");
         }
@@ -77,11 +84,11 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
             translation = exprRef;
         }
         else if (op.equals(NOT)) {
-            assert t.typeEquals(v.typeSystem().Boolean());
+            assert n.type().typeEquals(v.typeSystem().Boolean());
             translation = LLVMBuildNot(v.builder, exprRef, "not");
         }
         else {
-            throw new InternalCompilerError("Invalid unary operation");
+            throw new InternalCompilerError("Unknown unary operation " + op);
         }
 
         v.addTranslation(n, translation);

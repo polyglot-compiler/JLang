@@ -57,7 +57,28 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         Operator op = n.operator();
         Type elemType = n.left().type();
 
-        LLVMValueRef res = computeBinop(v.builder, op, left, right, resType, elemType);
+        LLVMValueRef res;
+        if (resType.isLongOrLess()) {
+            // Integer binop.
+            res = LLVMBuildBinOp(v.builder, llvmIntBinopCode(op, elemType), left, right, "ibinop");
+        }
+        else if (resType.isFloat() || resType.isDouble()) {
+            // Floating point binop.
+            res = LLVMBuildBinOp(v.builder, llvmFloatBinopCode(op), left, right, "fbinop");
+        }
+        else if (resType.isBoolean() && (elemType.isFloat() || elemType.isDouble())) {
+            // Floating point comparison.
+            res = LLVMBuildFCmp(v.builder, llvmFCmpBinopCode(op), left, right, "fcmp");
+        }
+        else if (resType.isBoolean()
+                && (elemType.isLongOrLess() || elemType.isBoolean() || elemType.isReference())) {
+            // Integer or boolean or reference comparison.
+            res = LLVMBuildICmp(v.builder, llvmICmpBinopCode(op, elemType), left, right, "icmp");
+        }
+        else {
+            throw new InternalCompilerError("Invalid binary operation result type");
+        }
+
         v.addTranslation(n, res);
         return super.leaveTranslateLLVM(v);
     }
@@ -85,27 +106,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         }
     }
 
-    static LLVMValueRef computeBinop(LLVMBuilderRef builder,
-                                     Operator op, LLVMValueRef left, LLVMValueRef right,
-                                     Type resType, Type elemType) {
-        if (resType.isLongOrLess()) {
-            // Integer binop.
-            return LLVMBuildBinOp(builder, llvmIntBinopCode(op, elemType), left, right, "ibinop");
-        } else if (resType.isFloat() || resType.isDouble()) {
-            // Floating point binop.
-            return LLVMBuildBinOp(builder, llvmFloatBinopCode(op), left, right, "fbinop");
-        } else if (resType.isBoolean() && (elemType.isFloat() || elemType.isDouble())) {
-            // Floating point comparison.
-            return LLVMBuildFCmp(builder, llvmFCmpBinopCode(op), left, right, "fcmp");
-        } else if (resType.isBoolean() && (elemType.isLongOrLess() || elemType.isBoolean() || elemType.isReference())) {
-            // Integer comparison.
-            return LLVMBuildICmp(builder, llvmICmpBinopCode(op, elemType), left, right, "icmp");
-        } else {
-            throw new InternalCompilerError("Invalid binary operation result type");
-        }
-    }
-
-    private LLVMValueRef computeShortCircuitOp(LLVMTranslator v, Type resType) {
+    protected LLVMValueRef computeShortCircuitOp(LLVMTranslator v, Type resType) {
         LLVMValueRef binopRes = v.utils.buildAlloca("binop.res", v.utils.toLL(resType));
         LLVMBasicBlockRef trueBranch = v.utils.buildBlock("true_branch");
         LLVMBasicBlockRef falseBranch = v.utils.buildBlock("false_branch");
@@ -128,11 +129,11 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         return LLVMBuildLoad(v.builder, binopRes, "binop");
     }
 
-    private static boolean isUnsigned(Type t) {
+    protected static boolean isUnsigned(Type t) {
         return t.isChar() || t.isBoolean();
     }
 
-    private static int llvmIntBinopCode(Operator op, Type type) {
+    protected static int llvmIntBinopCode(Operator op, Type type) {
         if      (op == ADD)     return LLVMAdd;
         else if (op == SUB)     return LLVMSub;
         else if (op == MUL)     return LLVMMul;
@@ -147,7 +148,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         else throw new InternalCompilerError("Invalid integer operation");
     }
 
-    private static int llvmFloatBinopCode(Operator op) {
+    protected static int llvmFloatBinopCode(Operator op) {
         if      (op == ADD) return LLVMFAdd;
         else if (op == SUB) return LLVMFSub;
         else if (op == MUL) return LLVMFMul;
@@ -155,7 +156,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         else throw new InternalCompilerError("Invalid floating point operation");
     }
 
-    private static int llvmICmpBinopCode(Operator op, Type t) {
+    protected static int llvmICmpBinopCode(Operator op, Type t) {
         if      (op == LT) return isUnsigned(t) ? LLVMIntULT : LLVMIntSLT;
         else if (op == LE) return isUnsigned(t) ? LLVMIntULE : LLVMIntSLE;
         else if (op == EQ) return LLVMIntEQ;
@@ -165,7 +166,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         else throw new InternalCompilerError("This operation is not a comparison");
     }
 
-    private static int llvmFCmpBinopCode(Operator op) {
+    protected static int llvmFCmpBinopCode(Operator op) {
         // Java floating point uses ordered comparisons (i.e., comparisons with NaN return false).
         if      (op == LT) return LLVMRealOLT;
         else if (op == LE) return LLVMRealOLE;

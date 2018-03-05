@@ -58,13 +58,13 @@ public class AddressOf_c extends Expr_c implements AddressOf {
 
     @Override
     public void prettyPrint(CodeWriter w, PrettyPrinter pp) {
-        w.write("lvalue(");
+        w.write("addr(");
         expr.prettyPrint(w, pp);
         w.write(")");
     }
 
     @Override
     public String toString() {
-        return "lvalue(" + expr.toString() + ")";
+        return "addr(" + expr.toString() + ")";
     }
 }

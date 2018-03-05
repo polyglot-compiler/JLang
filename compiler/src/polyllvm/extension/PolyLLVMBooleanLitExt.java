@@ -25,10 +25,6 @@ public class PolyLLVMBooleanLitExt extends PolyLLVMExt {
                                          LLVMBasicBlockRef trueBlock,
                                          LLVMBasicBlockRef falseBlock) {
         BooleanLit n = (BooleanLit) node();
-        if (n.value()) {
-            LLVMBuildBr(v.builder, trueBlock);
-        } else {
-            LLVMBuildBr(v.builder, falseBlock);
-        }
+        LLVMBuildBr(v.builder, n.value() ? trueBlock : falseBlock);
     }
 }

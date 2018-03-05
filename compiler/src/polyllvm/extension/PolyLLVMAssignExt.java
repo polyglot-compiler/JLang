@@ -36,17 +36,17 @@ public class PolyLLVMAssignExt extends PolyLLVMExt {
     protected Node desugarToSimpleAssignment(Assign n, DesugarLocally v) {
         Position pos = n.position();
 
-        LocalDecl leftFlat = v.tnf.TempSSA("lvalue", v.tnf.AddressOf(n.left()));
+        LocalDecl leftPtrFlat = v.tnf.TempSSA("lvalue", v.tnf.AddressOf(n.left()));
         LocalDecl rightFlat = v.tnf.TempSSA("rvalue", n.right());
-        Local left = v.tnf.Local(pos, leftFlat);
+        Local leftPtr = v.tnf.Local(pos, leftPtrFlat);
         Local right = v.tnf.Local(pos, rightFlat);
 
         Binary.Operator binop = convertAssignOpToBinop(n.operator());
-        Expr leftLoaded = v.tnf.Load(copy(left));
+        Expr leftLoaded = v.tnf.Load(copy(leftPtr));
         Binary res = (Binary) v.nf.Binary(pos, leftLoaded, binop, copy(right)).type(n.type());
-        n = n.left(copy(left)).operator(Assign.ASSIGN).right(res);
+        n = n.left(copy(leftPtr)).operator(Assign.ASSIGN).right(res);
 
-        return v.tnf.ESeq(Arrays.asList(leftFlat, rightFlat), n);
+        return v.tnf.ESeq(Arrays.asList(leftPtrFlat, rightFlat), n);
     }
 
     @Override
