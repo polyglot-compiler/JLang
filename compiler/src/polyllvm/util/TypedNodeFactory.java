@@ -243,6 +243,12 @@ public class TypedNodeFactory {
         return (Unary) nf.Unary(expr.position(), Unary.NOT, expr).type(ts.Boolean());
     }
 
+    public Binary CondOr(Expr l, Expr r) {
+        assert l.type().typeEquals(ts.Boolean());
+        assert r.type().typeEquals(ts.Boolean());
+        return (Binary) nf.Binary(l.position(), l, Binary.COND_OR, r).type(ts.Boolean());
+    }
+
     public Type typeForName(String name) {
         try {
             return ts.typeForName(name);

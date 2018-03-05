@@ -37,6 +37,19 @@ public final class String {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof String))
+            return false;
+        String s = (String) o;
+        if (value.length != s.value.length)
+            return false;
+        for (int i = 0; i < value.length; ++i)
+            if (value[i] != s.value[i])
+                return false;
+        return true;
+    }
+
+    @Override
     public String toString() {
         return this;
     }
