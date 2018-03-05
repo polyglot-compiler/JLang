@@ -10,7 +10,7 @@ public class PolyLLVMDesugaredNodeExt extends PolyLLVMExt {
             "This node should be desugared before translating to LLVM IR";
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         throw new InternalCompilerError(errorMsg + ": " + node().getClass());
     }
 }

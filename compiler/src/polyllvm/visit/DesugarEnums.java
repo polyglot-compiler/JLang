@@ -184,7 +184,7 @@ public class DesugarEnums extends DesugarVisitor {
 
         // Clone, cast, and return
         Call call = tnf.Call(pos, f, "clone", ts.Object(), ts.Object());
-        Cast cast = tnf.Cast(pos, ts.arrayOf(enumType), call);
+        Cast cast = tnf.Cast(call, ts.arrayOf(enumType));
         Return ret = nf.Return(pos, cast);
 
         // Declare method.
@@ -206,7 +206,7 @@ public class DesugarEnums extends DesugarVisitor {
         Call call = tnf.StaticCall(pos, "valueOf", container, enumType, clazz, s);
 
         // Cast and return.
-        Cast cast = tnf.Cast(pos, enumType, call);
+        Cast cast = tnf.Cast(call, enumType);
         Return ret = nf.Return(pos, cast);
 
         // Declare method.

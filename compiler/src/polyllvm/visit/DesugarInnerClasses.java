@@ -170,7 +170,7 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
                     : classes.peek();
             Expr res = getEnclosingInstance(s.position(), enclosingType);
             if (s.kind().equals(Special.SUPER))
-                res = tnf.Cast(n.position(), res.type().toClass().superType(), res);
+                res = tnf.Cast(res, res.type().toClass().superType());
             n = res;
         }
 

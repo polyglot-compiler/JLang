@@ -15,6 +15,5 @@ public class RuntimeTypeCheck {
             System.out.println("Correct");
         }
         System.out.println("Done");
-
     }
 }

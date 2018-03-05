@@ -10,7 +10,10 @@ import polyglot.frontend.goals.CodeGenerated;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
+import polyglot.main.Options;
 import polyglot.util.InternalCompilerError;
+import polyglot.util.OptimalCodeWriter;
+import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.MultiGoal;
@@ -62,28 +65,18 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // within class constructors.
                 new VisitorGoal(job, new DesugarClassInitializers(job, ts, nf)),
 
-                // These desugar passes simplify various language constructs.
-                // Their order should not matter, but future desugar desugar passes
-                // must not create the constructs that these remove.
-                new VisitorGoal(job, new DesugarEnhancedFors(job, ts, nf)),
+                // Translate enums to normal classes.
                 new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
-                new VisitorGoal(job, new DesugarStringConcatenation(job, ts, nf)),
-                new VisitorGoal(job, new DesugarAsserts(job, ts, nf)),
-                new VisitorGoal(job, new DesugarMultidimensionalArrays(job, ts, nf)),
-                new VisitorGoal(job, new DesugarVarargs(job, ts, nf)),
 
-                // Translates captures to field accesses.
+                // Translate captures to field accesses.
                 new DesugarLocalClasses(job, ts, nf),
 
-                // Translates accesses to enclosing instances. Future desugar passes
+                // Translate accesses to enclosing instances. Future desugar passes
                 // should not create qualified Special nodes.
                 new DesugarInnerClasses(job, ts, nf),
 
-                AutoBoxing(job),
-
-                // The explicit cast visitor should generally be run last, since the other
-                // visitors will not add explicit casts when creating nodes.
-                new VisitorGoal(job, new InsertExplicitCasts(job, ts, nf)),
+                // Local desugar transformations should be applied last.
+                new VisitorGoal(job, new DesugarLocally(job, ts, nf))
         };
         Goal prep = new MultiGoal(job, goals);
         try {
@@ -110,14 +103,15 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 throw new InternalCompilerError("AST root should be a SourceFile");
             SourceFile sf = (SourceFile) ast;
 
-            // This is a good place to debug the output of desugar passes:
-            // new PrettyPrinter(lang()).printAst(ast, new OptimalCodeWriter(System.out, 120));
+            if (((PolyLLVMOptions) Options.global).printDesugar) {
+                new PrettyPrinter(lang()).printAst(ast, new OptimalCodeWriter(System.out, 120));
+            }
 
             LLVMContextRef context = LLVMContextCreate();
             LLVMModuleRef mod = LLVMModuleCreateWithNameInContext(sf.source().name(), context);
             LLVMBuilderRef builder = LLVMCreateBuilderInContext(context);
             LLVMTranslator translator = new LLVMTranslator(
-                    sf.source().path(), context, mod, builder, nf, ts);
+                    sf.source().path(), context, mod, builder, ts, nf);
 
             ast.visit(translator);
 
@@ -155,7 +149,9 @@ public class PolyLLVMScheduler extends JL7Scheduler {
             LLVMDisposeModule(mod);
             LLVMContextDispose(context);
 
-            return verifySuccess;
+            if (!verifySuccess)
+                throw new InternalCompilerError("The LLVM verifier found an issue in " + outPath);
+            return true;
         }
     }
 

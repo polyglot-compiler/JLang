@@ -11,12 +11,4 @@ class Helper {
         String res = o.toString();
         return res == null ? "null" : res;
     }
-
-    static void assertHelper(boolean b) {
-        if (!b) throw new AssertionError();
-    }
-
-    static void assertHelper(boolean b, String msg) {
-        if (!b) throw new AssertionError(msg);
-    }
 }

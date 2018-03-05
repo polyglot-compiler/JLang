@@ -1,8 +1,18 @@
 package polyllvm.ast;
 
+import polyglot.ast.Expr;
+import polyglot.ast.Stmt;
 import polyglot.ext.jl7.ast.JL7NodeFactory;
+import polyglot.util.Position;
 
-/**
- * NodeFactory for the PolyLLVM extension.
- */
-public interface PolyLLVMNodeFactory extends JL7NodeFactory {}
+import java.util.List;
+
+/** NodeFactory for PolyLLVM. */
+public interface PolyLLVMNodeFactory extends JL7NodeFactory {
+
+    ESeq ESeq(Position pos, List<Stmt> statements, Expr expr);
+
+    AddressOf AddressOf(Position pos, Expr expr);
+
+    Load Load(Position pos, Expr expr);
+}

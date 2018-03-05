@@ -26,6 +26,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
+    protected Ext extESeqImpl() {
+        return new PolyLLVMEseqExt();
+    }
+
+    @Override
     protected Ext extInstanceofImpl() {
         return new PolyLLVMInstanceofExt();
     }
@@ -52,7 +57,7 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
 
     @Override
     protected Ext extExtendedForImpl() {
-        return new PolyLLVMDesugaredNodeExt();
+        return new PolyLLVMExtendedForExt();
     }
 
     @Override
@@ -62,7 +67,7 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
 
     @Override
     protected Ext extAssertImpl() {
-        return new PolyLLVMDesugaredNodeExt();
+        return new PolyLLVMAssertExt();
     }
 
     @Override
@@ -88,6 +93,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     @Override
     protected Ext extIfImpl() {
         return new PolyLLVMIfExt();
+    }
+
+    @Override
+    public Ext extLoadImpl() {
+        return new PolyLLVMLoadExt();
     }
 
     @Override
@@ -118,6 +128,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     @Override
     protected Ext extCastImpl() {
         return new PolyLLVMCastExt();
+    }
+
+    @Override
+    public Ext extAddressOfImpl() {
+        return new PolyLLVMAddressOfExt();
     }
 
     @Override

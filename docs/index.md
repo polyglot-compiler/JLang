@@ -15,6 +15,11 @@ The backend is in development for Java 1.4, with future support planned for the 
 Supported Features
 ------------------
 
-The project currently supports the basic arithmetic operations, variables, loops, arrays, class dispatch, interface dispatch, and instanceof checks. We are currently working on implementing threading and exception support.
+The project currently supports the basic arithmetic operations, variables, loops, arrays, class dispatch, interface dispatch, exceptions, inner/local/anonymous classes, and instanceof checks. We are currently working on implementing threading and library support.
+
+Unsupported Features
+--------------------
 
 We do not currently plan to support dynamic class loading or reflection.
+
+When converting floating point values to integral types, we deviate from the JLS when the floating point value is NaN, or too large to fit into the integral type. (In those cases, LLVM will produce undefined behavior, whereas Java might convert to a predefined constant.)

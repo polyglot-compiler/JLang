@@ -1,12 +1,12 @@
 package polyllvm.util;
 
 import polyglot.ast.*;
-import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
-import polyllvm.ast.PolyLLVMExt;
+import polyllvm.ast.*;
 import polyllvm.extension.PolyLLVMCallExt;
+import polyllvm.types.PolyLLVMTypeSystem;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -20,17 +20,17 @@ import java.util.stream.Collectors;
  * exception types on method instances.
  */
 public class TypedNodeFactory {
-    protected final JL5TypeSystem ts;
-    protected final NodeFactory nf;
+    protected final PolyLLVMTypeSystem ts;
+    protected final PolyLLVMNodeFactory nf;
 
-    public TypedNodeFactory(JL5TypeSystem ts, NodeFactory nf) {
+    public TypedNodeFactory(PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         this.ts = ts;
         this.nf = nf;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Formals and variables.
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     public FieldDecl FieldDecl(
             Position pos, String name, Type type, ParsedClassType container,
@@ -65,9 +65,20 @@ public class TypedNodeFactory {
                 .localInstance(ts.localInstance(pos, flags, type, name));
     }
 
-    public LocalDecl LocalDecl(Position pos, String name, Type type, Expr init, Flags flags) {
+    public LocalDecl TempVar(Position pos, String name, Type type, Expr init) {
+        return Temp(pos, name, type, init, Flags.NONE, /*isSSA*/ false);
+    }
+
+    public LocalDecl TempSSA(String name, Expr init) {
+        if (init == null)
+            throw new InternalCompilerError("SSA temporaries must have an init expression");
+        return Temp(init.position(), name, init.type(), init, Flags.FINAL, /*isSSA*/ true);
+    }
+
+    private LocalDecl Temp(
+            Position pos, String name, Type type, Expr init, Flags flags, boolean isSSA) {
         return nf.LocalDecl(pos, flags, nf.CanonicalTypeNode(pos, type), nf.Id(pos, name), init)
-                .localInstance(ts.localInstance(pos, flags, type, name));
+                .localInstance(ts.localInstance(pos, flags, type, name, /*isTemp*/ true, isSSA));
     }
 
     public Local Local(Position pos, VarDecl vd) {
@@ -78,9 +89,9 @@ public class TypedNodeFactory {
         return (Local) nf.Local(pos, nf.Id(pos, li.name())).localInstance(li).type(li.type());
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Methods and constructors.
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     public MethodDecl MethodDecl(
             Position pos, String name, ParsedClassType container, Type returnType,
@@ -171,11 +182,20 @@ public class TypedNodeFactory {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Misc
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    public Cast Cast(Position pos, Type type, Expr expr) {
+    public AddressOf AddressOf(Expr expr) {
+        return (AddressOf) nf.AddressOf(expr.position(), expr).type(expr.type());
+    }
+
+    public Load Load(Expr expr) {
+        return (Load) nf.Load(expr.position(), expr).type(expr.type());
+    }
+
+    public Cast Cast(Expr expr, Type type) {
+        Position pos = expr.position();
         return (Cast) nf.Cast(pos, nf.CanonicalTypeNode(pos, type), expr).type(type);
     }
 
@@ -195,5 +215,45 @@ public class TypedNodeFactory {
 
     public Special UnqualifiedThis(Position pos, ReferenceType container) {
         return (Special) nf.This(pos).type(container);
+    }
+
+    public Instanceof InstanceOf(Expr expr, ReferenceType type) {
+        Position pos = expr.position();
+        CanonicalTypeNode typeNode = nf.CanonicalTypeNode(pos, type);
+        return (Instanceof) nf.Instanceof(pos, expr, typeNode).type(ts.Boolean());
+    }
+
+    public If If(Expr cond, Stmt consequent) {
+        assert cond.type().typeEquals(ts.Boolean());
+        return nf.If(cond.position(), cond, consequent);
+    }
+
+    public ESeq ESeq(List<Stmt> statements, Expr expr) {
+        return (ESeq) nf.ESeq(expr.position(), statements, expr).type(expr.type());
+    }
+
+    public Throw Throw(Position pos, ClassType t, List<Expr> args) {
+        assert t.isSubtype(ts.Throwable());
+        New exn = New(pos, t, /*outer*/ null, args, /*body*/ null);
+        return nf.Throw(pos, exn);
+    }
+
+    public Unary Not(Expr expr) {
+        assert expr.type().typeEquals(ts.Boolean());
+        return (Unary) nf.Unary(expr.position(), Unary.NOT, expr).type(ts.Boolean());
+    }
+
+    public Binary CondOr(Expr l, Expr r) {
+        assert l.type().typeEquals(ts.Boolean());
+        assert r.type().typeEquals(ts.Boolean());
+        return (Binary) nf.Binary(l.position(), l, Binary.COND_OR, r).type(ts.Boolean());
+    }
+
+    public Type typeForName(String name) {
+        try {
+            return ts.typeForName(name);
+        } catch (SemanticException e) {
+            throw new InternalCompilerError(e);
+        }
     }
 }

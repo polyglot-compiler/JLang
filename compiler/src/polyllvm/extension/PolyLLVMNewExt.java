@@ -48,12 +48,6 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         return super.leaveTranslateLLVM(v);
     }
 
-    /** Translate with specified arguments and the default size. */
-    public static LLVMValueRef translateWithArgs(
-            LLVMTranslator v, LLVMValueRef[] args, ConstructorInstance ci) {
-        return translateWithArgsAndSize(v, args, mallocSize(v, ci), ci);
-    }
-
     /** Translate with specified arguments and size. */
     public static LLVMValueRef translateWithArgsAndSize(
             LLVMTranslator v, LLVMValueRef[] args, LLVMValueRef size, ConstructorInstance ci) {
@@ -79,7 +73,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         LLVMValueRef func = v.utils.getFunction(mangledFuncName, func_ty);
 
         // Bitcast the function so that the formal types are the types that
-        // the arguments were cast to by InsertExplicitCasts. It is
+        // the arguments were cast to by DesugarImplicitConversions. It is
         // needed due to potential mismatch between the types caused by erasure.
         LLVMTypeRef funcTyCast = v.utils.toLLFuncTy(
                 clazz, v.typeSystem().Void(), ci.formalTypes());

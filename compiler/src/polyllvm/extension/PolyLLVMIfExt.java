@@ -14,7 +14,7 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         If n = (If) node();
         LLVMBasicBlockRef ifEnd = v.utils.buildBlock("if.end");
         LLVMBasicBlockRef ifTrue = v.utils.buildBlock("if.true");
@@ -36,16 +36,5 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
 
         LLVMPositionBuilderAtEnd(v.builder, ifEnd);
         return n;
-    }
-
-    // Helper function used by other translations.
-    static void buildIf(LLVMTranslator v, LLVMValueRef cond, Runnable builder) {
-        LLVMBasicBlockRef ifTrue = v.utils.buildBlock("if.true");
-        LLVMBasicBlockRef ifEnd = v.utils.buildBlock("if.end");
-        LLVMBuildCondBr(v.builder, cond, ifTrue, ifEnd);
-        LLVMPositionBuilderAtEnd(v.builder, ifTrue);
-        builder.run();
-        v.utils.branchUnlessTerminated(ifEnd);
-        LLVMPositionBuilderAtEnd(v.builder, ifEnd);
     }
 }

@@ -103,7 +103,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
     }
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         Try n = (Try) node();
 
         // Useful functions, types, and constants.

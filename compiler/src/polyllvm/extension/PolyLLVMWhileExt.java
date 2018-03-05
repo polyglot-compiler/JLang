@@ -14,7 +14,7 @@ public class PolyLLVMWhileExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         While n = (While) node();
 
         LLVMBasicBlockRef cond = v.utils.buildBlock("while.cond");

@@ -23,14 +23,14 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
     }
 
     @Override
-    public Node overrideTranslateLLVM(LLVMTranslator v) {
+    public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
 
         ProcedureDecl n = (ProcedureDecl) node();
         TypeSystem ts = v.typeSystem();
         ProcedureInstance pi = n.procedureInstance();
         if (noImplementation(pi))
-            return super.overrideTranslateLLVM(v); // Ignore native and abstract methods.
+            return super.overrideTranslateLLVM(parent, v); // Ignore native and abstract methods.
 
         // Build function type.
         Type retType = n instanceof MethodDecl
@@ -62,6 +62,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             LocalInstance li = formal.localInstance().orig();
             LLVMTypeRef typeRef = v.utils.toLL(formal.declType());
             LLVMValueRef alloca = v.utils.buildAlloca(formal.name(), typeRef);
+
             v.addTranslation(li, alloca);
             v.debugInfo.createParamVariable(v, formal, i, alloca);
 

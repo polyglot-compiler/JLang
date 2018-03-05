@@ -21,10 +21,10 @@ import java.util.stream.Stream;
 
 /** A visitor convenient for desugar passes. Rethrows semantic exceptions, for example. */
 public abstract class DesugarVisitor extends NodeVisitor {
-    protected final Job job;
-    protected final PolyLLVMTypeSystem ts;
-    protected final PolyLLVMNodeFactory nf;
-    protected final TypedNodeFactory tnf;
+    public final Job job;
+    public final PolyLLVMTypeSystem ts;
+    public final PolyLLVMNodeFactory nf;
+    public final TypedNodeFactory tnf;
 
     /** Convenience stack of enclosing classes (including anonymous classes). */
     protected final Deque<ClassType> classes = new ArrayDeque<>();
