@@ -19,12 +19,6 @@ public class PolyLLVMAssignExt extends PolyLLVMExt {
     @Override
     public Node desugar(DesugarLocally v) {
         Assign n = (Assign) node();
-        Position pos = n.position();
-
-        // We desugar all assigns into Ambiguous assigns so that the children are
-        // not constrained to specific node types when desugaring.
-        if (!(n instanceof AmbAssign))
-            return v.nf.AmbAssign(pos, n.left(), n.operator(), n.right()).type(n.type());
 
         // Desugar to simple assignment.
         if (!n.operator().equals(Assign.ASSIGN))

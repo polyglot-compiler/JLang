@@ -39,31 +39,13 @@ public class DesugarImplicitConversions extends AscriptionVisitor {
             if (type == null)
                 throw new InternalCompilerError(
                         "Null expected type for " + n.getClass() + " with parent " + parent);
-            return ascribe(parent, e, type);
+            return convertType(parent, e, type);
         }
 
         return n;
     }
 
-    protected ConversionContext computeConversionContext(Node parent, Type toType) {
-        if (parent instanceof ProcedureCall) {
-            return ConversionContext.METHOD_INVOCATION;
-        }
-        else if (parent instanceof Binary
-                && ((Binary) parent).operator().equals(Binary.ADD)
-                && toType.typeEquals(ts.String())) {
-            return ConversionContext.STRING_CONCAT;
-        }
-        else if (parent instanceof Binary || parent instanceof Unary) {
-            return ConversionContext.NUMERIC_PROMOTION;
-        }
-        else {
-            // Assume all others are assignment conversions.
-            return ConversionContext.ASSIGNMENT;
-        }
-    }
-
-    protected Expr ascribe(Node parent, Expr e, Type toType) {
+    protected Expr convertType(Node parent, Expr e, Type toType) {
         TypeSystem ts = typeSystem();
 
         if (toType.isVoid()) {
@@ -84,7 +66,6 @@ public class DesugarImplicitConversions extends AscriptionVisitor {
             return e.type(ts.arrayOf(toType.toArray().base()));
         }
 
-        // Determine the conversion context.
         ConversionContext context = computeConversionContext(parent, toType);
 
         if (!context.equals(ConversionContext.STRING_CONCAT) && e.type().typeEquals(toType)) {
@@ -95,5 +76,24 @@ public class DesugarImplicitConversions extends AscriptionVisitor {
         Cast cast = tnf.Cast(e, toType);
         PolyLLVMCastExt ext = (PolyLLVMCastExt) PolyLLVMExt.ext(cast);
         return ext.context(context);
+    }
+
+    /** Determine the conversion context (a JLS concept) based on the parent node. */
+    protected ConversionContext computeConversionContext(Node parent, Type toType) {
+        if (parent instanceof ProcedureCall) {
+            return ConversionContext.METHOD_INVOCATION;
+        }
+        else if (parent instanceof Binary
+                && ((Binary) parent).operator().equals(Binary.ADD)
+                && toType.typeEquals(ts.String())) {
+            return ConversionContext.STRING_CONCAT;
+        }
+        else if (parent instanceof Binary || parent instanceof Unary) {
+            return ConversionContext.NUMERIC_PROMOTION;
+        }
+        else {
+            // Assume all others are assignment conversions.
+            return ConversionContext.ASSIGNMENT;
+        }
     }
 }

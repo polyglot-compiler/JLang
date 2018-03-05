@@ -104,7 +104,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
             SourceFile sf = (SourceFile) ast;
 
             if (((PolyLLVMOptions) Options.global).printDesugar) {
-                new PrettyPrinter(lang()).printAst(ast, new OptimalCodeWriter(System.out, 120));
+                new PrettyPrinter(lang()).printAst(ast, new OptimalCodeWriter(System.out, 80));
             }
 
             LLVMContextRef context = LLVMContextCreate();

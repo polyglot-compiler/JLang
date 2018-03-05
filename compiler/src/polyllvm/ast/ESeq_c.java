@@ -34,8 +34,8 @@ public class ESeq_c extends Expr_c implements ESeq {
     }
 
     @Override
-    public Expr expr() {
-        return expr;
+    public ESeq statements(List<Stmt> statements) {
+        return statements(this, statements);
     }
 
     protected <N extends ESeq_c> N statements(N n, List<Stmt> statements) {
@@ -43,6 +43,16 @@ public class ESeq_c extends Expr_c implements ESeq {
         n = copyIfNeeded(n);
         n.statements = ListUtil.copy(statements, true);
         return n;
+    }
+
+    @Override
+    public Expr expr() {
+        return expr;
+    }
+
+    @Override
+    public ESeq expr(Expr expr) {
+        return expr(this, expr);
     }
 
     protected <N extends ESeq_c> N expr(N n, Expr expr) {
