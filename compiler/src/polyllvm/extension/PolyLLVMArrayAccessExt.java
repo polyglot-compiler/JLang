@@ -60,6 +60,8 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
         LocalDecl idxFlat = v.tnf.TempSSA("idx", n.index());
         Local idx = v.tnf.Local(pos, idxFlat);
 
+        n = n.index(copy(idx)).array(copy(arr));
+
         // Build bounds check.
         Expr zero = v.nf.IntLit(pos, IntLit.INT, 0).type(v.ts.Int());
         Expr tooSmall = v.nf.Binary(pos, copy(idx), Binary.LT, zero).type(v.ts.Boolean());
@@ -69,8 +71,7 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
         // Guard access with bounds check. Avoid duplicating side-effects.
         Throw throwExn = v.tnf.Throw(pos, exnType, Collections.singletonList(copy(idx)));
         Stmt guard = v.tnf.If(check, throwExn);
-        Expr result = setGuarded(n.index(copy(idx)).array(copy(arr)));
-        return v.tnf.ESeq(Arrays.asList(arrFlat, lenFlat, idxFlat, guard), result);
+        return v.tnf.ESeq(Arrays.asList(arrFlat, lenFlat, idxFlat, guard), setGuarded(n));
     }
 
     @Override

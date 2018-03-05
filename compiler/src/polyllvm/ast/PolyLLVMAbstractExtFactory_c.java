@@ -33,11 +33,60 @@ public abstract class PolyLLVMAbstractExtFactory_c
         return postExtESeq(e);
     }
 
-    protected Ext extESeqImpl() {
+    @Override
+    public Ext extAddressOf() {
+        Ext e = extAddressOfImpl();
+
+        if (nextExtFactory() != null) {
+            Ext e2;
+            if (nextExtFactory() instanceof PolyLLVMExtFactory) {
+                e2 = ((PolyLLVMExtFactory) nextExtFactory()).extAddressOf();
+            }
+            else {
+                e2 = nextExtFactory().extExpr();
+            }
+            e = composeExts(e, e2);
+        }
+        return postExtAddressOf(e);
+    }
+
+    @Override
+    public Ext extLoad() {
+        Ext e = extLoadImpl();
+
+        if (nextExtFactory() != null) {
+            Ext e2;
+            if (nextExtFactory() instanceof PolyLLVMExtFactory) {
+                e2 = ((PolyLLVMExtFactory) nextExtFactory()).extLoad();
+            }
+            else {
+                e2 = nextExtFactory().extExpr();
+            }
+            e = composeExts(e, e2);
+        }
+        return postExtLoad(e);
+    }
+
+    protected Ext extAddressOfImpl() {
         return extExprImpl();
     }
 
+    protected Ext extESeqImpl() {
+        return extExprImpl();
+    }
+    protected Ext extLoadImpl() {
+        return extExprImpl();
+    }
+
+    protected Ext postExtAddressOf(Ext e) {
+        return postExtExpr(e);
+    }
+
     protected Ext postExtESeq(Ext e) {
+        return postExtExpr(e);
+    }
+
+    protected Ext postExtLoad(Ext e) {
         return postExtExpr(e);
     }
 }

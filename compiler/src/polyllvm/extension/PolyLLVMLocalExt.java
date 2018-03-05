@@ -2,7 +2,6 @@ package polyllvm.extension;
 
 import polyglot.ast.Local;
 import polyglot.ast.Node;
-import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.types.PolyLLVMLocalInstance;
@@ -37,8 +36,6 @@ public class PolyLLVMLocalExt extends PolyLLVMExt {
     public LLVMValueRef translateAsLValue(LLVMTranslator v) {
         Local n = (Local) node();
         PolyLLVMLocalInstance li = (PolyLLVMLocalInstance) n.localInstance().orig();
-        if (li.isSSA())
-            throw new InternalCompilerError("Attempting to translate SSA variable as pointer");
         return v.getTranslation(li);
     }
 }

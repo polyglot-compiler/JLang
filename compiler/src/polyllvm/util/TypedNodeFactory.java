@@ -4,9 +4,7 @@ import polyglot.ast.*;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
-import polyllvm.ast.ESeq;
-import polyllvm.ast.PolyLLVMExt;
-import polyllvm.ast.PolyLLVMNodeFactory;
+import polyllvm.ast.*;
 import polyllvm.extension.PolyLLVMCallExt;
 import polyllvm.types.PolyLLVMTypeSystem;
 
@@ -187,6 +185,14 @@ public class TypedNodeFactory {
     ////////////////////////////////////////////////////////////////////////////
     // Misc
     ////////////////////////////////////////////////////////////////////////////
+
+    public AddressOf AddressOf(Expr expr) {
+        return (AddressOf) nf.AddressOf(expr.position(), expr).type(expr.type());
+    }
+
+    public Load Load(Expr expr) {
+        return (Load) nf.Load(expr.position(), expr).type(expr.type());
+    }
 
     public Cast Cast(Expr expr, Type type) {
         Position pos = expr.position();

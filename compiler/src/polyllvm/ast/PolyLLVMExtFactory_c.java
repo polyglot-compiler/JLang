@@ -96,6 +96,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
+    public Ext extLoadImpl() {
+        return new PolyLLVMLoadExt();
+    }
+
+    @Override
     protected Ext extBooleanLitImpl() {
         return new PolyLLVMBooleanLitExt();
     }
@@ -123,6 +128,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     @Override
     protected Ext extCastImpl() {
         return new PolyLLVMCastExt();
+    }
+
+    @Override
+    public Ext extAddressOfImpl() {
+        return new PolyLLVMAddressOfExt();
     }
 
     @Override

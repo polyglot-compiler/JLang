@@ -11,4 +11,8 @@ import java.util.List;
 public interface PolyLLVMNodeFactory extends JL7NodeFactory {
 
     ESeq ESeq(Position pos, List<Stmt> statements, Expr expr);
+
+    AddressOf AddressOf(Position pos, Expr expr);
+
+    Load Load(Position pos, Expr expr);
 }

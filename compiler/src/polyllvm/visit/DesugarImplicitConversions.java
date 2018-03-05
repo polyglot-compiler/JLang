@@ -4,6 +4,7 @@ import polyglot.ast.*;
 import polyglot.frontend.Job;
 import polyglot.types.Type;
 import polyglot.types.TypeSystem;
+import polyglot.util.InternalCompilerError;
 import polyglot.visit.AscriptionVisitor;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMExt;
@@ -35,6 +36,9 @@ public class DesugarImplicitConversions extends AscriptionVisitor {
         if (n instanceof Expr) {
             Expr e = (Expr) n;
             Type type = ((AscriptionVisitor) v).toType();
+            if (type == null)
+                throw new InternalCompilerError(
+                        "Null expected type for " + n.getClass() + " with parent " + parent);
             return ascribe(parent, e, type);
         }
 

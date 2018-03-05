@@ -21,6 +21,16 @@ public class PolyLLVMNodeFactory_c extends JL7NodeFactory_c implements PolyLLVMN
     }
 
     @Override
+    public AddressOf AddressOf(Position pos, Expr expr) {
+        return new AddressOf_c(pos, expr, extFactory().extAddressOf());
+    }
+
+    @Override
+    public Load Load(Position pos, Expr expr) {
+        return new Load_c(pos, expr, extFactory().extLoad());
+    }
+
+    @Override
     public PolyLLVMExtFactory extFactory() {
         return (PolyLLVMExtFactory) super.extFactory();
     }

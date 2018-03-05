@@ -9,4 +9,8 @@ import polyglot.ext.jl7.ast.JL7ExtFactory;
 public interface PolyLLVMExtFactory extends JL7ExtFactory {
 
     Ext extESeq();
+
+    Ext extAddressOf();
+
+    Ext extLoad();
 }
