@@ -10,7 +10,10 @@ import polyglot.frontend.goals.CodeGenerated;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
+import polyglot.main.Options;
 import polyglot.util.InternalCompilerError;
+import polyglot.util.OptimalCodeWriter;
+import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.MultiGoal;
@@ -100,8 +103,9 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 throw new InternalCompilerError("AST root should be a SourceFile");
             SourceFile sf = (SourceFile) ast;
 
-            // This is a good place to debug the output of desugar passes:
-            // new PrettyPrinter(lang()).printAst(ast, new OptimalCodeWriter(System.out, 120));
+            if (((PolyLLVMOptions) Options.global).printDesugar) {
+                new PrettyPrinter(lang()).printAst(ast, new OptimalCodeWriter(System.out, 120));
+            }
 
             LLVMContextRef context = LLVMContextCreate();
             LLVMModuleRef mod = LLVMModuleCreateWithNameInContext(sf.source().name(), context);

@@ -19,7 +19,7 @@ public class PolyLLVMSwitchExt extends PolyLLVMExt {
         Switch n = (Switch) node();
         LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
 
-        LLVMBasicBlockRef end = v.utils.buildBlock("switch_end");
+        LLVMBasicBlockRef end = v.utils.buildBlock("switch.end");
         v.pushSwitch(end);
 
         // Build switch blocks and map cases to blocks.
@@ -33,7 +33,7 @@ public class PolyLLVMSwitchExt extends PolyLLVMExt {
             }
             else if (elem instanceof SwitchBlock) {
                 LLVMBasicBlockRef block =
-                        v.utils.buildBlock("switch_case");
+                        v.utils.buildBlock("switch.case");
                 LLVMPositionBuilderAtEnd(v.builder, block);
                 elem.visit(v);
                 blocks.add(block);
