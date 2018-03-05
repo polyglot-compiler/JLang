@@ -20,9 +20,9 @@ import polyllvm.util.TypedNodeFactory;
  * in isolation, and nodes cannot assume that their children have been desugared.
  * In return for these constraint, we can be sure that desugar
  * transformations compose well, and we can apply them all in one visitor pass.
- * This is not just for efficiency; it frees us from worrying about the particular
- * order in which we apply simple desugar transformations, and it makes it
- * easy for extensions for override desugar transformations for particular nodes.
+ * This frees us from worrying about the particular order in which we apply simple
+ * desugar transformations, and it makes it easy for extensions to override desugar
+ * transformations for particular nodes.
  *
  * More involved desugar transformations (such as {@link DesugarLocalClasses})
  * need their own visitors.

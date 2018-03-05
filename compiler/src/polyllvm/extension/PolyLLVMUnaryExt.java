@@ -3,9 +3,11 @@ package polyllvm.extension;
 import polyglot.ast.*;
 import polyglot.ast.Unary.*;
 import polyglot.types.SemanticException;
+import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.util.SerialVersionUID;
+import polyglot.visit.AscriptionVisitor;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.DesugarLocally;
 import polyllvm.visit.LLVMTranslator;
@@ -18,6 +20,18 @@ import static polyglot.ast.Unary.*;
 
 public class PolyLLVMUnaryExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
+
+    @Override
+    public Type childExpectedType(Expr child, AscriptionVisitor av) {
+        Unary n = (Unary) node();
+        if (Arrays.asList(PRE_INC, PRE_DEC, POST_INC, POST_DEC).contains(n.operator())) {
+            // JL5UnaryExt would return an unboxing conversion here, but
+            // it's not clear why. We fix that here, since we want the
+            // boxed value when we desugar.
+            return child.type();
+        }
+        return super.childExpectedType(child, av);
+    }
 
     @Override
     public Node desugar(DesugarLocally v) {
@@ -55,7 +69,7 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         }
 
         // Store the result and return the correct value.
-        LocalDecl resFlat = v.tnf.TempSSA("res", bin);
+        LocalDecl resFlat = v.tnf.TempSSA("res", v.tnf.Cast(bin, n.expr().type()));
         Local res = v.tnf.Local(pos, resFlat);
         Stmt update = v.tnf.EvalAssign(pos, copy(ptr), copy(res));
         Expr val = pre ? copy(res) : copy(ptrLoaded);
