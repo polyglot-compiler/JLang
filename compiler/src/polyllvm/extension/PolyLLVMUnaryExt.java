@@ -98,7 +98,7 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
             translation = exprRef;
         }
         else if (op.equals(NOT)) {
-            assert n.type().typeEquals(v.typeSystem().Boolean());
+            assert n.type().typeEquals(v.ts.Boolean());
             translation = LLVMBuildNot(v.builder, exprRef, "not");
         }
         else {

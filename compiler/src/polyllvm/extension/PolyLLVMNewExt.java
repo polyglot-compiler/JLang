@@ -69,14 +69,14 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         String mangledFuncName = v.mangler.mangleProcName(ci);
 
         LLVMTypeRef func_ty = v.utils.toLLFuncTy(
-                clazz, v.typeSystem().Void(), v.utils.formalsErasureLL(ci));
+                clazz, v.ts.Void(), v.utils.formalsErasureLL(ci));
         LLVMValueRef func = v.utils.getFunction(mangledFuncName, func_ty);
 
         // Bitcast the function so that the formal types are the types that
         // the arguments were cast to by DesugarImplicitConversions. It is
         // needed due to potential mismatch between the types caused by erasure.
         LLVMTypeRef funcTyCast = v.utils.toLLFuncTy(
-                clazz, v.typeSystem().Void(), ci.formalTypes());
+                clazz, v.ts.Void(), ci.formalTypes());
         func = LLVMBuildBitCast(v.builder, func, v.utils.ptrTypeRef(funcTyCast), "cast");
 
         LLVMValueRef[] llvmArgs = Stream.concat(

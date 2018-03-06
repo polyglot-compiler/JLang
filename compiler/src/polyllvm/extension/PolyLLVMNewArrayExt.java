@@ -100,8 +100,8 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
     }
 
     public static LLVMValueRef translateNewArray(LLVMTranslator v, LLVMValueRef len, Type elemT) {
-        ClassType arrType = v.typeSystem().Array();
-        TypeSystem ts = v.typeSystem();
+        ClassType arrType = v.ts.Array();
+        TypeSystem ts = v.ts;
         ConstructorInstance arrayConstructor;
         try {
             arrayConstructor = ts.findConstructor(

@@ -42,9 +42,9 @@ public class LLVMUtils {
         if (t instanceof LubType) {
             t = ((LubType) t).calculateLub();
         } else if (t.isArray()) {
-            t = v.typeSystem().Array();
+            t = v.ts.Array();
         }
-        Type jErasure = v.typeSystem().erasureType(t);
+        Type jErasure = v.ts.erasureType(t);
         assert jErasure.isPrimitive() || jErasure.isNull()
                 || jErasure instanceof ParsedClassType
                 || jErasure instanceof RawClass;
@@ -380,7 +380,7 @@ public class LLVMUtils {
 
         int numOfSlots = Constants.OBJECT_FIELDS_OFFSET + fields.size();
         boolean isArray = jt.isArray()
-                || (jt.isClass() && jt.toClass().typeEquals(v.typeSystem().Array()));
+                || (jt.isClass() && jt.toClass().typeEquals(v.ts.Array()));
         if (isArray)
             numOfSlots += 1;
         LLVMTypeRef[] res = new LLVMTypeRef[numOfSlots];

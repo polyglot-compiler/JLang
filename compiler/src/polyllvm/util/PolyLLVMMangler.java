@@ -44,7 +44,7 @@ public class PolyLLVMMangler {
      * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names
      */
     private String typeSignature(Type t) {
-        Type et = v.typeSystem().erasureType(t);
+        Type et = v.ts.erasureType(t);
         if      (et.isBoolean()) return "Z";
         else if (et.isByte())    return "B";
         else if (et.isChar())    return "C";

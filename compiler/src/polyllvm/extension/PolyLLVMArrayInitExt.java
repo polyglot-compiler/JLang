@@ -25,10 +25,10 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
         assert n.type().isArray() || n.type().isNull();
         Type elemType = n.type().isArray()
                 ? n.type().toArray().base()
-                : v.typeSystem().Null();
+                : v.ts.Null();
 
         LLVMValueRef len = LLVMConstInt(
-                v.utils.toLL(v.typeSystem().Int()), n.elements().size(), /*signExtend*/ 0);
+                v.utils.toLL(v.ts.Int()), n.elements().size(), /*signExtend*/ 0);
         LLVMValueRef array = PolyLLVMNewArrayExt.translateNewArray(v, len, elemType);
 
         if (!n.elements().isEmpty()) {

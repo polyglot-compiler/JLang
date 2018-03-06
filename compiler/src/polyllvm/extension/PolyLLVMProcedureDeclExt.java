@@ -27,7 +27,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
 
         ProcedureDecl n = (ProcedureDecl) node();
-        TypeSystem ts = v.typeSystem();
+        TypeSystem ts = v.ts;
         ProcedureInstance pi = n.procedureInstance();
         if (noImplementation(pi))
             return super.overrideTranslateLLVM(parent, v); // Ignore native and abstract methods.

@@ -38,12 +38,12 @@ public class PolyLLVMConstructorCallExt extends PolyLLVMProcedureCallExt {
 
         String mangledFuncName = v.mangler.mangleProcName(substC);
 
-        LLVMTypeRef func_ty = v.utils.toLLFuncTy(supc, v.typeSystem().Void(),
+        LLVMTypeRef func_ty = v.utils.toLLFuncTy(supc, v.ts.Void(),
                 v.utils.formalsErasureLL(substC));
         LLVMValueRef func = v.utils.getFunction(mangledFuncName,
                 func_ty);
         LLVMTypeRef func_ty_cast = v.utils.toLLFuncTy(supc,
-                v.typeSystem().Void(), substC.formalTypes());
+                v.ts.Void(), substC.formalTypes());
         // Bitcast the function so that the formal types are the types that the
         // arguments were cast to by DesugarImplicitConversions
         func = LLVMBuildBitCast(v.builder, func, v.utils.ptrTypeRef(func_ty_cast), "cast");

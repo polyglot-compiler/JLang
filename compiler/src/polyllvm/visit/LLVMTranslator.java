@@ -18,9 +18,7 @@ import polyllvm.util.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Translates Java into LLVM IR.
- */
+/** Translates Java into LLVM IR. */
 public class LLVMTranslator extends NodeVisitor {
     public final PolyLLVMNodeFactory nf;
     public final PolyLLVMTypeSystem ts;
@@ -125,14 +123,6 @@ public class LLVMTranslator extends NodeVisitor {
     @Override
     public Node leave(Node old, Node n, NodeVisitor v) {
         return lang().leaveTranslateLLVM(n, this);
-    }
-
-    public PolyLLVMNodeFactory nodeFactory() {
-        return nf;
-    }
-
-    public PolyLLVMTypeSystem typeSystem() {
-        return ts;
     }
 
     /** Add the translation from a Polyglot node to LLVM IR. */
@@ -271,7 +261,7 @@ public class LLVMTranslator extends NodeVisitor {
                 if (recvTy.isClass() && ts.isAccessible(m, recvTy.toClass())) {
                     // Be precise about the signature, as a subclass can refine
                     // it.
-                    m2 = typeSystem().findImplementingMethod(recvTy.toClass(),
+                    m2 = ts.findImplementingMethod(recvTy.toClass(),
                             m);
                     if (m2 == null) {
                         if (recvTy.toClass().flags().isAbstract())
@@ -354,7 +344,7 @@ public class LLVMTranslator extends NodeVisitor {
         res.addAll(iter.next().methods());
         // Add methods of the remaining interfaces in hierarchy
         while (iter.hasNext()) {
-            JL7TypeSystem ts = typeSystem();
+            JL7TypeSystem ts = this.ts;
             ClassType it = iter.next();
             for (MethodInstance mj : it.methods()) {
                 boolean seen = res.stream()
@@ -683,7 +673,7 @@ public class LLVMTranslator extends NodeVisitor {
             List<MethodInstance> lst) {
         for (int j = lst.size() - 1; j >= 0; --j) {
             JL5MethodInstance mj = (JL5MethodInstance) lst.get(j);
-            if (typeSystem().areOverrideEquivalent((JL5MethodInstance) mi, mj))
+            if (ts.areOverrideEquivalent((JL5MethodInstance) mi, mj))
                 return j;
         }
         throw new InternalCompilerError(
