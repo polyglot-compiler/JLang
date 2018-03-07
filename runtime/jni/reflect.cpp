@@ -4,7 +4,7 @@
 
 extern "C" {
 
-bool instanceof(jobject* obj, void* compare_type_id) {
+bool instanceof(jobject obj, void* compare_type_id) {
     if (obj == nullptr)
         return false;
     type_info* type_info = obj->dv->type_info;

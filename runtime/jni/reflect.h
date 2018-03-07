@@ -9,7 +9,7 @@
 
 extern "C" {
 
-bool instanceof(jobject *obj, void *compare_type_id);
+bool instanceof(jobject obj, void *compare_type_id);
 
 }
 

@@ -31,21 +31,21 @@ class sync_vars {
 };
 
 // Header of a Java object instance.
-class jobject {
+class jobject_struct {
 public:
     dv* dv;
     sync_vars* sync_vars;
 };
 
-class jarray : public jobject {
+class jarray_struct : public jobject_struct {
 public:
     int32_t len;
     intptr_t data;
 };
 
-class jstring : public jobject {
+class jstring_struct : public jobject_struct {
 public:
-    jarray* chars;
+    jarray_struct* chars;
 };
 
 using jbool = bool;
@@ -56,6 +56,9 @@ using jint = int32_t;
 using jlong = int64_t;
 using jfloat = float;
 using jdouble = double;
+using jobject = jobject_struct*;
+using jarray = jarray_struct*;
+using jstring = jstring_struct*;
 
 } // extern "C"
 

@@ -57,7 +57,7 @@ extern "C" {
 const uint64_t javaExceptionClass = 8101813523428701805ll;
 
 struct JavaException_t {
-  jobject* jexception;
+  jobject jexception;
 
   // Note: This is properly aligned in unwind.h
   _Unwind_Exception unwindException;
@@ -70,7 +70,7 @@ void deleteJavaException(_Unwind_Reason_Code reason,
   return; // The exception will be deleted by the garbage collector
 }
 
-_Unwind_Exception *createUnwindException(jobject* jexception) {
+_Unwind_Exception *createUnwindException(jobject jexception) {
   JavaException_t *ret = (JavaException_t*) GC_malloc(sizeof(JavaException_t));
   ret->jexception = jexception;
   ret->unwindException.exception_class = javaExceptionClass;
@@ -96,7 +96,7 @@ JavaException_t* extractJavaException(_Unwind_Exception *unwindException) {
   return exn;
 }
 
-jobject* extractJavaExceptionObject(_Unwind_Exception *unwindException) {
+jobject extractJavaExceptionObject(_Unwind_Exception *unwindException) {
   return extractJavaException(unwindException)->jexception;
 }
 
