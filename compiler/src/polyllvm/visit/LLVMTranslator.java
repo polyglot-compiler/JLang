@@ -18,7 +18,7 @@ import polyllvm.util.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/** Translates Java into LLVM IR. */
+/*Translates Java into LLVM IR. */
 public class LLVMTranslator extends NodeVisitor {
     public final PolyLLVMNodeFactory nf;
     public final PolyLLVMTypeSystem ts;
@@ -378,7 +378,7 @@ public class LLVMTranslator extends NodeVisitor {
      *         The returned list of methods are sorted by name.
      */
     private List<MethodInstance> nonOverridingMethods(ReferenceType rt) {
-        return rt.methods().stream().filter(m -> isNonOverriding(m))
+        return rt.methods().stream().filter(this::isNonOverriding)
                 .sorted(methodOrdByName()).collect(Collectors.toList());
     }
 
@@ -388,12 +388,10 @@ public class LLVMTranslator extends NodeVisitor {
      *         returned list of fields are sorted by name.
      */
     private List<FieldInstance> fields(ReferenceType rt) {
-        return rt.fields().stream().sorted(new Comparator<FieldInstance>() {
-            @Override
-            public int compare(FieldInstance f1, FieldInstance f2) {
-                return f1.name().compareTo(f2.name());
-            }
-        }).collect(Collectors.toList());
+        return rt.fields().stream()
+                .filter(fi -> !fi.flags().isStatic())
+                .sorted(Comparator.comparing(VarInstance::name))
+                .collect(Collectors.toList());
     }
 
     /**

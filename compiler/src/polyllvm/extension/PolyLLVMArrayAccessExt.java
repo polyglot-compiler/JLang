@@ -23,6 +23,15 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
     /** Whether this array access is already guarded by an index bounds check. */
     private boolean guarded = false;
 
+    @Override
+    public ArrayAccess node() {
+        return (ArrayAccess) super.node();
+    }
+
+    public ArrayAccess setGuarded() {
+        return setGuarded(node());
+    }
+
     public ArrayAccess setGuarded(ArrayAccess c) {
         PolyLLVMArrayAccessExt ext = (PolyLLVMArrayAccessExt) PolyLLVMExt.ext(c);
         if (ext.guarded) return c;
@@ -37,7 +46,7 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
     @Override
     public Node desugar(DesugarLocally v) {
         if (!guarded)
-            return desugarBoundsCheck(v, (ArrayAccess) node());
+            return desugarBoundsCheck(v, node());
         return super.desugar(v);
     }
 
@@ -76,7 +85,7 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
 
     @Override
     public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
-        ArrayAccess n = (ArrayAccess) node();
+        ArrayAccess n = node();
         LLVMValueRef ptr = translateAsLValue(v); // Emits debug location.
         LLVMValueRef load = LLVMBuildLoad(v.builder, ptr, "load.arr.elem");
         v.addTranslation(n, load);

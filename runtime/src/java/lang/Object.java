@@ -17,7 +17,8 @@ public class Object {
     }
 
     public final Class getClass() {
-        return new Class();
+        // TODO
+        return Object.class;
     }
 
     public int hashCode() {

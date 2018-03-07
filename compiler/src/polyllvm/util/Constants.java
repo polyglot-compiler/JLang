@@ -14,6 +14,9 @@ public class Constants {
     public static final String RUNTIME_ARRAY = RUNTIME_PACKAGE + ".Array";
     public static final String RUNTIME_ARRAY_TYPE = RUNTIME_ARRAY + ".Type";
 
+    public static final String CLASS_OBJECT = "class$object";
+    public static final String PRIMITIVE_CLASS_OBJECT_SUFFIX = "ClassObject";
+
     public static final String CALLOC = "GC_malloc";
     public static final String ENTRY_TRAMPOLINE =
             "Java_polyllvm_runtime_MainWrapper_main___3Ljava_lang_String_2";

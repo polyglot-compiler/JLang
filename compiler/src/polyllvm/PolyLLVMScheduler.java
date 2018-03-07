@@ -75,6 +75,9 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                 // should not create qualified Special nodes.
                 new DesugarInnerClasses(job, ts, nf),
 
+                // Declare static fields to hold class objects,
+                new VisitorGoal(job, new DeclareClassObjects(job, ts, nf)),
+
                 // Local desugar transformations should be applied last.
                 new VisitorGoal(job, new DesugarLocally(job, ts, nf))
         };

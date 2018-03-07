@@ -126,7 +126,7 @@ public class DesugarEnums extends DesugarVisitor {
 
             // Add the name and ordinal to the constructor call.
             List<Expr> args = new ArrayList<>();
-            args.add(nf.StringLit(pos, cd.name().id()).type(ts.String()));
+            args.add(tnf.StringLit(pos, cd.name().id()));
             args.add(nf.IntLit(pos, IntLit.INT, cd.ordinal()).type(ts.Int()));
             args.addAll(cd.args());
 

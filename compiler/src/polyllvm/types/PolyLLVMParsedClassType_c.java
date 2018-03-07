@@ -5,8 +5,7 @@ import polyglot.frontend.Source;
 import polyglot.types.LazyClassInitializer;
 import polyglot.types.TypeSystem;
 
-public class PolyLLVMParsedClassType_c extends JL5ParsedClassType_c
-        implements PolyLLVMParsedClassType {
+public class PolyLLVMParsedClassType_c extends JL5ParsedClassType_c {
 
     public PolyLLVMParsedClassType_c(TypeSystem ts, LazyClassInitializer init, Source fromSource) {
         super(ts, init, fromSource);

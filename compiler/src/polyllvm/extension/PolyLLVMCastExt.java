@@ -183,7 +183,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
 
         if (from.isNull()) {
             // Substitute "null".
-            return v.nf.StringLit(pos, "null").type(v.ts.String());
+            return v.tnf.StringLit(pos, "null");
         }
         else if (from.isPrimitive()) {
             // Call String.valueOf(...)

@@ -5,6 +5,7 @@ import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyllvm.ast.*;
+import polyllvm.extension.PolyLLVMArrayAccessExt;
 import polyllvm.extension.PolyLLVMCallExt;
 import polyllvm.types.PolyLLVMTypeSystem;
 
@@ -249,11 +250,24 @@ public class TypedNodeFactory {
         return (Binary) nf.Binary(l.position(), l, Binary.COND_OR, r).type(ts.Boolean());
     }
 
+    public ArrayAccess ArrayAccess(Expr base, Expr index, boolean alreadyGuarded) {
+        assert base.type().isArray();
+        ArrayAccess n = (ArrayAccess) nf.ArrayAccess(base.position(), base, index)
+                .type(base.type().toArray().base());
+        if (alreadyGuarded)
+            n = ((PolyLLVMArrayAccessExt) PolyLLVMExt.ext(n)).setGuarded();
+        return n;
+    }
+
     public Type typeForName(String name) {
         try {
             return ts.typeForName(name);
         } catch (SemanticException e) {
             throw new InternalCompilerError(e);
         }
+    }
+
+    public StringLit StringLit(Position pos, String value) {
+        return (StringLit) nf.StringLit(pos, value).type(ts.String());
     }
 }

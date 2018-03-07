@@ -50,7 +50,7 @@ public abstract class Enum<E extends Enum<E>> implements Serializable {
     public static <T extends Enum<T>> T valueOf(Class<T> enumType,
                                                 String name) {
         // TODO
-        return null;
+        throw new RuntimeException("java.lang.Enum#valueOf unimplemented");
     }
 
     protected final void finalize() {}

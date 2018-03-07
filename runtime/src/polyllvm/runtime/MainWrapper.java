@@ -11,10 +11,12 @@ class MainWrapper {
     static void runMain(String[] args) {
         try {
             main(args);
-        } catch (Throwable e) {
+        }
+        catch (Throwable e) {
             System.err.println(
                 "Terminating due to uncaught exception "
-                + e.getClass().toString());
+                + e.getClass().getName() + ": " + e.getMessage());
+            // TODO: System.exit(1);
         }
     }
 }

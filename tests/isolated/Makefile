@@ -63,6 +63,13 @@ else
 	@$(BASE_DIR)/bin/polyllvmc -assert $<
 endif
 
+.PHONY: phony
+%.desugar: %.java $(POLYLLVMC_SRC) $(RUNTIME_SRC)
+	@echo "Desugaring $<"
+	@ant -f $(BASE_DIR)
+	@$(BASE_DIR)/bin/polyllvmc -assert -dump-desugared $<
+
+
 %.binary: %.ll
 	@echo "Creating binary for $<"
 	@clang++ -Wno-override-module -L/usr/local/lib/ -lgc -g -o $@ $(RUNTIME)/runtime.o $<

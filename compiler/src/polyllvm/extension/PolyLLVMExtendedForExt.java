@@ -132,7 +132,7 @@ public class PolyLLVMExtendedForExt extends PolyLLVMExt {
         List<ForUpdate> update = Collections.singletonList(nf.Eval(pos, inc));
 
         // Loop.
-        Expr aAccess = nf.ArrayAccess(pos, copy(a), copy(it)).type(iteratedT);
+        Expr aAccess = tnf.ArrayAccess(copy(a), copy(it), /*alreadyGuarded*/ true);
         LocalDecl next = n.decl().init(aAccess);
         return nf.For(pos, forInit, cond, update, nf.Block(pos, next, n.body()));
     }

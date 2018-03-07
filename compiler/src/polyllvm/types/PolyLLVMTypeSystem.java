@@ -3,6 +3,7 @@ package polyllvm.types;
 import polyglot.ext.jl5.types.JL5MethodInstance;
 import polyglot.ext.jl5.types.JL5Subst;
 import polyglot.ext.jl7.types.JL7TypeSystem;
+import polyglot.types.ClassType;
 import polyglot.types.Flags;
 import polyglot.types.ParsedClassType;
 import polyglot.types.Type;
@@ -11,6 +12,8 @@ import polyglot.util.Position;
 public interface PolyLLVMTypeSystem extends JL7TypeSystem {
 
     ParsedClassType Array();
+
+    ClassType RuntimeHelper();
 
     @Override
     PolyLLVMLocalInstance localInstance(Position pos, Flags flags, Type type, String name);

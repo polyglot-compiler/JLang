@@ -1,15 +1,21 @@
 package polyllvm.types;
 
-import polyglot.ext.jl5.types.*;
+import polyglot.ext.jl5.types.JL5MethodInstance;
+import polyglot.ext.jl5.types.JL5Subst;
+import polyglot.ext.jl5.types.JL5TypeSystem_c;
+import polyglot.ext.jl5.types.TypeVariable;
 import polyglot.ext.jl7.types.JL7TypeSystem_c;
 import polyglot.frontend.Source;
 import polyglot.types.*;
+import polyglot.types.reflect.ClassFile;
+import polyglot.types.reflect.ClassFileLazyClassInitializer;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 
 import java.util.*;
 
 import static polyllvm.util.Constants.RUNTIME_ARRAY;
+import static polyllvm.util.Constants.RUNTIME_HELPER;
 
 public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTypeSystem {
 
@@ -20,11 +26,25 @@ public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTyp
     }
 
     @Override
+    public ClassFileLazyClassInitializer classFileLazyClassInitializer(ClassFile clazz) {
+        return new PolyLLVMClassFileLazyClassInitializer(clazz, this);
+    }
+
+    @Override
     public ParsedClassType Array() {
         try {
             return (ParsedClassType) typeForName(RUNTIME_ARRAY);
         } catch (SemanticException | ClassCastException e) {
             throw new InternalCompilerError("Could not load array type");
+        }
+    }
+
+    @Override
+    public ParsedClassType RuntimeHelper() {
+        try {
+            return (ParsedClassType) typeForName(RUNTIME_HELPER);
+        } catch (SemanticException e) {
+            throw new InternalCompilerError("Could not load runtime helper class");
         }
     }
 

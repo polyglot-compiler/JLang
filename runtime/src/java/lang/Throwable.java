@@ -5,7 +5,7 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 
 public class Throwable implements Serializable {
-	
+
     private transient Object backtrace;
     private Throwable cause;
     private String detailMessage;
@@ -13,9 +13,13 @@ public class Throwable implements Serializable {
     private java.util.List suppressedExceptions;
 
     public Throwable() {}
-    public Throwable(String s){}
-    public Throwable(String s, java.lang.Throwable t){}
-    public Throwable(Throwable t) {}
+    public Throwable(String s){ this(s, null); }
+    public Throwable(String s, java.lang.Throwable t) {
+        this.detailMessage = s;
+    }
+    public Throwable(Throwable t) {
+        this.detailMessage = t.detailMessage;
+    }
     protected Throwable(String s, Throwable t, boolean b1, boolean b2) {}
 
     public String toString(){
@@ -26,7 +30,7 @@ public class Throwable implements Serializable {
     public synchronized Throwable fillInStackTrace() {return null;}
     public synchronized Throwable getCause() {return null;}
     public String getLocalizedMessage() {return "";}
-    public String getMessage() {return "";}
+    public String getMessage() { return detailMessage; }
     public StackTraceElement[] getStackTrace() {return new StackTraceElement[0];}
     public final synchronized Throwable[] getSuppressed(){return new Throwable[0];}
     public synchronized Throwable initCause(Throwable t){return null;}
