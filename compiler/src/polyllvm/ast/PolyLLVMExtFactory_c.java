@@ -16,6 +16,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
+    protected Ext extTryWithResourcesImpl() {
+        return new PolyLLVMTryWithResourcesExt();
+    }
+
+    @Override
     protected Ext extNodeImpl() {
         return new PolyLLVMExt();
     }
