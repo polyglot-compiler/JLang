@@ -31,7 +31,7 @@ public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTyp
     }
 
     @Override
-    public ParsedClassType Array() {
+    public ParsedClassType ArrayObject() {
         try {
             return (ParsedClassType) typeForName(RUNTIME_ARRAY);
         } catch (SemanticException | ClassCastException e) {

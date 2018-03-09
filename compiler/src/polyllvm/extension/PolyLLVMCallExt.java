@@ -13,7 +13,6 @@ import polyglot.visit.TypeChecker;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.types.SubstMethodInstance;
 import polyllvm.util.CollectUtils;
-import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 import polyllvm.visit.LLVMTranslator.DispatchInfo;
 
@@ -109,11 +108,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
         DispatchInfo dispInfo = v.dispatchInfo(recvTy, origM);
         if (dispInfo.isClassDisp()) { // dispatching a class method
-            // Calling toLL ensures the LLVM types of the object and its CDV are
-            // not opaque before the following GEPs occur
-            v.utils.toLL(recvTy);
-            LLVMValueRef cdv_ptr_ptr = v.utils.buildStructGEP(x_recv, 0,
-                    Constants.DISPATCH_VECTOR_OFFSET);
+            LLVMValueRef cdv_ptr_ptr = v.obj.buildDispatchVectorElementPtr(x_recv, recvTy);
             LLVMValueRef cdv_ptr = LLVMBuildLoad(v.builder, cdv_ptr_ptr,
                     "cdv_ptr");
             LLVMValueRef func_ptr_ptr = v.utils.buildStructGEP(cdv_ptr, 0,

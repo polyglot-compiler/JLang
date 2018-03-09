@@ -21,20 +21,18 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         StringLit n = (StringLit) node();
         char[] chars = n.value().toCharArray();
 
-        ParsedClassType arrayType = v.ts.Array();
+        ParsedClassType arrayType = v.ts.ArrayObject();
         LLVMValueRef dvGlobal = v.utils.toCDVGlobal(arrayType);
         LLVMValueRef length = LLVMConstInt(v.utils.intType(32), chars.length, /*sign-extend*/ 0);
+        LLVMValueRef lenStruct = v.utils.buildConstStruct(length);
         List<LLVMValueRef> charTranslated = new ArrayList<>();
 
         LLVMValueRef sync_vars = LLVMConstNull(v.utils.llvmBytePtr());
 
-        // Add an i32 for alignment.
-        charTranslated.add(LLVMConstInt(v.utils.intType(32), 0, 0));
-        for (char c : chars) {
+        for (char c : chars)
             charTranslated.add(LLVMConstInt(v.utils.intType(16), c, 0));
-        }
         LLVMValueRef[] structBody =
-                Stream.concat(Stream.of(dvGlobal, sync_vars, length), charTranslated.stream())
+                Stream.concat(Stream.of(dvGlobal, sync_vars, lenStruct), charTranslated.stream())
                         .toArray(LLVMValueRef[]::new);
 
         LLVMValueRef charArray = v.utils.buildConstStruct(structBody);

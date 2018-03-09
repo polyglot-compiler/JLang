@@ -5,9 +5,7 @@ import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyllvm.visit.LLVMTranslator;
 
-/**
- * Mangles Java methods and variables for use in LLVM IR.
- */
+/** Mangles Java methods and variables for use in LLVM IR. */
 public class PolyLLVMMangler {
     private final LLVMTranslator v;
 
@@ -106,8 +104,7 @@ public class PolyLLVMMangler {
     }
 
     public String sizeVariable(ReferenceType superClass) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(superClass) + "_"
-                + SIZE_STR;
+        return ENV_PREFIX + "_" + mangleQualifiedName(superClass) + "_" + SIZE_STR;
     }
 
     public String cdvGlobalId(ReferenceType rt) {
@@ -119,13 +116,11 @@ public class PolyLLVMMangler {
     }
 
     public String idvIdArrGlobalId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_"
-                + IDV_ID_ARR_STR;
+        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IDV_ID_ARR_STR;
     }
 
     public String idvIdHashArrGlobalId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_"
-                + IDV_ID_HASH_ARR_STR;
+        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IDV_ID_HASH_ARR_STR;
     }
 
     public String idvGlobalId(ClassType intf, ReferenceType clazz) {
@@ -149,13 +144,12 @@ public class PolyLLVMMangler {
         return classTypeName(cd.type());
     }
 
-    public String classTypeName(ReferenceType t) {
+    public String classTypeName(ClassType t) {
         String className = mangleQualifiedName(t);
-        if (v.utils.erasureLL(t).flags().isInterface()) {
-            return INTERFACE_TYPE_STR + "." + className;
-        } else {
-            return CLASS_TYPE_STR + "." + className;
-        }
+        String prefix = v.utils.erasureLL(t).flags().isInterface()
+                ? INTERFACE_TYPE_STR
+                : CLASS_TYPE_STR;
+        return prefix + "." + className;
     }
 
     public String classInitFunction(ClassDecl n) {
@@ -163,8 +157,7 @@ public class PolyLLVMMangler {
     }
 
     public String classInitFunction(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_"
-                + CLASS_INIT_STR;
+        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + CLASS_INIT_STR;
     }
 
     public String interfacesInitFunction(ReferenceType rt) {

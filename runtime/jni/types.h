@@ -40,7 +40,7 @@ public:
 class jarray_struct : public jobject_struct {
 public:
     int32_t len;
-    intptr_t data;
+    int8_t data[0];
 };
 
 class jstring_struct : public jobject_struct {

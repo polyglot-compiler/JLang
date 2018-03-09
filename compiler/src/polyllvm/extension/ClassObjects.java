@@ -31,9 +31,7 @@ public final class ClassObjects {
      * type {@code rt}. The identity is efficiently represented by a pointer to
      * a global variable allocated per class/interface.
      *
-     * @param rt
-     * @param extern
-     *            indicates whether to initialize the global variable
+     * @param extern indicates whether to initialize the global variable
      */
     public LLVMValueRef toTypeIdentity(ReferenceType rt, boolean extern) {
         LLVMValueRef global = v.utils.getGlobal(
@@ -88,10 +86,9 @@ public final class ClassObjects {
             suptypes.add(v.utils.erasureLL(t));
             if (t.superType() != null)
                 toVisit.add(t.superType().toReference());
-            for (ReferenceType it : t.interfaces())
-                toVisit.add(it);
+            toVisit.addAll(t.interfaces());
         }
-        return suptypes.stream().map(t -> toTypeIdentity(t))
+        return suptypes.stream().map(this::toTypeIdentity)
                 .toArray(LLVMValueRef[]::new);
     }
 

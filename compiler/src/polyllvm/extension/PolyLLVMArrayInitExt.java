@@ -4,6 +4,7 @@ import polyglot.ast.ArrayInit;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
 import polyglot.types.Type;
+import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
@@ -19,20 +20,19 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         ArrayInit n = (ArrayInit) node();
 
-        // An ArrayInit's type is an array type whose base is the
-        // "least common ancestor" of the elements; it can also be
-        // the Null type when there is no element.
-        assert n.type().isArray() || n.type().isNull();
-        Type elemType = n.type().isArray()
-                ? n.type().toArray().base()
-                : v.ts.Null();
+        // Normally an empty ArrayInit could have ts.Null() as its base type,
+        // but we fixed that in an earlier pass using the expected type of
+        // this node with respect to its parent.
+        if (!n.type().isArray())
+            throw new InternalCompilerError("ArrayInit node does not have an array type");
+        Type elemType = n.type().toArray().base();
 
         LLVMValueRef len = LLVMConstInt(
                 v.utils.toLL(v.ts.Int()), n.elements().size(), /*signExtend*/ 0);
         LLVMValueRef array = PolyLLVMNewArrayExt.translateNewArray(v, len, elemType);
 
         if (!n.elements().isEmpty()) {
-            LLVMValueRef base = v.utils.buildJavaArrayBase(array, elemType);
+            LLVMValueRef base = v.obj.buildArrayBaseElementPtr(array, n.type().toArray());
             int idx = 0;
             for (Expr expr : n.elements()) {
                 LLVMValueRef gep = v.utils.buildStructGEP(base, idx);

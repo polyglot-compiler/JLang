@@ -13,7 +13,6 @@ import java.lang.Override;
 import java.util.Collections;
 
 import static org.bytedeco.javacpp.LLVM.*;
-import static polyllvm.util.Constants.ARR_ELEM_OFFSET;
 import static polyllvm.util.Constants.RUNTIME_ARRAY;
 import static polyllvm.util.Constants.RUNTIME_ARRAY_TYPE;
 
@@ -100,7 +99,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
     }
 
     public static LLVMValueRef translateNewArray(LLVMTranslator v, LLVMValueRef len, Type elemT) {
-        ClassType arrType = v.ts.Array();
+        ClassType arrType = v.ts.ArrayObject();
         TypeSystem ts = v.ts;
         ConstructorInstance arrayConstructor;
         try {
@@ -115,7 +114,7 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         LLVMValueRef arrLen64 = LLVMBuildSExt(v.builder, len, i64, "arr.len");
         LLVMValueRef elemSize = LLVMConstInt(i64, sizeOfType, /*sign-extend*/ 0);
         LLVMValueRef contentSize = LLVMBuildMul(v.builder, elemSize, arrLen64, "mul");
-        LLVMValueRef headerSize = LLVMConstInt(i64, ARR_ELEM_OFFSET * v.utils.llvmPtrSize(), /*sign-extend*/ 0);
+        LLVMValueRef headerSize = v.obj.sizeOf(arrType);
         LLVMValueRef size = LLVMBuildAdd(v.builder, headerSize, contentSize, "size");
 
         LLVMValueRef[] arg = {len};

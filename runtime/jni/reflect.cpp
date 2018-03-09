@@ -14,4 +14,8 @@ bool instanceof(jobject obj, void* compare_type_id) {
     return false;
 }
 
+jobject Java_java_lang_Object_getClass__(jobject obj) {
+    return nullptr; // TODO
+}
+
 } // extern "C"

@@ -109,8 +109,6 @@ public class PolyLLVMExtendedForExt extends PolyLLVMExt {
         PolyLLVMNodeFactory nf = v.nf;
         TypedNodeFactory tnf = v.tnf;
 
-        Type iteratedT = n.decl().declType();
-
         // Array alias: T[] a = e;
         LocalDecl aDecl = tnf.TempSSA("a", n.expr());
         Local a = tnf.Local(pos, aDecl);

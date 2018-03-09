@@ -42,7 +42,7 @@ public class LLVMUtils {
         if (t instanceof LubType) {
             t = ((LubType) t).calculateLub();
         } else if (t.isArray()) {
-            t = v.ts.Array();
+            t = v.ts.ArrayObject();
         }
         Type jErasure = v.ts.erasureType(t);
         assert jErasure.isPrimitive() || jErasure.isNull()
@@ -58,6 +58,10 @@ public class LLVMUtils {
      */
     public ClassType erasureLL(ReferenceType t) {
         return erasureLL((Type) t).toClass();
+    }
+
+    public FieldInstance erasureLL(FieldInstance fi) {
+        return erasureLL(fi.container()).fieldNamed(fi.name());
     }
 
     /**
@@ -119,7 +123,7 @@ public class LLVMUtils {
         return LLVMPointerType(elemType, Constants.LLVM_ADDR_SPACE);
     }
 
-    private LLVMTypeRef structTypeRefOpaque(String mangledName) {
+    public LLVMTypeRef getOrCreateNamedOpaqueStruct(String mangledName) {
         LLVMTypeRef res = LLVMGetTypeByName(v.mod, mangledName);
         if (res == null)
             res = LLVMStructCreateNamed(v.context, mangledName);
@@ -130,8 +134,14 @@ public class LLVMUtils {
         return LLVMFunctionType(ret, new PointerPointer<>(args), args.length, /* isVarArgs */ 0);
     }
 
-    private void setStructBody(LLVMTypeRef struct, LLVMTypeRef... types) {
+    public void setStructBody(LLVMTypeRef struct, LLVMTypeRef... types) {
         LLVMStructSetBody(struct, new PointerPointer<>(types), types.length, /* packed */ 0);
+    }
+
+    public void fillStructIfNeeded(LLVMTypeRef struct, Supplier<LLVMTypeRef[]> f) {
+        if (LLVMIsOpaqueStruct(struct) != 0) {
+            setStructBody(struct, f.get());
+        }
     }
 
     public LLVMValueRef buildCastToBytePtr(LLVMValueRef val) {
@@ -292,107 +302,37 @@ public class LLVMUtils {
     }
 
     /**
-     * Return a pointer to the first element in a Java array.
-     */
-    public LLVMValueRef buildJavaArrayBase(LLVMValueRef arr, Type elemType) {
-        LLVMValueRef baseRaw = v.utils.buildStructGEP(arr, 0, Constants.ARR_ELEM_OFFSET);
-        LLVMTypeRef ptrType = v.utils.ptrTypeRef(v.utils.toLL(elemType, false));
-        return LLVMBuildBitCast(v.builder, baseRaw, ptrType, "cast");
-    }
-
-    /**
-     * Obtains the LLVM type that Java values of type {@code jty} have after
-     * translated to LLVM while always populating the structure-type body when
-     * the translation is an LLVM structure type.
-     *
-     * @param jty
-     *            the Java type (not required to be erasure)
-     */
-    public LLVMTypeRef toLL(Type jty) {
-        return toLL(jty, true);
-    }
-
-    /**
-     * Obtains the LLVM type that Java values of type {@code jt} have after
+     * Obtains the LLVM type that Java values of type {@code t} have after
      * translated to LLVM.
      *
-     * @param jt
-     *            the Java type
-     * @param fillInStruct
-     *            whether to populate the structure-type body when the
-     *            translation is an LLVM structure type
-     * @return the LLVM type
+     * @param t the Java type
+     * @return an LLVM type reference
      */
-    private LLVMTypeRef toLL(final Type jt, boolean fillInStruct) {
-        if (jt.isBoolean())
+    public LLVMTypeRef toLL(final Type t) {
+        if (t.isBoolean()) {
             return LLVMInt1TypeInContext(v.context);
-        else if (jt.isLongOrLess())
-            return LLVMIntTypeInContext(v.context,
-                    numBitsOfIntegralType(jt.toPrimitive()));
-        else if (jt.isVoid())
-            return LLVMVoidTypeInContext(v.context);
-        else if (jt.isFloat())
-            return LLVMFloatTypeInContext(v.context);
-        else if (jt.isDouble())
-            return LLVMDoubleTypeInContext(v.context);
-        else if (jt.isNull())
-            return llvmBytePtr();
-        else if (jt.isReference())
-            return toObj(jt.toReference(), fillInStruct);
-        else
-            throw new InternalCompilerError("Cannot handle " + jt.getClass());
-    }
-
-    /**
-     * Obtains the LLVM type that Java values of reference type {@code jt} have
-     * after translated to LLVM.
-     *
-     * @param jt
-     *            the Java reference type (not required to be erasure)
-     * @param fillInStruct
-     *            whether to populate the structure-type body when the structure
-     *            type is opaque
-     * @return the LLVM type
-     */
-    private LLVMTypeRef toObj(ReferenceType jt, boolean fillInStruct) {
-        String mangledName = v.mangler.classTypeName(jt);
-        LLVMTypeRef structType = structTypeRefOpaque(mangledName);
-        if (LLVMIsOpaqueStruct(structType) != 0 && fillInStruct) {
-            if (erasureLL(jt).flags().isInterface())
-                setStructBody(structType);
-            else
-                setStructBody(structType, toObjSlots(jt));
         }
-        return ptrTypeRef(structType);
-    }
-
-    /**
-     * The LLVM types of each slot in the LLVM structure representation of a
-     * Java object of Java type {@code jt}.
-     *
-     * @param jt The Java non-interface reference type (not required to be erasure).
-     * @return an array of LLVM types that correspond to the slots in the object
-     *         layout for Java type {@code jt}.
-     */
-    private LLVMTypeRef[] toObjSlots(ReferenceType jt) {
-        List<FieldInstance> fields = v.objFields(erasureLL(jt));
-        LLVMTypeRef ptr_cdv_ty = ptrTypeRef(toCDVTy(jt));
-
-        int numOfSlots = Constants.OBJECT_FIELDS_OFFSET + fields.size();
-        boolean isArray = jt.isArray()
-                || (jt.isClass() && jt.toClass().typeEquals(v.ts.Array()));
-        if (isArray)
-            numOfSlots += 1;
-        LLVMTypeRef[] res = new LLVMTypeRef[numOfSlots];
-        int idx = 0;
-        res[idx++] = /* pointer to CDV */ ptr_cdv_ty;
-        res[idx++] = /* pointer to struct of sync vars */ llvmBytePtr();
-        for (FieldInstance fi : fields)
-            res[idx++] = /* field */ toLL(fi.type(), false);
-        if (isArray)
-            // noinspection UnusedAssignment
-            res[idx++] = /* extra i8* slot */ llvmBytePtr();
-        return res;
+        else if (t.isLongOrLess()) {
+            return LLVMIntTypeInContext(v.context, numBitsOfIntegralType(t.toPrimitive()));
+        }
+        else if (t.isVoid()) {
+            return LLVMVoidTypeInContext(v.context);
+        }
+        else if (t.isFloat()) {
+            return LLVMFloatTypeInContext(v.context);
+        }
+        else if (t.isDouble()) {
+            return LLVMDoubleTypeInContext(v.context);
+        }
+        else if (t.isNull()) {
+            return llvmBytePtr();
+        }
+        else if (t.isReference()) {
+            return ptrTypeRef(v.obj.structTypeRef(t.toReference()));
+        }
+        else {
+            throw new InternalCompilerError("Unhandled type " + t.getClass());
+        }
     }
 
     /**
@@ -413,7 +353,7 @@ public class LLVMUtils {
      */
     public LLVMTypeRef toCDVTy(ReferenceType jt) {
         String mangledDVName = v.mangler.cdvTyName(erasureLL(jt));
-        LLVMTypeRef cdv_ty = structTypeRefOpaque(mangledDVName);
+        LLVMTypeRef cdv_ty = getOrCreateNamedOpaqueStruct(mangledDVName);
         if (LLVMIsOpaqueStruct(cdv_ty) != 0)
             setStructBody(cdv_ty, toCDVTySlots(jt));
         return cdv_ty;
@@ -467,7 +407,7 @@ public class LLVMUtils {
      */
     public LLVMTypeRef toIDVTy(ClassType intf) {
         String mangledDVName = v.mangler.idvTyName(intf);
-        LLVMTypeRef idv_ty = structTypeRefOpaque(mangledDVName);
+        LLVMTypeRef idv_ty = getOrCreateNamedOpaqueStruct(mangledDVName);
         if (LLVMIsOpaqueStruct(idv_ty) != 0)
             setStructBody(idv_ty, toIDVTySlots(intf));
         return idv_ty;
@@ -626,8 +566,9 @@ public class LLVMUtils {
             ReferenceType recvTy, Type retTy, List<? extends Type> formalTys) {
         LLVMTypeRef[] arg_tys = Stream
                 .of(CollectUtils.toArray(recvTy, formalTys, Type.class))
-                .map(jt -> toLL(jt, false)).toArray(LLVMTypeRef[]::new);
-        LLVMTypeRef ret_ty = toLL(retTy, false);
+                .map(t -> toLL(t))
+                .toArray(LLVMTypeRef[]::new);
+        LLVMTypeRef ret_ty = toLL(retTy);
         return functionType(ret_ty, arg_tys);
     }
 
@@ -637,9 +578,9 @@ public class LLVMUtils {
      *         {@code retTy};
      */
     public LLVMTypeRef toLLFuncTy(Type retTy, List<? extends Type> formalTys) {
-        LLVMTypeRef[] arg_tys = formalTys.stream().map(t -> toLL(t, false))
+        LLVMTypeRef[] arg_tys = formalTys.stream().map(t -> toLL(t))
                 .toArray(LLVMTypeRef[]::new);
-        LLVMTypeRef ret_ty = toLL(retTy, false);
+        LLVMTypeRef ret_ty = toLL(retTy);
         return functionType(ret_ty, arg_tys);
     }
 
@@ -685,17 +626,22 @@ public class LLVMUtils {
         Type erased = erasureLL(t);
         if (erased.isBoolean()) {
             return 1;
-        } else if (erased.isFloat()) {
+        }
+        else if (erased.isFloat()) {
             return 4; // Specified by Java.
-        } else if (erased.isDouble()) {
+        }
+        else if (erased.isDouble()) {
             return 8; // Specified by Java.
-        } else if (erased.isLongOrLess()) {
+        }
+        else if (erased.isLongOrLess()) {
             PrimitiveType integral = erased.toPrimitive();
             assert numBitsOfIntegralType(integral) % 8 == 0 : "integer bits must be multiple of 8";
             return numBitsOfIntegralType(integral) / 8;
-        } else if (erased.isNull() || erased.isArray() || erased.isClass()) {
+        }
+        else if (erased.isNull() || erased.isArray() || erased.isClass()) {
             return llvmPtrSize();
-        } else {
+        }
+        else {
             throw new InternalCompilerError("Invalid type");
         }
     }

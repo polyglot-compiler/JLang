@@ -18,17 +18,6 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
-    /**
-     * Returns the default size needed to instantiate a given class.
-     * Only array instances will deviate from this default.
-     */
-    private static LLVMValueRef mallocSize(LLVMTranslator v, ConstructorInstance ci) {
-        // TODO: This assumes all fields require one word.
-        int bytes = v.utils.llvmPtrSize()
-                * (v.objFields(ci.container()).size() + /*header*/ Constants.OBJECT_FIELDS_OFFSET);
-        return LLVMConstInt(LLVMInt64TypeInContext(v.context), bytes, /*signExtend*/ 0);
-    }
-
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         New n = (New) node();
@@ -44,7 +33,8 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         LLVMValueRef[] args = n.arguments().stream()
                 .map(v::getTranslation)
                 .toArray(LLVMValueRef[]::new);
-        v.addTranslation(n, translateWithArgsAndSize(v, args, mallocSize(v, ci), ci));
+        LLVMValueRef size = v.obj.sizeOf(ci.container());
+        v.addTranslation(n, translateWithArgsAndSize(v, args, size, ci));
         return super.leaveTranslateLLVM(v);
     }
 
@@ -61,7 +51,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         LLVMValueRef objCast = LLVMBuildBitCast(v.builder, obj, v.utils.toLL(clazz), "obj_cast");
 
         // Set the Dispatch vector
-        LLVMValueRef gep = v.utils.buildStructGEP(objCast, 0, Constants.DISPATCH_VECTOR_OFFSET);
+        LLVMValueRef gep = v.obj.buildDispatchVectorElementPtr(objCast, clazz);
         LLVMValueRef dvGlobal = v.utils.toCDVGlobal(clazz);
         LLVMBuildStore(v.builder, dvGlobal, gep);
 

@@ -33,14 +33,13 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
             String mangledGlobalName = v.mangler.mangleStaticFieldName(fi);
             LLVMTypeRef elemType = v.utils.toLL(n.type());
             return v.utils.getGlobal(mangledGlobalName, elemType);
-        } else {
-            LLVMValueRef x_target = v.getTranslation(n.target());
-            int offset = v.fieldInfo(n.target().type().toReference(), fi);
-            // Make sure the LLVM type of the receiver object is not opaque before GEP occurs.
-            v.utils.toLL(n.target().type());
-            LLVMValueRef val = v.utils.buildStructGEP(x_target, 0, offset);
+        }
+        else {
+            LLVMValueRef instance = v.getTranslation(n.target());
+            LLVMValueRef ptr = v.obj.buildFieldElementPtr(instance, fi);
+
             // Bitcast needed due to potential mismatch introduced by erasure.
-            return v.utils.toBitcastL(val, n.type());
+            return v.utils.toBitcastL(ptr, n.type());
         }
     }
 }

@@ -12,6 +12,9 @@ import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.extension.ClassObjects;
 import polyllvm.extension.PolyLLVMTryExt.ExceptionFrame;
+import polyllvm.structures.*;
+import polyllvm.structures.ObjectStruct_c;
+import polyllvm.structures.ObjectStruct;
 import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.*;
 
@@ -34,6 +37,8 @@ public class LLVMTranslator extends NodeVisitor {
     public final LLVMUtils utils;
     public final ClassObjects classObjs;
     public final PolyLLVMMangler mangler;
+    public final ObjectStruct obj;
+    public final DispatchVector dv;
 
     private int ctorCounter;
 
@@ -87,9 +92,19 @@ public class LLVMTranslator extends NodeVisitor {
         this.utils = new LLVMUtils(this);
         this.classObjs = new ClassObjects(this);
         this.mangler = new PolyLLVMMangler(this);
+        this.obj = createObjectStruct();
+        this.dv = createDispatchVector();
         this.nf = nf;
         this.ts = ts;
         this.tnf = new TypedNodeFactory(ts, nf);
+    }
+
+    protected ObjectStruct createObjectStruct() {
+        return new ObjectStruct_c(this);
+    }
+
+    protected DispatchVector createDispatchVector() {
+        return new DispatchVector_c(this);
     }
 
     @Override
@@ -178,7 +193,7 @@ public class LLVMTranslator extends NodeVisitor {
      *         {@link ReferenceType#superType()}. The last element is
      *         {@code rt}, and the first element is {@code java.lang.Object}.
      */
-    private List<ReferenceType> classHierarchy(ReferenceType rt) {
+    public List<ReferenceType> classHierarchy(ReferenceType rt) {
         assert isArrayOrPlainClass(rt);
 
         LinkedList<ReferenceType> res = new LinkedList<>();
@@ -218,9 +233,6 @@ public class LLVMTranslator extends NodeVisitor {
 
     /** Caches class-dispatch-vector methods. */
     private HashMap<ReferenceType, List<MethodInstance>> cdvMethodsCache = new HashMap<>();
-
-    /** Caches object-layout fields. */
-    private HashMap<ReferenceType, List<FieldInstance>> objFieldsCache = new HashMap<>();
 
     /** Caches interface-dispatch-vector methods. */
     private HashMap<ClassType, List<MethodInstance>> idvMethodsCache = new HashMap<>();
@@ -286,33 +298,6 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     /**
-     * Returns the list of fields corresponding to those in an object of type
-     * {@code recvTy}. The returned field types are not necessarily the exact
-     * field types in the object layout because the field types in the object
-     * layout are the field types of the erasure of {@code recvTy}.
-     *
-     * @param recvTy
-     *            Should be an array type or a
-     *            "{@link LLVMTranslator#isArrayOrPlainClass plain}" class type.
-     * @return The list of fields corresponding to those in the object layout of
-     *         reference type {@code recvTy}.
-     */
-    public List<FieldInstance> objFields(ReferenceType recvTy) {
-        assert isArrayOrPlainClass(recvTy);
-
-        List<FieldInstance> res = objFieldsCache.get(recvTy);
-        if (res != null)
-            return res;
-
-        res = new ArrayList<>();
-        for (ReferenceType rt : classHierarchy(recvTy))
-            res.addAll(fields(rt));
-
-        objFieldsCache.put(recvTy, res);
-        return res;
-    }
-
-    /**
      * Returns the list of methods corresponding to those in the interface
      * dispatch vector (IDV) of reference type {@code recvTy}. The returned
      * methods are not necessarily the exact methods used to create the IDV
@@ -368,7 +353,7 @@ public class LLVMTranslator extends NodeVisitor {
             implements Comparator<MethodInstance> {
         public int compare(MethodInstance m1, MethodInstance m2) {
             return m1.name().compareTo(m2.name());
-        };
+        }
     }
 
     /**
@@ -380,18 +365,6 @@ public class LLVMTranslator extends NodeVisitor {
     private List<MethodInstance> nonOverridingMethods(ReferenceType rt) {
         return rt.methods().stream().filter(this::isNonOverriding)
                 .sorted(methodOrdByName()).collect(Collectors.toList());
-    }
-
-    /**
-     * @param rt
-     * @return The list of fields that are declared in type {@code rt}. The
-     *         returned list of fields are sorted by name.
-     */
-    private List<FieldInstance> fields(ReferenceType rt) {
-        return rt.fields().stream()
-                .filter(fi -> !fi.flags().isStatic())
-                .sorted(Comparator.comparing(VarInstance::name))
-                .collect(Collectors.toList());
     }
 
     /**
@@ -680,52 +653,6 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     /**
-     * @param recvTy
-     * @param fi
-     *            a field found in {@code recvTy} or its superclasses
-     * @return the index of field {@code fi} in the object layout when the
-     *         receiver type is {@code recvTy}.
-     */
-    public int fieldInfo(ReferenceType recvTy, FieldInstance fi) {
-        assert recvTy != null;
-
-        if (isArrayOrPlainClass(recvTy)) {
-            return fieldIndexInObj(recvTy, fi);
-        }
-        else if (recvTy instanceof TypeVariable
-                || recvTy instanceof WildCardType) {
-            ReferenceType container = fi.container();
-            assert isArrayOrPlainClass(container);
-            return fieldInfo(container, fi);
-
-        }
-        throw new InternalCompilerError("Cannot handle " + recvTy);
-    }
-
-    /**
-     * @param recvTy
-     *            should be an array type or a
-     *            "{@link LLVMTranslator#isArrayOrPlainClass plain}" class type
-     * @param fi
-     *            a field found in {@code recvTy} or its superclasses
-     * @return the index of field {@code fi} in the object layout of type
-     *         {@code recvTy}.
-     */
-    private int fieldIndexInObj(ReferenceType recvTy, FieldInstance fi) {
-        assert isArrayOrPlainClass(recvTy);
-
-        List<FieldInstance> objFields = objFields(recvTy);
-        int j = 0;
-        for (; j < objFields.size(); ++j) {
-            FieldInstance fj = objFields.get(j);
-            if (fi.equals(fj)) // field found
-                return j + Constants.OBJECT_FIELDS_OFFSET;
-        }
-        throw new InternalCompilerError("Could not find an entry for \"" + fi
-                + "\" in the object layout of " + recvTy);
-    }
-
-    /**
      * @param refTy
      *            should be non-null
      * @return true if {@code refTy} is one of the following:
@@ -736,7 +663,7 @@ public class LLVMTranslator extends NodeVisitor {
      *         <li>a non-interface {@link RawClass}</li>
      *         </ul>
      */
-    private boolean isArrayOrPlainClass(ReferenceType refTy) {
+    public boolean isArrayOrPlainClass(ReferenceType refTy) {
         assert refTy != null;
         if (refTy.isArray())
             return true;

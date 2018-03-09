@@ -12,14 +12,10 @@ public class Object {
         return false;
     }
 
-    protected void finalize() throws Throwable {
-        // TODO
-    }
+    // TODO: The finalize method is not yet supported.
+    private final void finalize() throws Throwable {}
 
-    public final Class getClass() {
-        // TODO
-        return Object.class;
-    }
+    public final native Class getClass();
 
     public int hashCode() {
         // TODO

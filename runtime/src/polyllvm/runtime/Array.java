@@ -9,7 +9,7 @@ import java.io.Serializable;
  * correct amount of memory for an array instance.
  */
 class Array implements Cloneable, Serializable {
-    final int length;
+    public final int length;
     // Array data is only visible to the compiler.
 
     /**

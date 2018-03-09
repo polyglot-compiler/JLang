@@ -98,12 +98,12 @@ public class PolyLLVMArrayAccessExt extends PolyLLVMExt {
         if (!guarded)
             throw new InternalCompilerError("Unguarded array access should be desugared");
 
-        ArrayAccess n = (ArrayAccess) node();
+        ArrayAccess n = node();
 
         lang().visitChildren(n, v);
 
         LLVMValueRef arr = v.getTranslation(n.array());
-        LLVMValueRef base = v.utils.buildJavaArrayBase(arr, n.type());
+        LLVMValueRef base = v.obj.buildArrayBaseElementPtr(arr, n.array().type().toArray());
         LLVMValueRef offset = v.getTranslation(n.index());
 
         return v.utils.buildGEP(base, offset);

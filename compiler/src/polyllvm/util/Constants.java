@@ -41,13 +41,6 @@ public class Constants {
      */
     public static final int OBJECT_FIELDS_OFFSET = 2;
 
-    /**
-     * Offset from start of object to the class dispatch vector
-     */
-    public static final int DISPATCH_VECTOR_OFFSET = 0;
-
-    /** Offset from start of array object to the length field */
-    public static final int ARR_LEN_OFFSET = OBJECT_FIELDS_OFFSET; //Length is immediately after object header
     /** Offset from start of array object to start of elements */
     public static final int ARR_ELEM_OFFSET = OBJECT_FIELDS_OFFSET+1; // Element is after the length field
 

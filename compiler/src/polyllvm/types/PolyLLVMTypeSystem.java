@@ -11,7 +11,7 @@ import polyglot.util.Position;
 
 public interface PolyLLVMTypeSystem extends JL7TypeSystem {
 
-    ParsedClassType Array();
+    ParsedClassType ArrayObject();
 
     ClassType RuntimeHelper();
 
