@@ -7,6 +7,22 @@
 
 extern "C" {
 
+class jobject_struct;
+class jarray_struct;
+class jstring_struct;
+
+using jbool = bool;
+using jbyte = int8_t;
+using jshort = int16_t;
+using jchar = uint16_t;
+using jint = int32_t;
+using jlong = int64_t;
+using jfloat = float;
+using jdouble = double;
+using jobject = jobject_struct*;
+using jarray = jarray_struct*;
+using jstring = jstring_struct*;
+
 class type_info {
 public:
     int32_t size;
@@ -21,6 +37,7 @@ public:
 // Class dispatch vector.
 class dv {
 public:
+    jobject* class_obj;
 	idv_ht* itt;
     type_info* type_info;
 };
@@ -45,20 +62,8 @@ public:
 
 class jstring_struct : public jobject_struct {
 public:
-    jarray_struct* chars;
+    jarray chars;
 };
-
-using jbool = bool;
-using jbyte = int8_t;
-using jshort = int16_t;
-using jchar = uint16_t;
-using jint = int32_t;
-using jlong = int64_t;
-using jfloat = float;
-using jdouble = double;
-using jobject = jobject_struct*;
-using jarray = jarray_struct*;
-using jstring = jstring_struct*;
 
 } // extern "C"
 

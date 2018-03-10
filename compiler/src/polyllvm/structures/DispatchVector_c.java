@@ -3,8 +3,10 @@ package polyllvm.structures;
 import org.bytedeco.javacpp.LLVM;
 import org.bytedeco.javacpp.LLVM.*;
 import polyglot.types.ClassType;
+import polyglot.types.FieldInstance;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
+import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
@@ -15,6 +17,11 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
+
+// TODO
+// There's still some cleanup to do here, namely, moving all dispatch vector code
+// from LLVMUtils and LLVMTranslator into this class. May also want to create new classes
+// to specifically manage the methods array and interface method hash table.
 
 public class DispatchVector_c implements DispatchVector {
     protected final LLVMTranslator v;
@@ -27,6 +34,17 @@ public class DispatchVector_c implements DispatchVector {
 
     /** The high-level layout of a dispatch vector. */
     private enum Layout {
+
+        CLASS_OBJECT {
+            // A pointer to the java.lang.Class representing this class type.
+            @Override
+            LLVMValueRef buildValueRef(DispatchVector_c o, ClassType erased) {
+                FieldInstance classObj = erased.fieldNamed(Constants.CLASS_OBJECT);
+                String mangledName = o.v.mangler.mangleStaticFieldName(classObj);
+                LLVMTypeRef elemType = o.v.utils.toLL(classObj.type());
+                return o.v.utils.getGlobal(mangledName, elemType);
+            }
+        },
 
         INTERFACE_METHOD_HASH_TABLE {
             // A hash table for interface method dispatch.

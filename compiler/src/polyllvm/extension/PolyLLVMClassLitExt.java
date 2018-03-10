@@ -34,6 +34,7 @@ public class PolyLLVMClassLitExt extends PolyLLVMExt {
         else if (t.isArray()) {
             // Call java.lang.Class.forName(...) and trust library code
             // to return the right class object.
+            // TODO: Right now this does the match the class object in the dispatch vector.
             Expr classNameExpr = v.tnf.StringLit(pos, getArrayClassObjectName(t.toArray()));
             return v.tnf.StaticCall(pos, "forName", v.ts.Class(), v.ts.Class(), classNameExpr);
         }

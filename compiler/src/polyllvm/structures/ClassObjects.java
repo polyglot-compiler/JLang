@@ -34,6 +34,7 @@ public final class ClassObjects {
      * @param extern indicates whether to initialize the global variable
      */
     public LLVMValueRef toTypeIdentity(ReferenceType rt, boolean extern) {
+        // TODO: We could reuse the class object as the type identity.
         LLVMValueRef global = v.utils.getGlobal(
                 v.mangler.typeIdentityId(v.utils.erasureLL(rt)),
                 classIdVarTypeRef());

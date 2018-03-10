@@ -8,12 +8,19 @@ class ClassLiteral {
         System.out.println(Object.class.toString());
         System.out.println(byte[].class);
         System.out.println(String[][].class);
+        System.out.println();
+
+        System.out.println(new ClassLiteral().getClass());
+        System.out.println(new Object().getClass());
+        System.out.println("String".getClass());
+        // System.out.println(new char[0].getClass()); // TODO
+        System.out.println();
 
         System.out.println(Object.class == new Object().getClass());
         System.out.println(String.class == "String".getClass());
         System.out.println(String.class == new Object().getClass());
         System.out.println(ClassLiteral.Inner.class
                 == new ClassLiteral().new Inner().getClass());
-        System.out.println(short[].class == new short[] {1, 2, 3}.getClass());
+        // System.out.println(short[].class == new short[] {1, 2, 3}.getClass()); TODO
     }
 }
