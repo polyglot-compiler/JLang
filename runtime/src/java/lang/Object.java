@@ -3,47 +3,50 @@ package java.lang;
 public class Object {
 
     protected Object clone() throws CloneNotSupportedException {
-        // TODO
+        // if (this instanceof Cloneable)
+        //     throw new CloneNotSupportedException(
+        //         "Cannot clone " + getClass().getName());
+        //
+        // TODO: Object#clone() is unimplemented,
+        //       but don't throw an exception for now.
         return this;
     }
 
     public boolean equals(Object other) {
-        // TODO
-        return false;
+        return this == other;
     }
 
-    // TODO: The finalize method is not yet supported.
-    private final void finalize() throws Throwable {}
+    protected final void finalize() throws Throwable {
+        // Note: Marked as final to prevent overrides for now.
+        throw new RuntimeException("Object#finalize() not implemented");
+    }
 
     public final native Class getClass();
 
-    public int hashCode() {
-        // TODO
-        return 0;
-    }
+    public native int hashCode();
 
     public final void notify() {
-        // TODO
+        throw new RuntimeException("Object#notify() not implemented");
     }
 
     public final void notifyAll() {
-        // TODO
+        throw new RuntimeException("Object#notifyAll() not implemented");
     }
 
     public String toString() {
-        // TODO
-        return getClass().toString();
+        // TODO: This is technically supposed to use Integer.toHexString(hashCode()).
+        return getClass().getName() + '@' + hashCode();
     }
 
-    public final void wait(long x) throws InterruptedException {
-        // TODO
+    public final void wait(long timeout) throws InterruptedException {
+        throw new RuntimeException("Object#wait(long) not implemented");
     }
 
-    public final void wait(long x, int y) throws InterruptedException {
-        // TODO
+    public final void wait(long timeout, int nanos) throws InterruptedException {
+        throw new RuntimeException("Object#wait(long,int) not implemented");
     }
 
     public final void wait() throws InterruptedException {
-        // TODO
+        throw new RuntimeException("Object#wait() not implemented");
     }
 }

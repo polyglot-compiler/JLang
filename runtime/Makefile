@@ -1,21 +1,23 @@
 BASE_DIR = ..
 POLYLLVMC_SRC = $(shell find $(BASE_DIR)/compiler/src -name "*.java")
 
-JAVA_SRC = $(shell find src -name "*.java")
-JNI_SRC = $(shell find jni -name "*.cpp")
+OUT_DIR = out
 
-JNI_LL = $(JNI_SRC:%.cpp=ll/%.ll)
-JAVA_LL = $(JAVA_SRC:src/%.java=ll/%.ll)
-ALL_LL = $(JNI_LL) $(JAVA_LL)
+JAVA_SRC = $(shell find src -name "*.java")
+NATIVE_SRC = $(shell find native -name "*.cpp")
+
+NATIVE_LL = $(NATIVE_SRC:%.cpp=$(OUT_DIR)/%.ll)
+JAVA_LL = $(JAVA_SRC:src/%.java=$(OUT_DIR)/%.ll)
+ALL_LL = $(NATIVE_LL) $(JAVA_LL)
 
 SHELL:=/bin/bash
 
 all: runtime.o
 
-$(JNI_LL): ll/%.ll: %.cpp
+$(NATIVE_LL): $(OUT_DIR)/%.ll: %.cpp
 	@mkdir -p $(dir $@)
 	@echo "Compiling $<"
-	@clang++ -pthread -S -emit-llvm -std=c++11 -o $@ $<
+	@clang++ -Inative -Wall -MMD -pthread -S -emit-llvm -std=c++11 -o $@ $<
 
 # Mixing Ant and Make is tricky; this rule isn't perfect,
 # but will work in almost all cases. Note that build.xml
@@ -26,8 +28,8 @@ ifndef PREBUILT
 	@ant -S -f "$(BASE_DIR)"
 endif
 	@echo "Compiling $(words $(JAVA_SRC)) Java files down to IR"
-	@$(BASE_DIR)/bin/polyllvmc -c -d ll src/java/lang/Object.java
-	@$(BASE_DIR)/bin/polyllvmc -c -d ll $(filter-out src/java/lang/Object.java, $(JAVA_SRC))
+	@$(BASE_DIR)/bin/polyllvmc -c -d $(OUT_DIR) src/java/lang/Object.java
+	@$(BASE_DIR)/bin/polyllvmc -c -d $(OUT_DIR) $(filter-out src/java/lang/Object.java, $(JAVA_SRC))
 
 runtime.ll: $(ALL_LL)
 	@echo "Linking $(words $(ALL_LL)) IR files into $@"
@@ -38,4 +40,7 @@ runtime.o: runtime.ll
 
 .PHONY: clean
 clean:
-	rm -rf classes ll runtime.{ll,o}
+	rm -rf classes $(OUT_DIR) runtime.{ll,o}
+
+# Auto-generated dependencies for native code.
+-include $(NATIVE_SRC:%.cpp=out/%.d)

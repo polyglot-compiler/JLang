@@ -43,8 +43,8 @@ public:
 };
 
 class sync_vars {
-	pthread_mutex_t* mutex;
-	pthread_cond_t *condition_variable;
+	// pthread_mutex_t* mutex;
+	// pthread_cond_t *condition_variable;
 };
 
 // Header of a Java object instance.

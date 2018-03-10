@@ -53,7 +53,8 @@ public abstract class Enum<E extends Enum<E>> implements Serializable {
         throw new RuntimeException("java.lang.Enum#valueOf unimplemented");
     }
 
-    protected final void finalize() {}
+    // TODO: Object#finalize temporarily marked as final too.
+    // protected final void finalize() {}
 
     private void readObject(/*ObjectInputStream*/ Object in) {
         // throw new InvalidObjectException("can't deserialize enum");

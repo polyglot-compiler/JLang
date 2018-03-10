@@ -13,7 +13,7 @@
 BASE_DIR = ../..
 RUNTIME = $(BASE_DIR)/runtime
 POLYLLVMC_SRC = $(shell find $(BASE_DIR)/compiler/src -name "*.java")
-RUNTIME_SRC = $(shell find $(RUNTIME) -name "*.java") $(shell find $(RUNTIME)/jni -name "*.cpp")
+RUNTIME_SRC = $(shell find $(RUNTIME) -name "*.java") $(shell find $(RUNTIME)/native -name "*.cpp")
 
 SRCS = $(shell find * -name "*.java")
 
