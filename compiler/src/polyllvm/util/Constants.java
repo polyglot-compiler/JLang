@@ -34,24 +34,7 @@ public class Constants {
     public static final int DEBUG_INFO_VERSION = 3;
     public static final int DEBUG_DWARF_VERSION = 2;
 
-    /**
-     * Offset from start of Object to the 0th field
-     *  * First slot used for dispatch vector
-     *  * Second slot used for synchronization variable struct pointer
-     */
-    public static final int OBJECT_FIELDS_OFFSET = 2;
-
-    /** Offset from start of array object to start of elements */
-    public static final int ARR_ELEM_OFFSET = OBJECT_FIELDS_OFFSET+1; // Element is after the length field
-
-    /**
-     * Offset from start of a class dispatch vector to the 0th method. First
-     * slot used for interface dispatch. Second slot used for type information.
-     */
-    public static final int CLASS_DISP_VEC_OFFSET = 2;
-    /**
-     * Offset from start of an interface dispatch vector to the 0th method.
-     */
+    /** Offset from start of an interface dispatch vector to the 0th method. */
     public static final int INTF_DISP_VEC_OFFSET = 0;
 
 

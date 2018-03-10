@@ -1,4 +1,4 @@
-package polyllvm.extension;
+package polyllvm.structures;
 
 import polyglot.types.ReferenceType;
 import polyllvm.visit.LLVMTranslator;
@@ -77,18 +77,21 @@ public final class ClassObjects {
     }
 
     private LLVMValueRef[] classObjPtrs(ReferenceType rt) {
-        // suptypes will contain the erasure of all supertypes
-        Set<ReferenceType> suptypes = new LinkedHashSet<>();
+        // supTypes will contain the erasure of all supertypes.
+        Set<ReferenceType> supTypes = new LinkedHashSet<>();
         Deque<ReferenceType> toVisit = new LinkedList<>();
         toVisit.add(rt);
+
         while (!toVisit.isEmpty()) {
             ReferenceType t = toVisit.remove();
-            suptypes.add(v.utils.erasureLL(t));
+            supTypes.add(v.utils.erasureLL(t));
             if (t.superType() != null)
                 toVisit.add(t.superType().toReference());
             toVisit.addAll(t.interfaces());
         }
-        return suptypes.stream().map(this::toTypeIdentity)
+
+        return supTypes.stream()
+                .map(this::toTypeIdentity)
                 .toArray(LLVMValueRef[]::new);
     }
 

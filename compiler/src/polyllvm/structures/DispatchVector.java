@@ -2,8 +2,8 @@ package polyllvm.structures;
 
 import org.bytedeco.javacpp.LLVM.LLVMTypeRef;
 import org.bytedeco.javacpp.LLVM.LLVMValueRef;
-import polyglot.types.ClassType;
-import polyglot.types.ProcedureInstance;
+import polyglot.types.MethodInstance;
+import polyglot.types.ReferenceType;
 
 /**
  * Defines the layout of a dispatch vector in terms of LLVM IR.
@@ -12,9 +12,15 @@ import polyglot.types.ProcedureInstance;
  */
 public interface DispatchVector {
 
-    /** Return an LLVM type representing the dispatch vector layout. */
-    LLVMTypeRef buildTypeRef(ClassType ct);
+    /** Returns an LLVM type representing the dispatch vector layout. */
+    LLVMTypeRef structTypeRef(ReferenceType rt);
+
+    /** Initializes the dispatch vector for a specific concrete class. */
+    void initializeDispatchVectorFor(ReferenceType rt);
+
+    /** Returns a pointer to the dispatch vector for a specific concrete class. */
+    LLVMValueRef getDispatchVectorFor(ReferenceType rt);
 
     /** Returns a pointer to the specified method in a dispatch vector. */
-    LLVMValueRef buildFuncElementPtr(LLVMValueRef dv, ProcedureInstance pi);
+    LLVMValueRef buildFuncElementPtr(LLVMValueRef dvPtr, ReferenceType rt, MethodInstance pi);
 }

@@ -10,7 +10,7 @@ import polyglot.util.ListUtil;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.extension.ClassObjects;
+import polyllvm.structures.ClassObjects;
 import polyllvm.extension.PolyLLVMTryExt.ExceptionFrame;
 import polyllvm.structures.*;
 import polyllvm.structures.ObjectStruct_c;
@@ -611,8 +611,7 @@ public class LLVMTranslator extends NodeVisitor {
         assert isArrayOrPlainClass(recvTy);
 
         List<MethodInstance> cdvMethods = cdvMethods(recvTy);
-        int idx = indexOfOverridingMethod(mi, cdvMethods);
-        return Constants.CLASS_DISP_VEC_OFFSET + idx;
+        return indexOfOverridingMethod(mi, cdvMethods);
     }
 
     /**

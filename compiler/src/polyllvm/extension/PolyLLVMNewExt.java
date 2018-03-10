@@ -52,7 +52,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         // Set the Dispatch vector
         LLVMValueRef gep = v.obj.buildDispatchVectorElementPtr(objCast, clazz);
-        LLVMValueRef dvGlobal = v.utils.toCDVGlobal(clazz);
+        LLVMValueRef dvGlobal = v.dv.getDispatchVectorFor(clazz);
         LLVMBuildStore(v.builder, dvGlobal, gep);
 
         // Call the constructor function

@@ -108,12 +108,10 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
 
         DispatchInfo dispInfo = v.dispatchInfo(recvTy, origM);
         if (dispInfo.isClassDisp()) { // dispatching a class method
-            LLVMValueRef cdv_ptr_ptr = v.obj.buildDispatchVectorElementPtr(x_recv, recvTy);
-            LLVMValueRef cdv_ptr = LLVMBuildLoad(v.builder, cdv_ptr_ptr,
-                    "cdv_ptr");
-            LLVMValueRef func_ptr_ptr = v.utils.buildStructGEP(cdv_ptr, 0,
-                    dispInfo.methodIndex());
-            func_ptr = LLVMBuildLoad(v.builder, func_ptr_ptr,
+            LLVMValueRef cdvPtrPtr = v.obj.buildDispatchVectorElementPtr(x_recv, recvTy);
+            LLVMValueRef cdvPtr = LLVMBuildLoad(v.builder, cdvPtrPtr, "cdv");
+            LLVMValueRef funcPtrPtr = v.dv.buildFuncElementPtr(cdvPtr, recvTy, origM);
+            func_ptr = LLVMBuildLoad(v.builder, funcPtrPtr,
                     "load_method_ptr");
             // Bitcast the function so that the formal types are the types that
             // the arguments were cast to by DesugarImplicitConversions. It is

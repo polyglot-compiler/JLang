@@ -25,7 +25,7 @@ public class ObjectStruct_c implements ObjectStruct {
         DV {
             @Override
             LLVMTypeRef buildTypeRef(ObjectStruct_c o, ClassType erased) {
-                return o.v.utils.ptrTypeRef(o.v.utils.toCDVTy(erased));
+                return o.v.utils.ptrTypeRef(o.v.dv.structTypeRef(erased));
             }
         },
 

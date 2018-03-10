@@ -336,56 +336,6 @@ public class LLVMUtils {
     }
 
     /**
-     * Obtains the LLVM global variable that denotes the class dispatch vector
-     * for Java reference type {@code jt}.
-     *
-     * @param jt The Java type (not required to be erasure)
-     */
-    public LLVMValueRef toCDVGlobal(ReferenceType jt) {
-        return getGlobal(v.mangler.cdvGlobalId(jt), toCDVTy(jt));
-    }
-
-    /**
-     * Obtains the LLVM type of the LLVM structure representation of the class
-     * dispatch vector for Java reference type {@code jt}.
-     *
-     * @param jt The Java type (not required to be erasure)
-     */
-    public LLVMTypeRef toCDVTy(ReferenceType jt) {
-        String mangledDVName = v.mangler.cdvTyName(erasureLL(jt));
-        LLVMTypeRef cdv_ty = getOrCreateNamedOpaqueStruct(mangledDVName);
-        if (LLVMIsOpaqueStruct(cdv_ty) != 0)
-            setStructBody(cdv_ty, toCDVTySlots(jt));
-        return cdv_ty;
-    }
-
-    /**
-     * The LLVM types of each slot in the LLVM structure representation of the
-     * class dispatch vector for Java type {@code jt}.
-     *
-     * @param jt
-     *            The Java non-interface reference type (not required to be
-     *            erasure).
-     * @return an array of LLVM types that correspond to the slots in the class
-     *         dispatch vector for Java type {@code jt}.
-     */
-    private LLVMTypeRef[] toCDVTySlots(ReferenceType jt) {
-        List<MethodInstance> methods = v.cdvMethods(erasureLL(jt));
-        LLVMTypeRef[] res = new LLVMTypeRef[Constants.CLASS_DISP_VEC_OFFSET + methods.size()];
-        int idx = 0;
-        // 1st slot points to the table of IDVs
-        res[idx++] = ptrTypeRef(LLVMInt8TypeInContext(v.context));
-        // 2nd slot points to RTTI
-        res[idx++] = ptrTypeRef(v.classObjs.classObjTypeRef(jt));
-        // remaining slots point to method codes
-        for (MethodInstance m : methods) {
-            LLVMTypeRef m_ty = toLLFuncTy(jt, m.returnType(), m.formalTypes());
-            res[idx++] = ptrTypeRef(m_ty);
-        }
-        return res;
-    }
-
-    /**
      * Obtains the LLVM global variable that denotes the interface dispatch
      * vector for Java interface type {@code intf} implemented by {@code clazz}.
      *
@@ -423,8 +373,7 @@ public class LLVMUtils {
      */
     private LLVMTypeRef[] toIDVTySlots(ClassType intf) {
         List<MethodInstance> methods = v.idvMethods(erasureLL(intf));
-        LLVMTypeRef[] res = new LLVMTypeRef[Constants.INTF_DISP_VEC_OFFSET
-                + methods.size()];
+        LLVMTypeRef[] res = new LLVMTypeRef[Constants.INTF_DISP_VEC_OFFSET + methods.size()];
         int idx = 0;
         for (MethodInstance m : methods) {
             LLVMTypeRef m_ty = toLLFuncTy(intf, m.returnType(),
@@ -480,40 +429,6 @@ public class LLVMUtils {
     }
 
     /**
-     * Returns the LLVM representation of each slot in the class dispatch vector
-     * of Java type {@code jt} except for the first slot. The first slot is left
-     * null, and will be initialized later to point to the IDV hash table.
-     *
-     * @param jt The Java non-abstract class type.
-     */
-    public LLVMValueRef[] toCDVSlots(ReferenceType jt) {
-        return toCDVSlots(jt, LLVMConstNull(llvmBytePtr()));
-    }
-
-    private LLVMValueRef[] toCDVSlots(ReferenceType jt, LLVMValueRef next) {
-        // The method signatures are obtained using the erasure of the Java
-        // class type.
-        List<MethodInstance> jms = v.cdvMethods(erasureLL(jt));
-
-        LLVMValueRef[] res = new LLVMValueRef[Constants.CLASS_DISP_VEC_OFFSET
-                + jms.size()];
-        int idx = 0;
-        // 1st slot points to the hash table of IDVs
-        res[idx++] = next;
-        // 2nd slot points to RTTI
-        res[idx++] = v.classObjs.classObjRef(jt);
-        // remaining slots point to method codes
-        for (MethodInstance jm : jms) {
-            LLVMTypeRef castFrom = toLLFuncTy(jm.container(), jm.returnType(), jm.formalTypes());
-            LLVMTypeRef castTo = toLLFuncTy(jt, jm.returnType(), jm.formalTypes());
-            LLVMValueRef llm = getFunction(v.mangler.mangleProcName(jm), castFrom);
-            LLVMValueRef cast = LLVMConstBitCast(llm, ptrTypeRef(castTo));
-            res[idx++] = cast;
-        }
-        return res;
-    }
-
-    /**
      * Returns the LLVM representation of each slot in the interface dispatch
      * vector of Java class type {@code clazz} for Java interface type
      * {@code intf}.
@@ -566,7 +481,7 @@ public class LLVMUtils {
             ReferenceType recvTy, Type retTy, List<? extends Type> formalTys) {
         LLVMTypeRef[] arg_tys = Stream
                 .of(CollectUtils.toArray(recvTy, formalTys, Type.class))
-                .map(t -> toLL(t))
+                .map(this::toLL)
                 .toArray(LLVMTypeRef[]::new);
         LLVMTypeRef ret_ty = toLL(retTy);
         return functionType(ret_ty, arg_tys);
@@ -578,7 +493,8 @@ public class LLVMUtils {
      *         {@code retTy};
      */
     public LLVMTypeRef toLLFuncTy(Type retTy, List<? extends Type> formalTys) {
-        LLVMTypeRef[] arg_tys = formalTys.stream().map(t -> toLL(t))
+        LLVMTypeRef[] arg_tys = formalTys.stream()
+                .map(this::toLL)
                 .toArray(LLVMTypeRef[]::new);
         LLVMTypeRef ret_ty = toLL(retTy);
         return functionType(ret_ty, arg_tys);

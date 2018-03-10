@@ -22,7 +22,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         char[] chars = n.value().toCharArray();
 
         ParsedClassType arrayType = v.ts.ArrayObject();
-        LLVMValueRef dvGlobal = v.utils.toCDVGlobal(arrayType);
+        LLVMValueRef dvGlobal = v.dv.getDispatchVectorFor(arrayType);
         LLVMValueRef length = LLVMConstInt(v.utils.intType(32), chars.length, /*sign-extend*/ 0);
         LLVMValueRef lenStruct = v.utils.buildConstStruct(length);
         List<LLVMValueRef> charTranslated = new ArrayList<>();
@@ -42,7 +42,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         LLVMSetLinkage(stringLit, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringLit, charArray);
 
-        LLVMValueRef dvString = v.utils.toCDVGlobal(v.ts.String());
+        LLVMValueRef dvString = v.dv.getDispatchVectorFor(v.ts.String());
         LLVMValueRef[] stringLitBody =
                 Stream.of(dvString, sync_vars, LLVMConstBitCast(stringLit, v.utils.toLL(arrayType)))
                         .toArray(LLVMValueRef[]::new);

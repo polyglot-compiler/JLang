@@ -41,12 +41,8 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         List<ClassType> interfaces = v.allInterfaces(ct);
 
         if (!ct.flags().isAbstract()) {
-            // Initialize the CDV global
-            LLVMValueRef cdvGlobal = v.utils.toCDVGlobal(ct);
-            LLVMValueRef[] cdvSlots = v.utils.toCDVSlots(ct);
-            LLVMTypeRef cdvType = v.utils.toCDVTy(ct);
-            LLVMValueRef init = v.utils.buildNamedConstStruct(cdvType, cdvSlots);
-            LLVMSetInitializer(cdvGlobal, init);
+            // Initialize the dispatch vector for this class.
+            v.dv.initializeDispatchVectorFor(ct);
         }
 
         if (!ct.flags().isAbstract() && !interfaces.isEmpty()) {
@@ -78,13 +74,10 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
 
             // Set up the hash table that points to the interface dispatch
             // vectors
-            LLVMValueRef cdv_global = v.utils.toCDVGlobal(ct);
-            LLVMValueRef idv_arr_global = v.utils.toIDVArrGlobal(ct,
-                    numOfIntfs);
-            LLVMValueRef idv_id_arr_global = v.utils.toIDVIdArrGlobal(ct,
-                    numOfIntfs);
-            LLVMValueRef idv_id_hash_arr_global = v.utils
-                    .toIDVIdHashArrGlobal(ct, numOfIntfs);
+            LLVMValueRef cdv_global = v.dv.getDispatchVectorFor(ct);
+            LLVMValueRef idv_arr_global = v.utils.toIDVArrGlobal(ct, numOfIntfs);
+            LLVMValueRef idv_id_arr_global = v.utils.toIDVIdArrGlobal(ct, numOfIntfs);
+            LLVMValueRef idv_id_hash_arr_global = v.utils.toIDVIdHashArrGlobal(ct, numOfIntfs);
 
             LLVMSetInitializer(idv_arr_global, v.utils
                     .buildConstArray(v.utils.llvmBytePtr(), intfTables));
