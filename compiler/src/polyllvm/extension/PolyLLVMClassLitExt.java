@@ -1,5 +1,8 @@
 package polyllvm.extension;
 
+import org.bytedeco.javacpp.LLVM;
+import org.bytedeco.javacpp.LLVM.LLVMTypeRef;
+import org.bytedeco.javacpp.LLVM.LLVMValueRef;
 import polyglot.ast.ClassLit;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
@@ -17,7 +20,17 @@ public class PolyLLVMClassLitExt extends PolyLLVMExt {
 
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
-        throw new InternalCompilerError("Class literals should be desugared");
+        ClassLit n = (ClassLit) node();
+        Type t = n.typeNode().type();
+        assert t.isReference();
+
+        String mangled = v.mangler.mangleStaticFieldName(t.toReference(), Constants.CLASS_OBJECT);
+        LLVMTypeRef elemType = v.utils.toLL(v.ts.Class());
+        LLVMValueRef globalVar = v.utils.getGlobal(mangled, elemType);
+        LLVMValueRef load = LLVM.LLVMBuildLoad(v.builder, globalVar, "class.obj");
+
+        v.addTranslation(n, load);
+        return super.leaveTranslateLLVM(v);
     }
 
     @Override
@@ -38,12 +51,9 @@ public class PolyLLVMClassLitExt extends PolyLLVMExt {
             Expr classNameExpr = v.tnf.StringLit(pos, getArrayClassObjectName(t.toArray()));
             return v.tnf.StaticCall(pos, "forName", v.ts.Class(), v.ts.Class(), classNameExpr);
         }
-        else if (t.isReference()) {
-            // Get the class object from a static field that we insert into every class.
-            return v.tnf.StaticField(pos, Constants.CLASS_OBJECT, t.toReference());
-        }
         else {
-            throw new InternalCompilerError("Unhandled type kind");
+            assert t.isReference();
+            return super.desugar(v);
         }
     }
 

@@ -20,7 +20,10 @@ public class ObjectStruct_c implements ObjectStruct {
         this.v = v;
     }
 
-    /** The high-level layout of an object instance. */
+    /**
+     * The high-level layout of an object instance.
+     * This should match the layout defined in the native runtime.
+     */
     protected enum Layout {
         DV {
             @Override

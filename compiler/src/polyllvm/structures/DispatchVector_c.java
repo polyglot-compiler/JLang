@@ -3,7 +3,6 @@ package polyllvm.structures;
 import org.bytedeco.javacpp.LLVM;
 import org.bytedeco.javacpp.LLVM.*;
 import polyglot.types.ClassType;
-import polyglot.types.FieldInstance;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
 import polyllvm.util.Constants;
@@ -32,16 +31,20 @@ public class DispatchVector_c implements DispatchVector {
         this.v = v;
     }
 
-    /** The high-level layout of a dispatch vector. */
+    /**
+     * The high-level layout of a dispatch vector.
+     * This should match the layout defined in the native runtime.
+     */
     private enum Layout {
 
         CLASS_OBJECT {
             // A pointer to the java.lang.Class representing this class type.
+            // These class objects are declared as static fields.
             @Override
             LLVMValueRef buildValueRef(DispatchVector_c o, ClassType erased) {
-                FieldInstance classObj = erased.fieldNamed(Constants.CLASS_OBJECT);
-                String mangledName = o.v.mangler.mangleStaticFieldName(classObj);
-                LLVMTypeRef elemType = o.v.utils.toLL(classObj.type());
+                String fieldName = Constants.CLASS_OBJECT;
+                String mangledName = o.v.mangler.mangleStaticFieldName(erased, fieldName);
+                LLVMTypeRef elemType = o.v.utils.toLL(o.v.ts.Class());
                 return o.v.utils.getGlobal(mangledName, elemType);
             }
         },
@@ -63,8 +66,8 @@ public class DispatchVector_c implements DispatchVector {
             }
         },
 
-        METHODS {
-            // Method pointers for instance method dispatch.
+        CLASS_METHODS {
+            // Method pointers for class method dispatch.
             @Override
             LLVMValueRef buildValueRef(DispatchVector_c o, ClassType erased) {
 
@@ -140,6 +143,6 @@ public class DispatchVector_c implements DispatchVector {
             LLVMValueRef dvPtr, ReferenceType recvTy, MethodInstance pi) {
         structTypeRefNonOpaque(recvTy); // Erase non-opaque type.
         int idx = v.dispatchInfo(recvTy, pi).methodIndex();
-        return v.utils.buildStructGEP(dvPtr, 0, Layout.METHODS.ordinal(), idx);
+        return v.utils.buildStructGEP(dvPtr, 0, Layout.CLASS_METHODS.ordinal(), idx);
     }
 }

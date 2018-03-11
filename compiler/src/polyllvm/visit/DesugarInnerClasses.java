@@ -1,6 +1,7 @@
 package polyllvm.visit;
 
 import polyglot.ast.*;
+import polyglot.frontend.AbstractPass;
 import polyglot.frontend.ExtensionInfo;
 import polyglot.frontend.Job;
 import polyglot.frontend.Pass;
@@ -11,7 +12,6 @@ import polyglot.types.*;
 import polyglot.util.Position;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
-import polyllvm.util.MultiGoal;
 
 import java.util.Collections;
 import java.util.List;
@@ -44,7 +44,14 @@ public class DesugarInnerClasses extends AbstractGoal {
 
     @Override
     public Pass createPass(ExtensionInfo extInfo) {
-        return new MultiGoal(job, declare, substitute).createPass(job.extensionInfo());
+        Pass declarePass = declare.createPass(extInfo);
+        Pass substitutePass = substitute.createPass(extInfo);
+        return new AbstractPass(this) {
+            @Override
+            public boolean run() {
+                return declarePass.run() && substitutePass.run();
+            }
+        };
     }
 }
 

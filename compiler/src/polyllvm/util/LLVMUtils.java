@@ -4,6 +4,7 @@ import org.bytedeco.javacpp.PointerPointer;
 import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.ext.jl5.types.RawClass;
 import polyglot.ext.jl5.types.inference.LubType;
+import polyglot.ext.jl7.types.DiamondType;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyllvm.visit.LLVMTranslator;
@@ -41,13 +42,20 @@ public class LLVMUtils {
     public Type erasureLL(Type t) {
         if (t instanceof LubType) {
             t = ((LubType) t).calculateLub();
-        } else if (t.isArray()) {
+        }
+        else if (t instanceof DiamondType) {
+            t = ((DiamondType) t).base();
+        }
+        else if (t.isArray()) {
             t = v.ts.ArrayObject();
         }
+
         Type jErasure = v.ts.erasureType(t);
-        assert jErasure.isPrimitive() || jErasure.isNull()
+        assert jErasure.isPrimitive()
+                || jErasure.isNull()
                 || jErasure instanceof ParsedClassType
-                || jErasure instanceof RawClass;
+                || jErasure instanceof RawClass
+                : jErasure.getClass();
         return jErasure;
     }
 

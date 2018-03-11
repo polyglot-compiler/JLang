@@ -1,8 +1,12 @@
 package polyllvm.visit;
 
-import polyglot.ast.*;
+import polyglot.ast.ClassBody;
+import polyglot.ast.Expr;
+import polyglot.ast.FieldDecl;
 import polyglot.frontend.Job;
-import polyglot.types.*;
+import polyglot.types.ClassType;
+import polyglot.types.Flags;
+import polyglot.types.ParsedClassType;
 import polyglot.util.Position;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;

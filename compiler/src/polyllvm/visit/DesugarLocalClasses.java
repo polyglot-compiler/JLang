@@ -1,6 +1,7 @@
 package polyllvm.visit;
 
 import polyglot.ast.*;
+import polyglot.frontend.AbstractPass;
 import polyglot.frontend.ExtensionInfo;
 import polyglot.frontend.Job;
 import polyglot.frontend.Pass;
@@ -11,7 +12,6 @@ import polyglot.types.*;
 import polyglot.util.Position;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
-import polyllvm.util.MultiGoal;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,7 +33,7 @@ import static polyllvm.visit.DeclareCaptures.CAPTURE_PREFIX;
  *     - prepends capture arguments to super constructor calls and {@code new} expressions.
  *
  * Passes (1) and (2) could not be combined into one pass, because there could be an
- * expression of the form {@code new C(...)} inside the body C, and we can't know
+ * expression of the form {@code new C(...)} inside the body of C, and we can't know
  * which captures to prepend as arguments until we've finished visiting C in its entirety.
  */
 public class DesugarLocalClasses extends AbstractGoal {
@@ -48,7 +48,14 @@ public class DesugarLocalClasses extends AbstractGoal {
 
     @Override
     public Pass createPass(ExtensionInfo extInfo) {
-        return new MultiGoal(job, declare, substitute).createPass(job.extensionInfo());
+        Pass declarePass = declare.createPass(extInfo);
+        Pass substitutePass = substitute.createPass(extInfo);
+        return new AbstractPass(this) {
+            @Override
+            public boolean run() {
+                return declarePass.run() && substitutePass.run();
+            }
+        };
     }
 }
 

@@ -99,8 +99,11 @@ public class PolyLLVMMangler {
     }
 
     public String mangleStaticFieldName(FieldInstance fi) {
-        return JAVA_PREFIX + "_" + mangleQualifiedName(fi.container()) + "_"
-                + mangleName(fi.name());
+        return mangleStaticFieldName(fi.container(), fi.name());
+    }
+
+    public String mangleStaticFieldName(ReferenceType rt, String fieldName) {
+        return JAVA_PREFIX + "_" + mangleQualifiedName(rt) + "_" + mangleName(fieldName);
     }
 
     public String sizeVariable(ReferenceType superClass) {

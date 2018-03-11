@@ -7,8 +7,6 @@ import polyglot.ext.jl5.types.TypeVariable;
 import polyglot.ext.jl7.types.JL7TypeSystem_c;
 import polyglot.frontend.Source;
 import polyglot.types.*;
-import polyglot.types.reflect.ClassFile;
-import polyglot.types.reflect.ClassFileLazyClassInitializer;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 
@@ -23,11 +21,6 @@ public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTyp
     public SubstMethodInstance substMethodInstance(
             JL5MethodInstance postSubst, JL5MethodInstance preSubst, JL5Subst subst) {
         return new PolyLLVMSubstMethodInstance_c(postSubst, preSubst, subst);
-    }
-
-    @Override
-    public ClassFileLazyClassInitializer classFileLazyClassInitializer(ClassFile clazz) {
-        return new PolyLLVMClassFileLazyClassInitializer(clazz, this);
     }
 
     @Override

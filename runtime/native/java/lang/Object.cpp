@@ -7,4 +7,8 @@ jint Java_java_lang_Object_hashCode__(jobject o) {
     return static_cast<jint>(addr);
 }
 
+jobject Java_java_lang_Object_getClass__(jobject obj) {
+    return *obj->dv->class_obj;
+}
+
 } // extern "C"

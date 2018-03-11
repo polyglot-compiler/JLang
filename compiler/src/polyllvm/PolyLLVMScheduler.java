@@ -9,15 +9,14 @@ import polyglot.frontend.*;
 import polyglot.frontend.goals.CodeGenerated;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
-import polyglot.frontend.goals.VisitorGoal;
 import polyglot.main.Options;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.OptimalCodeWriter;
 import polyglot.visit.PrettyPrinter;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
-import polyllvm.util.MultiGoal;
-import polyllvm.visit.*;
+import polyllvm.util.PolyLLVMDesugared;
+import polyllvm.visit.LLVMTranslator;
 
 import java.io.File;
 import java.lang.Override;
@@ -49,45 +48,13 @@ public class PolyLLVMScheduler extends JL7Scheduler {
 
     /** Desugar passes which simplify LLVM translation. */
     public Goal PrepareForLLVMOutput(Job job) {
-        ExtensionInfo extInfo = job.extensionInfo();
-        PolyLLVMTypeSystem ts = (PolyLLVMTypeSystem) extInfo.typeSystem();
-        PolyLLVMNodeFactory nf = (PolyLLVMNodeFactory) extInfo.nodeFactory();
-        Goal[] goals = {
-                // Visitor passes running after type checking must preserve type information.
-                // However, running type check again after these passes can fail, for example
-                // because the type checker could complain about visibility issues. That's ok.
-
-                // Future desugar passes assume that anonymous classes have constructors and names.
-                new VisitorGoal(job, new NameLocalClasses(job, ts, nf)),
-                new VisitorGoal(job, new DeclareExplicitAnonCtors(job, ts, nf)),
-
-                // Future desugar passes assume that class initialization code exists
-                // within class constructors.
-                new VisitorGoal(job, new DesugarClassInitializers(job, ts, nf)),
-
-                // Translate enums to normal classes.
-                new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
-
-                // Translate captures to field accesses.
-                new DesugarLocalClasses(job, ts, nf),
-
-                // Translate accesses to enclosing instances. Future desugar passes
-                // should not create qualified Special nodes.
-                new DesugarInnerClasses(job, ts, nf),
-
-                // Declare static fields to hold class objects,
-                new VisitorGoal(job, new DeclareClassObjects(job, ts, nf)),
-
-                // Local desugar transformations should be applied last.
-                new VisitorGoal(job, new DesugarLocally(job, ts, nf))
-        };
-        Goal prep = new MultiGoal(job, goals);
+        Goal desugar = new PolyLLVMDesugared(job);
         try {
-            prep.addPrerequisiteGoal(Serialized(job), this);
+            desugar.addPrerequisiteGoal(Serialized(job), this);
         } catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
         }
-        return internGoal(prep);
+        return internGoal(desugar);
     }
 
     private static class LLVMOutputPass extends AbstractPass {
@@ -116,7 +83,12 @@ public class PolyLLVMScheduler extends JL7Scheduler {
             LLVMTranslator translator = new LLVMTranslator(
                     sf.source().path(), context, mod, builder, ts, nf);
 
-            ast.visit(translator);
+            try {
+                ast.visit(translator);
+            } catch (MissingDependencyException e) {
+                throw new InternalCompilerError(
+                        "Cannot handle missing dependencies during LLVM translation", e);
+            }
 
             LLVMDIBuilderFinalize(translator.debugInfo.diBuilder);
 
@@ -159,12 +131,17 @@ public class PolyLLVMScheduler extends JL7Scheduler {
     }
 
     private static class LLVMOutputGoal extends CodeGenerated {
+        private boolean attempted = false;
+
         private LLVMOutputGoal(Job job) {
             super(job);
         }
 
         @Override
         public Pass createPass(ExtensionInfo extInfo) {
+            if (attempted)
+                throw new InternalCompilerError("Cannot attempt to emit LLVM output twice");
+            attempted = true;
             return new LLVMOutputPass(this);
         }
     }
