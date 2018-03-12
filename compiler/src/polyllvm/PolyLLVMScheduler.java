@@ -84,7 +84,10 @@ public class PolyLLVMScheduler extends JL7Scheduler {
                     sf.source().path(), context, mod, builder, ts, nf);
 
             try {
+                translator = (LLVMTranslator) translator.begin();
                 ast.visit(translator);
+                translator.finish();
+                goal.job().ast(ast);
             } catch (MissingDependencyException e) {
                 throw new InternalCompilerError(
                         "Cannot handle missing dependencies during LLVM translation", e);

@@ -270,4 +270,8 @@ public class TypedNodeFactory {
     public StringLit StringLit(Position pos, String value) {
         return (StringLit) nf.StringLit(pos, value).type(ts.String());
     }
+
+    public NullLit NullLit(Position pos) {
+        return (NullLit) nf.NullLit(pos).type(ts.Null());
+    }
 }

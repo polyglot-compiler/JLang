@@ -187,7 +187,6 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                         v.builder, LLVMIntEQ, catchSel, typeId, "catch.matches");
                 LLVMBuildCondBr(v.builder, matches, catchBlock, catchNext);
 
-
                 // Declare catch block formal.
                 LLVMPositionBuilderAtEnd(v.builder, catchBlock);
                 LLVMTypeRef exnType = v.utils.toLL(cb.catchType().toReference());

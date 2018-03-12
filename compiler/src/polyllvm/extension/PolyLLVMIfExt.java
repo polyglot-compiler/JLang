@@ -25,12 +25,12 @@ public class PolyLLVMIfExt extends PolyLLVMExt {
         lang().translateLLVMConditional(n.cond(), v, ifTrue, ifFalse);
 
         LLVMPositionBuilderAtEnd(v.builder, ifTrue);
-        n.consequent().visit(v);
+        n.visitChild(n.consequent(), v);
         v.utils.branchUnlessTerminated(ifEnd);
 
         if (n.alternative() != null) {
             LLVMPositionBuilderAtEnd(v.builder, ifFalse);
-            n.alternative().visit(v);
+            n.visitChild(n.alternative(), v);
             v.utils.branchUnlessTerminated(ifEnd);
         }
 
