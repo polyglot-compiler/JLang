@@ -1,6 +1,5 @@
 package polyllvm.extension;
 
-import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.Branch;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
@@ -20,10 +19,11 @@ public class PolyLLVMBranchExt extends PolyLLVMExt {
                 ? v.getContinueLoc(n.label())
                 : v.getBreakLoc(n.label());
 
-        LLVM.LLVMBasicBlockRef dest = v.buildFinallyBlockChain(
-                loc.getBlock(), loc.getTryCatchNestingLevel());
+        // If we are within an exception frame, we may need to detour through finally blocks first.
+        v.buildFinallyBlockChain(loc.getTryCatchNestingLevel());
 
-        v.addTranslation(n, LLVMBuildBr(v.builder, dest));
+        LLVMBuildBr(v.builder, loc.getBlock());
+
         return super.leaveTranslateLLVM(v);
     }
 }

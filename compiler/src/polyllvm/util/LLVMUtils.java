@@ -257,12 +257,15 @@ public class LLVMUtils {
         return LLVMAppendBasicBlockInContext(v.context, v.currFn(), name);
     }
 
-    /**
-     *  If the current block has no terminator, then branch to [block].
-     */
-    public void branchUnlessTerminated(LLVMBasicBlockRef block) {
+    /** Returns whether the current basic block has a terminating instruction. */
+    public boolean blockTerminated() {
         LLVMBasicBlockRef curr = LLVMGetInsertBlock(v.builder);
-        if (LLVMGetBasicBlockTerminator(curr) == null) {
+        return LLVMGetBasicBlockTerminator(curr) != null;
+    }
+
+    /** If the current block has no terminator, then branch to [block]. */
+    public void branchUnlessTerminated(LLVMBasicBlockRef block) {
+        if (!blockTerminated()) {
             LLVMBuildBr(v.builder, block);
         }
     }

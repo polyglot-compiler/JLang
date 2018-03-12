@@ -8,8 +8,8 @@ import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -62,12 +62,13 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         private LLVMBasicBlockRef lpadFinally;
 
         /**
-         * A stack-allocated integer that tracks where to go after the finally block finishes.
-         * Ranges from 0 to one less than the number of finally block destinations.
-         * At the end of a finally block, we switch on the value stored in this variable.
+         * A stack-allocated block address pointing to the basic block we jump to
+         * (using an LLVM indirect jump) after the finally block runs.
          * May be null if there is no finally block.
+         *
+         * See http://blog.llvm.org/2010/01/address-of-label-and-indirect-branches.html
          */
-        private LLVMValueRef destIdVar;
+        private LLVMValueRef finallyDestAddrVar;
 
         /**
          * The finally block for this exception frame.
@@ -76,12 +77,10 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         private LLVMBasicBlockRef finallyBlock;
 
         /**
-         * Maps finally-block destinations to blocks which jump to the finally block
-         * after setting the finally destination ID appropriately.
-         * The ith destination block in this map has destination ID i.
+         * Set of possible destinations to jump to after the finally block runs.
          * May be null if there is no finally block.
          */
-        private Map<LLVMBasicBlockRef, LLVMBasicBlockRef> destBlocks;
+        private Set<LLVMBasicBlockRef> finallyDestBlocks;
 
         private ExceptionFrame(
                 LLVMTranslator v,
@@ -92,8 +91,8 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             this.lpadFinally = lpadFinally;
             if (lpadFinally != null) {
                 finallyBlock = v.utils.buildBlock("finally");
-                destIdVar = v.utils.buildAlloca("finally.dest", LLVMInt32TypeInContext(v.context));
-                destBlocks = new LinkedHashMap<>();
+                finallyDestAddrVar = v.utils.buildAlloca("finally.dest", v.utils.llvmBytePtr());
+                finallyDestBlocks = new LinkedHashSet<>();
             }
         }
 
@@ -105,32 +104,20 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             return lpadFinally;
         }
 
-        /**
-         * Returns a block which will run the finally block and then jump to [dest].
-         * Note: returns [dest] if there is no finally block.
-         */
-        public LLVMBasicBlockRef getFinallyBlockBranchingTo(LLVMBasicBlockRef dest) {
+        /** Runs the finally block (if any) and then jumps to [dest]. */
+        public void buildFinallyBlockBranchingTo(LLVMBasicBlockRef dest) {
             // If no finally block, jump directly to the destination.
-            if (lpadFinally == null)
-                return dest;
+            if (lpadFinally == null) {
+                LLVMBuildBr(v.builder, dest);
+                return;
+            }
 
-            // Otherwise, build an intermediate block which sets the finally
-            // destination ID, then branches to the finally block.
-            return destBlocks.computeIfAbsent(dest, (key) -> {
-                LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
-
-                String destName = LLVMGetBasicBlockName(key).getString();
-                LLVMBasicBlockRef block = v.utils.buildBlock("finally.then." + destName);
-                LLVMPositionBuilderAtEnd(v.builder, block);
-
-                LLVMTypeRef intTy = LLVMInt32TypeInContext(v.context);
-                LLVMValueRef destId = LLVMConstInt(intTy, destBlocks.size(), /*sign-extend*/ 0);
-                LLVMBuildStore(v.builder, destId, destIdVar);
-                LLVMBuildBr(v.builder, finallyBlock);
-
-                LLVMPositionBuilderAtEnd(v.builder, prevBlock);
-                return block;
-            });
+            // Otherwise, store the address of the destination on the stack,
+            // and jump to the finally block.
+            LLVMValueRef blockAddr = LLVMBlockAddress(v.currFn(), dest);
+            LLVMBuildStore(v.builder, blockAddr, finallyDestAddrVar);
+            LLVMBuildBr(v.builder, finallyBlock);
+            finallyDestBlocks.add(dest);
         }
     }
 
@@ -168,7 +155,9 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
 
         // Build try block.
         n.visitChild(n.tryBlock(), v);
-        v.utils.branchUnlessTerminated(frame.getFinallyBlockBranchingTo(end));
+        if (!v.utils.blockTerminated()) {
+            frame.buildFinallyBlockBranchingTo(end);
+        }
 
         // Prevent future translations landing at this catch.
         // For example, exceptions thrown within the catch blocks should either land at the
@@ -185,10 +174,17 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         boolean mustStopUnwinding = n.finallyBlock() != null || lpadOuter != null;
 
         // If we must stop unwinding, then we may need to rethrow the in-flight exception.
-        // Hold that exception on the stack.
-        LLVMValueRef rethrowExnVar = mustStopUnwinding
-                ? v.utils.buildAlloca("rethrow.exn", v.utils.llvmBytePtr())
-                : null;
+        // Store the exception on the stack, and build a block that can rethrow it.
+        LLVMBasicBlockRef rethrowBlock = null;
+        LLVMValueRef rethrowExnVar = null;
+        if (mustStopUnwinding) {
+            rethrowBlock = v.utils.buildBlock("rethrow");
+            rethrowExnVar = v.utils.buildAlloca("rethrow.exn", v.utils.llvmBytePtr());
+            LLVMPositionBuilderAtEnd(v.builder, rethrowBlock);
+            LLVMValueRef loadExn = LLVMBuildLoad(v.builder, rethrowExnVar, "load.rethrow.exn");
+            v.utils.buildProcCall(lpadOuter, throwExnFunc, loadExn);
+            LLVMBuildUnreachable(v.builder);
+        }
 
         if (!n.catchBlocks().isEmpty()) {
 
@@ -239,7 +235,9 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
 
                 // Build catch block.
                 n.visitChild(cb, v);
-                v.utils.branchUnlessTerminated(frame.getFinallyBlockBranchingTo(end));
+                if (!v.utils.blockTerminated()) {
+                    frame.buildFinallyBlockBranchingTo(end);
+                }
 
                 LLVMPositionBuilderAtEnd(v.builder, catchNext);
             }
@@ -248,24 +246,18 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
                 // We temporarily caught the exception using a catch-all clause.
                 // Rethrow the exception after running the finally block (if any).
                 LLVMBuildStore(v.builder, catchExn, rethrowExnVar);
-                LLVMBasicBlockRef catchRethrow = v.utils.buildBlock("rethrow");
-                LLVMBuildBr(v.builder, frame.getFinallyBlockBranchingTo(catchRethrow));
-                LLVMPositionBuilderAtEnd(v.builder, catchRethrow);
-                LLVMValueRef loadExn = LLVMBuildLoad(v.builder, rethrowExnVar, "load.rethrow.exn");
-                v.utils.buildProcCall(lpadOuter, throwExnFunc, loadExn);
-                LLVMBuildUnreachable(v.builder);
+                frame.buildFinallyBlockBranchingTo(rethrowBlock);
             } else {
                 // We did not catch the exception. Resume unwinding.
                 LLVMBuildResume(v.builder, lpadCatchRes);
             }
-
         }
 
         if (n.finallyBlock() != null) {
 
             assert frame.finallyBlock != null
-                    && frame.destIdVar != null
-                    && frame.destBlocks != null;
+                    && frame.finallyDestAddrVar != null
+                    && frame.finallyDestBlocks != null;
 
             // Build finally landing pad. This handles exceptions thrown within a catch block,
             // or within a try block when there are no catch clauses.
@@ -275,14 +267,9 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             LLVMAddClause(lpadFinallyRes, nullBytePtr); // Catch-all clause.
             LLVMValueRef finallyExn = LLVMBuildExtractValue(v.builder, lpadFinallyRes, 0, "exn");
 
-            // Build block to rethrow the exception once the finally block finishes.
+            // Rethrow after the finally block runs.
             LLVMBuildStore(v.builder, finallyExn, rethrowExnVar);
-            LLVMBasicBlockRef finallyRethrow = v.utils.buildBlock("rethrow");
-            LLVMBuildBr(v.builder, frame.getFinallyBlockBranchingTo(finallyRethrow));
-            LLVMPositionBuilderAtEnd(v.builder, finallyRethrow);
-            LLVMValueRef loadExn = LLVMBuildLoad(v.builder, rethrowExnVar, "load.rethrow.exn");
-            v.utils.buildProcCall(lpadOuter, throwExnFunc, loadExn);
-            LLVMBuildUnreachable(v.builder);
+            frame.buildFinallyBlockBranchingTo(rethrowBlock);
 
             // We want the finally block translations to use the outer landing pad for any
             // exceptions thrown within the finally block.
@@ -291,25 +278,15 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
             // Build finally block.
             LLVMPositionBuilderAtEnd(v.builder, frame.finallyBlock);
             n.visitChild(n.finallyBlock(), v);
-
-            // Switch on the finally destination ID.
-            LLVMBasicBlockRef switchBlock = v.utils.buildBlock("finally.dest.switch");
-            v.utils.branchUnlessTerminated(switchBlock);
-
-            // The default case of the destination switch is unreachable.
-            LLVMBasicBlockRef unreachableBlock = v.utils.buildBlock("unreachable");
-            LLVMPositionBuilderAtEnd(v.builder, unreachableBlock);
-            LLVMBuildUnreachable(v.builder);
-
-            LLVMPositionBuilderAtEnd(v.builder, switchBlock);
-            LLVMValueRef destId = LLVMBuildLoad(v.builder, frame.destIdVar, "load.finally.dest");
-            LLVMValueRef switchDest = LLVMBuildSwitch(
-                    v.builder, destId, unreachableBlock, frame.destBlocks.size());
-            int counter = 0;
-            for (LLVMBasicBlockRef dest : frame.destBlocks.keySet()) {
-                LLVMTypeRef intTy = LLVMInt32TypeInContext(v.context);
-                LLVMValueRef catchDestId = LLVMConstInt(intTy, counter++, /*sign-extend*/ 0);
-                LLVMAddCase(switchDest, catchDestId, dest);
+            if (!v.utils.blockTerminated()) {
+                LLVMValueRef destAddr = LLVMBuildLoad(
+                        v.builder, frame.finallyDestAddrVar, "load.finally.dest");
+                LLVMValueRef branch = LLVMBuildIndirectBr(
+                        v.builder, destAddr, frame.finallyDestBlocks.size());
+                for (LLVMBasicBlockRef dest : frame.finallyDestBlocks) {
+                    // LLVM requires that indirect branches declare their possible destinations.
+                    LLVMAddDestination(branch, dest);
+                }
             }
         }
 

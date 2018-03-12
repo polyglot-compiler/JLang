@@ -18,14 +18,8 @@ public class PolyLLVMReturnExt extends PolyLLVMExt {
         Expr e = n.expr();
 
         // If we are within an exception frame, we may need to detour through finally blocks first.
-        if (v.needsFinallyBlockChain()) {
-            LLVMBasicBlockRef retBlock = v.utils.buildBlock("ret");
-            LLVMBasicBlockRef firstFinallyBlock = v.buildFinallyBlockChain(retBlock, 0);
-            LLVMBuildBr(v.builder, firstFinallyBlock);
-            LLVMPositionBuilderAtEnd(v.builder, retBlock);
-        }
+        v.buildFinallyBlockChain(/*tryCatchNestingLevel*/ 0);
 
-        // Build the actual return.
         LLVMValueRef res = e == null
                 ? LLVMBuildRetVoid(v.builder)
                 : LLVMBuildRet(v.builder, v.getTranslation(e));

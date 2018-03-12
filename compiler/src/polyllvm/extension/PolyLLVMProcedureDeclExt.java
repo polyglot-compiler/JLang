@@ -85,8 +85,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         n = (ProcedureDecl) lang().visitChildren(n, v);
 
         // Add void return if necessary.
-        LLVMBasicBlockRef block = LLVMGetInsertBlock(v.builder);
-        if (LLVMGetBasicBlockTerminator(block) == null) {
+        if (!v.utils.blockTerminated()) {
             if (retType.isVoid()) {
                 LLVMBuildRetVoid(v.builder);
             } else {

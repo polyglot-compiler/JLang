@@ -10,16 +10,15 @@ import polyglot.util.ListUtil;
 import polyglot.visit.NodeVisitor;
 import polyllvm.ast.PolyLLVMLang;
 import polyllvm.ast.PolyLLVMNodeFactory;
-import polyllvm.structures.ClassObjects;
 import polyllvm.extension.PolyLLVMTryExt.ExceptionFrame;
 import polyllvm.structures.*;
-import polyllvm.structures.ObjectStruct_c;
-import polyllvm.structures.ObjectStruct;
 import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.util.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.bytedeco.javacpp.LLVM.*;
 
 /*Translates Java into LLVM IR. */
 public class LLVMTranslator extends NodeVisitor {
@@ -706,17 +705,20 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     /**
-     * Runs all finally blocks between the current location of the translator and the
-     * [destExceptionFrameNestingLevel], returning the first finally block to jump to.
+     * Runs all finally blocks between the current location of the
+     * translator and [destExceptionFrameNestingLevel].
      */
-    public LLVMBasicBlockRef buildFinallyBlockChain(
-            LLVMBasicBlockRef dest,
-            int destExceptionFrameNestingLevel) {
-         ExceptionFrame[] frames = exceptionFrames.stream()
+    public void buildFinallyBlockChain(int destExceptionFrameNestingLevel) {
+
+        List<ExceptionFrame> frames = exceptionFrames.stream()
                 .limit(exceptionFrames.size() - destExceptionFrameNestingLevel)
-                .toArray(ExceptionFrame[]::new);
-         for (int i = frames.length - 1; i >= 0; --i)
-             dest = frames[i].getFinallyBlockBranchingTo(dest);
-         return dest;
+                .filter(f -> f.getLpadFinally() != null)
+                .collect(Collectors.toList());
+
+        for (ExceptionFrame frame : frames) {
+            LLVMBasicBlockRef next = utils.buildBlock("finally.chain");
+            frame.buildFinallyBlockBranchingTo(next);
+            LLVMPositionBuilderAtEnd(builder, next);
+        }
     }
 }
