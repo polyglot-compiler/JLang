@@ -14,8 +14,8 @@ class MainWrapper {
         }
         catch (Throwable e) {
             System.err.println(
-                "Terminating due to uncaught exception "
-                + e.getClass().getName() + ": " + e.getMessage());
+                "Terminating due to uncaught "
+                + e.getClass().getName() + " with message:\n" + e.getMessage());
             // TODO: System.exit(1);
         }
     }

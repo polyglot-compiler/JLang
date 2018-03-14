@@ -15,12 +15,17 @@ jstring Java_polyllvm_runtime_Factory_createString___3B(jarray bytes);
 } // extern "C"
 
 static void sigaction(int sig, siginfo_t* info, void* ucontext) {
-    fprintf(stderr, "Aborting due to signal: %s\n", strsignal(sig));
+    const char* cause = "";
     if (sig == SIGSEGV)
-        fprintf(stderr, "This probably indicates a null pointer exception.\n");
+        cause = "This likely indicates a null pointer exception.\n";
     if (sig == SIGFPE)
-        fprintf(stderr, "This indicates an arithmetic exception "
-                        "(e.g., divide by zero).\n");
+        cause = "This indicates an arithmetic exception "
+                "(e.g., divide by zero).\n";
+    fprintf(stderr,
+        "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
+        "Aborting due to signal: %s\n%s"
+        "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
+        , strsignal(sig), cause);
     fflush(stderr);
     abort();
 }
@@ -53,8 +58,11 @@ int main(int argc, char** argv) {
     try {
         Java_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jargs);
     } catch (...) {
-        printf("Aborting due to uncaught foreign (non-Java) exception.\n");
-        fflush(stdout);
+        fprintf(stderr,
+            "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
+            "Aborting due to uncaught foreign (non-Java) exception.\n"
+            "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
+        fflush(stderr);
         abort();
     }
 }
