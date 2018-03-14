@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include "types.h"
+#include "rep.h"
 #include "gc.h"
 
 extern "C" {
@@ -46,13 +46,14 @@ int main(int argc, char** argv) {
     // Ignore the 0th argument, which is the name of the program.
     --argc, ++argv;
     jarray jargs = Java_polyllvm_runtime_Factory_createObjectArray__I(argc);
+    jstring* jargs_data = static_cast<jstring*>(Unwrap(jargs)->Data());
     for (int i = 0; i < argc; ++i) {
         size_t len = strlen(argv[i]);
         jarray jargBytes = Java_polyllvm_runtime_Factory_createByteArray__I(len);
-        for (int j = 0; j < len; ++j)
-            ((int8_t*) &jargBytes->data)[j] = argv[i][j];
+        jbyte* data = static_cast<jbyte*>(Unwrap(jargBytes)->Data());
+        memcpy(data, argv[i], len);
         jstring jargString = Java_polyllvm_runtime_Factory_createString___3B(jargBytes);
-        ((jstring*) &jargs->data)[i] = jargString;
+        jargs_data[i] = jargString;
     }
 
     try {

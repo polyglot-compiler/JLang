@@ -1,6 +1,6 @@
 #include <sys/time.h>
 #include <assert.h>
-#include "types.h"
+#include "rep.h"
 
 extern "C" {
 

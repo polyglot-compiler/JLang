@@ -1,0 +1,107 @@
+//
+// This file includes class declarations that represent the layout of
+// Java objects, dispatch vectors, arrays, and more.
+//
+// Other native code can interact with these structures through the
+// inlined functions defined here.
+//
+#ifndef REP_H
+#define REP_H
+
+#include <type_traits>
+#include <jni.h>
+#include "interface.h"
+
+// Ensure that our C++ representations are POD types,
+// i.e., that they have the layout we'd expect from a C struct.
+#define ASSERT_POD(layout) static_assert(   \
+    std::is_trivial<layout>::value &&       \
+    std::is_standard_layout<layout>::value, \
+    "Java object representations should have the layout of C structs")
+
+struct JObjectRep;
+struct JArrayRep;
+struct JStringRep;
+struct JClassRep;
+
+struct type_info {
+    int32_t size;
+    void* super_type_ids[];
+};
+
+// Class dispatch vector.
+struct DispatchVector {
+    JClassRep* Class() { return *class_; }
+    idv_ht* Idv() { return idv_; }
+    void SetIdv(idv_ht* idv) { idv_ = idv; }
+    type_info* SuperTypes() { return super_types_; }
+private:
+    JClassRep** class_; // Notice: double-pointer.
+	idv_ht* idv_;
+    type_info* super_types_;
+};
+
+struct sync_vars {
+	// pthread_mutex_t* mutex;
+	// pthread_cond_t *condition_variable;
+};
+
+// Representation for java.lang.Object.
+struct JObjectRep {
+    DispatchVector* Cdv() { return cdv_; }
+    jobject Wrap() { return reinterpret_cast<jobject>(this); }
+private:
+    DispatchVector* cdv_;
+    sync_vars* sync_vars_;
+};
+ASSERT_POD(JObjectRep);
+
+// Representation for Java built-in arrays.
+struct JArrayRep {
+    jsize Length() { return len_ ; }
+    void* Data() { return data_; }
+    JObjectRep* Super() { return &header_; }
+    jarray Wrap() { return reinterpret_cast<jarray>(this); }
+private:
+    JObjectRep header_;
+    jsize len_;
+    char data_[0];
+};
+ASSERT_POD(JArrayRep);
+
+// Representation for java.lang.String.
+struct JStringRep {
+    JArrayRep* Chars() { return chars_; }
+    JObjectRep* Super() { return &header_; }
+    jstring Wrap() { return reinterpret_cast<jstring>(this); }
+private:
+    JObjectRep header_;
+    JArrayRep* chars_;
+};
+ASSERT_POD(JStringRep);
+
+// Representation for java.lang.Class.
+struct JClassRep {
+    JObjectRep* Super() { return &header_; }
+    jclass Wrap() { return reinterpret_cast<jclass>(this); }
+private:
+    JObjectRep header_;
+};
+ASSERT_POD(JClassRep);
+
+// These functions convert an opaque Java object reference into
+// a pointer to the appropriate C++ representation.
+inline JObjectRep* Unwrap(jobject o) {
+    return reinterpret_cast<JObjectRep*>(o);
+}
+inline JArrayRep* Unwrap(jarray o) {
+    return reinterpret_cast<JArrayRep*>(o);
+}
+inline JStringRep* Unwrap(jstring o) {
+    return reinterpret_cast<JStringRep*>(o);
+}
+inline JClassRep* Unwrap(jclass o) {
+    return reinterpret_cast<JClassRep*>(o);
+}
+
+#endif // REP_H

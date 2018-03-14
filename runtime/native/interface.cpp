@@ -1,25 +1,25 @@
 #include <inttypes.h>
 #include <string.h>
 #include <cstdlib>
-#include "types.h"
+#include "rep.h"
 
 #include "interface.h"
 
 extern "C" {
 
 void __createInterfaceTables
-	(dv* D, int capacity, int size, int intf_id_hashcodes[], void* intf_ids[], it* intf_tables[])
+	(DispatchVector* D, int capacity, int size, int intf_id_hashcodes[], void* intf_ids[], void* intf_tables[])
 {
 	idv_ht* ittab = new idv_ht(capacity);
 	for (int i = 0; i < size; ++i)
 		ittab->put(intf_id_hashcodes[i], intf_ids[i], intf_tables[i]);
-	D->itt = ittab;
+	D->SetIdv(ittab);
 }
 
 void* __getInterfaceMethod
 	(jobject obj, int intf_id_hash, void* intf_id, int method_index)
 {
-	idv_ht* ittab = obj->dv->itt;
+	idv_ht* ittab = Unwrap(obj)->Cdv()->Idv();
 	void** itab = reinterpret_cast<void**>(ittab->get(intf_id_hash, intf_id));
 	return itab[method_index];
 }

@@ -5,7 +5,7 @@
 #ifndef JNI_REFLECT_H
 #define JNI_REFLECT_H
 
-#include "types.h"
+#include "rep.h"
 
 extern "C" {
 

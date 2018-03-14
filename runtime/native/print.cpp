@@ -1,11 +1,12 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
-#include "types.h"
+#include "rep.h"
 
 static void printJavaString(jstring s) {
-    jchar* data = (jchar*) &s->chars->data;
-    jint len = s->chars->len;
+    auto chars = Unwrap(s)->Chars();
+    jchar* data = static_cast<jchar*>(chars->Data());
+    jint len = chars->Length();
     for (jint i = 0; i < len; ++i) {
         printf("%lc", data[i]);
     }
@@ -26,11 +27,11 @@ void Java_java_lang_System_PrintStream_println__Ljava_lang_String_2(jstring s) {
     printf("\n");
 }
 
-void Java_java_lang_System_PrintStream_print__Z(jbool n) {
+void Java_java_lang_System_PrintStream_print__Z(jboolean n) {
     printf("%s", n ? "true" : "false");
 }
 
-void Java_java_lang_System_PrintStream_println__Z(jbool n) {
+void Java_java_lang_System_PrintStream_println__Z(jboolean n) {
     printf("%s\n", n ? "true" : "false");
 }
 
@@ -67,13 +68,11 @@ void Java_java_lang_System_PrintStream_println__I(jint n) {
 }
 
 void Java_java_lang_System_PrintStream_print__J(jlong n) {
-    // Portable formatting for int64_t
-    printf("%" PRId64, n);
+    printf("%ld", n);
 }
 
 void Java_java_lang_System_PrintStream_println__J(jlong n) {
-    // Portable formatting for int64_t
-    printf("%" PRId64 "\n", n);
+    printf("%ld\n", n);
 }
 
 void Java_java_lang_System_PrintStream_print__F(jfloat n) {
@@ -101,13 +100,13 @@ jstring Java_polyllvm_runtime_Factory_createString___3B(jarray bytes);
 jstring cstring_to_jstring(const char* cstr) {
     size_t len = strlen(cstr);
     jarray jargBytes = Java_polyllvm_runtime_Factory_createByteArray__I(len);
-    for (int j = 0; j < len; ++j)
-        ((int8_t*) &jargBytes->data)[j] = cstr[j];
+    jbyte* data = static_cast<jbyte*>(Unwrap(jargBytes)->Data());
+    memcpy(data, cstr, len);
     jstring jstr = Java_polyllvm_runtime_Factory_createString___3B(jargBytes);
     return jstr;
 }
 
-jstring Java_java_lang_String_valueOf__Z(jbool b) {
+jstring Java_java_lang_String_valueOf__Z(jboolean b) {
    const char* str = b ? "true" : "false";
    return cstring_to_jstring(str);
 }
@@ -143,7 +142,7 @@ jstring Java_java_lang_String_valueOf__I(jint n) {
 jstring Java_java_lang_String_valueOf__J(jlong n) {
     size_t len = 21; //Max of 20 chars for long, 1 char for null terminator
     char str[len];
-    sprintf(str, "%" PRId64, n);
+    sprintf(str, "%ld", n);
     return cstring_to_jstring(str);
 }
 

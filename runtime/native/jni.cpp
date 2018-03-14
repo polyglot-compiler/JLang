@@ -2,6 +2,9 @@
 #include <cstdio>
 #include <cstdlib>
 
+// Compiler-specific representations for Java objects.
+#include "rep.h"
+
 [[noreturn]] static void jni_Unimplemented(const char* name) {
   fprintf(stderr,
     "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
@@ -97,7 +100,7 @@ void jni_DeleteLocalRef(JNIEnv *env, jobject obj) {
 }
 
 jboolean jni_IsSameObject(JNIEnv *env, jobject obj1, jobject obj2) {
-    jni_Unimplemented("IsSameObject");
+    return obj1 == obj2;
 }
 
 jobject jni_NewLocalRef(JNIEnv *env, jobject ref) {
@@ -685,7 +688,7 @@ void jni_ReleaseStringUTFChars(JNIEnv *env, jstring str, const char* chars) {
 }
 
 jsize jni_GetArrayLength(JNIEnv *env, jarray array) {
-    jni_Unimplemented("GetArrayLength");
+    return Unwrap(array)->Length();
 }
 
 jobjectArray jni_NewObjectArray(JNIEnv *env, jsize len, jclass clazz, jobject init) {
@@ -693,11 +696,13 @@ jobjectArray jni_NewObjectArray(JNIEnv *env, jsize len, jclass clazz, jobject in
 }
 
 jobject jni_GetObjectArrayElement(JNIEnv *env, jobjectArray array, jsize index) {
-    jni_Unimplemented("GetObjectArrayElement");
+    jobject* data = static_cast<jobject*>(Unwrap(array)->Data());
+    return data[index];
 }
 
 void jni_SetObjectArrayElement(JNIEnv *env, jobjectArray array, jsize index, jobject val) {
-    jni_Unimplemented("SetObjectArrayElement");
+    jobject* data = static_cast<jobject*>(Unwrap(array)->Data());
+    data[index] = val;
 }
 
 jbooleanArray jni_NewBooleanArray(JNIEnv *env, jsize len) {
@@ -732,68 +737,72 @@ jdoubleArray jni_NewDoubleArray(JNIEnv *env, jsize len) {
     jni_Unimplemented("NewDoubleArray");
 }
 
+#define RETURN_ARRAY_DATA_NO_COPY(type) \
+    if (isCopy != nullptr) *isCopy = JNI_FALSE; \
+    return static_cast<type*>(Unwrap(array)->Data())
+
 jboolean* jni_GetBooleanArrayElements(JNIEnv *env, jbooleanArray array, jboolean *isCopy) {
-    jni_Unimplemented("GetBooleanArrayElements");
+    RETURN_ARRAY_DATA_NO_COPY(jboolean);
 }
 
 jbyte* jni_GetByteArrayElements(JNIEnv *env, jbyteArray array, jboolean *isCopy) {
-    jni_Unimplemented("GetByteArrayElements");
+    RETURN_ARRAY_DATA_NO_COPY(jbyte);
 }
 
 jchar* jni_GetCharArrayElements(JNIEnv *env, jcharArray array, jboolean *isCopy) {
-    jni_Unimplemented("GetCharArrayElements");
+    RETURN_ARRAY_DATA_NO_COPY(jchar);
 }
 
 jshort* jni_GetShortArrayElements(JNIEnv *env, jshortArray array, jboolean *isCopy) {
-    jni_Unimplemented("GetShortArrayElements");
+    RETURN_ARRAY_DATA_NO_COPY(jshort);
 }
 
 jint* jni_GetIntArrayElements(JNIEnv *env, jintArray array, jboolean *isCopy) {
-    jni_Unimplemented("GetIntArrayElements");
+    RETURN_ARRAY_DATA_NO_COPY(jint);
 }
 
 jlong* jni_GetLongArrayElements(JNIEnv *env, jlongArray array, jboolean *isCopy) {
-    jni_Unimplemented("GetLongArrayElements");
+    RETURN_ARRAY_DATA_NO_COPY(jlong);
 }
 
 jfloat* jni_GetFloatArrayElements(JNIEnv *env, jfloatArray array, jboolean *isCopy) {
-    jni_Unimplemented("GetFloatArrayElements");
+    RETURN_ARRAY_DATA_NO_COPY(jfloat);
 }
 
 jdouble* jni_GetDoubleArrayElements(JNIEnv *env, jdoubleArray array, jboolean *isCopy) {
-    jni_Unimplemented("GetDoubleArrayElements");
+    RETURN_ARRAY_DATA_NO_COPY(jdouble);
 }
 
 void jni_ReleaseBooleanArrayElements(JNIEnv *env, jbooleanArray array, jboolean *elems, jint mode) {
-    jni_Unimplemented("ReleaseBooleanArrayElements");
+    // We use a conservative garbage collector, so nothing to do here.
 }
 
 void jni_ReleaseByteArrayElements(JNIEnv *env, jbyteArray array, jbyte *elems, jint mode) {
-    jni_Unimplemented("ReleaseByteArrayElements");
+    // We use a conservative garbage collector, so nothing to do here.
 }
 
 void jni_ReleaseCharArrayElements(JNIEnv *env, jcharArray array, jchar *elems, jint mode) {
-    jni_Unimplemented("ReleaseCharArrayElements");
+    // We use a conservative garbage collector, so nothing to do here.
 }
 
 void jni_ReleaseShortArrayElements(JNIEnv *env, jshortArray array, jshort *elems, jint mode) {
-    jni_Unimplemented("ReleaseShortArrayElements");
+    // We use a conservative garbage collector, so nothing to do here.
 }
 
 void jni_ReleaseIntArrayElements(JNIEnv *env, jintArray array, jint *elems, jint mode) {
-    jni_Unimplemented("ReleaseIntArrayElements");
+    // We use a conservative garbage collector, so nothing to do here.
 }
 
 void jni_ReleaseLongArrayElements(JNIEnv *env, jlongArray array, jlong *elems, jint mode) {
-    jni_Unimplemented("ReleaseLongArrayElements");
+    // We use a conservative garbage collector, so nothing to do here.
 }
 
 void jni_ReleaseFloatArrayElements(JNIEnv *env, jfloatArray array, jfloat *elems, jint mode) {
-    jni_Unimplemented("ReleaseFloatArrayElements");
+    // We use a conservative garbage collector, so nothing to do here.
 }
 
 void jni_ReleaseDoubleArrayElements(JNIEnv *env, jdoubleArray array, jdouble *elems, jint mode) {
-    jni_Unimplemented("ReleaseDoubleArrayElements");
+    // We use a conservative garbage collector, so nothing to do here.
 }
 
 void jni_GetBooleanArrayRegion(JNIEnv *env, jbooleanArray array, jsize start, jsize l, jboolean *buf) {
@@ -1211,7 +1220,7 @@ const struct JNINativeInterface_ jni_NativeInterface = {
     jni_GetObjectRefType
 };
 
-extern const JNIEnv jni_MainJNIEnv = {&jni_NativeInterface};
+extern const JNIEnv jni_JNIEnv = {&jni_NativeInterface};
 
 jint jni_DestroyJavaVM(JavaVM *vm) {
     jni_Unimplemented("DestroyJavaVM");

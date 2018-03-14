@@ -10,14 +10,19 @@ NATIVE_LL = $(NATIVE_SRC:%.cpp=$(OUT_DIR)/%.ll)
 JAVA_LL = $(JAVA_SRC:src/%.java=$(OUT_DIR)/%.ll)
 ALL_LL = $(NATIVE_LL) $(JAVA_LL)
 
-SHELL:=/bin/bash
+JNI_INCLUDES = \
+	-I"$(JAVA_HOME)/include" \
+	-I"$(JAVA_HOME)/include/darwin" \
+	-I"$(JAVA_HOME)/include/linux"
+
+NATIVE_FLAGS = -Inative -Wall -Wno-unused-private-field -MMD -pthread
 
 all: runtime.o
 
 $(NATIVE_LL): $(OUT_DIR)/%.ll: %.cpp
 	@mkdir -p $(dir $@)
 	@echo "Compiling $<"
-	@clang++ -Inative -Wall -MMD -pthread -S -emit-llvm -std=c++11 -o $@ $<
+	@clang++ $(JNI_INCLUDES) $(NATIVE_FLAGS) -S -emit-llvm -std=c++11 -o $@ $<
 
 # Mixing Ant and Make is tricky; this rule isn't perfect,
 # but will work in almost all cases. Note that build.xml

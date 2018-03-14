@@ -1,4 +1,4 @@
-#include "types.h"
+#include "rep.h"
 
 extern "C" {
 
@@ -7,8 +7,8 @@ jint Java_java_lang_Object_hashCode__(jobject o) {
     return static_cast<jint>(addr);
 }
 
-jobject Java_java_lang_Object_getClass__(jobject obj) {
-    return *obj->dv->class_obj;
+jclass Java_java_lang_Object_getClass__(jobject o) {
+    return Unwrap(o)->Cdv()->Class()->Wrap();
 }
 
 } // extern "C"

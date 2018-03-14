@@ -6,7 +6,7 @@
 #define JNI_EXCEPTION_H
 
 #include <unwind.h>
-#include "types.h"
+#include "rep.h"
 
 extern "C" {
 
