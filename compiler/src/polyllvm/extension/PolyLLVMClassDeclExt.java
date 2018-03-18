@@ -69,7 +69,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 LLVMValueRef init = v.utils.buildNamedConstStruct(idvType, idvMethods);
                 LLVMSetInitializer(idvGlobal, init);
                 intfTables[i] = LLVMBuildBitCast(
-                        v.builder, idvGlobal, v.utils.llvmBytePtr(), "cast");
+                        v.builder, idvGlobal, v.utils.i8Ptr(), "cast");
             }
 
             // Set up the hash table that points to the interface dispatch
@@ -80,20 +80,20 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
             LLVMValueRef idv_id_hash_arr_global = v.utils.toIDVIdHashArrGlobal(ct, numOfIntfs);
 
             LLVMSetInitializer(idv_arr_global, v.utils
-                    .buildConstArray(v.utils.llvmBytePtr(), intfTables));
+                    .buildConstArray(v.utils.i8Ptr(), intfTables));
             LLVMSetInitializer(idv_id_arr_global,
-                    v.utils.buildConstArray(v.utils.llvmBytePtr(), intf_ids));
+                    v.utils.buildConstArray(v.utils.i8Ptr(), intf_ids));
             LLVMSetInitializer(idv_id_hash_arr_global, v.utils.buildConstArray(
                     LLVMInt32TypeInContext(v.context), intf_id_hashes));
 
             LLVMTypeRef create_idv_ht_func_type = v.utils.functionType(
                     LLVMVoidTypeInContext(v.context), // void return type
-                    v.utils.llvmBytePtr(), // dv*
+                    v.utils.i8Ptr(), // dv*
                     LLVMInt32TypeInContext(v.context), // int
                     LLVMInt32TypeInContext(v.context), // int
                     v.utils.ptrTypeRef(LLVMInt32TypeInContext(v.context)), // int[]
-                    v.utils.llvmBytePtr(), // void*[]
-                    v.utils.llvmBytePtr() // it*[]
+                    v.utils.i8Ptr(), // void*[]
+                    v.utils.i8Ptr() // it*[]
             );
             LLVMValueRef create_idv_ht_func = v.utils.getFunction(
                     "__createInterfaceTables", create_idv_ht_func_type);

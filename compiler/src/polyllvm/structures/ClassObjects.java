@@ -19,7 +19,7 @@ public final class ClassObjects {
     }
 
     public LLVMTypeRef classIdVarTypeRef() {
-        return LLVMInt8TypeInContext(v.context);
+        return v.utils.i8();
     }
 
     public LLVMTypeRef classIdVarPtrTypeRef() {
@@ -38,10 +38,8 @@ public final class ClassObjects {
         LLVMValueRef global = v.utils.getGlobal(
                 v.mangler.typeIdentityId(v.utils.erasureLL(rt)),
                 classIdVarTypeRef());
-        if (!extern) {
-            LLVMSetInitializer(global, LLVMConstInt(
-                    LLVMInt8TypeInContext(v.context), 0, /* sign-extend */ 0));
-        }
+        if (!extern)
+            LLVMSetInitializer(global, LLVMConstInt(v.utils.i8(), 0, /* sign-extend */ 0));
         return global;
     }
 

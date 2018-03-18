@@ -16,11 +16,11 @@ public class PolyLLVMThrowExt extends PolyLLVMExt {
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         Throw n = (Throw) node();
         LLVMValueRef createExnFun = v.utils.getFunction(Constants.CREATE_EXCEPTION,
-                v.utils.functionType(v.utils.llvmBytePtr(), v.utils.llvmBytePtr()));
+                v.utils.functionType(v.utils.i8Ptr(), v.utils.i8Ptr()));
         LLVMValueRef throwExnFunc = v.utils.getFunction(Constants.THROW_EXCEPTION,
-                v.utils.functionType(LLVMVoidTypeInContext(v.context), v.utils.llvmBytePtr()));
+                v.utils.functionType(LLVMVoidTypeInContext(v.context), v.utils.i8Ptr()));
         LLVMValueRef cast = LLVMBuildBitCast(
-                v.builder, v.getTranslation(n.expr()), v.utils.llvmBytePtr(), "cast");
+                v.builder, v.getTranslation(n.expr()), v.utils.i8Ptr(), "cast");
         LLVMValueRef exn = v.utils.buildFunCall(createExnFun, cast);
         v.utils.buildProcCall(throwExnFunc, exn);
         LLVMBuildUnreachable(v.builder);

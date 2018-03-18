@@ -23,7 +23,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     @Override
     public LLVMTranslator enterTranslateLLVM(LLVMTranslator v) {
         // Add a calloc declaration to the current module (declare i8* @GC_malloc(i64)).
-        LLVMTypeRef retType = v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context));
+        LLVMTypeRef retType = v.utils.ptrTypeRef(v.utils.i8());
         LLVMTypeRef sizeType = v.utils.llvmPtrSizedIntType();
         LLVMTypeRef funcType = v.utils.functionType(retType, sizeType);
         LLVMAddFunction(v.mod, Constants.CALLOC, funcType);
@@ -91,7 +91,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         // Create the ctor global array as specified in the LLVM Language Reference Manual.
         LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context));
         LLVMTypeRef funcPtrType = v.utils.ptrTypeRef(funcType);
-        LLVMTypeRef voidPtr = v.utils.ptrTypeRef(LLVMInt8TypeInContext(v.context));
+        LLVMTypeRef voidPtr = v.utils.i8Ptr();
         LLVMTypeRef structType = v.utils.structType(LLVMInt32TypeInContext(v.context), funcPtrType, voidPtr);
         LLVMTypeRef ctorVarType = LLVMArrayType(structType, ctors.length);
         String ctorVarName = Constants.CTOR_VAR_NAME;

@@ -22,5 +22,5 @@ public interface DispatchVector {
     LLVMValueRef getDispatchVectorFor(ReferenceType rt);
 
     /** Returns a pointer to the specified method in a dispatch vector. */
-    LLVMValueRef buildFuncElementPtr(LLVMValueRef dvPtr, ReferenceType rt, MethodInstance pi);
+    LLVMValueRef buildFuncElementPtr(LLVMValueRef dvPtr, ReferenceType rt, MethodInstance mi);
 }

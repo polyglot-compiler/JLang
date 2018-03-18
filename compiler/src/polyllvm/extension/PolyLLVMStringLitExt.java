@@ -27,7 +27,7 @@ public class PolyLLVMStringLitExt extends PolyLLVMExt {
         LLVMValueRef lenStruct = v.utils.buildConstStruct(length);
         List<LLVMValueRef> charTranslated = new ArrayList<>();
 
-        LLVMValueRef sync_vars = LLVMConstNull(v.utils.llvmBytePtr());
+        LLVMValueRef sync_vars = LLVMConstNull(v.utils.i8Ptr());
 
         for (char c : chars)
             charTranslated.add(LLVMConstInt(v.utils.intType(16), c, 0));

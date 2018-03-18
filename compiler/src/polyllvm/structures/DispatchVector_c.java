@@ -54,7 +54,7 @@ public class DispatchVector_c implements DispatchVector {
             @Override
             LLVMValueRef buildValueRef(DispatchVector_c o, ClassType erased) {
                 // The pointer will be initialized at runtime.
-                return LLVMConstNull(o.v.utils.llvmBytePtr());
+                return LLVMConstNull(o.v.utils.i8Ptr());
             }
         },
 
@@ -79,15 +79,12 @@ public class DispatchVector_c implements DispatchVector {
                     return o.v.utils.getFunction(name, type);
                 };
 
-                // Collect all function pointers, casted to byte pointers.
-                LLVMTypeRef funcPtrTy = o.v.utils.llvmBytePtr();
-                List<MethodInstance> methods = o.v.cdvMethods(o.v.utils.erasureLL(erased));
-                LLVMValueRef[] funcPtrs = methods.stream()
+                // Collect all function pointers.
+                LLVMValueRef[] funcPtrs = o.v.cdvMethods(erased).stream()
                         .map(getFuncPtr)
-                        .map(func -> LLVMConstBitCast(func, funcPtrTy))
                         .toArray(LLVMValueRef[]::new);
 
-                return o.v.utils.buildConstArray(funcPtrTy, funcPtrs);
+                return o.v.utils.buildConstStruct(funcPtrs);
             }
         };
 
@@ -140,9 +137,9 @@ public class DispatchVector_c implements DispatchVector {
 
     @Override
     public LLVMValueRef buildFuncElementPtr(
-            LLVMValueRef dvPtr, ReferenceType recvTy, MethodInstance pi) {
-        structTypeRefNonOpaque(recvTy); // Erase non-opaque type.
-        int idx = v.dispatchInfo(recvTy, pi).methodIndex();
+            LLVMValueRef dvPtr, ReferenceType recvTy, MethodInstance mi) {
+        structTypeRefNonOpaque(recvTy); // Ensure non-opaque type.
+        int idx = v.dispatchInfo(recvTy, mi.orig()).methodIndex();
         return v.utils.buildStructGEP(dvPtr, 0, Layout.CLASS_METHODS.ordinal(), idx);
     }
 }

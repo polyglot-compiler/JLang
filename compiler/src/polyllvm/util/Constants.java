@@ -44,4 +44,5 @@ public class Constants {
     public static final int INTERFACE_TABLE_SIZE = 10;
 
     public static final String CTOR_VAR_NAME = "llvm.global_ctors";
+    public static final String JNI_ENV_VAR_NAME = "jni_JNIEnv";
 }

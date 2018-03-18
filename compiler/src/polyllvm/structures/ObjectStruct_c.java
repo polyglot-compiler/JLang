@@ -36,7 +36,7 @@ public class ObjectStruct_c implements ObjectStruct {
             @Override
             LLVMTypeRef buildTypeRef(ObjectStruct_c o, ClassType erased) {
                 // TODO: This will eventually be needed for implementing synchronized blocks.
-                return o.v.utils.llvmBytePtr();
+                return o.v.utils.i8Ptr();
             }
         },
 
@@ -68,10 +68,9 @@ public class ObjectStruct_c implements ObjectStruct {
                 // Append a zero-length LLVM array [0 x i8] onto Java array types so that
                 // we can access the underlying array elements. This is the LLVM-approved
                 // way of implementing dynamically sized arrays.
-                LLVMTypeRef i8 = LLVMInt8TypeInContext(o.v.context);
                 return Stream.concat(
                         Stream.of(baseComponents),
-                        Stream.of(LLVMArrayType(i8, 0)))
+                        Stream.of(LLVMArrayType(o.v.utils.i8(), 0)))
                         .toArray(LLVMTypeRef[]::new);
             }
             else if (erased.isClass()) {

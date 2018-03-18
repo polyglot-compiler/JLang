@@ -9,11 +9,11 @@ import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyllvm.visit.LLVMTranslator;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -119,8 +119,16 @@ public class LLVMUtils {
         return 8;
     }
 
-    public LLVMTypeRef llvmBytePtr() {
-        return ptrTypeRef(LLVMInt8TypeInContext(v.context));
+    public LLVMTypeRef i8() {
+        return LLVMInt8TypeInContext(v.context);
+    }
+
+    public LLVMTypeRef i32() {
+        return LLVMInt32TypeInContext(v.context);
+    }
+
+    public LLVMTypeRef i8Ptr() {
+        return ptrTypeRef(i8());
     }
 
     public LLVMTypeRef intType(int numBits) {
@@ -153,7 +161,7 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef buildCastToBytePtr(LLVMValueRef val) {
-        return LLVMConstBitCast(val, llvmBytePtr());
+        return LLVMConstBitCast(val, i8Ptr());
     }
 
     /** Builds a call, or an invoke if the translator is currently within an exception frame. */
@@ -199,7 +207,7 @@ public class LLVMUtils {
     public void buildCtor(Supplier<LLVMValueRef> ctor) {
         LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
         LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context));
-        LLVMTypeRef voidPtr = v.utils.llvmBytePtr();
+        LLVMTypeRef voidPtr = v.utils.i8Ptr();
 
         int counter = v.incCtorCounter();
         String name = "ctor." + counter;
@@ -316,7 +324,7 @@ public class LLVMUtils {
      * Obtains the LLVM type that Java values of type {@code t} have after
      * translated to LLVM.
      *
-     * @param t the Java type
+     * @param t the Java type (not necessarily erased).
      * @return an LLVM type reference
      */
     public LLVMTypeRef toLL(final Type t) {
@@ -336,7 +344,7 @@ public class LLVMUtils {
             return LLVMDoubleTypeInContext(v.context);
         }
         else if (t.isNull()) {
-            return llvmBytePtr();
+            return i8Ptr();
         }
         else if (t.isReference()) {
             return ptrTypeRef(v.obj.structTypeRef(t.toReference()));
@@ -426,12 +434,12 @@ public class LLVMUtils {
 
     public LLVMValueRef toIDVArrGlobal(ReferenceType clazz, int length) {
         return getGlobal(v.mangler.idvArrGlobalId(clazz),
-                LLVMArrayType(llvmBytePtr(), length));
+                LLVMArrayType(i8Ptr(), length));
     }
 
     public LLVMValueRef toIDVIdArrGlobal(ReferenceType clazz, int length) {
         return getGlobal(v.mangler.idvIdArrGlobalId(clazz),
-                LLVMArrayType(llvmBytePtr(), length));
+                LLVMArrayType(i8Ptr(), length));
     }
 
     public LLVMValueRef toIDVIdHashArrGlobal(ReferenceType clazz, int length) {
@@ -490,12 +498,10 @@ public class LLVMUtils {
      */
     public LLVMTypeRef toLLFuncTy(
             ReferenceType recvTy, Type retTy, List<? extends Type> formalTys) {
-        LLVMTypeRef[] arg_tys = Stream
-                .of(CollectUtils.toArray(recvTy, formalTys, Type.class))
-                .map(this::toLL)
-                .toArray(LLVMTypeRef[]::new);
-        LLVMTypeRef ret_ty = toLL(retTy);
-        return functionType(ret_ty, arg_tys);
+        List<Type> allFormals = new ArrayList<>();
+        allFormals.add(recvTy);
+        allFormals.addAll(formalTys);
+        return toLLFuncTy(retTy, allFormals);
     }
 
     /**
@@ -504,11 +510,45 @@ public class LLVMUtils {
      *         {@code retTy};
      */
     public LLVMTypeRef toLLFuncTy(Type retTy, List<? extends Type> formalTys) {
-        LLVMTypeRef[] arg_tys = formalTys.stream()
+        LLVMTypeRef[] argTypes = formalTys.stream()
                 .map(this::toLL)
                 .toArray(LLVMTypeRef[]::new);
-        LLVMTypeRef ret_ty = toLL(retTy);
-        return functionType(ret_ty, arg_tys);
+        LLVMTypeRef retType = toLL(retTy);
+        return functionType(retType, argTypes);
+    }
+
+    /** Returns an LLVM type reference for the erased return type of [pi]. */
+    public LLVMTypeRef toLLReturnType(ProcedureInstance pi) {
+        return pi instanceof MethodInstance
+                ? toLL(((MethodInstance) pi).orig().returnType())
+                : toLL(v.ts.Void());
+    }
+
+    /** Returns LLVM type references for the erased parameter types of [pi]. */
+    public LLVMTypeRef[] toLLParamTypes(ProcedureInstance pi) {
+        // Use the original procedure instance to ensure unsubstituted type parameters.
+        if (pi instanceof ConstructorInstance)
+            pi = ((ConstructorInstance) pi).orig();
+        else if (pi instanceof MethodInstance)
+            pi = ((MethodInstance) pi).orig();
+        else throw new InternalCompilerError("Unhandled procedure instance kind");
+
+        List<LLVMTypeRef> res = new ArrayList<>();
+
+        // Add implicit JNIEnv parameter.
+        if (pi.flags().isNative()) {
+            // TODO
+        }
+
+        // Add implicit receiver parameter.
+        if (!pi.flags().isStatic()) {
+            res.add(toLL(pi.container()));
+        }
+
+        // Add normal parameters.
+        pi.formalTypes().stream().map(this::toLL).forEach(res::add);
+
+        return res.toArray(new LLVMTypeRef[res.size()]);
     }
 
     /**
