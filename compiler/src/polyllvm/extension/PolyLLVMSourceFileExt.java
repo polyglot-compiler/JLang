@@ -62,12 +62,15 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
      */
     private static void buildEntryPoint(LLVMTranslator v, LLVMValueRef javaEntryPoint) {
         TypeSystem ts = v.ts;
-        LLVMTypeRef argType = v.utils.toLL(ts.arrayOf(ts.String()));
-        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context), argType);
+        LLVMTypeRef jniEnvT = v.utils.ptrTypeRef(v.utils.jniEnvType());
+        LLVMTypeRef strArgsT = v.utils.toLL(ts.arrayOf(ts.String()));
+        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context), jniEnvT, strArgsT);
 
         LLVMValueRef func = LLVMAddFunction(v.mod, Constants.ENTRY_TRAMPOLINE, funcType);
 
-        LLVMMetadataRef[] formals = Stream.of(ts.arrayOf(ts.String())).map(v.debugInfo::debugType).toArray(LLVMMetadataRef[]::new);
+        LLVMMetadataRef[] formals = Stream.of(ts.Object(), ts.arrayOf(ts.String()))
+                .map(v.debugInfo::debugType)
+                .toArray(LLVMMetadataRef[]::new);
         LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(v.debugInfo.diBuilder, new PointerPointer<>(formals), formals.length);
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
         v.debugInfo.funcDebugInfo(func, Constants.ENTRY_TRAMPOLINE, Constants.ENTRY_TRAMPOLINE, funcDiType, 0);
@@ -75,7 +78,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(v.context, func, "body");
         LLVMPositionBuilderAtEnd(v.builder, block);
 
-        v.utils.buildProcCall(javaEntryPoint, LLVMGetFirstParam(func));
+        v.utils.buildProcCall(javaEntryPoint, LLVMGetParam(func, 1));
         LLVMBuildRetVoid(v.builder);
         v.debugInfo.popScope();
     }

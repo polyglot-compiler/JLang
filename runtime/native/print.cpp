@@ -1,6 +1,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include <jni.h>
 #include "rep.h"
 
 static void printJavaString(jstring s) {
@@ -14,80 +15,80 @@ static void printJavaString(jstring s) {
 
 extern "C" {
 
-void Java_java_lang_System_PrintStream_println__() {
+void Java_java_lang_System_PrintStream_println__(JNIEnv* env) {
     printf("\n");
 }
 
-void Java_java_lang_System_PrintStream_print__Ljava_lang_String_2(jstring s) {
+void Java_java_lang_System_PrintStream_print__Ljava_lang_String_2(JNIEnv* env, jstring s) {
     printJavaString(s);
 }
 
-void Java_java_lang_System_PrintStream_println__Ljava_lang_String_2(jstring s) {
+void Java_java_lang_System_PrintStream_println__Ljava_lang_String_2(JNIEnv* env, jstring s) {
     printJavaString(s);
     printf("\n");
 }
 
-void Java_java_lang_System_PrintStream_print__Z(jboolean n) {
+void Java_java_lang_System_PrintStream_print__Z(JNIEnv* env, jboolean n) {
     printf("%s", n ? "true" : "false");
 }
 
-void Java_java_lang_System_PrintStream_println__Z(jboolean n) {
+void Java_java_lang_System_PrintStream_println__Z(JNIEnv* env, jboolean n) {
     printf("%s\n", n ? "true" : "false");
 }
 
-void Java_java_lang_System_PrintStream_print__B(jbyte n) {
+void Java_java_lang_System_PrintStream_print__B(JNIEnv* env, jbyte n) {
     printf("%d", n);
 }
 
-void Java_java_lang_System_PrintStream_println__B(jbyte n) {
+void Java_java_lang_System_PrintStream_println__B(JNIEnv* env, jbyte n) {
     printf("%d\n", n);
 }
 
-void Java_java_lang_System_PrintStream_print__S(jshort n) {
+void Java_java_lang_System_PrintStream_print__S(JNIEnv* env, jshort n) {
     printf("%d", n);
 }
 
-void Java_java_lang_System_PrintStream_println__S(jshort n) {
+void Java_java_lang_System_PrintStream_println__S(JNIEnv* env, jshort n) {
     printf("%d\n", n);
 }
 
-void Java_java_lang_System_PrintStream_print__C(jchar c) {
+void Java_java_lang_System_PrintStream_print__C(JNIEnv* env, jchar c) {
     printf("%lc", c);
 }
 
-void Java_java_lang_System_PrintStream_println__C(jchar c) {
+void Java_java_lang_System_PrintStream_println__C(JNIEnv* env, jchar c) {
     printf("%lc\n", c);
 }
 
-void Java_java_lang_System_PrintStream_print__I(jint n) {
+void Java_java_lang_System_PrintStream_print__I(JNIEnv* env, jint n) {
     printf("%d", n);
 }
 
-void Java_java_lang_System_PrintStream_println__I(jint n) {
+void Java_java_lang_System_PrintStream_println__I(JNIEnv* env, jint n) {
     printf("%d\n", n);
 }
 
-void Java_java_lang_System_PrintStream_print__J(jlong n) {
+void Java_java_lang_System_PrintStream_print__J(JNIEnv* env, jlong n) {
     printf("%ld", n);
 }
 
-void Java_java_lang_System_PrintStream_println__J(jlong n) {
+void Java_java_lang_System_PrintStream_println__J(JNIEnv* env, jlong n) {
     printf("%ld\n", n);
 }
 
-void Java_java_lang_System_PrintStream_print__F(jfloat n) {
+void Java_java_lang_System_PrintStream_print__F(JNIEnv* env, jfloat n) {
     printf("%f", n);
 }
 
-void Java_java_lang_System_PrintStream_println__F(jfloat n) {
+void Java_java_lang_System_PrintStream_println__F(JNIEnv* env, jfloat n) {
     printf("%f\n", n);
 }
 
-void Java_java_lang_System_PrintStream_print__D(jdouble n) {
+void Java_java_lang_System_PrintStream_print__D(JNIEnv* env, jdouble n) {
     printf("%f", n);
 }
 
-void Java_java_lang_System_PrintStream_println__D(jdouble n) {
+void Java_java_lang_System_PrintStream_println__D(JNIEnv* env, jdouble n) {
     printf("%f\n", n);
 }
 
@@ -106,61 +107,61 @@ jstring cstring_to_jstring(const char* cstr) {
     return jstr;
 }
 
-jstring Java_java_lang_String_valueOf__Z(jboolean b) {
+jstring Java_java_lang_String_valueOf__Z(JNIEnv* env, jboolean b) {
    const char* str = b ? "true" : "false";
    return cstring_to_jstring(str);
 }
 
-jstring Java_java_lang_String_valueOf__B(jbyte n) {
+jstring Java_java_lang_String_valueOf__B(JNIEnv* env, jbyte n) {
     size_t len = 5; //Max of 4 chars for byte, 1 char for null terminator
     char str[len];
     sprintf(str, "%d", n);
     return cstring_to_jstring(str);
 }
 
-jstring Java_java_lang_String_valueOf__C(jchar c) {
+jstring Java_java_lang_String_valueOf__C(JNIEnv* env, jchar c) {
     size_t len = 3; //Max of 2 chars for jchar (as java characters are 2 bytes), 1 char for null terminator
     char str[len];
     sprintf(str, "%lc", c);
     return cstring_to_jstring(str);
 }
 
-jstring Java_java_lang_String_valueOf__S(jshort n) {
+jstring Java_java_lang_String_valueOf__S(JNIEnv* env, jshort n) {
     size_t len = 7; //Max of 6 chars for short, 1 char for null terminator
     char str[len];
     sprintf(str, "%d", n);
     return cstring_to_jstring(str);
 }
 
-jstring Java_java_lang_String_valueOf__I(jint n) {
+jstring Java_java_lang_String_valueOf__I(JNIEnv* env, jint n) {
     size_t len = 12; //Max of 11 chars for int, 1 char for null terminator
     char str[len];
     sprintf(str, "%d", n);
     return cstring_to_jstring(str);
 }
 
-jstring Java_java_lang_String_valueOf__J(jlong n) {
+jstring Java_java_lang_String_valueOf__J(JNIEnv* env, jlong n) {
     size_t len = 21; //Max of 20 chars for long, 1 char for null terminator
     char str[len];
     sprintf(str, "%ld", n);
     return cstring_to_jstring(str);
 }
 
-jstring Java_java_lang_String_valueOf__F(jfloat n) {
+jstring Java_java_lang_String_valueOf__F(JNIEnv* env, jfloat n) {
     size_t len = 50; // Overestimate.
     char str[len];
     sprintf(str, "%f", n);
     return cstring_to_jstring(str);
 }
 
-jstring Java_java_lang_String_valueOf__D(jdouble n) {
+jstring Java_java_lang_String_valueOf__D(JNIEnv* env, jdouble n) {
     size_t len = 50; // Overestimate.
     char str[len];
     sprintf(str, "%f", n);
     return cstring_to_jstring(str);
 }
 
-void Java_java_lang_System_PrintStream_flush__() {
+void Java_java_lang_System_PrintStream_flush__(JNIEnv* env) {
     fflush(stdout);
 }
 

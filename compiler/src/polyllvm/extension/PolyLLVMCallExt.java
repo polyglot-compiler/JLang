@@ -13,8 +13,6 @@ import polyllvm.visit.LLVMTranslator;
 import polyllvm.visit.LLVMTranslator.DispatchInfo;
 
 import java.lang.Override;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -69,43 +67,13 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
     }
 
     @Override
-    public Node leaveTranslateLLVM(LLVMTranslator v) {
-        Call n = node();
-        MethodInstance mi = n.methodInstance();
-
-        LLVMTypeRef retType = v.utils.toLLReturnType(mi);
-        LLVMTypeRef[] paramTypes = v.utils.toLLParamTypes(mi);
-        LLVMTypeRef funcType = v.utils.functionType(retType, paramTypes);
-
-        LLVMValueRef[] args = buildErasedArgs(v, paramTypes);
-        LLVMValueRef funcPtr = buildFuncPtr(v, funcType);
-
-        if (mi.returnType().isVoid()) {
-            // Procedure call.
-            v.utils.buildProcCall(funcPtr, args);
-        }
-        else {
-            // Function call; bitcast result to handle erasure.
-            LLVMValueRef call = v.utils.buildFunCall(funcPtr, args);
-            LLVMTypeRef resType = v.utils.toLL(mi.returnType());
-            LLVMValueRef erasureCast = LLVMBuildBitCast(v.builder, call, resType, "cast.erasure");
-            v.addTranslation(n, erasureCast);
-        }
-
-        return super.leaveTranslateLLVM(v);
-    }
-
-    /**
-     * Build the function pointer for this call.
-     * Takes in a pre-computed function type to avoid having to recompute it.
-     */
     protected LLVMValueRef buildFuncPtr(LLVMTranslator v, LLVMTypeRef funcType) {
         Call n = node();
         MethodInstance mi = n.methodInstance();
 
         if (direct) {
             // Direct (static, final, private, etc.) call.
-            return buildDirectFuncPtr(v, mi, funcType);
+            return super.buildFuncPtr(v, funcType);
         } else {
             ReferenceType recvTy = n.target().type().toReference();
             if (recvTy.isClass() && recvTy.toClass().flags().isInterface()) {
@@ -116,12 +84,6 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
                 return buildInstanceMethodPtr(v, mi);
             }
         }
-    }
-
-    protected LLVMValueRef buildDirectFuncPtr(
-            LLVMTranslator v, MethodInstance mi, LLVMTypeRef funcType) {
-        String funcName = v.mangler.mangleProcName(mi);
-        return v.utils.getFunction(funcName, funcType);
     }
 
     protected LLVMValueRef buildInstanceMethodPtr(LLVMTranslator v, MethodInstance mi) {
@@ -173,40 +135,9 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         return LLVMBuildBitCast(v.builder, funcPtr, funcPtrT, "cast.interface.method");
     }
 
-    /**
-     * Returns the LLVM arguments for this call, including implicit receiver and JNI arguments.
-     * Casts each argument to the type that the callee expects (due to erasure).
-     */
-    protected LLVMValueRef[] buildErasedArgs(LLVMTranslator v, LLVMTypeRef[] paramTypes) {
-        Call n = node();
-        MethodInstance mi = n.methodInstance();
-        List<LLVMValueRef> rawArgs = new ArrayList<>();
-
-        // Add JNIEnv reference.
-        if (mi.flags().isNative()) {
-            // TODO
-            // rawArgs.add(v.utils.getGlobal(Constants.JNI_ENV_VAR_NAME, v.utils.i8()));
-        }
-
-        // Add receiver argument.
-        if (!mi.flags().isStatic()) {
-            rawArgs.add(v.getTranslation(n.target()));
-        }
-
-        // Add normal arguments.
-        n.arguments().stream()
-                .map(a -> (LLVMValueRef) v.getTranslation(a))
-                .forEach(rawArgs::add);
-
-        // Cast all arguments to erased types.
-        LLVMValueRef[] res = rawArgs.toArray(new LLVMValueRef[rawArgs.size()]);
-        assert res.length == paramTypes.length
-                : "Number of args does not match number of parameters";
-        for (int i = 0; i < res.length; ++i) {
-            res[i] = LLVMBuildBitCast(v.builder, res[i], paramTypes[i], "cast.erasure");
-        }
-
-        return res;
+    @Override
+    protected LLVMValueRef buildReceiverArg(LLVMTranslator v) {
+        return v.getTranslation(node().target());
     }
 
     @Override

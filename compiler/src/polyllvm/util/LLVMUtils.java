@@ -139,6 +139,10 @@ public class LLVMUtils {
         return LLVMPointerType(elemType, Constants.LLVM_ADDR_SPACE);
     }
 
+    public LLVMTypeRef jniEnvType() {
+        return i8();
+    }
+
     public LLVMTypeRef getOrCreateNamedOpaqueStruct(String mangledName) {
         LLVMTypeRef res = LLVMGetTypeByName(v.mod, mangledName);
         if (res == null)
@@ -517,6 +521,11 @@ public class LLVMUtils {
         return functionType(retType, argTypes);
     }
 
+    /** Returns the (erased) LLVM type reference for the given procedure */
+    public LLVMTypeRef toLL(ProcedureInstance pi) {
+        return functionType(toLLReturnType(pi), toLLParamTypes(pi));
+    }
+
     /** Returns an LLVM type reference for the erased return type of [pi]. */
     public LLVMTypeRef toLLReturnType(ProcedureInstance pi) {
         return pi instanceof MethodInstance
@@ -537,7 +546,7 @@ public class LLVMUtils {
 
         // Add implicit JNIEnv parameter.
         if (pi.flags().isNative()) {
-            // TODO
+            res.add(ptrTypeRef(jniEnvType()));
         }
 
         // Add implicit receiver parameter.
@@ -626,5 +635,4 @@ public class LLVMUtils {
             return 64;
         throw new InternalCompilerError("Type " + t + " is not an integral type");
     }
-
 }

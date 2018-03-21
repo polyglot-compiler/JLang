@@ -29,18 +29,15 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
             PolyLLVMClassDeclExt.initClassDataStructures(n.type().toClass(), v);
         }
 
-        ConstructorInstance ci = n.constructorInstance();
-        LLVMValueRef[] args = n.arguments().stream()
-                .map(v::getTranslation)
-                .toArray(LLVMValueRef[]::new);
-        LLVMValueRef size = v.obj.sizeOf(ci.container());
-        v.addTranslation(n, translateWithArgsAndSize(v, args, size, ci));
+        // Most of the translation happens in this super call.
         return super.leaveTranslateLLVM(v);
     }
 
     /** Translate with specified arguments and size. */
     public static LLVMValueRef translateWithArgsAndSize(
             LLVMTranslator v, LLVMValueRef[] args, LLVMValueRef size, ConstructorInstance ci) {
+        // TODO: This duplicates code elsewhere. Restructure.
+
         ReferenceType clazz = ci.container();
 
         // Allocate space for the new object.
@@ -58,22 +55,46 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         // Call the constructor function
         String mangledFuncName = v.mangler.mangleProcName(ci);
 
-        LLVMTypeRef func_ty = v.utils.toLLFuncTy(
-                clazz, v.ts.Void(), v.utils.formalsErasureLL(ci));
-        LLVMValueRef func = v.utils.getFunction(mangledFuncName, func_ty);
+        LLVMTypeRef funcType = v.utils.toLL(ci);
+        LLVMValueRef funcPtr = v.utils.getFunction(mangledFuncName, funcType);
 
         // Bitcast the function so that the formal types are the types that
         // the arguments were cast to by DesugarImplicitConversions. It is
         // needed due to potential mismatch between the types caused by erasure.
         LLVMTypeRef funcTyCast = v.utils.toLLFuncTy(
                 clazz, v.ts.Void(), ci.formalTypes());
-        func = LLVMBuildBitCast(v.builder, func, v.utils.ptrTypeRef(funcTyCast), "cast");
+        funcPtr = LLVMBuildBitCast(v.builder, funcPtr, v.utils.ptrTypeRef(funcTyCast), "cast");
 
         LLVMValueRef[] llvmArgs = Stream.concat(
                 Stream.of(objCast), Arrays.stream(args))
                 .toArray(LLVMValueRef[]::new);
-        v.utils.buildProcCall(func, llvmArgs);
+        v.utils.buildProcCall(funcPtr, llvmArgs);
 
         return objCast;
+    }
+
+    @Override
+    protected LLVMValueRef buildReceiverArg(LLVMTranslator v) {
+        New n = (New) node();
+        ConstructorInstance ci = n.constructorInstance();
+        ReferenceType clazz = ci.container();
+        LLVMValueRef size = v.obj.sizeOf(ci.container());
+
+        // Allocate space for the new object.
+        LLVMValueRef calloc = LLVMGetNamedFunction(v.mod, Constants.CALLOC);
+        LLVMValueRef rawPtr = v.utils.buildFunCall(calloc, size);
+
+        // Bitcast object
+        LLVMValueRef obj = LLVMBuildBitCast(v.builder, rawPtr, v.utils.toLL(clazz), "cast.new");
+
+        // Set the Dispatch vector
+        LLVMValueRef gep = v.obj.buildDispatchVectorElementPtr(obj, clazz);
+        LLVMValueRef dvGlobal = v.dv.getDispatchVectorFor(clazz);
+        LLVMBuildStore(v.builder, dvGlobal, gep);
+
+        // The receiver should be the eventual result of translating this node.
+        v.addTranslation(n, obj);
+
+        return obj;
     }
 }

@@ -18,6 +18,8 @@
   abort();
 }
 
+extern "C" {
+
 jint jni_GetVersion(JNIEnv *env) {
     // This is the correct version for Java SE 7 too.
     return JNI_VERSION_1_6;
@@ -1255,3 +1257,5 @@ const struct JNIInvokeInterface_ jni_InvokeInterface = {
 };
 
 extern const JavaVM jni_MainJavaVM = {&jni_InvokeInterface};
+
+} // extern "C"

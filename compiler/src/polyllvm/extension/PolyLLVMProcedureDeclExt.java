@@ -10,8 +10,6 @@ import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -32,18 +30,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         if (noImplementation(pi))
             return super.overrideTranslateLLVM(parent, v); // Ignore native and abstract methods.
 
-        // Build function type.
-        Type retType = n instanceof MethodDecl
-                ? ((MethodDecl) n).returnType().type()
-                : ts.Void();
-        List<Type> formalTypes = n.formals().stream()
-                .map(Formal::declType)
-                .collect(Collectors.toList());
-        ReferenceType target = pi.container();
-        LLVMTypeRef funcType = pi.flags().isStatic()
-                ? v.utils.toLLFuncTy(retType, formalTypes)
-                : v.utils.toLLFuncTy(target, retType, formalTypes);
-
+        LLVMTypeRef funcType = v.utils.toLL(pi);
         LLVMValueRef funcRef = v.utils.getFunction(v.mangler.mangleProcName(pi), funcType);
         v.debugInfo.funcDebugInfo(n, funcRef);
         v.pushFn(funcRef);
@@ -85,6 +72,9 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         n = (ProcedureDecl) lang().visitChildren(n, v);
 
         // Add void return if necessary.
+        Type retType = n instanceof MethodDecl
+                ? ((MethodDecl) n).returnType().type()
+                : ts.Void();
         if (!v.utils.blockTerminated()) {
             if (retType.isVoid()) {
                 LLVMBuildRetVoid(v.builder);
