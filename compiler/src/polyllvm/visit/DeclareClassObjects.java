@@ -21,6 +21,9 @@ public class DeclareClassObjects extends DesugarVisitor {
 
     @Override
     protected ClassBody leaveClassBody(ParsedClassType ct, ClassBody cb) {
+        if (ct.flags().isInterface() || ct.flags().isAbstract())
+            return cb;
+
         Position pos = ct.position();
 
         String className = getClassObjectName(ct);
