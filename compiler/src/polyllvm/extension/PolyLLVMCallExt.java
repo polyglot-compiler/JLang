@@ -103,7 +103,7 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
         Call n = node();
         LLVMValueRef recv = v.getTranslation(n.target());
         ReferenceType recvTy = n.target().type().toReference();
-        DispatchInfo dispInfo = v.dispatchInfo(recvTy, mi.orig());
+        DispatchInfo dispInfo = v.dispatchInfo(recvTy, mi);
 
         ClassType intf = dispInfo.intfErasure();
         LLVMValueRef intf_id_global = v.classObjs.toTypeIdentity(intf);

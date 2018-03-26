@@ -638,16 +638,15 @@ public class LLVMTranslator extends NodeVisitor {
      * @param mi
      * @param lst
      */
-    public int indexOfOverridingMethod(MethodInstance mi,
-            List<MethodInstance> lst) {
+    public int indexOfOverridingMethod(MethodInstance mi, List<MethodInstance> lst) {
         for (int j = lst.size() - 1; j >= 0; --j) {
             JL5MethodInstance mj = (JL5MethodInstance) lst.get(j);
-            if (ts.areOverrideEquivalent((JL5MethodInstance) mi, mj))
+            if (ts.areOverrideEquivalent((JL5MethodInstance) mi, mj)) {
                 return j;
+            }
         }
         throw new InternalCompilerError(
-                "Could not find a method that is override-equivalent with "
-                        + mi.signature());
+                "Could not find a method that is override-equivalent with " + mi.signature());
     }
 
     /**

@@ -138,7 +138,7 @@ public class DispatchVector_c implements DispatchVector {
     public LLVMValueRef buildFuncElementPtr(
             LLVMValueRef dvPtr, ReferenceType recvTy, MethodInstance mi) {
         structTypeRefNonOpaque(recvTy); // Ensure non-opaque type.
-        int idx = v.dispatchInfo(recvTy, mi.orig()).methodIndex();
+        int idx = v.dispatchInfo(recvTy, mi).methodIndex();
         return v.utils.buildStructGEP(dvPtr, 0, Layout.CLASS_METHODS.ordinal(), idx);
     }
 }
