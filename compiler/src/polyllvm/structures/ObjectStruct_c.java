@@ -139,7 +139,10 @@ public class ObjectStruct_c implements ObjectStruct {
     /** Returns an ordered list of all type-erased fields in the given reference type. */
     protected List<FieldInstance> getOrComputeInstanceFields(ReferenceType rt) {
         ClassType erased = v.utils.erasureLL(rt);
-        return fieldCache.computeIfAbsent(erased, (key) -> {
+
+        // Note: cannot use Map#computeIfAbsent here, because that combined with
+        // recursion leads to a ConcurrentModificationException.
+        if (!fieldCache.containsKey(erased)) {
 
             // Add fields from super type.
             List<FieldInstance> res = new ArrayList<>();
@@ -152,7 +155,9 @@ public class ObjectStruct_c implements ObjectStruct {
                     .sorted(Comparator.comparing(VarInstance::name))
                     .forEach(res::add);
 
-            return res;
-        });
+            fieldCache.put(erased, res);
+        }
+
+        return fieldCache.get(erased);
     }
 }
