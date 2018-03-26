@@ -6,15 +6,11 @@ import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
 import polyglot.types.ParsedClassType;
 import polyglot.types.SemanticException;
-import polyglot.types.TypeSystem;
 import polyglot.util.InternalCompilerError;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
 import polyllvm.visit.*;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -64,12 +60,13 @@ public class PolyLLVMDesugared extends AbstractGoal {
     }
 
     @Override
-    public Collection<Goal> prerequisiteGoals(Scheduler scheduler) {
-        TypeSystem ts = job.extensionInfo().typeSystem();
-        List<Goal> prereqs = new ArrayList<>(super.prerequisiteGoals(scheduler));
+    public Pass createPass(ExtensionInfo extInfo) {
 
-        // Resolve signatures for any class that we might reference in a
-        // desugar transformation.
+        Pass[] passes = Stream.of(goals)
+                .map(g -> g.createPass(extInfo))
+                .toArray(Pass[]::new);
+
+        // List of types needed by the desugar transformations.
         String[] neededTypes = {
                 "java.lang.Class",
                 "java.lang.ClassCastException",
@@ -84,34 +81,36 @@ public class PolyLLVMDesugared extends AbstractGoal {
                 Constants.RUNTIME_ARRAY_TYPE,
                 Constants.RUNTIME_HELPER
         };
-        try {
-            for (String t : neededTypes) {
-                prereqs.add(scheduler.SignaturesResolved((ParsedClassType) ts.typeForName(t)));
-            }
-        } catch (SemanticException e) {
-            throw new InternalCompilerError(e);
-        }
-
-        return prereqs;
-    }
-
-    @Override
-    public Pass createPass(ExtensionInfo extInfo) {
-        // Make sure we have not already run the desugar passes.
-        if (attempted)
-            throw new InternalCompilerError(
-                    "Desugaring passes should only be run once per job.\n" +
-                            "They are not idempotent!\n" + job.toString());
-        attempted = true;
-
-        Pass[] passes = Stream.of(goals)
-                .map(g -> g.createPass(extInfo))
-                .toArray(Pass[]::new);
 
         return new AbstractPass(this) {
 
             @Override
             public boolean run() {
+
+                // Desugar passes depend on the available of certain types such as AssertionError
+                // and ClassCastException. Here we ensure that those types are resolved.
+                // It's difficult to express these dependencies as explicit prerequisites for
+                // the overall desugaring goal, because the class types might not even exist yet.
+                for (String t : neededTypes) {
+                    try {
+                        Scheduler scheduler = extInfo.scheduler();
+                        ParsedClassType ct = (ParsedClassType) extInfo.typeSystem().typeForName(t);
+                        Goal g = scheduler.SignaturesResolved(ct);
+                        if (!scheduler.reached(g)) {
+                            throw new MissingDependencyException(g);
+                        }
+                    }
+                    catch (SemanticException e) {
+                        throw new InternalCompilerError(e);
+                    }
+                }
+
+                // Make sure we have not already run the desugar passes.
+                if (attempted)
+                    throw new InternalCompilerError(
+                            "Desugaring passes should only be run once per job.\n" +
+                                    "They are not idempotent!\n" + job.toString());
+                attempted = true;
 
                 // Run all sub-passes in sequence.
                 for (Pass p : passes) {

@@ -5,7 +5,7 @@ import polyglot.ext.jl5.ast.JL5ExtFactory_c;
 import polyglot.ext.jl7.JL7ExtensionInfo;
 import polyglot.ext.jl7.ast.JL7ExtFactory_c;
 import polyglot.frontend.Scheduler;
-import polyglot.main.*;
+import polyglot.main.Options;
 import polyglot.main.Version;
 import polyglot.types.TypeSystem;
 import polyllvm.ast.PolyLLVMExtFactory_c;
