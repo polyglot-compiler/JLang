@@ -59,6 +59,25 @@ public class PolyLLVMDesugared extends AbstractGoal {
         };
     }
 
+    /**
+     * List of types needed by desugar transformations.
+     * Used to find missing dependencies ahead-of-time.
+     */
+    private static final String[] neededTypes = {
+            "java.lang.Class",
+            "java.lang.ClassCastException",
+            "java.lang.NullPointerException",
+            "java.lang.IndexOutOfBoundsException",
+            "java.lang.ArrayIndexOutOfBoundsException",
+            "java.lang.AssertionError",
+            "java.lang.Throwable",
+            "java.lang.Exception",
+            "java.lang.Error",
+            Constants.RUNTIME_ARRAY,
+            Constants.RUNTIME_ARRAY_TYPE,
+            Constants.RUNTIME_HELPER
+    };
+
     @Override
     public Pass createPass(ExtensionInfo extInfo) {
 
@@ -66,39 +85,18 @@ public class PolyLLVMDesugared extends AbstractGoal {
                 .map(g -> g.createPass(extInfo))
                 .toArray(Pass[]::new);
 
-        // List of types needed by the desugar transformations.
-        String[] neededTypes = {
-                "java.lang.Class",
-                "java.lang.ClassCastException",
-                "java.lang.NullPointerException",
-                "java.lang.IndexOutOfBoundsException",
-                "java.lang.ArrayIndexOutOfBoundsException",
-                "java.lang.AssertionError",
-                "java.lang.Throwable",
-                "java.lang.Exception",
-                "java.lang.Error",
-                Constants.RUNTIME_ARRAY,
-                Constants.RUNTIME_ARRAY_TYPE,
-                Constants.RUNTIME_HELPER
-        };
 
         return new AbstractPass(this) {
 
             @Override
             public boolean run() {
 
-                // Desugar passes depend on the available of certain types such as AssertionError
-                // and ClassCastException. Here we ensure that those types are resolved.
-                // It's difficult to express these dependencies as explicit prerequisites for
-                // the overall desugaring goal, because the class types might not even exist yet.
+                // Eagerly query the members for types needed by desugar transformations.
+                // This catches missing dependency exceptions ahead-of-time.
                 for (String t : neededTypes) {
                     try {
-                        Scheduler scheduler = extInfo.scheduler();
                         ParsedClassType ct = (ParsedClassType) extInfo.typeSystem().typeForName(t);
-                        Goal g = scheduler.SignaturesResolved(ct);
-                        if (!scheduler.reached(g)) {
-                            throw new MissingDependencyException(g);
-                        }
+                        ct.members(); // Force missing dependency exceptions.
                     }
                     catch (SemanticException e) {
                         throw new InternalCompilerError(e);
