@@ -34,10 +34,6 @@ public class Constants {
     public static final int DEBUG_INFO_VERSION = 3;
     public static final int DEBUG_DWARF_VERSION = 2;
 
-    /** Offset from start of an interface dispatch vector to the 0th method. */
-    public static final int INTF_DISP_VEC_OFFSET = 0;
-
-
     /**
      * The default size of the table for interfaces
      */

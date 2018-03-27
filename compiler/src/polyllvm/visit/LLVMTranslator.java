@@ -608,9 +608,10 @@ public class LLVMTranslator extends NodeVisitor {
      */
     private int methodIndexInCDV(ReferenceType recvTy, MethodInstance mi) {
         assert isArrayOrPlainClass(recvTy);
-
-        List<MethodInstance> cdvMethods = cdvMethods(recvTy);
-        return indexOfOverridingMethod(mi, cdvMethods);
+        List<MethodInstance> cdvMethods = cdvMethods(recvTy).stream()
+                .map(MethodInstance::orig)
+                .collect(Collectors.toList());
+        return cdvMethods.indexOf(mi.orig());
     }
 
     /**
@@ -625,8 +626,7 @@ public class LLVMTranslator extends NodeVisitor {
         assert recvTy.flags().isInterface();
 
         List<MethodInstance> idvMethods = idvMethods(recvTy);
-        int idx = indexOfOverridingMethod(mi, idvMethods);
-        return Constants.INTF_DISP_VEC_OFFSET + idx;
+        return indexOfOverridingMethod(mi, idvMethods);
     }
 
     /**
@@ -639,12 +639,10 @@ public class LLVMTranslator extends NodeVisitor {
      * @param lst
      */
     public int indexOfOverridingMethod(MethodInstance mi, List<MethodInstance> lst) {
-        for (int j = lst.size() - 1; j >= 0; --j) {
-            JL5MethodInstance mj = (JL5MethodInstance) lst.get(j);
-            if (ts.areOverrideEquivalent((JL5MethodInstance) mi, mj)) {
+        // Notice that we operate on non-substituted method instances by calling orig().
+        for (int j = lst.size() - 1; j >= 0; --j)
+            if (ts.areOverrideEquivalent((JL5MethodInstance) mi, (JL5MethodInstance) lst.get(j)))
                 return j;
-            }
-        }
         throw new InternalCompilerError(
                 "Could not find a method that is override-equivalent with " + mi.signature());
     }

@@ -396,7 +396,7 @@ public class LLVMUtils {
      */
     private LLVMTypeRef[] toIDVTySlots(ClassType intf) {
         List<MethodInstance> methods = v.idvMethods(erasureLL(intf));
-        LLVMTypeRef[] res = new LLVMTypeRef[Constants.INTF_DISP_VEC_OFFSET + methods.size()];
+        LLVMTypeRef[] res = new LLVMTypeRef[methods.size()];
         int idx = 0;
         for (MethodInstance m : methods) {
             LLVMTypeRef m_ty = toLLFuncTy(intf, m.returnType(),
@@ -470,25 +470,21 @@ public class LLVMUtils {
         // as to get the right mangled name and signature.
         // However, method signatures in cdvMethods do not in general (due to
         // erasure) override those in idvMethods.
+        // TODO(gharrma): I suspect this could be simplified; why is the above comment true?
         List<MethodInstance> clazzMethods = v.cdvMethods(clazz);
         List<MethodInstance> intfMethods = v.idvMethods(intf);
-        // Fortunately, method signatures in clazzMethods do override those in
-        // intfMethods.
+        // Fortunately, method signatures in clazzMethods do override those in intfMethods.
         for (int idxI = 0; idxI < idvSize; ++idxI) {
             MethodInstance intfM = intfMethods.get(idxI);
             int idxC = v.indexOfOverridingMethod(intfM, clazzMethods);
             // The idxI-th method in IDV is the idxC-th method in CDV.
             MethodInstance cdvM = cdvMethods.get(idxC);
-            LLVMTypeRef cdvM_LLTy = toLLFuncTy(clazz, cdvM.returnType(),
-                    cdvM.formalTypes());
-            LLVMValueRef funcVal = getFunction(
-                    v.mangler.mangleProcName(cdvM), cdvM_LLTy);
+            LLVMTypeRef cdvM_LLTy = toLLFuncTy(clazz, cdvM.returnType(), cdvM.formalTypes());
+            LLVMValueRef funcVal = getFunction(v.mangler.mangleProcName(cdvM), cdvM_LLTy);
             // Cast funcVal to the method signature used by IDV
             MethodInstance idvM = idvMethods.get(idxI);
-            LLVMTypeRef idvM_LLTy = toLLFuncTy(intf, idvM.returnType(),
-                    idvM.formalTypes());
-            LLVMValueRef cast = LLVMConstBitCast(funcVal,
-                    ptrTypeRef(idvM_LLTy));
+            LLVMTypeRef idvM_LLTy = toLLFuncTy(intf, idvM.returnType(), idvM.formalTypes());
+            LLVMValueRef cast = LLVMConstBitCast(funcVal, ptrTypeRef(idvM_LLTy));
             res[idxI] = cast;
         }
         return res;
