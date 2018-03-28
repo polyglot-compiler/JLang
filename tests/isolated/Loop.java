@@ -38,5 +38,13 @@ public class Loop {
             ++i;
         } while (i < n);
         System.out.println();
+
+        i = 0;
+        for (;;) {
+            ++i;
+            break;
+        }
+        for (; i == 0; );
+        System.out.println(i);
     }
 }

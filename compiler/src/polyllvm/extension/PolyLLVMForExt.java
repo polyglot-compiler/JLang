@@ -8,6 +8,7 @@ import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
 
+import static org.bytedeco.javacpp.LLVM.LLVMBuildBr;
 import static org.bytedeco.javacpp.LLVM.LLVMPositionBuilderAtEnd;
 
 public class PolyLLVMForExt extends PolyLLVMExt {
@@ -34,9 +35,13 @@ public class PolyLLVMForExt extends PolyLLVMExt {
         n.visitList(n.inits(), v);
         v.utils.branchUnlessTerminated(cond);
 
-        // Conditional.
+        // Conditional (may be empty).
         LLVMPositionBuilderAtEnd(v.builder, cond);
-        lang().translateLLVMConditional(n.cond(), v, body, end);
+        if (n.cond() != null) {
+            lang().translateLLVMConditional(n.cond(), v, body, end);
+        } else {
+            LLVMBuildBr(v.builder, body);
+        }
 
         // Update.
         LLVMPositionBuilderAtEnd(v.builder, update);
