@@ -31,7 +31,7 @@ public class DesugarClassInitializers extends DesugarVisitor {
             return super.leaveClassBody(ct, cb);
         assert !ct.constructors().isEmpty();
 
-        // Create class initialization code in a separate method.
+        // Collect class initialization code.
         List<Stmt> initCode = new ArrayList<>();
         for (ClassMember member : cb.members()) {
 
@@ -55,6 +55,9 @@ public class DesugarClassInitializers extends DesugarVisitor {
                 initCode.add(init.body());
             }
         }
+
+        if (initCode.isEmpty())
+            return super.leaveClassBody(ct, cb); // Optimization.
 
         // Declare init method.
         MethodDecl initMethod = tnf.MethodDecl(

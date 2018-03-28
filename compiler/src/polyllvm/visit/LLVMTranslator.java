@@ -258,6 +258,16 @@ public class LLVMTranslator extends NodeVisitor {
     public List<MethodInstance> cdvMethods(ReferenceType recvTy) {
         assert isArrayOrPlainClass(recvTy);
 
+        // Get the base class type.
+        // We do this because desugaring transformations may have declared new methods,
+        // yet these new methods might not be reflected in raw and subst class types.
+        // An alternative solution would be to change CachingTransformingList (used
+        // by raw and subst class types) to adapt to growing underlying lists.
+        if (recvTy instanceof JL5SubstClassType)
+            recvTy = ((JL5SubstClassType) recvTy).base();
+        if (recvTy instanceof RawClass)
+            recvTy = ((RawClass) recvTy).base();
+
         List<MethodInstance> res = cdvMethodsCache.get(recvTy);
         if (res != null)
             return res;
@@ -270,10 +280,8 @@ public class LLVMTranslator extends NodeVisitor {
             for (MethodInstance m : nonOverridingMethods(supc)) {
                 MethodInstance m2;
                 if (recvTy.isClass() && ts.isAccessible(m, recvTy.toClass())) {
-                    // Be precise about the signature, as a subclass can refine
-                    // it.
-                    m2 = ts.findImplementingMethod(recvTy.toClass(),
-                            m);
+                    // Be precise about the signature, as a subclass can refine it.
+                    m2 = ts.findImplementingMethod(recvTy.toClass(), m);
                     if (m2 == null) {
                         if (recvTy.toClass().flags().isAbstract())
                             m2 = m; // It's OK if we couldn't find one in an
