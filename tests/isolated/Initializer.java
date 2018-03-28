@@ -10,6 +10,8 @@ class Initializer {
         System.out.println(i);
     }
 
+    Initializer(String s) {}
+
     Initializer() {
         this(27);
         System.out.println("Outer constructor");
