@@ -12,6 +12,7 @@ import polyllvm.visit.DesugarLocally;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
+import java.util.Arrays;
 
 import static org.bytedeco.javacpp.LLVM.*;
 import static polyglot.ast.Binary.*;
@@ -58,7 +59,19 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         Type elemType = n.left().type();
 
         LLVMValueRef res;
-        if (resType.isLongOrLess()) {
+        if (Arrays.asList(Binary.SHL, Binary.SHR, Binary.USHR).contains(op)) {
+            // Shift operation. See JLS SE 7, section 15.19.
+            // First ensure that the shift operand has the same type as the shifted operand.
+            right = LLVMBuildIntCast(v.builder, right, LLVMTypeOf(left), "shift.cast");
+
+            // Then mask the shift operand to keep JLS-defined behavior.
+            int numBits = v.utils.numBitsOfIntegralType(elemType.toPrimitive());
+            LLVMValueRef mask = LLVMConstInt(LLVMTypeOf(right), numBits - 1, /*sign-extend*/ 0);
+            right = LLVMBuildAnd(v.builder, right, mask, "shift.mask");
+
+            res = LLVMBuildBinOp(v.builder, llvmIntBinopCode(op, elemType), left, right, "shift");
+        }
+        else if (resType.isLongOrLess()) {
             // Integer binop.
             res = LLVMBuildBinOp(v.builder, llvmIntBinopCode(op, elemType), left, right, "ibinop");
         }

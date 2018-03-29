@@ -14,8 +14,8 @@ class Binary {
         System.out.println(1 + 2 + 3);
         System.out.println(1.0 + 2.1 == 3.1);
         System.out.println(33 << 3);
-        System.out.println(33 >> 3);
-        System.out.println(-33 >>> 3);
+        System.out.println(33 >> 3L);
+        System.out.println(-33L >>> 3);
         System.out.println(33 ^ 23);
         System.out.println(23 | 47);
         System.out.println(7 & 32);

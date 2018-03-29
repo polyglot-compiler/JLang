@@ -618,7 +618,7 @@ public class LLVMUtils {
         }
     }
 
-    private int numBitsOfIntegralType(PrimitiveType t) {
+    public int numBitsOfIntegralType(PrimitiveType t) {
         if (t.isByte())
             return 8;
         else if (t.isShort())
