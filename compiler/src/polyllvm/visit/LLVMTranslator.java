@@ -633,8 +633,13 @@ public class LLVMTranslator extends NodeVisitor {
     private int methodIndexInIDV(ClassType recvTy, MethodInstance mi) {
         assert recvTy.flags().isInterface();
 
-        List<MethodInstance> idvMethods = idvMethods(recvTy);
-        return indexOfOverridingMethod(mi, idvMethods);
+        List<MethodInstance> idvMethods = idvMethods(recvTy).stream()
+                .map(MethodInstance::orig)
+                .collect(Collectors.toList());
+        int idx = idvMethods.indexOf(mi.orig());
+        if (idx == -1)
+            throw new InternalCompilerError("Method not found");
+        return idx;
     }
 
     /**
@@ -647,12 +652,11 @@ public class LLVMTranslator extends NodeVisitor {
      * @param lst
      */
     public int indexOfOverridingMethod(MethodInstance mi, List<MethodInstance> lst) {
-        // Notice that we operate on non-substituted method instances by calling orig().
         for (int j = lst.size() - 1; j >= 0; --j)
             if (ts.areOverrideEquivalent((JL5MethodInstance) mi, (JL5MethodInstance) lst.get(j)))
                 return j;
         throw new InternalCompilerError(
-                "Could not find a method that is override-equivalent with " + mi.signature());
+                "Could not find a method that is override-equivalent with: " + mi.signature());
     }
 
     /**
