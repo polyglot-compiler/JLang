@@ -61,4 +61,13 @@ class Array implements Cloneable, Serializable {
                 throw new Error("Unhandled array base type");
         }
     }
+
+    @Override
+    public Array clone() {
+        try {
+            return (Array) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new RuntimeException("Arrays should be cloneable");
+        }
+    }
 }

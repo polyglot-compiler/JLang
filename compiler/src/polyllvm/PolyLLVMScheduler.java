@@ -6,6 +6,7 @@ import polyglot.frontend.JLExtensionInfo;
 import polyglot.frontend.Job;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
+import polyglot.types.ParsedClassType;
 import polyglot.util.InternalCompilerError;
 import polyllvm.util.PolyLLVMDesugared;
 
@@ -52,5 +53,21 @@ public class PolyLLVMScheduler extends JL7Scheduler {
             throw new InternalCompilerError(e);
         }
         return internGoal(translate);
+    }
+
+    @Override
+    public Goal SignaturesResolved(ParsedClassType ct) {
+        Goal g = super.SignaturesResolved(ct);
+        try {
+            if (ct.superType() != null) {
+                ParsedClassType superType =
+                        (ParsedClassType) ct.superType().toClass().declaration();
+                g.addPrerequisiteGoal(SignaturesResolved(superType), this);
+            }
+        }
+        catch (CyclicDependencyException e) {
+            throw new InternalCompilerError(e);
+        }
+        return g;
     }
 }

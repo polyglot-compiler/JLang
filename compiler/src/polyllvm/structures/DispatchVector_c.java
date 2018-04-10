@@ -25,7 +25,7 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class DispatchVector_c implements DispatchVector {
     protected final LLVMTranslator v;
     protected final Map<ClassType, LLVMTypeRef> typeCache = new HashMap<>();
-    protected final Map<ClassType, List<MethodInstance>> methodCached = new HashMap<>();
+    protected final Map<ClassType, List<MethodInstance>> methodCache = new HashMap<>();
 
     public DispatchVector_c(LLVMTranslator v) {
         this.v = v;

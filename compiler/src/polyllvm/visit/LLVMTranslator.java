@@ -3,7 +3,6 @@ package polyllvm.visit;
 import org.bytedeco.javacpp.LLVM.*;
 import polyglot.ast.Node;
 import polyglot.ext.jl5.types.*;
-import polyglot.ext.jl7.types.JL7TypeSystem;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.ListUtil;
@@ -13,7 +12,10 @@ import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.extension.PolyLLVMTryExt.ExceptionFrame;
 import polyllvm.structures.*;
 import polyllvm.types.PolyLLVMTypeSystem;
-import polyllvm.util.*;
+import polyllvm.util.DebugInfo;
+import polyllvm.util.LLVMUtils;
+import polyllvm.util.PolyLLVMMangler;
+import polyllvm.util.TypedNodeFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -205,240 +207,114 @@ public class LLVMTranslator extends NodeVisitor {
         return res;
     }
 
-    /**
-     * Returns the superinterfaces of interface {@code it}, including {@code it}
-     * itself. The order of interfaces in the list is not prescribed but
-     * deterministic. Any two interfaces in the returned list are not equal.
-     *
-     * @param it
-     *            should be an interface
-     * @return The interfaces of interface {@code it}, including {@code it}
-     *         itself.
-     */
-    private List<ClassType> intfHierarchy(ClassType it) {
-        assert it.flags().isInterface();
-
-        Set<ClassType> res = new LinkedHashSet<>();
-        Deque<ClassType> toVisit = new LinkedList<>();
-        toVisit.addLast(it);
-        do {
-            ClassType curIntf = toVisit.removeFirst();
-            res.add(curIntf);
-            curIntf.interfaces().stream()
-                    .forEach(rt -> toVisit.addLast(rt.toClass()));
-        } while (!toVisit.isEmpty());
-        return new ArrayList<>(res);
-    }
-
     /** Caches class-dispatch-vector methods. */
-    private HashMap<ReferenceType, List<MethodInstance>> cdvMethodsCache = new HashMap<>();
+    private Map<ReferenceType, List<MethodInstance>> cdvMethodsCache = new IdentityHashMap<>();
 
     /** Caches interface-dispatch-vector methods. */
     private HashMap<ClassType, List<MethodInstance>> idvMethodsCache = new HashMap<>();
 
     /**
-     * Returns the list of methods corresponding to those in the class dispatch
-     * vector (CDV) of reference type {@code recvTy}. The returned methods are
-     * not necessarily the exact methods used to create the CDV because the
-     * methods used to create the CDV are methods of the erasure of
-     * {@code recvTy}.
+     * Returns the list of methods in the class dispatch
+     * vector (CDV) of the reference type {@param rt}.
      *
-     * <p>
-     * In a CDV, methods declared by a superclass appear before methods added by
-     * its subclasses. Override-equivalent methods appear only once in a CDV; an
-     * overriding method is treated as member of the greatest superclass that
-     * adds the method.
+     * The actual dispatch vector methods may differ due to
+     * erasure. We preserve type variable substitutions here
+     * because they're needed to determine whether methods
+     * are override-equivalent. For example, consider the following.
      *
-     * @param recvTy
-     *            Should be an array type or a
-     *            "{@link LLVMTranslator#isArrayOrPlainClass plain}" class type.
-     * @return The list of methods corresponding to those in the class dispatch
-     *         vector of reference type {@code recvTy}.
+     * <code>
+     * class A<T> {
+     *     void f(T t) {};
+     * }
+     *
+     * class B extends A<String> {
+     *     void f(Object o) {};
+     *     void f(String s) {}; // Overrides A<T>#f(T).
+     * }
+     * </code>
+     *
+     * If we eagerly erased the supertype of B, then we could not
+     * know which method overrides {@code A<T>#f(T)}.
      */
-    public List<MethodInstance> cdvMethods(ReferenceType recvTy) {
-        assert isArrayOrPlainClass(recvTy);
+    public List<MethodInstance> cdvMethods(ReferenceType rt) {
 
-        // Get the base class type.
-        // We do this because desugaring transformations may have declared new methods,
-        // yet these new methods might not be reflected in raw and subst class types.
-        // An alternative solution would be to change CachingTransformingList (used
-        // by raw and subst class types) to adapt to growing underlying lists.
-        if (recvTy instanceof JL5SubstClassType)
-            recvTy = ((JL5SubstClassType) recvTy).base();
-        if (recvTy instanceof RawClass)
-            recvTy = ((RawClass) recvTy).base();
+        if (cdvMethodsCache.containsKey(rt))
+            return cdvMethodsCache.get(rt);
 
-        List<MethodInstance> res = cdvMethodsCache.get(recvTy);
-        if (res != null)
-            return res;
+        // Start with all methods from the supertype.
+        List<MethodInstance> supMethods = rt.superType() != null
+                ? cdvMethods(rt.superType().toClass())
+                : Collections.emptyList();
+        List<MethodInstance> res = new ArrayList<>(supMethods);
 
-        res = new ArrayList<>();
-        List<ReferenceType> hierarchy = classHierarchy(recvTy);
-        // Add the methods of the superclasses.
-        for (int i = 0; i < hierarchy.size() - 1; ++i) {
-            ClassType supc = hierarchy.get(i).toClass();
-            for (MethodInstance m : nonOverridingMethods(supc)) {
-                MethodInstance m2;
-                if (recvTy.isClass() && ts.isAccessible(m, recvTy.toClass())) {
-                    // Be precise about the signature, as a subclass can refine it.
-                    m2 = ts.findImplementingMethod(recvTy.toClass(), m);
-                    if (m2 == null) {
-                        if (recvTy.toClass().flags().isAbstract())
-                            m2 = m; // It's OK if we couldn't find one in an
-                                    // abstract class.
-                        else
-                            throw new InternalCompilerError(
-                                    "Could not find a method implementing \""
-                                            + m + "\" in " + recvTy);
-                    }
-                } else {
-                    m2 = m;
+        // Look for overriding methods.
+        for (ListIterator<MethodInstance> it = res.listIterator(); it.hasNext(); ) {
+            MethodInstance supMi = it.next();
+
+            if (!ts.isAccessible(supMi, rt))
+                continue; // If not visible, cannot override.
+
+            List<? extends MethodInstance> declared = rt.methodsNamed(supMi.name());
+            for (MethodInstance mi : declared) {
+                if (ts.areOverrideEquivalent((JL5MethodInstance) mi, (JL5MethodInstance) supMi)) {
+                    it.set(mi);
+                    break;
                 }
-                res.add(m2);
             }
         }
-        // Add the methods of the current type.
-        res.addAll(nonOverridingMethods(recvTy));
 
-        cdvMethodsCache.put(recvTy, res);
+        // Add remaining methods from this class.
+        rt.methods().stream()
+                .filter(mi -> !mi.flags().isStatic())
+                .filter(mi -> !res.contains(mi))
+                .sorted(Comparator.comparing(MethodInstance::name))
+                .forEach(res::add);
+
+        cdvMethodsCache.put(rt, res);
         return res;
     }
 
     /**
-     * Returns the list of methods corresponding to those in the interface
-     * dispatch vector (IDV) of reference type {@code recvTy}. The returned
-     * methods are not necessarily the exact methods used to create the IDV
-     * because the methods used to create the IDV are the methods of the erasure
-     * of {@code recvTy}.
-     *
-     * <p>
-     * In an IDV, methods declared by a superinterface appear <em>after</em> the
-     * methods added by its subinterfaces. Override-equivalent methods appear
-     * only once in an IDV; a method is treated as member of the first interface
-     * that declares an override-equivalent method in the list defined by
-     * {@link LLVMTranslator#intfHierarchy}.
-     *
-     * @param recvTy
-     *            should be an interface
-     * @return
+     * Returns the list of methods in the interface
+     * dispatch vector (IDV) for interface type {@code ct}.
      */
-    public List<MethodInstance> idvMethods(ClassType recvTy) {
-        assert recvTy.flags().isInterface();
+    public List<MethodInstance> idvMethods(ClassType ct) {
+        assert ct.flags().isInterface();
 
-        List<MethodInstance> res = idvMethodsCache.get(recvTy);
-        if (res != null)
-            return res;
+        if (idvMethodsCache.containsKey(ct))
+            return idvMethodsCache.get(ct);
 
-        res = new ArrayList<>();
-        List<ClassType> hierarchy = intfHierarchy(recvTy);
-        Iterator<ClassType> iter = hierarchy.iterator();
-        // Add methods of the first interface in hierarchy
-        res.addAll(iter.next().methods());
-        // Add methods of the remaining interfaces in hierarchy
-        while (iter.hasNext()) {
-            JL7TypeSystem ts = this.ts;
-            ClassType it = iter.next();
+        List<MethodInstance> res = new ArrayList<>();
+        for (ClassType it : allInterfaces(ct)) {
             for (MethodInstance mj : it.methods()) {
-                boolean seen = res.stream()
-                        .anyMatch(mi -> ts.areOverrideEquivalent(
+                boolean novel = res.stream()
+                        .noneMatch(mi -> ts.areOverrideEquivalent(
                                 (JL5MethodInstance) mi,
                                 (JL5MethodInstance) mj));
-                if (!seen)
+                if (novel) {
                     res.add(mj);
+                }
             }
         }
 
-        idvMethodsCache.put(recvTy, res);
+        idvMethodsCache.put(ct, res);
         return res;
     }
 
-    private static Comparator<MethodInstance> methodOrdByName() {
-        return new CompareMethodsByName();
-    }
-
-    private static class CompareMethodsByName
-            implements Comparator<MethodInstance> {
-        public int compare(MethodInstance m1, MethodInstance m2) {
-            return m1.name().compareTo(m2.name());
-        }
-    }
-
     /**
-     * @param rt
-     * @return The list of methods that are declared in type {@code rt} but do
-     *         not override any method declared in a superclass of {@code rt}.
-     *         The returned list of methods are sorted by name.
+     * Returns a list of all interfaces that {@code rt} implements,
+     * including itself if applicable. No duplicates.
      */
-    private List<MethodInstance> nonOverridingMethods(ReferenceType rt) {
-        return rt.methods().stream().filter(this::isNonOverriding)
-                .sorted(methodOrdByName()).collect(Collectors.toList());
-    }
-
-    /**
-     * @param clazz
-     *            the non-interface class type
-     * @return The interfaces of class {@code clazz}, including the interfaces
-     *         that {@code clazz} transitively implements. The iteration order
-     *         of the list is deterministic.
-     */
-    public List<ClassType> allInterfaces(ClassType clazz) {
-        assert !clazz.flags().isInterface();
+    public List<ClassType> allInterfaces(ReferenceType rt) {
         List<ClassType> res = new ArrayList<>();
-        addAllInterfacesOfClass(clazz, res);
+        if (rt.isClass() && rt.toClass().flags().isInterface())
+            res.add(rt.toClass());
+        for (ReferenceType it : rt.interfaces())
+            res.addAll(allInterfaces(it));
+        if (rt.superType() != null)
+            res.addAll(allInterfaces(rt.superType().toReference()));
+
         return res;
-    }
-
-    /**
-     * Appends all of {@code clazz}'s interfaces (up to transitivity) that are
-     * not already in {@code lst} to {@code lst}.
-     *
-     * @param clazz
-     *            the non-interface class type
-     * @param lst
-     *            the existing list of interfaces
-     */
-    private void addAllInterfacesOfClass(ClassType clazz, List<ClassType> lst) {
-        assert !clazz.flags().isInterface();
-        for (ReferenceType intf : clazz.interfaces()) {
-            addAllInterfacesOfIntf(intf.toClass(), lst);
-        }
-        if (clazz.superType() != null) {
-            addAllInterfacesOfClass(clazz.superType().toClass(), lst);
-        }
-    }
-
-    /**
-     * Appends all of {@code intf}'s superinterfaces (up to transitivity and
-     * reflexivity) that are not already in {@code lst} to {@code lst}.
-     *
-     * @param intf
-     *            the interface type
-     * @param lst
-     *            the existing list of interfaces
-     */
-    private void addAllInterfacesOfIntf(ClassType intf, List<ClassType> lst) {
-        assert intf.flags().isInterface();
-        if (addIfNonExistent(lst, intf)) {
-            for (ReferenceType superIntf : intf.interfaces()) {
-                addAllInterfacesOfIntf(superIntf.toClass(), lst);
-            }
-        }
-    }
-
-    /**
-     * Appends {@code t} to {@code types} if there does not exist a {@code t0}
-     * in {@code types} such that {@code t.typeEquals(t0)} is true.
-     *
-     * @return true if {@code t} is appended to {@code types}, or false
-     *         otherwise
-     */
-    private <T extends Type> boolean addIfNonExistent(List<T> types, T t) {
-        if (types.stream().anyMatch(t::typeEquals)) {
-            return false;
-        } else {
-            types.add(t);
-            return true;
-        }
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -606,20 +482,22 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     /**
-     * @param recvTy
-     *            should be an array type or a
+     * @param rt  should be an array type or a
      *            "{@link LLVMTranslator#isArrayOrPlainClass plain}" class type
-     * @param mi
-     *            a method found in type {@code recvTy} or its superclasses
+     * @param mi  a method found in type {@code rt} or its superclasses
      * @return the index of method {@code mi} in the class dispatch vector of
-     *         type {@code recvTy}.
+     *         type {@code rt}.
      */
-    private int methodIndexInCDV(ReferenceType recvTy, MethodInstance mi) {
-        assert isArrayOrPlainClass(recvTy);
-        List<MethodInstance> cdvMethods = cdvMethods(recvTy).stream()
+    private int methodIndexInCDV(ReferenceType rt, MethodInstance mi) {
+        assert isArrayOrPlainClass(rt);
+        // TODO: Verify that this is correct.
+        List<MethodInstance> cdvMethods = cdvMethods(rt).stream()
                 .map(MethodInstance::orig)
                 .collect(Collectors.toList());
-        return cdvMethods.indexOf(mi.orig());
+        int idx = cdvMethods.indexOf(mi.orig());
+        if (idx == -1)
+            throw new InternalCompilerError("Method not found in CDV: " + mi.orig());
+        return idx;
     }
 
     /**
@@ -638,7 +516,7 @@ public class LLVMTranslator extends NodeVisitor {
                 .collect(Collectors.toList());
         int idx = idvMethods.indexOf(mi.orig());
         if (idx == -1)
-            throw new InternalCompilerError("Method not found");
+            throw new InternalCompilerError("Could not find method for IDV");
         return idx;
     }
 
@@ -656,7 +534,7 @@ public class LLVMTranslator extends NodeVisitor {
             if (ts.areOverrideEquivalent((JL5MethodInstance) mi, (JL5MethodInstance) lst.get(j)))
                 return j;
         throw new InternalCompilerError(
-                "Could not find a method that is override-equivalent with: " + mi.signature());
+                "Could not find a method that is override-equivalent with " + mi);
     }
 
     /**

@@ -9,6 +9,7 @@ public class Object {
         //
         // TODO: Object#clone() is unimplemented,
         //       but don't throw an exception for now.
+        //       Note: would need to support array cloning here.
         return this;
     }
 

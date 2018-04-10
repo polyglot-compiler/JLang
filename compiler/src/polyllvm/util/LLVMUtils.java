@@ -399,8 +399,7 @@ public class LLVMUtils {
         LLVMTypeRef[] res = new LLVMTypeRef[methods.size()];
         int idx = 0;
         for (MethodInstance m : methods) {
-            LLVMTypeRef m_ty = toLLFuncTy(intf, m.returnType(),
-                    m.formalTypes());
+            LLVMTypeRef m_ty = toLLFuncTy(intf, m.returnType(), m.formalTypes());
             res[idx++] = ptrTypeRef(m_ty);
         }
         return res;
