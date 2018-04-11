@@ -36,6 +36,11 @@ public final class PolyLLVMExtFactory_c extends PolyLLVMAbstractExtFactory_c {
     }
 
     @Override
+    protected Ext extNormalAnnotationElemImpl() {
+        return new PolyLLVMAnnotationElemExt();
+    }
+
+    @Override
     protected Ext extInstanceofImpl() {
         return new PolyLLVMInstanceofExt();
     }
