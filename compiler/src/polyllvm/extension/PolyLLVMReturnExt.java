@@ -17,14 +17,29 @@ public class PolyLLVMReturnExt extends PolyLLVMExt {
         Return n = (Return) node();
         Expr e = n.expr();
 
-        // If we are within an exception frame, we may need to detour through finally blocks first.
+        LLVMValueRef retVal = null; // Return value.
+        LLVMValueRef retSlot = null; // Stack slot to store return value during finally blocks.
+        if (e != null) {
+            retVal = v.getTranslation(e);
+            if (v.needsFinallyBlockChain()) {
+                retSlot = v.utils.buildAlloca("ret.finally.slot", LLVMTypeOf(retVal));
+                LLVMBuildStore(v.builder, retVal, retSlot);
+            }
+        }
+
+        // Detour through finally blocks if necessary.
         v.buildFinallyBlockChain(/*tryCatchNestingLevel*/ 0);
 
-        LLVMValueRef res = e == null
-                ? LLVMBuildRetVoid(v.builder)
-                : LLVMBuildRet(v.builder, v.getTranslation(e));
-        v.addTranslation(n, res);
+        // Reload return value if necessary.
+        if (retSlot != null) {
+            retVal = LLVMBuildLoad(v.builder, retSlot, "load.ret.finally");
+        }
 
+        LLVMValueRef res = retVal != null
+                ? LLVMBuildRet(v.builder, retVal)
+                : LLVMBuildRetVoid(v.builder);
+
+        v.addTranslation(n, res);
         return super.leaveTranslateLLVM(v);
     }
 }

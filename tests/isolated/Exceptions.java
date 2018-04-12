@@ -28,6 +28,8 @@ public class Exceptions {
 
         crazy();
 
+        System.out.println(returnWithSideEffects());
+
         System.out.println("end");
     }
 
@@ -170,5 +172,15 @@ public class Exceptions {
             }
         }
         System.out.println("good");
+    }
+
+    static int sideEffect() {
+        System.out.println("g");
+        return 42;
+    }
+
+    static int returnWithSideEffects() {
+        try { return sideEffect(); }
+        finally { System.out.println("finally"); }
     }
 }
