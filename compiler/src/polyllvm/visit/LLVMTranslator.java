@@ -18,11 +18,12 @@ import polyllvm.util.PolyLLVMMangler;
 import polyllvm.util.TypedNodeFactory;
 
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
-/*Translates Java into LLVM IR. */
+/** Translates Java into LLVM IR. */
 public class LLVMTranslator extends NodeVisitor {
     public final PolyLLVMNodeFactory nf;
     public final PolyLLVMTypeSystem ts;
@@ -47,14 +48,43 @@ public class LLVMTranslator extends NodeVisitor {
         return ctorCounter++;
     }
 
-    /** A stack of all enclosing functions. */
-    private Deque<LLVMValueRef> functions = new ArrayDeque<>();
+    /**
+     * A function context stores data such as exception frames
+     * and label maps for the current function.
+     */
+    private static class FnCtxt {
+        final LLVMValueRef fn;
 
-    public void pushFn(LLVMValueRef fn) { functions.push(fn); }
+        /** Stack of nested exception frames, innermost first. */
+        final Deque<ExceptionFrame> exceptionFrames = new ArrayDeque<>();
 
-    public void popFn() { functions.pop(); }
+        /**
+         * Map from labels to IR locations.
+         * Labels cannot be shadowed within a function,
+         * so no need to worry about overwriting previous mappings.
+         */
+        final Map<String, LabeledStmtLocs> labelMap = new HashMap<>();
 
-    public LLVMValueRef currFn() { return functions.peek(); }
+        FnCtxt(LLVMValueRef fn) {
+            this.fn = fn;
+        }
+    }
+
+    /**
+     * A stack of all enclosing function contexts.
+     * A stack is needed to handle nested classes.
+     */
+    private Deque<FnCtxt> fnCtxts = new ArrayDeque<>();
+
+    private FnCtxt fnCtxt() { return fnCtxts.getFirst(); }
+
+    /** Must be called when entering a function. */
+    public void pushFn(LLVMValueRef fn) { fnCtxts.push(new FnCtxt(fn)); }
+
+    /** Must be called when leaving a function. */
+    public void popFn() { fnCtxts.pop(); }
+
+    public LLVMValueRef currFn() { return fnCtxts.peek().fn; }
 
     /** A list of all potential entry points (i.e., Java main functions). */
     private Map<String, LLVMValueRef> entryPoints = new HashMap<>();
@@ -331,7 +361,7 @@ public class LLVMTranslator extends NodeVisitor {
 
         // The try-catch nesting level is used to determine how many try-catch finally blocks
         // we need to run before jumping to this location.
-        private int tryCatchNestingLevel = exceptionFrames.size();
+        private int tryCatchNestingLevel = exceptionFrames().size();
 
         ControlTransferLoc(LLVMBasicBlockRef block) {
             this.block = block;
@@ -344,6 +374,10 @@ public class LLVMTranslator extends NodeVisitor {
         public int getTryCatchNestingLevel() {
             return tryCatchNestingLevel;
         }
+    }
+
+    private Map<String, LabeledStmtLocs> labelMap() {
+        return fnCtxt().labelMap;
     }
 
     // The last items in these stacks hold the destination of unlabeled continue/break statements.
@@ -364,15 +398,12 @@ public class LLVMTranslator extends NodeVisitor {
         }
     }
 
-    // Labels cannot be shadowed, so no need to worry about overwriting previous mappings.
-    private Map<String, LabeledStmtLocs> labelMap = new HashMap<>();
-
     public void pushLabel(String label, LLVMBasicBlockRef before, LLVMBasicBlockRef after) {
-        labelMap.put(label, new LabeledStmtLocs(before, after));
+        labelMap().put(label, new LabeledStmtLocs(before, after));
     }
 
     public void popLabel(String label) {
-        labelMap.remove(label);
+        labelMap().remove(label);
     }
 
     public void pushLoop(LLVMBasicBlockRef head, LLVMBasicBlockRef end) {
@@ -394,11 +425,11 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     public ControlTransferLoc getContinueLoc(String label) {
-        return label == null ? continueLocs.getLast() : labelMap.get(label).head;
+        return label == null ? continueLocs.getLast() : labelMap().get(label).head;
     }
 
     public ControlTransferLoc getBreakLoc(String label) {
-        return label == null ? breakLocs.getLast() : labelMap.get(label).end;
+        return label == null ? breakLocs.getLast() : labelMap().get(label).end;
     }
 
     /**
@@ -563,22 +594,23 @@ public class LLVMTranslator extends NodeVisitor {
     // Exception handling.
     ////////////////////////////////////////////////////////////////////////////
 
-    /** Stack of nested exception frames, innermost first. */
-    private final Deque<ExceptionFrame> exceptionFrames = new ArrayDeque<>();
+    private Deque<ExceptionFrame> exceptionFrames() {
+        return fnCtxt().exceptionFrames;
+    }
 
     /** Must be called when entering a try-catch-finally structure. */
     public void pushExceptionFrame(ExceptionFrame frame) {
-        exceptionFrames.push(frame);
+        exceptionFrames().push(frame);
     }
 
-    /** Must be called when leaving a try-catch finally structure. */
+    /** Must be called when leaving a try-catch-finally structure. */
     public void popExceptionFrame() {
-        exceptionFrames.pop();
+        exceptionFrames().pop();
     }
 
     /** Returns the landing pad in the current exception frame. */
     public LLVMBasicBlockRef currLandingPad() {
-        for (ExceptionFrame frame : exceptionFrames) {
+        for (ExceptionFrame frame : exceptionFrames()) {
             if (frame.getLpadCatch() != null)
                 return frame.getLpadCatch();
             if (frame.getLpadFinally() != null)
@@ -588,7 +620,7 @@ public class LLVMTranslator extends NodeVisitor {
     }
 
     public boolean needsFinallyBlockChain() {
-        return exceptionFrames.stream().anyMatch((ef) -> ef.getLpadFinally() != null);
+        return exceptionFrames().stream().anyMatch((ef) -> ef.getLpadFinally() != null);
     }
 
     /**
@@ -597,8 +629,8 @@ public class LLVMTranslator extends NodeVisitor {
      */
     public void buildFinallyBlockChain(int destExceptionFrameNestingLevel) {
 
-        List<ExceptionFrame> frames = exceptionFrames.stream()
-                .limit(exceptionFrames.size() - destExceptionFrameNestingLevel)
+        List<ExceptionFrame> frames = exceptionFrames().stream()
+                .limit(exceptionFrames().size() - destExceptionFrameNestingLevel)
                 .filter(f -> f.getLpadFinally() != null)
                 .collect(Collectors.toList());
 

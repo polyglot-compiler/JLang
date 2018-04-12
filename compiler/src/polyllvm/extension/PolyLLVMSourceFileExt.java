@@ -67,6 +67,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context), jniEnvT, strArgsT);
 
         LLVMValueRef func = LLVMAddFunction(v.mod, Constants.ENTRY_TRAMPOLINE, funcType);
+        v.pushFn(func);
 
         LLVMMetadataRef[] formals = Stream.of(ts.Object(), ts.arrayOf(ts.String()))
                 .map(v.debugInfo::debugType)
@@ -81,6 +82,8 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         v.utils.buildProcCall(javaEntryPoint, LLVMGetParam(func, 1));
         LLVMBuildRetVoid(v.builder);
         v.debugInfo.popScope();
+
+        v.popFn();
     }
 
     /**

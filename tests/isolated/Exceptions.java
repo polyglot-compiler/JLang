@@ -31,6 +31,8 @@ public class Exceptions {
         System.out.println(returnWithSideEffects());
 
         System.out.println("end");
+
+        nestedLandingPad();
     }
 
     public static void simple() {
@@ -182,5 +184,26 @@ public class Exceptions {
     static int returnWithSideEffects() {
         try { return sideEffect(); }
         finally { System.out.println("finally"); }
+    }
+
+    static void nestedLandingPad() {
+        try {
+            class Inner {
+                void f() {
+                    System.out.println("inner f");
+                    throw new RuntimeException();
+                }
+
+                void g() {
+                    System.out.println("inner g");
+                    f();
+                }
+            }
+            new Inner().g();
+        }
+        finally {
+            System.out.println("finally");
+            return;
+        }
     }
 }

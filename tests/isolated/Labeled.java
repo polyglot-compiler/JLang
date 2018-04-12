@@ -1,4 +1,5 @@
 class Labeled {
+
     public static void main(String[] args) {
         stmtlabel:
         System.out.println("stmtlabel");
@@ -70,5 +71,25 @@ class Labeled {
             System.out.println("yes");
         }
         System.out.println("yes");
+
+        nestedLabels();
+    }
+
+    static void nestedLabels() {
+        label: while (true) {
+            class Inner {
+                void g() {
+                    System.out.println("before inner");
+                    label: while (true)
+                        break label;
+                    System.out.println("after inner");
+                }
+            }
+            System.out.println("before outer");
+            new Inner().g();
+            System.out.println("after outer");
+            break label;
+        }
+        System.out.println("after nested");
     }
 }
