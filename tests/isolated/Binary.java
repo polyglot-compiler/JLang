@@ -77,5 +77,9 @@ class Binary {
         System.out.println(g() || f());
 
         System.out.println("hello" + " " + "world");
+
+        // Regression test.
+        System.out.println(true & false);
+        System.out.println(true & true);
     }
 }

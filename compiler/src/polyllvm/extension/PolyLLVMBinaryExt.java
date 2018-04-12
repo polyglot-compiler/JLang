@@ -58,8 +58,11 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         Operator op = n.operator();
         Type elemType = n.left().type();
 
+        boolean isShift = Arrays.asList(SHL, SHR, USHR).contains(op);
+        boolean isBitwiseOp = Arrays.asList(BIT_AND, BIT_OR, BIT_XOR).contains(op);
+
         LLVMValueRef res;
-        if (Arrays.asList(Binary.SHL, Binary.SHR, Binary.USHR).contains(op)) {
+        if (isShift) {
             // Shift operation. See JLS SE 7, section 15.19.
             // First ensure that the shift operand has the same type as the shifted operand.
             right = LLVMBuildIntCast(v.builder, right, LLVMTypeOf(left), "shift.cast");
@@ -71,8 +74,8 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
 
             res = LLVMBuildBinOp(v.builder, llvmIntBinopCode(op, elemType), left, right, "shift");
         }
-        else if (resType.isLongOrLess()) {
-            // Integer binop.
+        else if (resType.isLongOrLess() || (resType.isBoolean() && isBitwiseOp)) {
+            // Integer binop or boolean logical operator.
             res = LLVMBuildBinOp(v.builder, llvmIntBinopCode(op, elemType), left, right, "ibinop");
         }
         else if (resType.isFloat() || resType.isDouble()) {
@@ -158,7 +161,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         else if (op == SHL)     return LLVMShl;
         else if (op == USHR)    return LLVMLShr;
         else if (op == SHR)     return isUnsigned(type) ? LLVMLShr : LLVMAShr;
-        else throw new InternalCompilerError("Invalid integer operation");
+        else throw new InternalCompilerError("Invalid integer operation: " + op);
     }
 
     protected static int llvmFloatBinopCode(Operator op) {
@@ -166,7 +169,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         else if (op == SUB) return LLVMFSub;
         else if (op == MUL) return LLVMFMul;
         else if (op == DIV) return LLVMFDiv;
-        else throw new InternalCompilerError("Invalid floating point operation");
+        else throw new InternalCompilerError("Invalid floating point operation: " + op);
     }
 
     protected static int llvmICmpBinopCode(Operator op, Type t) {
@@ -176,7 +179,7 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         else if (op == NE) return LLVMIntNE;
         else if (op == GE) return isUnsigned(t) ? LLVMIntUGE : LLVMIntSGE;
         else if (op == GT) return isUnsigned(t) ? LLVMIntUGT : LLVMIntSGT;
-        else throw new InternalCompilerError("This operation is not a comparison");
+        else throw new InternalCompilerError("This operation is not a comparison: " + op);
     }
 
     protected static int llvmFCmpBinopCode(Operator op) {
@@ -187,6 +190,6 @@ public class PolyLLVMBinaryExt extends PolyLLVMExt {
         else if (op == NE) return LLVMRealONE;
         else if (op == GE) return LLVMRealOGE;
         else if (op == GT) return LLVMRealOGT;
-        else throw new InternalCompilerError("This operation is not a comparison");
+        else throw new InternalCompilerError("This operation is not a comparison: " + op);
     }
 }
