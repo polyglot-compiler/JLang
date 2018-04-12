@@ -89,5 +89,10 @@ public class Switch {
             default:
                 System.out.println("default");
         }
+
+        // Regression test.
+        switch (0) {
+            default: if (true);
+        }
     }
 }

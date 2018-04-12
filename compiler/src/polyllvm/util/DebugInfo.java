@@ -180,13 +180,10 @@ public class DebugInfo {
                     diBuilder, size, size, elemType, /*subscripts*/ null);
         }
         else if (erased.isClass()) {
-            LLVMMetadataRef superType = erased.toClass().superType() != null
-                    ? debugType(erased.toClass().superType())
-                    : null;
             debugType = LLVMDIBuilderCreateStructType(
                     diBuilder, currentScope(), erased.toString(), debugFile,
                     erased.position().line(), /*TODO*/ 0, /*TODO*/ 0, /*flags*/0 ,
-                    superType, /*TODO*/ null);
+                    /*TODO*/ null, /*TODO*/ null);
         }
         else throw new InternalCompilerError("Cannot handle " + erased.getClass());
 

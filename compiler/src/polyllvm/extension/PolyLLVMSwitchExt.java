@@ -8,9 +8,8 @@ import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.DesugarLocally;
 import polyllvm.visit.LLVMTranslator;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.lang.Override;
+import java.util.*;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -30,9 +29,9 @@ public class PolyLLVMSwitchExt extends PolyLLVMExt {
     // switch (strExpr) {
     //     case s1:
     //         ...
-    //     default:
-    //         ...
     //     case sn:
+    //         ...
+    //     default:
     //         ...
     // }
     //
@@ -51,10 +50,11 @@ public class PolyLLVMSwitchExt extends PolyLLVMExt {
     // switch (i) {
     //     case 1:
     //         ...
-    //     default:
-    //         ...
     //     case n:
     //         ...
+    //     default:
+    //         ...
+    // }
     protected Node desugarStringSwitch(Switch n, DesugarLocally v) {
         assert n.expr().type().isSubtype(v.ts.String());
         Position pos = n.position();
@@ -111,71 +111,65 @@ public class PolyLLVMSwitchExt extends PolyLLVMExt {
     @Override
     public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         Switch n = (Switch) node();
-        LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
 
-        LLVMBasicBlockRef end = v.utils.buildBlock("switch.end");
-        v.pushSwitch(end);
+        // Translate switch expression.
+        n.expr().visit(v);
+        LLVMValueRef exprRef = v.getTranslation(n.expr());
+        LLVMBasicBlockRef headBlock = LLVMGetInsertBlock(v.builder);
 
-        // Build switch blocks and map cases to blocks.
-        List<Case> cases = new ArrayList<>();
+        // Create a basic block for each switch block.
         List<LLVMBasicBlockRef> blocks = new ArrayList<>();
-        List<Integer> blockMap = new ArrayList<>();
+        for (SwitchElement e : n.elements())
+            if (e instanceof SwitchBlock)
+                blocks.add(v.utils.buildBlock("switch.case"));
+
+        // Build end block.
+        LLVMBasicBlockRef end = v.utils.buildBlock("switch.end");
+        blocks.add(end); // Append end block for convenience.
+
+        // Build switch blocks and case-to-block mappings.
+        v.pushSwitch(end); // Allows break statements to jump to end.
+        Map<Case, LLVMBasicBlockRef> blockMap = new LinkedHashMap<>(); // Excludes default case.
+        LLVMBasicBlockRef defaultBlock = end;
+        int nextBlockIdx = 0;
         for (SwitchElement elem : n.elements()) {
             if (elem instanceof Case) {
-                cases.add((Case) elem);
-                blockMap.add(blocks.size()); // Map to the next block encountered.
+                // Map case to block.
+                Case c = (Case) elem;
+                if (c.isDefault()) {
+                    defaultBlock = blocks.get(nextBlockIdx);
+                } else {
+                    blockMap.put(c, blocks.get(nextBlockIdx));
+                }
             }
             else if (elem instanceof SwitchBlock) {
-                LLVMBasicBlockRef block = v.utils.buildBlock("switch.case");
-                LLVMPositionBuilderAtEnd(v.builder, block);
+                // Build switch block and implement fall-through.
+                LLVMPositionBuilderAtEnd(v.builder, blocks.get(nextBlockIdx));
                 elem.visit(v);
-                blocks.add(block);
+                ++nextBlockIdx;
+                v.utils.branchUnlessTerminated(blocks.get(nextBlockIdx));
             }
             else {
                 throw new InternalCompilerError("Unhandled switch element");
             }
         }
-        blocks.add(end);
+        v.popSwitch();
 
-        // Implement fall-through.
-        for (int i = 0; i < blocks.size() - 1; ++i) {
-            LLVMBasicBlockRef before = blocks.get(i);
-            LLVMBasicBlockRef after = blocks.get(i + 1);
-            if (LLVMGetBasicBlockTerminator(before) == null)  {
-                LLVMPositionBuilderAtEnd(v.builder, before);
-                LLVMBuildBr(v.builder, after);
-            }
-        }
-
-        // Set the default block.
-        LLVMBasicBlockRef defaultBlock = end;
-        for (int i = 0; i < cases.size(); ++i) {
-            if (cases.get(i).isDefault()) {
-                defaultBlock = blocks.get(blockMap.get(i));
-                break;
-            }
-        }
-
-        LLVMPositionBuilderAtEnd(v.builder, prevBlock);
-        n.expr().visit(v);
-
-        LLVMValueRef exprRef = v.getTranslation(n.expr());
-        int numNormalCases = (int) cases.stream().filter(c -> !c.isDefault()).count();
-        LLVMValueRef switchRef = LLVMBuildSwitch(v.builder, exprRef, defaultBlock, numNormalCases);
+        // Build switch.
+        LLVMPositionBuilderAtEnd(v.builder, headBlock);
+        LLVMValueRef switchRef = LLVMBuildSwitch(v.builder, exprRef, defaultBlock, blockMap.size());
 
         // Add all cases.
-        for (int i = 0; i < cases.size(); ++i) {
-            Case c = cases.get(i);
-            if (c.isDefault())
-                continue;
+        for (Map.Entry<Case, LLVMBasicBlockRef> e : blockMap.entrySet()) {
+            Case c = e.getKey();
+            LLVMBasicBlockRef block = e.getValue();
+            assert !c.isDefault() : "The default case should be handled separately";
             LLVMTypeRef type = v.utils.toLL(c.expr().type());
-            LLVMValueRef val = LLVMConstInt(type, c.value(), /*sign-extend*/ 0);
-            LLVMBasicBlockRef block = blocks.get(blockMap.get(i));
-            LLVMAddCase(switchRef, val, block);
+            LLVMValueRef label = LLVMConstInt(type, c.value(), /*sign-extend*/ 0);
+            LLVMAddCase(switchRef, label, block);
         }
 
         LLVMPositionBuilderAtEnd(v.builder, end);
-        v.popSwitch();
         return n;
     }
 }
