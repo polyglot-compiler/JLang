@@ -22,7 +22,7 @@ public class Object {
         throw new RuntimeException("Object#finalize() not implemented");
     }
 
-    public final native Class getClass();
+    public final native Class<?> getClass();
 
     public native int hashCode();
 

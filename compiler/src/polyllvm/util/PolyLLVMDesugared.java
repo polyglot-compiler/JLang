@@ -69,6 +69,8 @@ public class PolyLLVMDesugared extends AbstractGoal {
             "java.lang.NullPointerException",
             "java.lang.IndexOutOfBoundsException",
             "java.lang.ArrayIndexOutOfBoundsException",
+            "java.util.Iterator",
+            "java.lang.Iterable",
             "java.lang.AssertionError",
             "java.lang.Throwable",
             "java.lang.Exception",

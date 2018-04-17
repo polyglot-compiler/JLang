@@ -140,7 +140,9 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
         // Pass enclosing instance to {@code new} expressions.
         if (n instanceof New) {
             New nw = (New) n;
-            Type container = nw.constructorInstance().container();
+            ClassType container = (ClassType) nw
+                    .constructorInstance().container()
+                    .toClass().declaration();
             if (container.isClass() && container.toClass().isInnerClass()) {
                 ClassType outer = container.toClass().outer();
                 if (container.toClass().hasEnclosingInstance(outer)) {
@@ -157,7 +159,9 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
         // Pass enclosing instance to super constructor calls.
         if (n instanceof ConstructorCall) {
             ConstructorCall cc = (ConstructorCall) n;
-            ClassType container = cc.constructorInstance().container().toClass();
+            ClassType container = (ClassType) cc
+                    .constructorInstance().container()
+                    .toClass().declaration();
             if (cc.kind().equals(ConstructorCall.SUPER) && container.isInnerClass()) {
                 if (container.hasEnclosingInstance(container.outer())) {
                     Expr enclosing = cc.qualifier() != null
