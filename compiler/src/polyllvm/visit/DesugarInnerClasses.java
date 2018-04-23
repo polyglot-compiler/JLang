@@ -102,15 +102,17 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
     }
 
     /** Given an expression, returns its enclosing instance of the specified type. */
-    private Expr getEnclosingInstance(Expr expr, ClassType targetType) {
+    private Expr getEnclosingInstance(Expr expr, ClassType targetType, boolean allowSubtype) {
         if (expr.type().typeEquals(targetType))
             return expr;
+        if (allowSubtype && expr.type().isSubtype(targetType))
+            return expr;
         Field enclosing = tnf.Field(expr.position(), expr, ENCLOSING_STR);
-        return getEnclosingInstance(enclosing, targetType);
+        return getEnclosingInstance(enclosing, targetType, allowSubtype);
     }
 
     /** Return the enclosing instance of the specified type with respect to the current class. */
-    private Expr getEnclosingInstance(Position pos, ClassType targetType) {
+    private Expr getEnclosingInstance(Position pos, ClassType targetType, boolean allowSubtype) {
         ClassType currClass = classes.peek();
 
         // If we are inside a constructor, try to use an enclosing instance formal rather than the
@@ -125,13 +127,13 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
                 assert enclosingFormals.size() == 1;
                 Formal enclosingFormal = enclosingFormals.get(0);
                 Local enclosing = tnf.Local(enclosingFormal.position(), enclosingFormal);
-                return getEnclosingInstance(enclosing, targetType);
+                return getEnclosingInstance(enclosing, targetType, allowSubtype);
             }
         }
 
         // Otherwise, look for an enclosing instance through enclosing instance fields.
         Special unqualified = tnf.UnqualifiedThis(pos, currClass);
-        return getEnclosingInstance(unqualified, targetType);
+        return getEnclosingInstance(unqualified, targetType, allowSubtype);
     }
 
     @Override
@@ -149,7 +151,7 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
                     Position pos = nw.position();
                     Expr enclosing = nw.qualifier() != null
                             ? nw.qualifier()
-                            : getEnclosingInstance(pos, outer);
+                            : getEnclosingInstance(pos, outer, /*allowSubtype*/ true);
                     List<Expr> args = concat(enclosing, nw.arguments());
                     n = tnf.New(pos, nw.type().toClass(), /*outer*/ null, args, nw.body());
                 }
@@ -163,10 +165,11 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
                     .constructorInstance().container()
                     .toClass().declaration();
             if (cc.kind().equals(ConstructorCall.SUPER) && container.isInnerClass()) {
-                if (container.hasEnclosingInstance(container.outer())) {
+                ClassType outer = container.outer();
+                if (container.hasEnclosingInstance(outer)) {
                     Expr enclosing = cc.qualifier() != null
                             ? cc.qualifier()
-                            : getEnclosingInstance(cc.position(), container.outer());
+                            : getEnclosingInstance(cc.position(), outer, /*allowSubtype*/ true);
                     List<Expr> args = concat(enclosing, cc.arguments());
                     n = tnf.ConstructorCall(cc.position(), cc.kind(), container, args);
                 }
@@ -179,7 +182,7 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
             ClassType enclosingType = s.qualifier() != null
                     ? s.qualifier().type().toClass()
                     : classes.peek();
-            Expr res = getEnclosingInstance(s.position(), enclosingType);
+            Expr res = getEnclosingInstance(s.position(), enclosingType, /*allowSubtype*/ false);
             if (s.kind().equals(Special.SUPER))
                 res = tnf.Cast(res, res.type().toClass().superType());
             n = res;
