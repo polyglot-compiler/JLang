@@ -1,6 +1,7 @@
 package polyllvm.visit;
 
 import polyglot.ast.*;
+import polyglot.ext.param.types.SubstType;
 import polyglot.frontend.AbstractPass;
 import polyglot.frontend.ExtensionInfo;
 import polyglot.frontend.Job;
@@ -103,9 +104,10 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
 
     /** Given an expression, returns its enclosing instance of the specified type. */
     private Expr getEnclosingInstance(Expr expr, ClassType targetType, boolean allowSubtype) {
-        if (expr.type().typeEquals(targetType))
-            return expr;
-        if (allowSubtype && expr.type().isSubtype(targetType))
+        Type t = expr.type();
+        if (targetType instanceof SubstType)
+            t = ((SubstType) targetType).subst().substType(t);
+        if (t.typeEquals(targetType) || (allowSubtype && t.isSubtype(targetType)))
             return expr;
         Field enclosing = tnf.Field(expr.position(), expr, ENCLOSING_STR);
         return getEnclosingInstance(enclosing, targetType, allowSubtype);
@@ -114,6 +116,11 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
     /** Return the enclosing instance of the specified type with respect to the current class. */
     private Expr getEnclosingInstance(Position pos, ClassType targetType, boolean allowSubtype) {
         ClassType currClass = classes.peek();
+        if (targetType instanceof SubstType) {
+            // Apply the same substitutions so that subtyping
+            // works as expected amid generics.
+            currClass = ((SubstType) targetType).subst().substType(currClass).toClass();
+        }
 
         // If we are inside a constructor, try to use an enclosing instance formal rather than the
         // enclosing instance field. This ensures that enclosing instance fields are not accessed
@@ -132,7 +139,7 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
         }
 
         // Otherwise, look for an enclosing instance through enclosing instance fields.
-        Special unqualified = tnf.UnqualifiedThis(pos, currClass);
+        Special unqualified = tnf.UnqualifiedThis(pos, classes.peek());
         return getEnclosingInstance(unqualified, targetType, allowSubtype);
     }
 
@@ -142,9 +149,7 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
         // Pass enclosing instance to {@code new} expressions.
         if (n instanceof New) {
             New nw = (New) n;
-            ClassType container = (ClassType) nw
-                    .constructorInstance().container()
-                    .toClass().declaration();
+            ClassType container = nw.constructorInstance().container().toClass();
             if (container.isClass() && container.toClass().isInnerClass()) {
                 ClassType outer = container.toClass().outer();
                 if (container.toClass().hasEnclosingInstance(outer)) {
@@ -161,9 +166,7 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
         // Pass enclosing instance to super constructor calls.
         if (n instanceof ConstructorCall) {
             ConstructorCall cc = (ConstructorCall) n;
-            ClassType container = (ClassType) cc
-                    .constructorInstance().container()
-                    .toClass().declaration();
+            ClassType container = cc.constructorInstance().container().toClass();
             if (cc.kind().equals(ConstructorCall.SUPER) && container.isInnerClass()) {
                 ClassType outer = container.outer();
                 if (container.hasEnclosingInstance(outer)) {
