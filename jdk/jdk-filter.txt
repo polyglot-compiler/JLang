@@ -1,0 +1,27 @@
+// The methods below do not type check with Polyglot.
+
+sun.reflect.annotation.AnnotationParser#parseEnumValue(.*)
+java.util.EnumSet#noneOf(.*)
+sun.nio.fs.WindowsFileAttributeViews.Dos#dosAttributeNames
+java.util.RegularEnumSet#iterator(.*)
+java.util.JumboEnumSet#iterator(.*)
+
+
+// The methods below cause PolyLLVM to crash.
+
+// These methods call `new Condition()`, where Condition is an inner class
+// in another file. PolyLLVM crashes because it tries to provide
+// the enclosing instance as part of the constructor call, but the
+// constructor has not yet been update to accept the enclosing instance
+// (since it is defined in another file). This should be fixed by
+// updating class types with enclosing instances before they are needed,
+// not just when PolyLLVM gets around to desugaring their defining file.
+java.util.concurrent.locks.ReentrantLock.Sync#newCondition()
+java.util.concurrent.locks.ReentrantReadWriteLock.Sync#newCondition()
+
+// These methods cause the compiler to throw a MissingDependencyException
+// while desugaring enums, where the dependency is something like
+// "SupertypesResolved(sun.nio.fs.WindowsPathType)".
+// Notice that sun.nio.fs.WindowsPathType is an enum type.
+sun.nio.fs.WindowsPath#resolve(.*)
+sun.nio.fs.WindowsChannelFactory.Flags#toFlags(.*)
