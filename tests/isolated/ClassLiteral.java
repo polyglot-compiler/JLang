@@ -2,6 +2,10 @@ class ClassLiteral {
 
     class Inner {}
 
+    interface It {}
+
+    abstract class Abstract {}
+
     public static void main(String[] args) {
         System.out.println(int.class);
         System.out.println(ClassLiteral.Inner.class);
@@ -21,6 +25,8 @@ class ClassLiteral {
         System.out.println(String.class == new Object().getClass());
         System.out.println(ClassLiteral.Inner.class
                 == new ClassLiteral().new Inner().getClass());
+        // System.out.println(It.class); TODO
+        System.out.println(Abstract.class);
         // System.out.println(short[].class == new short[] {1, 2, 3}.getClass()); TODO
     }
 }
