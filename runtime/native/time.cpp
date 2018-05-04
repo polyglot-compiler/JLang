@@ -4,14 +4,14 @@
 
 extern "C" {
 
-	jlong Java_java_lang_System_currentTimeMillis__() {
+	jlong Java_java_lang_System_currentTimeMillis() {
 		timeval time;
 		int status = gettimeofday(&time, NULL);
 		assert(status != -1);
 		return jlong(time.tv_sec) * 1000  +  jlong(time.tv_usec / 1000);
 	}
 
-	jlong Java_java_lang_System_nanoTime__() {
+	jlong Java_java_lang_System_nanoTime() {
 		timeval time;
 		int status = gettimeofday(&time, NULL);
 		assert(status != -1);

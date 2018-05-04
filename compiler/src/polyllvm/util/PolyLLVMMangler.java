@@ -73,26 +73,32 @@ public class PolyLLVMMangler {
         }
     }
 
-    private String mangleProcName(ProcedureInstance pi, String name) {
+    private String mangleProcName(ProcedureInstance pi, String name, boolean overloaded) {
         StringBuilder sb = new StringBuilder();
         sb.append(JAVA_PREFIX);
         sb.append('_');
         sb.append(mangleQualifiedName(pi.container()));
         sb.append('_');
         sb.append(mangleName(name));
-        sb.append("__");
-        for (Type t : pi.formalTypes())
-            sb.append(typeSignature(t));
+        if (overloaded) {
+            // Extended mangling for overloaded methods.
+            sb.append("__");
+            for (Type t : pi.formalTypes()) {
+                sb.append(typeSignature(t));
+            }
+        }
         return sb.toString();
     }
 
     public String mangleProcName(ProcedureInstance pi) {
         if (pi instanceof MethodInstance) {
             MethodInstance mi = (MethodInstance) pi;
-            return mangleProcName(mi.orig(), mi.name());
+            boolean overloaded = mi.container().methodsNamed(mi.name()).size() > 1;
+            return mangleProcName(mi.orig(), mi.name(), overloaded);
         } else if (pi instanceof ConstructorInstance) {
             ConstructorInstance ci = (ConstructorInstance) pi;
-            return mangleProcName(ci.orig(), ci.container().toClass().name());
+            boolean overloaded = ci.container().toClass().constructors().size() > 1;
+            return mangleProcName(ci.orig(), ci.container().toClass().name(), overloaded);
         } else {
             throw new InternalCompilerError("Unknown procedure type: " + pi.getClass());
         }
