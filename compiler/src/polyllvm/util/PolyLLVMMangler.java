@@ -73,15 +73,20 @@ public class PolyLLVMMangler {
         }
     }
 
-    private String mangleProcName(ProcedureInstance pi, String name, boolean overloaded) {
+    /**
+     * Mangles a procedure name.
+     * Native methods that are not overloaded by other native methods must use the
+     * abbreviated mangling format, which omits argument type information.
+     */
+    private String mangleProcName(ProcedureInstance pi, String name, boolean abbreviated) {
         StringBuilder sb = new StringBuilder();
         sb.append(JAVA_PREFIX);
         sb.append('_');
         sb.append(mangleQualifiedName(pi.container()));
         sb.append('_');
         sb.append(mangleName(name));
-        if (overloaded) {
-            // Extended mangling for overloaded methods.
+        if (!abbreviated) {
+            // Add argument type information as necessary.
             sb.append("__");
             for (Type t : pi.formalTypes()) {
                 sb.append(typeSignature(t));
@@ -93,13 +98,21 @@ public class PolyLLVMMangler {
     public String mangleProcName(ProcedureInstance pi) {
         if (pi instanceof MethodInstance) {
             MethodInstance mi = (MethodInstance) pi;
-            boolean overloaded = mi.container().methodsNamed(mi.name()).size() > 1;
-            return mangleProcName(mi.orig(), mi.name(), overloaded);
-        } else if (pi instanceof ConstructorInstance) {
+            boolean abbreviated = mi.flags().isNative() &&
+                    mi.container().methodsNamed(mi.name()).stream()
+                            .filter(m -> m.flags().isNative())
+                            .count() <= 1;
+            return mangleProcName(mi.orig(), mi.name(), abbreviated);
+        }
+        else if (pi instanceof ConstructorInstance) {
             ConstructorInstance ci = (ConstructorInstance) pi;
-            boolean overloaded = ci.container().toClass().constructors().size() > 1;
-            return mangleProcName(ci.orig(), ci.container().toClass().name(), overloaded);
-        } else {
+            boolean abbreviated = ci.flags().isNative() &&
+                    ci.container().toClass().constructors().stream()
+                            .filter(c -> c.flags().isNative())
+                            .count() <= 1;
+            return mangleProcName(ci.orig(), ci.container().toClass().name(), abbreviated);
+        }
+        else {
             throw new InternalCompilerError("Unknown procedure type: " + pi.getClass());
         }
     }
