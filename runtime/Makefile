@@ -3,8 +3,9 @@ POLYLLVMC_SRC = $(shell find $(BASE_DIR)/compiler/src -name "*.java")
 
 OUT_DIR = out
 
-JAVA_SRC = $(shell find src -name "*.java")
+JAVA_SRC = $(shell find src/polyllvm -name "*.java")
 NATIVE_SRC = $(shell find native -name "*.cpp")
+JVM_SRC = jvm
 
 NATIVE_LL = $(NATIVE_SRC:%.cpp=$(OUT_DIR)/%.ll)
 JAVA_LL = $(JAVA_SRC:src/%.java=$(OUT_DIR)/%.ll)
@@ -17,12 +18,16 @@ JNI_INCLUDES = \
 
 NATIVE_FLAGS = -Inative -Wall -Wno-unused-private-field -MMD -pthread
 
-all: runtime.o
+all: runtime.o $(JVM_SRC)/libjvm.dylib
 
 $(NATIVE_LL): $(OUT_DIR)/%.ll: %.cpp
 	@mkdir -p $(dir $@)
 	@echo "Compiling $<"
 	@clang++ $(JNI_INCLUDES) $(NATIVE_FLAGS) -S -emit-llvm -std=c++11 -o $@ $<
+
+$(JVM_SRC)/libjvm.dylib: $(JVM_SRC)/jvm.cpp
+	@echo "Creating libjvm"
+	@g++ -std=c++14 -shared -current_version 1.0.0 -compatibility_version 1.0.0 -o $@ $<
 
 # Mixing Ant and Make is tricky; this rule isn't perfect,
 # but will work in almost all cases. Note that build.xml
@@ -45,7 +50,7 @@ runtime.o: runtime.ll
 
 .PHONY: clean
 clean:
-	rm -rf classes $(OUT_DIR) runtime.{ll,o}
+	rm -rf classes $(OUT_DIR) runtime.{ll,o} $(JVM_SRC)/libjvm.dylib
 
 # Auto-generated dependencies for native code.
 -include $(NATIVE_SRC:%.cpp=out/%.d)

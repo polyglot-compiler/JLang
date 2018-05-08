@@ -13,28 +13,26 @@ public class PolyLLVMMangler {
         this.v = v;
     }
 
-    static private final String JAVA_PREFIX = "Java";
-    static private final String ENV_PREFIX = "Env";
-    static private final String CLASS_TYPE_STR = "class";
-    static private final String INTERFACE_TYPE_STR = "interface";
-    static private final String CDV_TYPE_STR = "cdv_ty";
-    static private final String IDV_TYPE_STR = "idv_ty";
-    static private final String SIZE_STR = "size";
-    static private final String CDV_STR = "cdv";
-    static private final String IDV_STR = "idv";
-    static private final String IDV_ARR_STR = "idv_arr";
-    static private final String IDV_ID_ARR_STR = "idv_id_arr";
-    static private final String IDV_ID_HASH_ARR_STR = "idv_hash_arr";
-    static private final String CLASS_INIT_STR = "init";
-    static private final String IT_INIT_STR = "it_init";
-    static private final String IT_STR_STR = "intf_name";
-    static private final String TYPE_INFO_STR = "rtti";
-    static private final String CLASS_ID_STR = "class_id";
+    private static final String JAVA_PREFIX = "Java";
+    private static final String ENV_PREFIX = "Env";
+    private static final String CLASS_TYPE_STR = "class";
+    private static final String INTERFACE_TYPE_STR = "interface";
+    private static final String CDV_TYPE_STR = "cdv_ty";
+    private static final String IDV_TYPE_STR = "idv_ty";
+    private static final String CDV_STR = "cdv";
+    private static final String IDV_STR = "idv";
+    private static final String IDV_ARR_STR = "idv_arr";
+    private static final String IDV_ID_ARR_STR = "idv_id_arr";
+    private static final String IDV_ID_HASH_ARR_STR = "idv_hash_arr";
+    private static final String IT_INIT_STR = "it_init";
+    private static final String IT_STR_STR = "intf_name";
+    private static final String TYPE_INFO_STR = "rtti";
+    private static final String CLASS_ID_STR = "class_id";
 
     // From the JNI API.
-    static private final String UNDERSCORE_ESCAPE = "_1";
-    static private final String SEMICOLON_ESCAPE = "_2";
-    static private final String BRACKET_ESCAPE = "_3";
+    private static final String UNDERSCORE_ESCAPE = "_1";
+    private static final String SEMICOLON_ESCAPE = "_2";
+    private static final String BRACKET_ESCAPE = "_3";
 
     /**
      * To facilitate JNI support, we mangle types as specified in the JNI API.
@@ -125,26 +123,6 @@ public class PolyLLVMMangler {
         return JAVA_PREFIX + "_" + mangleQualifiedName(rt) + "_" + mangleName(fieldName);
     }
 
-    public String sizeVariable(ReferenceType superClass) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(superClass) + "_" + SIZE_STR;
-    }
-
-    public String cdvGlobalId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + CDV_STR;
-    }
-
-    public String idvArrGlobalId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IDV_ARR_STR;
-    }
-
-    public String idvIdArrGlobalId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IDV_ID_ARR_STR;
-    }
-
-    public String idvIdHashArrGlobalId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IDV_ID_HASH_ARR_STR;
-    }
-
     public String idvGlobalId(ClassType intf, ReferenceType clazz) {
         return ENV_PREFIX +
                 "_" + mangleQualifiedName(intf) +
@@ -174,27 +152,39 @@ public class PolyLLVMMangler {
         return prefix + "." + className;
     }
 
-    public String classInitFunction(ClassDecl n) {
-        return classInitFunction(n.type());
+    public String cdvGlobalId(ReferenceType rt) {
+        return typePrefix(rt) + "_" + CDV_STR;
     }
 
-    public String classInitFunction(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + CLASS_INIT_STR;
+    public String idvArrGlobalId(ReferenceType rt) {
+        return typePrefix(rt) + "_" + IDV_ARR_STR;
+    }
+
+    public String idvIdArrGlobalId(ReferenceType rt) {
+        return typePrefix(rt) + "_" + IDV_ID_ARR_STR;
+    }
+
+    public String idvIdHashArrGlobalId(ReferenceType rt) {
+        return typePrefix(rt) + "_" + IDV_ID_HASH_ARR_STR;
     }
 
     public String interfacesInitFunction(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IT_INIT_STR;
+        return typePrefix(rt) + "_" + IT_INIT_STR;
     }
 
     public String interfaceStringVariable(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IT_STR_STR;
+        return typePrefix(rt) + "_" + IT_STR_STR;
     }
 
     public String classObjName(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + TYPE_INFO_STR;
+        return typePrefix(rt) + "_" + TYPE_INFO_STR;
     }
 
     public String typeIdentityId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + CLASS_ID_STR;
+        return typePrefix(rt) + "_" + CLASS_ID_STR;
+    }
+
+    private String typePrefix(ReferenceType rt) {
+        return ENV_PREFIX + "_" + mangleQualifiedName(rt);
     }
 }
