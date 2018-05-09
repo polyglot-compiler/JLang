@@ -27,10 +27,10 @@ public class DeclareClassObjects extends DesugarVisitor {
         Expr classNameExpr = tnf.StringLit(pos, className);
 
         ClassType classType = ts.Class();
-        Expr init = tnf.StaticCall(pos, "forName", ts.Class(), ts.Class(), classNameExpr);
+        Expr init = tnf.StaticCall(pos, ts.Class(), ts.Class(), "forName", classNameExpr);
 
         Flags flags = Flags.NONE.Public().Static().Final();
-        FieldDecl decl = tnf.FieldDecl(pos, Constants.CLASS_OBJECT, classType, ct, init, flags);
+        FieldDecl decl = tnf.FieldDecl(pos, ct, flags, classType, Constants.CLASS_OBJECT, init);
 
         return cb.members(concat(decl, cb.members()));
     }

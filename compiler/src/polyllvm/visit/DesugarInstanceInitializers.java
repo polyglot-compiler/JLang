@@ -17,15 +17,16 @@ import java.util.List;
  * Builds class initializers at the top of each constructor.
  * Preserves typing.
  */
-public class DesugarClassInitializers extends DesugarVisitor {
-    private static final String INIT_FUNC_NAME = "init$instance";
+public class DesugarInstanceInitializers extends DesugarVisitor {
+    private static final String INSTANCE_INIT_FUNC = "init$instance";
 
-    public DesugarClassInitializers(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
+    public DesugarInstanceInitializers(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, ts, nf);
     }
 
     @Override
     public ClassBody leaveClassBody(ParsedClassType ct, ClassBody cb) {
+        // TODO: Erase initializers here after they're moved, then remove LLVMInitializerExt.
 
         if (ct.flags().isInterface())
             return super.leaveClassBody(ct, cb);
@@ -43,7 +44,7 @@ public class DesugarClassInitializers extends DesugarVisitor {
                     continue;
                 Special receiver = tnf.UnqualifiedThis(pos, ct);
                 Field field = tnf.Field(pos, receiver, fd.name());
-                Stmt assign = tnf.EvalAssign(pos, field, fd.init());
+                Stmt assign = tnf.EvalAssign(field, fd.init());
                 initCode.add(assign);
             }
 
@@ -61,11 +62,10 @@ public class DesugarClassInitializers extends DesugarVisitor {
 
         // Declare init method.
         MethodDecl initMethod = tnf.MethodDecl(
-                ct.position(),
-                INIT_FUNC_NAME,
-                ct, ts.Void(), Collections.emptyList(),
-                nf.Block(ct.position(), initCode),
-                Flags.NONE.Private().Final());
+                ct.position(), ct,
+                Flags.NONE.Private().Final(), ts.Void(), INSTANCE_INIT_FUNC,
+                Collections.emptyList(),
+                nf.Block(ct.position(), initCode));
         cb = cb.addMember(initMethod);
 
         cb = mapConstructors(cb, (ctor) -> {
@@ -89,7 +89,7 @@ public class DesugarClassInitializers extends DesugarVisitor {
             Call callInitFunc = tnf.Call(
                     ct.position(),
                     tnf.UnqualifiedThis(ct.position(), ct),
-                    INIT_FUNC_NAME,
+                    INSTANCE_INIT_FUNC,
                     ct, ts.Void());
             stmts.add(nf.Eval(ct.position(), callInitFunc));
 

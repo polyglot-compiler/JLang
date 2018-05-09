@@ -71,7 +71,7 @@ public class PolyLLVMUnaryExt extends PolyLLVMExt {
         // Store the result and return the correct value.
         LocalDecl resFlat = v.tnf.TempSSA("res", v.tnf.Cast(bin, n.expr().type()));
         Local res = v.tnf.Local(pos, resFlat);
-        Stmt update = v.tnf.EvalAssign(pos, copy(ptr), copy(res));
+        Stmt update = v.tnf.EvalAssign(copy(ptr), copy(res));
         Expr val = pre ? copy(res) : copy(ptrLoaded);
 
         return v.tnf.ESeq(Arrays.asList(ptrFlat, ptrLoadedFlat, resFlat, update), val);

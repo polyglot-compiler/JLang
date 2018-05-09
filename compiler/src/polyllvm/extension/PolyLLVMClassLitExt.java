@@ -42,14 +42,14 @@ public class PolyLLVMClassLitExt extends PolyLLVMExt {
         if (t.isVoid() || t.isPrimitive()) {
             // Get the class object from the runtime library.
             String fieldName = t.toString() + Constants.PRIMITIVE_CLASS_OBJECT_SUFFIX;
-            return v.tnf.StaticField(pos, fieldName, v.ts.RuntimeHelper());
+            return v.tnf.StaticField(pos, v.ts.RuntimeHelper(), fieldName);
         }
         else if (t.isArray()) {
             // Call java.lang.Class.forName(...) and trust library code
             // to return the right class object.
             // TODO: Right now this does the match the class object in the dispatch vector.
             Expr classNameExpr = v.tnf.StringLit(pos, getArrayClassObjectName(t.toArray()));
-            return v.tnf.StaticCall(pos, "forName", v.ts.Class(), v.ts.Class(), classNameExpr);
+            return v.tnf.StaticCall(pos, v.ts.Class(), v.ts.Class(), "forName", classNameExpr);
         }
         else {
             assert t.isReference();

@@ -72,8 +72,8 @@ class DeclareEnclosingInstances extends DesugarVisitor {
 
         if (ct.isInnerClass() && ct.hasEnclosingInstance(ct.outer())) {
             FieldDecl field = tnf.FieldDecl(
-                    cb.position(), ENCLOSING_STR, ct.outer(),
-                    ct, /*init*/ null, Flags.FINAL);
+                    cb.position(), ct, Flags.FINAL, ct.outer(), ENCLOSING_STR,
+                    /*init*/ null);
             // Most of the rewriting happens in this helper function.
             cb = prependConstructorInitializedFields(ct, cb, Collections.singletonList(field));
         }

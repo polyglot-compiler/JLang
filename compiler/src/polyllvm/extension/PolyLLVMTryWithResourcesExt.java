@@ -80,7 +80,7 @@ public class PolyLLVMTryWithResourcesExt extends PolyLLVMTryExt {
         List<Stmt> catchBlockStmts = new ArrayList<>();
         Formal tDecl = v.tnf.Formal(pos, "t", v.ts.Throwable(), Flags.NONE);
         Local t = v.tnf.Local(pos, tDecl);
-        catchBlockStmts.add(v.tnf.EvalAssign(pos, copy(primaryExn), copy(t)));
+        catchBlockStmts.add(v.tnf.EvalAssign(copy(primaryExn), copy(t)));
         catchBlockStmts.add(v.nf.Throw(pos, copy(t)));
         Catch catchClause = v.nf.Catch(pos, tDecl, v.nf.Block(pos, catchBlockStmts));
         List<Catch> catchClauses = Collections.singletonList(catchClause);

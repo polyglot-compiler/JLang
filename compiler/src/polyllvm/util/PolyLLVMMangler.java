@@ -153,35 +153,39 @@ public class PolyLLVMMangler {
     }
 
     public String cdvGlobalId(ReferenceType rt) {
-        return typePrefix(rt) + "_" + CDV_STR;
+        return classSpecificGlobal(rt, CDV_STR);
     }
 
     public String idvArrGlobalId(ReferenceType rt) {
-        return typePrefix(rt) + "_" + IDV_ARR_STR;
+        return classSpecificGlobal(rt, IDV_ARR_STR);
     }
 
     public String idvIdArrGlobalId(ReferenceType rt) {
-        return typePrefix(rt) + "_" + IDV_ID_ARR_STR;
+        return classSpecificGlobal(rt, IDV_ID_ARR_STR);
     }
 
     public String idvIdHashArrGlobalId(ReferenceType rt) {
-        return typePrefix(rt) + "_" + IDV_ID_HASH_ARR_STR;
+        return classSpecificGlobal(rt, IDV_ID_HASH_ARR_STR);
     }
 
     public String interfacesInitFunction(ReferenceType rt) {
-        return typePrefix(rt) + "_" + IT_INIT_STR;
+        return classSpecificGlobal(rt, IT_INIT_STR);
     }
 
     public String interfaceStringVariable(ReferenceType rt) {
-        return typePrefix(rt) + "_" + IT_STR_STR;
+        return classSpecificGlobal(rt, IT_STR_STR);
     }
 
     public String classObjName(ReferenceType rt) {
-        return typePrefix(rt) + "_" + TYPE_INFO_STR;
+        return classSpecificGlobal(rt, TYPE_INFO_STR);
     }
 
     public String typeIdentityId(ReferenceType rt) {
-        return typePrefix(rt) + "_" + CLASS_ID_STR;
+        return classSpecificGlobal(rt, CLASS_ID_STR);
+    }
+
+    private String classSpecificGlobal(ReferenceType rt, String suffix) {
+        return typePrefix(rt) + "_" + suffix;
     }
 
     private String typePrefix(ReferenceType rt) {

@@ -95,7 +95,7 @@ public class PolyLLVMSwitchExt extends PolyLLVMExt {
                 Expr equal = v.tnf.Call(
                         pos, copy(str), "equals", v.ts.String(), v.ts.Boolean(), c.expr());
                 IntLit val = (IntLit) v.nf.IntLit(pos, IntLit.INT, ++counter).type(v.ts.Int());
-                stmts.add(v.tnf.If(equal, v.tnf.EvalAssign(pos, copy(idx), copy(val))));
+                stmts.add(v.tnf.If(equal, v.tnf.EvalAssign(copy(idx), copy(val))));
 
                 // Update case value.
                 c = c.expr(copy(val)).value(val.value());

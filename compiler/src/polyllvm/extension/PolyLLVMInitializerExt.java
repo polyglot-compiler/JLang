@@ -1,6 +1,5 @@
 package polyllvm.extension;
 
-import polyglot.ast.Initializer;
 import polyglot.ast.Node;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
@@ -11,14 +10,8 @@ public class PolyLLVMInitializerExt extends PolyLLVMExt {
 
     @Override
     public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
-        Initializer n = (Initializer) node();
-        // Non-static initializers are handled by the constructors.
-        if (n.flags().isStatic()) {
-            v.utils.buildCtor(() -> {
-                n.body().visit(v);
-                return null;
-            });
-        }
-        return n;
+        // Instance initializers and static initializers are desugared
+        // into standalone functions that are called when necessary.
+        return node();
     }
 }

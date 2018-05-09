@@ -263,7 +263,7 @@ public abstract class DesugarVisitor extends NodeVisitor {
                 Local arg = tnf.Local(pos, f);
                 Special thisClass = tnf.UnqualifiedThis(pos, ct);
                 Field field = tnf.Field(pos, thisClass, f.name());
-                stmts.add(tnf.EvalAssign(pos, field, arg));
+                stmts.add(tnf.EvalAssign(field, arg));
             });
             stmts.addAll(oldStmts);
             return (ConstructorDecl) ctor.body(ctor.body().statements(stmts));

@@ -456,7 +456,7 @@ public class LLVMUtils {
      * {@code intf}.
      *
      * @param intf a Java interface type
-     *             {@link LLVMTranslator#allInterfaces(ClassType) implemented} by
+     *             {@link LLVMTranslator#allInterfaces(ReferenceType)} implemented by
      *             {@code clazz}
      * @param clazz the non-abstract Java class type
      */
