@@ -52,7 +52,7 @@ public class TypedNodeFactory {
      * but does not assume that the static field already exists in {@code container}.
      */
     public Field StaticFieldForced(
-            Position pos, ParsedClassType container, Flags flags, Type type, String name) {
+            Position pos, ReferenceType container, Flags flags, Type type, String name) {
         FieldInstance fi = ts.fieldInstance(pos, container, flags, type, name);
         CanonicalTypeNode receiver = nf.CanonicalTypeNode(pos, container);
         return Field(pos, receiver, fi);
@@ -153,7 +153,7 @@ public class TypedNodeFactory {
      * but does not assume that the static method already exists in {@code container}.
      */
     public Call StaticCallForced(
-            Position pos, ParsedClassType container,
+            Position pos, ReferenceType container,
             Flags flags, Type returnType, String name, Expr... args) {
         List<Type> argTypes = Arrays.stream(args).map(Expr::type).collect(Collectors.toList());
         MethodInstance mi = ts.methodInstance(

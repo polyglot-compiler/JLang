@@ -3,7 +3,7 @@ POLYLLVMC_SRC = $(shell find $(BASE_DIR)/compiler/src -name "*.java")
 
 OUT_DIR = out
 
-JAVA_SRC = $(shell find src/polyllvm -name "*.java")
+JAVA_SRC = $(shell find src -name "*.java")
 NATIVE_SRC = $(shell find native -name "*.cpp")
 JVM_SRC = jvm
 

@@ -37,8 +37,18 @@ public class PolyLLVMDesugared extends AbstractGoal {
                 new VisitorGoal(job, new NameLocalClasses(job, ts, nf)),
                 new VisitorGoal(job, new DeclareExplicitAnonCtors(job, ts, nf)),
 
+                // Translate enums to normal classes.
+                new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
+
                 // Declare static fields to hold class objects,
                 new VisitorGoal(job, new DeclareClassObjects(job, ts, nf)),
+
+                // Translate captures to field accesses.
+                new DesugarLocalClasses(job, ts, nf),
+
+                // Translate accesses to enclosing instances. Future desugar passes
+                // should not create qualified Special nodes.
+                new DesugarInnerClasses(job, ts, nf),
 
                 // Future desugar passes assume that instance initialization code
                 // is called at the beginning of each constructor.
@@ -48,18 +58,15 @@ public class PolyLLVMDesugared extends AbstractGoal {
                 // can be called before the associated class is accessed.
                 new VisitorGoal(job, new DesugarStaticInitializers(job, ts, nf)),
 
-                // Translate enums to normal classes.
-                new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
+                // Local desugar transformations.
+                // It's usually unsafe to run a pass after this one.
+                new VisitorGoal(job, new DesugarLocally(job, ts, nf)),
 
-                // Translate captures to field accesses.
-                new DesugarLocalClasses(job, ts, nf),
-
-                // Translate accesses to enclosing instances. Future desugar passes
-                // should not create qualified Special nodes.
-                new DesugarInnerClasses(job, ts, nf),
-
-                // Local desugar transformations should be applied last.
-                new VisitorGoal(job, new DesugarLocally(job, ts, nf))
+                // Guard static field/method accesses with checks to make sure the associated
+                // class has been initialized (i.e., that it's static initializers have run).
+                // It's safe to run this after local desugaring because we carefully
+                // avoid creating new nodes that would require local desugaring.
+                new VisitorGoal(job, new InsertClassInitChecks(job, ts, nf)),
         };
     }
 

@@ -11,9 +11,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Consolidates static class initialization code into a standalone function
+ * that can be called prior to static field/method accesses.
+ */
 public class DesugarStaticInitializers extends DesugarVisitor {
-    private static final String STATIC_INIT_FUNC = "init$class";
-    private static final String STATIC_INIT_FLAG = "init$class$flag";
+    static final String STATIC_INIT_FUNC = "init$class";
+    static final String STATIC_INIT_FLAG = "init$class$flag";
 
     public DesugarStaticInitializers(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, ts, nf);
@@ -40,7 +44,7 @@ public class DesugarStaticInitializers extends DesugarVisitor {
 
         // Initialize superclass if necessary.
         if (!ct.flags().isInterface() && ct.superType() != null) {
-            ParsedClassType superCt = (ParsedClassType) ct.superType().toClass().declaration();
+            ReferenceType superCt = ct.superType().toReference();
             Field superInitFlag = tnf.StaticFieldForced(
                     superCt.position(), superCt,
                     Flags.NONE.Static(), ts.Boolean(), STATIC_INIT_FLAG);

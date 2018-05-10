@@ -60,6 +60,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         // Register as entry point if applicable.
         boolean isEntryPoint = n.name().equals("main")
                 && n.flags().isPublic()
+                && n.flags().isStatic()
                 && n.formals().size() == 1
                 && n.formals().iterator().next().declType().equals(ts.arrayOf(ts.String()));
         if (isEntryPoint) {
