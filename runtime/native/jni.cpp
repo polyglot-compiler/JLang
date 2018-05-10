@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <cstdio>
 #include <cstdlib>
+#include "stack_trace.h"
 
 // Compiler-specific representations for Java objects.
 #include "rep.h"
@@ -14,6 +15,7 @@
     "Aborting for now.\n"
     "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
     , name);
+  dump_stack_trace();
   fflush(stderr);
   abort();
 }

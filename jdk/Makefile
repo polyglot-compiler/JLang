@@ -1,6 +1,6 @@
 MAIN = Main
 PLC := ../bin/polyllvmc
-JDK=/Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
+JDK = /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
 JDK_SRC := openjdk-7-src
 OUT := out
 
@@ -11,11 +11,11 @@ all: $(MAIN).binary
 
 # Extract OpenJDK 7 source.
 # The zip file comes from https://sourceforge.net/projects/jdk7src/
-$(JDK_SRC): $(JDK_SRC).zip
+$(JDK_SRC): | $(JDK_SRC).zip
 	unzip -d $@ $<
 
 # Compile JDK source files (.java --> .ll)
-$(OUT)/llstamp: $(JDK_SRC) $(MAIN).java
+$(OUT)/llstamp: $(MAIN).java | $(JDK_SRC)
 	@echo "Compiling JDK sources"
 	@$(PLC) $(PLC_FLAGS) -d $(OUT) $(MAIN).java
 	@date > $(OUT)/llstamp
@@ -36,7 +36,7 @@ $(OUT)/stubs.o: stubs.cpp
 	@clang++ -std=c++14 -c -o $@ $<
 
 # Link everything together into a binary.
-$(MAIN).binary: $(OUT)/llstamp $(OUT)/ostamp $(OUT)/stubs.o
+$(MAIN).binary: $(OUT)/llstamp $(OUT)/ostamp $(OUT)/stubs.o ../runtime/runtime.o
 	@echo "Linking everything together"
 	@clang++ -L/usr/local/lib/ -lgc -o \
 	    `find $(OUT) -name "*.o"` \
