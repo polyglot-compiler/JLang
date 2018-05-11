@@ -27,7 +27,7 @@ $(NATIVE_LL): $(OUT_DIR)/%.ll: %.cpp
 
 $(JVM_SRC)/libjvm.dylib: $(JVM_SRC)/jvm.cpp
 	@echo "Creating libjvm"
-	@g++ -std=c++14 -shared -current_version 1.0.0 -compatibility_version 1.0.0 -o $@ $<
+	@g++ $(JNI_INCLUDES) -std=c++14 -shared -current_version 1.0.0 -compatibility_version 1.0.0 -o $@ $<
 
 # Mixing Ant and Make is tricky; this rule isn't perfect,
 # but will work in almost all cases. Note that build.xml
@@ -38,8 +38,7 @@ ifndef PREBUILT
 	@ant -S -f "$(BASE_DIR)"
 endif
 	@echo "Compiling $(words $(JAVA_SRC)) Java files down to IR"
-	@$(BASE_DIR)/bin/polyllvmc -c -d $(OUT_DIR) src/java/lang/Object.java
-	@$(BASE_DIR)/bin/polyllvmc -c -d $(OUT_DIR) $(filter-out src/java/lang/Object.java, $(JAVA_SRC))
+	@$(BASE_DIR)/bin/polyllvmc -c -d $(OUT_DIR) $(JAVA_SRC)
 
 runtime.ll: $(ALL_LL)
 	@echo "Linking $(words $(ALL_LL)) IR files into $@"

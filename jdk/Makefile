@@ -18,7 +18,7 @@ $(JDK_SRC): | $(JDK_SRC).zip
 $(OUT)/llstamp: $(MAIN).java | $(JDK_SRC)
 	@echo "Compiling JDK sources"
 	@$(PLC) $(PLC_FLAGS) -d $(OUT) $(MAIN).java
-	@date > $(OUT)/llstamp
+	@date > $@
 	@echo "Successfully compiled `find $(OUT) -name '*.ll' | wc -l | awk '{print $1}'` files"
 
 # Compile LLVM IR (.ll --> .o).
@@ -26,8 +26,8 @@ $(OUT)/llstamp: $(MAIN).java | $(JDK_SRC)
 # only after the LLVM IR files are created.
 $(OUT)/ostamp: $(OUT)/llstamp
 	@echo "Compiling LLVM IR"
-	@$(MAKE) -f Makefile.obj
-	@date > $(OUT)/ostamp
+	@$(MAKE) -f Makefile.obj -j4
+	@date > $@
 
 # Compile temporary stubs for missing symbols.
 # These are due to methods that the JDK normally registers at runtime.
@@ -42,6 +42,7 @@ $(MAIN).binary: $(OUT)/llstamp $(OUT)/ostamp $(OUT)/stubs.o ../runtime/runtime.o
 	    `find $(OUT) -name "*.o"` \
 	    ../runtime/runtime.o \
 	    $(JDK)/jre/lib/{libjava,libnio,libnet,libzip}.dylib \
+	    -headerpad_max_install_names \
 	    -o $@
 
 	@# Add system JDK libraries.
@@ -49,6 +50,14 @@ $(MAIN).binary: $(OUT)/llstamp $(OUT)/ostamp $(OUT)/stubs.o ../runtime/runtime.o
 
 	@# Add custom JVM stubs.
 	@install_name_tool -add_rpath ../runtime/jvm $@
+
+$(OUT)/classes/cstamp: | $(JDK_SRC)
+	@echo "Creating JDK class files"
+	@mkdir -p $(OUT)/classes
+	@find $(JDK_SRC) -name "*.java" > all.txt
+	@javac @all.txt -source 7 -target 7 -Xlint:none -d $(OUT)/classes
+	@rm all.txt
+	@date > $@
 
 clean:
 	rm -rf $(OUT) $(MAIN).binary

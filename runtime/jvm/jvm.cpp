@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <execinfo.h>
+#include "jni.h"
 
 [[noreturn]] static void jvm_Unimplemented(const char* name) {
     fprintf(stderr,
@@ -30,16 +31,16 @@ void AsyncGetCallTrace() {
     jvm_Unimplemented("AsyncGetCallTrace");
 }
 
-void JNI_CreateJavaVM() {
+jint JNI_GetDefaultJavaVMInitArgs(void *args) {
+    jvm_Unimplemented("JNI_GetDefaultJavaVMInitArgs");
+}
+
+jint JNI_CreateJavaVM(JavaVM **pvm, void **penv, void *args) {
     jvm_Unimplemented("JNI_CreateJavaVM");
 }
 
-void JNI_GetCreatedJavaVMs() {
+jint JNI_GetCreatedJavaVMs(JavaVM **, jsize, jsize *) {
     jvm_Unimplemented("JNI_GetCreatedJavaVMs");
-}
-
-void JNI_GetDefaultJavaVMInitArgs() {
-    jvm_Unimplemented("JNI_GetDefaultJavaVMInitArgs");
 }
 
 void JVM_Accept() {
@@ -338,7 +339,7 @@ void JVM_GetCPMethodSignatureUTF() {
     jvm_Unimplemented("JVM_GetCPMethodSignatureUTF");
 }
 
-void JVM_GetCallerClass() {
+void JVM_GetCallerClass(JNIEnv *env, int n) {
     jvm_Unimplemented("JVM_GetCallerClass");
 }
 

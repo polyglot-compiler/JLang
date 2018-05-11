@@ -25,3 +25,9 @@ java.util.concurrent.locks.ReentrantReadWriteLock.Sync#newCondition()
 // Notice that sun.nio.fs.WindowsPathType is an enum type.
 sun.nio.fs.WindowsPath#resolve(.*)
 sun.nio.fs.WindowsChannelFactory.Flags#toFlags(.*)
+
+// These fields cause a stack overflow due to (very) deeply nested
+// string concatenation expressions. An alternative might be to increase the
+// JVM stack size when running PolyLLVM.
+java.util.LocaleISOData#isoLanguageTable
+java.util.LocaleISOData#isoCountryTable

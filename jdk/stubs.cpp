@@ -16,6 +16,16 @@
 
 extern "C" {
 
+// Begin weird anomalies.
+
+void Java_java_lang_Enum_compareTo__Ljava_lang_Object_2() {
+    // For some reason Polyglot adds this method to java.lang.Enum with
+    // the wrong argument type, in addition to the correct version.
+    // This should be fixed, because this likely breaks
+    // method dispatch for enums.
+    unlinked("Java_java_lang_Enum_compareTo__Ljava_lang_Object_2");
+}
+
 // Begin missing shared library methods.
 
 void Java_sun_security_krb5_Credentials_acquireDefaultNativeCreds() {

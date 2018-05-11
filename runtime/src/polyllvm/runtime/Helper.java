@@ -14,13 +14,30 @@ class Helper {
 
     // These classes implicitly generate class objects,
     // which we use for primitive types.
-    static final Class voidClassObject    = Class.forName("void");
-    static final Class booleanClassObject = Class.forName("boolean");
-    static final Class byteClassObject    = Class.forName("byte");
-    static final Class charClassObject    = Class.forName("char");
-    static final Class shortClassObject   = Class.forName("short");
-    static final Class intClassObject     = Class.forName("int");
-    static final Class longClassObject    = Class.forName("long");
-    static final Class floatClassObject   = Class.forName("float");
-    static final Class doubleClassObject  = Class.forName("double");
+    static final Class voidClassObject;
+    static final Class booleanClassObject;
+    static final Class byteClassObject;
+    static final Class charClassObject;
+    static final Class shortClassObject;
+    static final Class intClassObject;
+    static final Class longClassObject;
+    static final Class floatClassObject;
+    static final Class doubleClassObject;
+
+    static {
+        try {
+            voidClassObject    = Class.forName("void");
+            booleanClassObject = Class.forName("boolean");
+            byteClassObject    = Class.forName("byte");
+            charClassObject    = Class.forName("char");
+            shortClassObject   = Class.forName("short");
+            intClassObject     = Class.forName("int");
+            longClassObject    = Class.forName("long");
+            floatClassObject   = Class.forName("float");
+            doubleClassObject  = Class.forName("double");
+        }
+        catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
