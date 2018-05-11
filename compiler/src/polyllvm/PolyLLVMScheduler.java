@@ -1,13 +1,19 @@
 package polyllvm;
 
+import polyglot.ast.ClassDecl;
+import polyglot.ast.Lang;
+import polyglot.ast.Node;
 import polyglot.ext.jl7.JL7Scheduler;
 import polyglot.frontend.CyclicDependencyException;
 import polyglot.frontend.JLExtensionInfo;
 import polyglot.frontend.Job;
+import polyglot.frontend.MissingDependencyException;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
+import polyglot.frontend.goals.VisitorGoal;
 import polyglot.types.ParsedClassType;
 import polyglot.util.InternalCompilerError;
+import polyglot.visit.NodeVisitor;
 import polyllvm.util.PolyLLVMDesugared;
 
 /**
@@ -32,11 +38,38 @@ public class PolyLLVMScheduler extends JL7Scheduler {
         return internGoal(g);
     }
 
+    /**
+     * Eagerly resolves the signatures for the classes declared in the given job.
+     * Used to avoid missing dependencies during desugar transformations.
+     */
+    public Goal AllSignaturesResolved(Job job) {
+        Lang lang = job.extensionInfo().nodeFactory().lang();
+        Goal resolveAll = new VisitorGoal(job, new NodeVisitor(lang) {
+            @Override
+            public Node leave(Node old, Node n, NodeVisitor v) {
+                if (n instanceof ClassDecl) {
+                    ClassDecl cd = (ClassDecl) n;
+                    ParsedClassType ct = cd.type();
+                    if (!ct.signaturesResolved()) {
+                        throw new MissingDependencyException(SignaturesResolved(ct));
+                    }
+                }
+                return super.leave(old, n, v);
+            }
+        });
+        try {
+            resolveAll.addPrerequisiteGoal(Serialized(job), this);
+        } catch (CyclicDependencyException e) {
+            throw new InternalCompilerError(e);
+        }
+        return internGoal(resolveAll);
+    }
+
     /** Desugar passes which simplify LLVM translation. */
-    public Goal PrepareForLLVMOutput(Job job) {
+    public Goal LLVMDesugared(Job job) {
         Goal desugar = new PolyLLVMDesugared(job);
         try {
-            desugar.addPrerequisiteGoal(Serialized(job), this);
+            desugar.addPrerequisiteGoal(AllSignaturesResolved(job), this);
         } catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
         }
@@ -47,7 +80,7 @@ public class PolyLLVMScheduler extends JL7Scheduler {
     public Goal CodeGenerated(Job job) {
         Goal translate = new LLVMEmitted(job);
         try {
-            translate.addPrerequisiteGoal(PrepareForLLVMOutput(job), this);
+            translate.addPrerequisiteGoal(LLVMDesugared(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);

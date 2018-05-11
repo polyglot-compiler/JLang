@@ -9,7 +9,8 @@ import polyllvm.types.PolyLLVMTypeSystem;
 
 import java.util.Collections;
 
-import static polyllvm.visit.DesugarStaticInitializers.*;
+import static polyllvm.visit.DesugarStaticInitializers.STATIC_INIT_FLAG;
+import static polyllvm.visit.DesugarStaticInitializers.STATIC_INIT_FUNC;
 
 /** Inserts calls to static class initialization code prior to static field/method accesses. */
 public class InsertClassInitChecks extends DesugarVisitor {
@@ -97,16 +98,14 @@ public class InsertClassInitChecks extends DesugarVisitor {
     }
 
     protected Expr guardWithInitCheck(Expr e, ClassType ct) {
-        ct = (ClassType) ct.declaration(); // Use declaration to avoid generics issues.
-
-        if (extendsIndirectly(ct, classes.peek()))
-            return e; // Optimization. No need to guard code that's inside the body of {@code ct}.
-
+        if (classes.peek() != null && extendsErased(classes.peek(), ct))
+            return e; // Optimization. Recall that superclasses are initialized before subclasses.
         Stmt check = buildInitCheck(e.position(), ct);
         return tnf.ESeq(Collections.singletonList(check), e);
     }
 
     protected Stmt buildInitCheck(Position pos, ClassType ct) {
+        ct = (ClassType) ct.declaration(); // Use declaration to avoid generics issues.
         Flags flags = Flags.NONE.Static();
         Field marker = tnf.StaticFieldForced(pos, ct, flags, ts.Boolean(), STATIC_INIT_FLAG);
         Expr cond = tnf.Not(marker);
@@ -114,13 +113,13 @@ public class InsertClassInitChecks extends DesugarVisitor {
         return tnf.If(cond, nf.Eval(pos, call));
     }
 
-    /** Returns true if {@code sub} extends {@code sup}, *ignoring generics*. */
-    protected boolean extendsIndirectly(ClassType sub, ClassType sup) {
-        sub = (ClassType) sub.declaration();
+    /** Returns true if {@code ct} extends {@code sup}, ignoring generics. */
+    protected boolean extendsErased(ClassType ct, ClassType sup) {
+        ct = (ClassType) ct.declaration();
         sup = (ClassType) sup.declaration();
         //noinspection SimplifiableIfStatement
-        if (sub.equals(sup))
+        if (ct.equals(sup))
             return true;
-        return sub.superType() != null && extendsIndirectly(sub.superType().toClass(), sup);
+        return ct.superType() != null && extendsErased(ct.superType().toClass(), sup);
     }
 }
