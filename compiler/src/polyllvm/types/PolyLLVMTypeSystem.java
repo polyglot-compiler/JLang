@@ -27,4 +27,11 @@ public interface PolyLLVMTypeSystem extends JL7TypeSystem {
 
     SubstMethodInstance substMethodInstance(JL5MethodInstance postSubst,
             JL5MethodInstance preSubst, JL5Subst subst);
+
+
+    /** Returns whether two types are equal when ignoring generics. */
+    boolean typeEqualsErased(Type a, Type b);
+
+    /** Returns whether {@code a} is a subtype of {@code b}, ignoring generics. */
+    boolean isSubtypeErased(Type a, Type b);
 }

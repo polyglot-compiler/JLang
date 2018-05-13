@@ -233,7 +233,7 @@ class SubstituteCaptures extends DesugarVisitor {
                 // constructor before they are initialized.
                 if (!constructors.isEmpty()) {
                     ConstructorDecl ctor = constructors.peek();
-                    if (ctor.constructorInstance().container().typeEquals(ct)) {
+                    if (ts.typeEqualsErased(ctor.constructorInstance().container(), ct)) {
                         List<Formal> captureFormals = ctor.formals().stream()
                                 .filter((f) -> f.name().equals(captureName))
                                 .collect(Collectors.toList());

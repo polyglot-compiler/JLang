@@ -79,7 +79,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             return stringConversion(v, n.expr(), from);
 
         // 5.1.1 Identity Conversion.
-        if (from.typeEquals(to))
+        if (v.ts.typeEqualsErased(from, to))
             return n.expr();
 
         // 5.1.7 Boxing Conversion.
@@ -96,7 +96,8 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
 
         // 5.1.6 Narrowing Reference Conversion (guard with instanceof check).
         if (!context.equals(GUARDED_BITCAST)
-                && from.isReference() && to.isReference() && !from.isSubtype(to))
+                && from.isReference() && to.isReference()
+                && !v.ts.isSubtypeErased(from, to))
             return narrowingReferenceConversion(v, n.expr(), from.toReference(), to.toReference());
 
         return super.desugar(v);
@@ -111,7 +112,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         Type to = n.castType().type();
         LLVMValueRef e = v.getTranslation(n.expr());
         LLVMTypeRef llT = v.utils.toLL(to);
-        assert !from.typeEquals(to);
+        assert !v.ts.typeEqualsErased(from, to);
 
         LLVMValueRef res;
         if (from.isPrimitive() && to.isPrimitive()) {
@@ -124,7 +125,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             // 5.1.6 Narrowing Reference Conversion (already guarded by instanceof check).
             // 5.1.9 Unchecked Conversion (irrelevant after erasure).
             // 5.1.10 Capture Conversion (irrelevant after erasure).
-            assert from.isSubtype(to) || context.equals(GUARDED_BITCAST);
+            assert v.ts.isSubtypeErased(from, to) || context.equals(GUARDED_BITCAST);
             res = LLVMBuildBitCast(v.builder, e, llT, "cast");
         }
         else {

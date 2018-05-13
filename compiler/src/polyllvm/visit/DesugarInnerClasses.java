@@ -107,8 +107,8 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
     /** Given an expression, returns its enclosing instance of the specified type. */
     private Expr getEnclosingInstance(Expr expr, ClassType targetType, boolean allowSubtype) {
         ClassType t = expr.type().toClass();
-        if (typeEqualsErased(t, targetType)
-                || (allowSubtype && isSubtypeErased(t, targetType)))
+        if (ts.typeEqualsErased(t, targetType)
+                || (allowSubtype && ts.isSubtypeErased(t, targetType)))
             return expr;
         Field enclosing = tnf.Field(expr.position(), expr, ENCLOSING_STR);
         return getEnclosingInstance(enclosing, targetType, allowSubtype);
@@ -121,9 +121,9 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
         // If we are inside a constructor, try to use an enclosing instance formal rather than the
         // enclosing instance field. This ensures that enclosing instance fields are not accessed
         // in the constructor before they are initialized.
-        if (!typeEqualsErased(currClass, targetType) && !constructors.isEmpty()) {
+        if (!ts.typeEqualsErased(currClass, targetType) && !constructors.isEmpty()) {
             ConstructorDecl ctor = constructors.peek();
-            if (typeEqualsErased(ctor.constructorInstance().container().toClass(), currClass)) {
+            if (ts.typeEqualsErased(ctor.constructorInstance().container(), currClass)) {
                 List<Formal> enclosingFormals = ctor.formals().stream()
                         .filter((f) -> f.name().equals(ENCLOSING_STR))
                         .collect(Collectors.toList());

@@ -268,17 +268,4 @@ public abstract class DesugarVisitor extends NodeVisitor {
 
         return cb;
     }
-
-    /** Returns whether two class types share the same underlying parsed class type. */
-    boolean typeEqualsErased(ClassType a, ClassType b) {
-        return a.declaration().equals(b.declaration());
-    }
-
-    /** Returns whether {@code a} is a subtype of {@code b}, ignoring generics. */
-    boolean isSubtypeErased(ClassType a, ClassType b) {
-        if (typeEqualsErased(a, b))
-            return true;
-        Type t = a.superType();
-        return t != null && isSubtypeErased(t.toClass(), b);
-    }
 }
