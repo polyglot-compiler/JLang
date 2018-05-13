@@ -97,6 +97,11 @@ abstract class PolyLLVMProcedureCallExt extends PolyLLVMExt {
         // Add JNIEnv reference.
         if (pi.flags().isNative()) {
             args.add(v.utils.getGlobal(Constants.JNI_ENV_VAR_NAME, v.utils.jniEnvType()));
+
+            // Static native methods take in the class object as well.
+            if (pi.flags().isStatic()) {
+                args.add(v.utils.buildClassObject(pi.container()));
+            }
         }
 
         // Add receiver argument.

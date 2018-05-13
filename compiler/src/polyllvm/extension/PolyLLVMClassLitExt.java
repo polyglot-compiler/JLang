@@ -1,7 +1,5 @@
 package polyllvm.extension;
 
-import org.bytedeco.javacpp.LLVM;
-import org.bytedeco.javacpp.LLVM.LLVMTypeRef;
 import org.bytedeco.javacpp.LLVM.LLVMValueRef;
 import polyglot.ast.ClassLit;
 import polyglot.ast.Expr;
@@ -24,10 +22,7 @@ public class PolyLLVMClassLitExt extends PolyLLVMExt {
         Type t = n.typeNode().type();
         assert t.isReference();
 
-        String mangled = v.mangler.mangleStaticFieldName(t.toReference(), Constants.CLASS_OBJECT);
-        LLVMTypeRef elemType = v.utils.toLL(v.ts.Class());
-        LLVMValueRef globalVar = v.utils.getGlobal(mangled, elemType);
-        LLVMValueRef load = LLVM.LLVMBuildLoad(v.builder, globalVar, "class.obj");
+        LLVMValueRef load = v.utils.buildClassObject(t.toReference());
 
         v.addTranslation(n, load);
         return super.leaveTranslateLLVM(v);

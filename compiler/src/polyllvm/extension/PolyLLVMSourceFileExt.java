@@ -71,23 +71,27 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     private static void buildEntryPoint(LLVMTranslator v, LLVMValueRef javaEntryPoint) {
         TypeSystem ts = v.ts;
         LLVMTypeRef jniEnvT = v.utils.ptrTypeRef(v.utils.jniEnvType());
+        LLVMTypeRef classObj = v.utils.toLL(v.ts.Class());
         LLVMTypeRef strArgsT = v.utils.toLL(ts.arrayOf(ts.String()));
-        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context), jniEnvT, strArgsT);
+        LLVMTypeRef voidT = LLVMVoidTypeInContext(v.context);
+        LLVMTypeRef funcType = v.utils.functionType(voidT, jniEnvT, classObj, strArgsT);
 
-        LLVMValueRef func = LLVMAddFunction(v.mod, Constants.ENTRY_TRAMPOLINE, funcType);
+        LLVMValueRef func = LLVMAddFunction(v.mod, ENTRY_TRAMPOLINE, funcType);
         v.pushFn(func);
 
-        LLVMMetadataRef[] formals = Stream.of(ts.Object(), ts.arrayOf(ts.String()))
+        LLVMMetadataRef[] formals = Stream.of(ts.Object(), ts.Class(), ts.arrayOf(ts.String()))
                 .map(v.debugInfo::debugType)
                 .toArray(LLVMMetadataRef[]::new);
-        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(v.debugInfo.diBuilder, new PointerPointer<>(formals), formals.length);
-        LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
-        v.debugInfo.funcDebugInfo(func, Constants.ENTRY_TRAMPOLINE, Constants.ENTRY_TRAMPOLINE, funcDiType, 0);
+        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
+                v.debugInfo.diBuilder, new PointerPointer<>(formals), formals.length);
+        LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
+                v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
+        v.debugInfo.funcDebugInfo(func, ENTRY_TRAMPOLINE, ENTRY_TRAMPOLINE, funcDiType, 0);
 
         LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(v.context, func, "body");
         LLVMPositionBuilderAtEnd(v.builder, block);
 
-        v.utils.buildProcCall(javaEntryPoint, LLVMGetParam(func, 1));
+        v.utils.buildProcCall(javaEntryPoint, LLVMGetParam(func, 2));
         LLVMBuildRetVoid(v.builder);
         v.debugInfo.popScope();
 

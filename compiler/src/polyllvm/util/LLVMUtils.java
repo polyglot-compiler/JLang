@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.bytedeco.javacpp.LLVM.*;
+import static polyllvm.util.Constants.CLASS_OBJECT;
 
 /**
  * Helper methods for building common LLVM types and IR instructions. This
@@ -310,6 +311,13 @@ public class LLVMUtils {
         return global;
     }
 
+    public LLVMValueRef buildClassObject(ReferenceType rt) {
+        String mangled = v.mangler.mangleStaticFieldName(rt, CLASS_OBJECT);
+        LLVMTypeRef elemType = v.utils.toLL(v.ts.Class());
+        LLVMValueRef globalVar = v.utils.getGlobal(mangled, elemType);
+        return LLVMBuildLoad(v.builder, globalVar, "class.obj");
+    }
+
     public LLVMValueRef buildGEP(LLVMValueRef ptr, LLVMValueRef... indices) {
         // TODO: If safe to do so, might be better to use LLVMBuildInBoundsGEP.
         return LLVMBuildGEP(v.builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
@@ -542,6 +550,11 @@ public class LLVMUtils {
         // Add implicit JNIEnv parameter.
         if (pi.flags().isNative()) {
             res.add(ptrTypeRef(jniEnvType()));
+
+            // Static native methods take in the class object as well.
+            if (pi.flags().isStatic()) {
+                res.add(toLL(v.ts.Class()));
+            }
         }
 
         // Add implicit receiver parameter.
