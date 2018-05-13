@@ -9,6 +9,7 @@ import java.util.Set;
 public class PolyLLVMOptions extends JL5Options {
 
     public String entryPointClass;
+    public boolean entryPointEmitted;
     public boolean printDesugar;
 
     public PolyLLVMOptions(PolyLLVMExtensionInfo extension) {

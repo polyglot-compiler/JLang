@@ -64,7 +64,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 && n.formals().size() == 1
                 && n.formals().iterator().next().declType().equals(ts.arrayOf(ts.String()));
         if (isEntryPoint) {
-            String className = (n.procedureInstance()).container().toString();
+            String className = n.procedureInstance().container().toClass().fullName();
             v.addEntryPoint(funcRef, className);
         }
 

@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
+import static polyllvm.util.Constants.ENTRY_TRAMPOLINE;
 
 public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -36,19 +37,26 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
 
         // Call an entry point within the current module if possible.
         Map<String, LLVMValueRef> entryPoints = v.getEntryPoints();
-        String entryPointClass = ((PolyLLVMOptions) Options.global).entryPointClass;
+        PolyLLVMOptions options = (PolyLLVMOptions) Options.global;
+        String entryPointClass = options.entryPointClass;
+
         if (entryPointClass != null) {
-            if (!entryPoints.containsKey(entryPointClass))
-                throw new Main.TerminationException(
-                        "No entry point found for class " + entryPointClass);
-            buildEntryPoint(v, entryPoints.get(entryPointClass));
+            if (entryPoints.containsKey(entryPointClass)) {
+                buildEntryPoint(v, entryPoints.get(entryPointClass));
+            }
         }
-        else if (entryPoints.size() > 1) {
-            throw new Main.TerminationException(
-                    "Multiple Java main functions found; please specify which to use");
-        }
-        else if (!entryPoints.isEmpty()) {
-            buildEntryPoint(v, entryPoints.values().iterator().next());
+        else {
+            // Try to emit an entry point even if the user did not specify one.
+            for (String entry : entryPoints.keySet()) {
+                if (options.entryPointEmitted) {
+                    throw new Main.TerminationException(
+                            "Multiple Java main functions found; " +
+                                    "please specify which to use with -entry-point <classname>");
+                }
+                System.out.println("Using the Java entry point found in " + entry);
+                buildEntryPoint(v, entryPoints.get(entry));
+                options.entryPointEmitted = true;
+            }
         }
 
         // Build ctor functions, if any.
