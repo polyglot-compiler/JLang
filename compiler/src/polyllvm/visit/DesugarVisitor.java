@@ -3,10 +3,7 @@ package polyllvm.visit;
 import polyglot.ast.*;
 import polyglot.ext.jl5.ast.EnumConstantDecl;
 import polyglot.frontend.Job;
-import polyglot.types.ClassType;
-import polyglot.types.Flags;
-import polyglot.types.ParsedClassType;
-import polyglot.types.SemanticException;
+import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyglot.visit.NodeVisitor;
@@ -270,5 +267,18 @@ public abstract class DesugarVisitor extends NodeVisitor {
         });
 
         return cb;
+    }
+
+    /** Returns whether two class types share the same underlying parsed class type. */
+    boolean typeEqualsErased(ClassType a, ClassType b) {
+        return a.declaration().equals(b.declaration());
+    }
+
+    /** Returns whether {@code a} is a subtype of {@code b}, ignoring generics. */
+    boolean isSubtypeErased(ClassType a, ClassType b) {
+        if (typeEqualsErased(a, b))
+            return true;
+        Type t = a.superType();
+        return t != null && isSubtypeErased(t.toClass(), b);
     }
 }
