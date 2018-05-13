@@ -23,6 +23,11 @@
     abort();
 }
 
+static void warn(const char* name) {
+    fprintf(stderr, "WARNING: Native method %s is currently unlinked, but will not abort.\n", name);
+    fflush(stderr);
+}
+
 extern "C" {
 
 // Begin weird anomalies.
@@ -126,8 +131,7 @@ void Java_java_lang_Class_desiredAssertionStatus0() {
 }
 
 jobject Java_java_lang_Class_getClassLoader0(JNIEnv* env, jclass clazz) {
-    fprintf(stderr, "WARNING: Native method Java_java_lang_Class_getClassLoader0 is currently unlinked, but will not abort.\n");
-    fflush(stderr);
+    warn("Java_java_lang_Class_getClassLoader0");
     return nullptr;
 }
 
@@ -612,8 +616,9 @@ void Java_sun_misc_Perf_registerNatives() {
     unlinked("Java_sun_misc_Perf_registerNatives");
 }
 
-void Java_sun_misc_Unsafe_addressSize() {
-    unlinked("Java_sun_misc_Unsafe_addressSize");
+jint Java_sun_misc_Unsafe_addressSize(JNIEnv* env, jobject unsafe) {
+    warn("Java_sun_misc_Unsafe_addressSize");
+    return sizeof(void*);
 }
 
 void Java_sun_misc_Unsafe_allocateInstance() {
@@ -624,12 +629,14 @@ void Java_sun_misc_Unsafe_allocateMemory() {
     unlinked("Java_sun_misc_Unsafe_allocateMemory");
 }
 
-void Java_sun_misc_Unsafe_arrayBaseOffset() {
-    unlinked("Java_sun_misc_Unsafe_arrayBaseOffset");
+jint Java_sun_misc_Unsafe_arrayBaseOffset(JNIEnv* env, jobject unsafe, jclass arg) {
+    warn("Java_sun_misc_Unsafe_arrayBaseOffset");
+    return 0;
 }
 
-void Java_sun_misc_Unsafe_arrayIndexScale() {
-    unlinked("Java_sun_misc_Unsafe_arrayIndexScale");
+jint Java_sun_misc_Unsafe_arrayIndexScale(JNIEnv* env, jobject unsafe, jclass arg) {
+    warn("Java_sun_misc_Unsafe_arrayIndexScale");
+    return 0;
 }
 
 void Java_sun_misc_Unsafe_compareAndSwapInt() {
@@ -917,8 +924,7 @@ void Java_sun_misc_Unsafe_reallocateMemory() {
 }
 
 void Java_sun_misc_Unsafe_registerNatives() {
-    fprintf(stderr, "WARNING: Native method Java_sun_misc_Unsafe_registerNatives is unimplemented, but does not abort.\n");
-    fflush(stderr);
+    warn("Java_sun_misc_Unsafe_registerNatives");
 }
 
 void Java_sun_misc_Unsafe_setMemory() {
