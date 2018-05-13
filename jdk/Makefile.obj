@@ -5,6 +5,6 @@ OBJ := $(LL:%.ll=%.o)
 all: $(OBJ)
 .PHONY: all
 
-$(OBJ): %.o: %.ll
+$(OBJ): %.o: %.ll $(OUT)/llstamp
 	@echo "Compiling $<"
 	@clang++ -Wno-override-module -c -o $@ $<

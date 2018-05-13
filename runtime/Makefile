@@ -16,7 +16,7 @@ JNI_INCLUDES = \
 	-I"$(JAVA_HOME)/include/darwin" \
 	-I"$(JAVA_HOME)/include/linux"
 
-NATIVE_FLAGS = -Inative -Wall -Wno-unused-private-field -MMD -pthread
+NATIVE_FLAGS = -g -Inative -Wall -Wno-unused-private-field -MMD -pthread
 
 all: runtime.o $(JVM_SRC)/libjvm.dylib
 
@@ -27,7 +27,8 @@ $(NATIVE_LL): $(OUT_DIR)/%.ll: %.cpp
 
 $(JVM_SRC)/libjvm.dylib: $(JVM_SRC)/jvm.cpp
 	@echo "Creating libjvm"
-	@g++ $(JNI_INCLUDES) -std=c++14 -shared -current_version 1.0.0 -compatibility_version 1.0.0 -o $@ $<
+	@g++ $(JNI_INCLUDES) -Inative -std=c++14 -shared -current_version 1.0.0 -compatibility_version 1.0.0 -o $@ $<
+	@install_name_tool -id '@rpath/libjvm.dylib' $@
 
 # Mixing Ant and Make is tricky; this rule isn't perfect,
 # but will work in almost all cases. Note that build.xml
@@ -45,7 +46,7 @@ runtime.ll: $(ALL_LL)
 	@llvm-link -S -o $@ $(ALL_LL)
 
 runtime.o: runtime.ll
-	@clang++ -c -o $@ $<
+	@clang++ -g -c -o $@ $<
 
 .PHONY: clean
 clean:

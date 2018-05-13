@@ -2,22 +2,32 @@ MAIN = Main
 PLC := ../bin/polyllvmc
 JDK = /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
 JDK_SRC := openjdk-7-src
+PATCHES := patches
 OUT := out
 
 # PolyLLVM flags when compiling the JDK.
 PLC_FLAGS := -assert -method-filter jdk-method-filter.txt -sourcepath $(JDK_SRC)
+
+JNI_INCLUDES = \
+	-I"$(JAVA_HOME)/include" \
+	-I"$(JAVA_HOME)/include/darwin" \
+	-I"$(JAVA_HOME)/include/linux"
 
 all: $(MAIN).binary
 
 # Extract OpenJDK 7 source.
 # The zip file comes from https://sourceforge.net/projects/jdk7src/
 $(JDK_SRC): | $(JDK_SRC).zip
-	unzip -d $@ $<
+	unzip -d $@ $(JDK_SRC).zip
+
+$(JDK_SRC)/patchstamp: | $(JDK_SRC)
+	for f in `find $(PATCHES) -name "*.patch"`; do patch -p0 < "$$f"; done
+	@date > $@
 
 # Compile JDK source files (.java --> .ll)
-$(OUT)/llstamp: $(MAIN).java | $(JDK_SRC)
+$(OUT)/llstamp: $(MAIN).java $(JDK_SRC)/patchstamp
 	@echo "Compiling JDK sources"
-	@$(PLC) $(PLC_FLAGS) -d $(OUT) $(MAIN).java
+	@$(PLC) $(PLC_FLAGS) -d $(OUT) -entry-point $(MAIN) $(MAIN).java
 	@date > $@
 	@echo "Successfully compiled `find $(OUT) -name '*.ll' | wc -l | awk '{print $1}'` files"
 
@@ -33,14 +43,16 @@ $(OUT)/ostamp: $(OUT)/llstamp
 # These are due to methods that the JDK normally registers at runtime.
 $(OUT)/stubs.o: stubs.cpp
 	@echo "Compiling missing symbol stubs"
-	@clang++ -std=c++14 -c -o $@ $<
+	@clang++ -g -std=c++14 $(JNI_INCLUDES) -c -o $@ $<
 
 # Link everything together into a binary.
-$(MAIN).binary: $(OUT)/llstamp $(OUT)/ostamp $(OUT)/stubs.o ../runtime/runtime.o
+$(MAIN).binary: $(OUT)/llstamp $(OUT)/ostamp $(OUT)/stubs.o ../runtime/runtime.o ../runtime/jvm/libjvm.dylib
 	@echo "Linking everything together"
-	@clang++ -L/usr/local/lib/ -lgc -o \
+	@clang++ -g \
+	    -L/usr/local/lib/ -lgc \
 	    `find $(OUT) -name "*.o"` \
 	    ../runtime/runtime.o \
+	    ../runtime/jvm/libjvm.dylib \
 	    $(JDK)/jre/lib/{libjava,libnio,libnet,libzip}.dylib \
 	    -headerpad_max_install_names \
 	    -o $@
@@ -60,6 +72,6 @@ $(OUT)/classes/cstamp: | $(JDK_SRC)
 	@date > $@
 
 clean:
-	rm -rf $(OUT) $(MAIN).binary
+	rm -rf $(OUT) $(MAIN).binary $(JDK_SRC)
 
 .PHONY: all

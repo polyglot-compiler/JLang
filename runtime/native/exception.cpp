@@ -81,7 +81,10 @@ _Unwind_Exception *createUnwindException(jobject jexception) {
 
 void throwUnwindException(_Unwind_Exception* exception) {
   _Unwind_RaiseException(exception);
-  fprintf(stderr, "Aborting due to uncaught exception.\n");
+  fprintf(stderr,
+    "- - - - - - - - - - - - - - - - - -\n"
+    "Aborting due to uncaught exception.\n"
+    "- - - - - - - - - - - - - - - - - -\n");
   dump_stack_trace();
   fflush(stderr);
   abort();

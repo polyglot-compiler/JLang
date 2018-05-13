@@ -132,7 +132,7 @@ jobject jni_NewObjectA(JNIEnv *env, jclass clazz, jmethodID methodID, const jval
 }
 
 jclass jni_GetObjectClass(JNIEnv *env, jobject obj) {
-    jni_Unimplemented("GetObjectClass");
+    return Unwrap(obj)->Cdv()->Class()->Wrap();
 }
 
 jboolean jni_IsInstanceOf(JNIEnv *env, jobject obj, jclass clazz) {
@@ -684,11 +684,19 @@ jsize jni_GetStringUTFLength(JNIEnv *env, jstring str) {
 }
 
 const char* jni_GetStringUTFChars(JNIEnv *env, jstring str, jboolean *isCopy) {
-    jni_Unimplemented("GetStringUTFChars");
+    auto chars = Unwrap(str)->Chars();
+    auto len = chars->Length();
+    auto data = (jchar*) chars->Data();
+    char* res = (char*) malloc(len);
+    // TODO: Incorrect conversion from Java string chars to UTF-8 chars.
+    for (jsize i = 0; i < len; ++i)
+        res[i] = static_cast<char>(data[i]);
+    *isCopy = true;
+    return res;
 }
 
 void jni_ReleaseStringUTFChars(JNIEnv *env, jstring str, const char* chars) {
-    jni_Unimplemented("ReleaseStringUTFChars");
+    free(const_cast<char*>(chars));
 }
 
 jsize jni_GetArrayLength(JNIEnv *env, jarray array) {
@@ -874,7 +882,9 @@ void jni_SetDoubleArrayRegion(JNIEnv *env, jdoubleArray array, jsize start, jsiz
 }
 
 jint jni_RegisterNatives(JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint nMethods) {
-    jni_Unimplemented("RegisterNatives");
+    fprintf(stderr, "WARNING: JNI method RegisterNatives is unimplemented, but does not abort.\n");
+    fflush(stderr);
+    return 0;
 }
 
 jint jni_UnregisterNatives(JNIEnv *env, jclass clazz) {

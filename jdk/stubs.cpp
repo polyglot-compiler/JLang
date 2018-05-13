@@ -1,17 +1,26 @@
 #include <cstdio>
 #include <cstdlib>
+#include <execinfo.h>
+#include "jni.h"
 
 [[noreturn]] static void unlinked(const char* name) {
-  fprintf(stderr,
-    "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
-    "The following native method is currently unlinked:\n"
-    "  %s\n"
-    "This stub is defined in " __FILE__ ".\n"
-    "Aborting for now.\n"
-    "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
-    , name);
-  fflush(stderr);
-  abort();
+    fprintf(stderr,
+        "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
+        "The following native method is currently unlinked:\n"
+        "  %s\n"
+        "This stub is defined in " __FILE__ ".\n"
+        "Aborting for now.\n"
+        "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
+        , name);
+
+    // Dump stack trace.
+    constexpr int max_frames = 256;
+    void* callstack[max_frames];
+    int frames = backtrace(callstack, max_frames);
+    backtrace_symbols_fd(callstack, frames, fileno(stderr));
+
+    fflush(stderr);
+    abort();
 }
 
 extern "C" {
@@ -62,8 +71,10 @@ void Java_java_lang_Object_wait__J() {
     unlinked("Java_java_lang_Object_wait__J");
 }
 
-void Java_java_lang_Object_hashCode() {
-    unlinked("Java_java_lang_Object_hashCode");
+jint JVM_IHashCode(JNIEnv *env, jobject obj);
+jint Java_java_lang_Object_hashCode(JNIEnv* env, jobject obj) {
+    // TODO: This is temporary.
+    return JVM_IHashCode(env, obj);
 }
 
 void Java_java_lang_System_PrintStream_println__Ljava_lang_String_2() {
@@ -114,8 +125,10 @@ void Java_java_lang_Class_desiredAssertionStatus0() {
     unlinked("Java_java_lang_Class_desiredAssertionStatus0");
 }
 
-void Java_java_lang_Class_getClassLoader0() {
-    unlinked("Java_java_lang_Class_getClassLoader0");
+jobject Java_java_lang_Class_getClassLoader0(JNIEnv* env, jclass clazz) {
+    fprintf(stderr, "WARNING: Native method Java_java_lang_Class_getClassLoader0 is currently unlinked, but will not abort.\n");
+    fflush(stderr);
+    return nullptr;
 }
 
 void Java_java_lang_Class_getComponentType() {
@@ -250,8 +263,13 @@ void Java_java_lang_ProcessImpl_waitForInterruptibly() {
     unlinked("Java_java_lang_ProcessImpl_waitForInterruptibly");
 }
 
-void Java_java_lang_System_arraycopy() {
-    unlinked("Java_java_lang_System_arraycopy");
+void JVM_ArrayCopy(JNIEnv *env, jclass ignored, jobject src, jint src_pos,
+                   jobject dst, jint dst_pos, jint length);
+void Java_java_lang_System_arraycopy(
+        JNIEnv *env, jclass ignored, jobject src, jint src_pos,
+        jobject dst, jint dst_pos, jint length) {
+    // TODO: This is temporary.
+    JVM_ArrayCopy(env, ignored, src, src_pos, dst, dst_pos, length);
 }
 
 void Java_java_lang_Thread_countStackFrames() {
@@ -899,7 +917,8 @@ void Java_sun_misc_Unsafe_reallocateMemory() {
 }
 
 void Java_sun_misc_Unsafe_registerNatives() {
-    unlinked("Java_sun_misc_Unsafe_registerNatives");
+    fprintf(stderr, "WARNING: Native method Java_sun_misc_Unsafe_registerNatives is unimplemented, but does not abort.\n");
+    fflush(stderr);
 }
 
 void Java_sun_misc_Unsafe_setMemory() {

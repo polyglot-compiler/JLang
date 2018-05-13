@@ -152,7 +152,6 @@ public class ObjectStruct_c implements ObjectStruct {
             // Add own fields.
             erased.fields().stream()
                     .filter(fi -> !fi.flags().isStatic()) // Non-static.
-                    .sorted(Comparator.comparing(VarInstance::name))
                     .forEach(res::add);
 
             fieldCache.put(erased, res);

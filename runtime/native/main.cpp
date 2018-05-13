@@ -58,14 +58,5 @@ int main(int argc, char** argv) {
         jargs_data[i] = jargString;
     }
 
-    try {
-        Java_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jargs);
-    } catch (...) {
-        fprintf(stderr,
-            "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
-            "Aborting due to uncaught foreign (non-Java) exception.\n"
-            "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
-        fflush(stderr);
-        abort();
-    }
+    Java_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jargs);
 }

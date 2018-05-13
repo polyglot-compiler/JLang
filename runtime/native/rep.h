@@ -71,12 +71,12 @@ ASSERT_POD(JArrayRep);
 
 // Representation for java.lang.String.
 struct JStringRep {
-    JArrayRep* Chars() { return chars_; }
+    JArrayRep* Chars() { return value_; }
     JObjectRep* Super() { return &header_; }
     jstring Wrap() { return reinterpret_cast<jstring>(this); }
 private:
     JObjectRep header_;
-    JArrayRep* chars_;
+    JArrayRep* value_;
 };
 ASSERT_POD(JStringRep);
 

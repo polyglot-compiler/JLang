@@ -1,7 +1,9 @@
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <execinfo.h>
 #include "jni.h"
+#include "rep.h"
 
 [[noreturn]] static void jvm_Unimplemented(const char* name) {
     fprintf(stderr,
@@ -23,6 +25,12 @@
 
     fflush(stderr);
     abort();
+}
+
+static void jvm_Warn(const char* name) {
+    fprintf(stderr,
+        "WARNING: JVM method %s is unimplemented, but will not abort.\n", name);
+    fflush(stderr);
 }
 
 extern "C" {
@@ -59,8 +67,13 @@ void JVM_AllocateNewObject() {
     jvm_Unimplemented("JVM_AllocateNewObject");
 }
 
-void JVM_ArrayCopy() {
-    jvm_Unimplemented("JVM_ArrayCopy");
+void JVM_ArrayCopy(JNIEnv *env, jclass ignored, jobject src, jint src_pos,
+                   jobject dst, jint dst_pos, jint length) {
+    jarray src_arr = reinterpret_cast<jarray>(src);
+    jarray dst_arr = reinterpret_cast<jarray>(dst);
+    char* src_data = static_cast<char*>(Unwrap(src_arr)->Data());
+    char* dst_data = static_cast<char*>(Unwrap(dst_arr)->Data());
+    memmove(dst_data + dst_pos, src_data + src_pos, length);
 }
 
 void JVM_AssertionStatusDirectives() {
@@ -247,8 +260,9 @@ void JVM_Exit() {
     jvm_Unimplemented("JVM_Exit");
 }
 
-void JVM_FillInStackTrace() {
-    jvm_Unimplemented("JVM_FillInStackTrace");
+void JVM_FillInStackTrace(JNIEnv *env, jobject throwable) {
+    // TODO
+    jvm_Warn("FillInStackTrace");
 }
 
 void JVM_FindClassFromBootLoader() {
@@ -339,8 +353,10 @@ void JVM_GetCPMethodSignatureUTF() {
     jvm_Unimplemented("JVM_GetCPMethodSignatureUTF");
 }
 
-void JVM_GetCallerClass(JNIEnv *env, int n) {
-    jvm_Unimplemented("JVM_GetCallerClass");
+jclass JVM_GetCallerClass(JNIEnv *env, int n) {
+    // TODO
+    jvm_Warn("JVM_GetCallerClass");
+    return nullptr;
 }
 
 void JVM_GetClassAccessFlags() {
@@ -567,8 +583,22 @@ void JVM_GetThreadStateValues() {
     jvm_Unimplemented("JVM_GetThreadStateValues");
 }
 
-void JVM_GetVersionInfo() {
-    jvm_Unimplemented("JVM_GetVersionInfo");
+typedef struct {
+    unsigned int jvm_version;
+    unsigned int update_version : 8;
+    unsigned int special_update_version : 8;
+    unsigned int reserved1 : 16;
+    unsigned int reserved2;
+    unsigned int is_attach_supported : 1;
+    unsigned int is_kernel_jvm : 1;
+    unsigned int : 30;
+    unsigned int : 32;
+    unsigned int : 32;
+} jvm_version_info;
+
+void JVM_GetVersionInfo(JNIEnv* env, jvm_version_info* info, size_t info_size) {
+    // TODO
+    jvm_Warn("JVM_GetVersionInfo");
 }
 
 void JVM_Halt() {
@@ -579,8 +609,9 @@ void JVM_HoldsLock() {
     jvm_Unimplemented("JVM_HoldsLock");
 }
 
-void JVM_IHashCode() {
-    jvm_Unimplemented("JVM_IHashCode");
+jint JVM_IHashCode(JNIEnv *env, jobject obj) {
+    auto addr = reinterpret_cast<intptr_t>(obj);
+    return static_cast<jint>(addr);
 }
 
 void JVM_InitAgentProperties() {
