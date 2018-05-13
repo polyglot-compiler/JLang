@@ -27,7 +27,12 @@ public class DesugarImplicitConversions extends AscriptionVisitor {
 
     public DesugarImplicitConversions(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, ts, nf);
-        tnf = new TypedNodeFactory(ts, nf);
+        this.tnf = new TypedNodeFactory(ts, nf);
+    }
+
+    @Override
+    public PolyLLVMTypeSystem typeSystem() {
+        return (PolyLLVMTypeSystem) super.typeSystem();
     }
 
     @Override
@@ -68,7 +73,8 @@ public class DesugarImplicitConversions extends AscriptionVisitor {
 
         ConversionContext context = computeConversionContext(parent, toType);
 
-        if (!context.equals(ConversionContext.STRING_CONCAT) && e.type().typeEquals(toType)) {
+        if (!context.equals(ConversionContext.STRING_CONCAT)
+                && typeSystem().typeEqualsErased(e.type(), toType)) {
             // Avoid adding redundant casts.
             return e;
         }

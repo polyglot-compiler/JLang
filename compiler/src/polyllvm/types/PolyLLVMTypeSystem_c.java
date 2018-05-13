@@ -52,4 +52,40 @@ public class PolyLLVMTypeSystem_c extends JL7TypeSystem_c implements PolyLLVMTyp
     public ParsedClassType createClassType(LazyClassInitializer init, Source fromSource) {
         return new PolyLLVMParsedClassType_c(this, init, fromSource);
     }
+
+    @Override
+    public boolean typeEqualsErased(Type a, Type b) {
+        if (a.isClass() && b.isClass())
+            return a.toClass().declaration().equals(b.toClass().declaration());
+        return a.typeEquals(b);
+    }
+
+    @Override
+    public boolean isSubtypeErased(Type a, Type b) {
+
+        // Check bottom and top.
+        if (a.isNull() || b.typeEquals(Object()))
+            return true;
+
+        // Check if equal.
+        if (typeEqualsErased(a, b))
+            return true;
+
+        // Check class hierarchy.
+        if (a.isReference()) {
+            ReferenceType rt = a.toReference();
+
+            // Check supertype.
+            if (rt.superType() != null)
+                if (isSubtypeErased(rt.superType(), b))
+                    return true;
+
+            // Check interfaces.
+            for (ReferenceType it : rt.interfaces())
+                if (isSubtypeErased(it, b))
+                    return true;
+        }
+
+        return false;
+    }
 }

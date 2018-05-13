@@ -1,7 +1,6 @@
 package polyllvm.visit;
 
 import polyglot.ast.*;
-import polyglot.ext.param.types.SubstType;
 import polyglot.frontend.AbstractPass;
 import polyglot.frontend.ExtensionInfo;
 import polyglot.frontend.Job;
@@ -9,7 +8,10 @@ import polyglot.frontend.Pass;
 import polyglot.frontend.goals.AbstractGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
-import polyglot.types.*;
+import polyglot.types.ClassType;
+import polyglot.types.Flags;
+import polyglot.types.ParsedClassType;
+import polyglot.types.SemanticException;
 import polyglot.util.Position;
 import polyllvm.ast.PolyLLVMNodeFactory;
 import polyllvm.types.PolyLLVMTypeSystem;
@@ -104,10 +106,9 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
 
     /** Given an expression, returns its enclosing instance of the specified type. */
     private Expr getEnclosingInstance(Expr expr, ClassType targetType, boolean allowSubtype) {
-        Type t = expr.type();
-        if (targetType instanceof SubstType)
-            t = ((SubstType) targetType).subst().substType(t);
-        if (t.typeEquals(targetType) || (allowSubtype && t.isSubtype(targetType)))
+        ClassType t = expr.type().toClass();
+        if (ts.typeEqualsErased(t, targetType)
+                || (allowSubtype && ts.isSubtypeErased(t, targetType)))
             return expr;
         Field enclosing = tnf.Field(expr.position(), expr, ENCLOSING_STR);
         return getEnclosingInstance(enclosing, targetType, allowSubtype);
@@ -116,18 +117,13 @@ class SubstituteEnclosingInstances extends DesugarVisitor {
     /** Return the enclosing instance of the specified type with respect to the current class. */
     private Expr getEnclosingInstance(Position pos, ClassType targetType, boolean allowSubtype) {
         ClassType currClass = classes.peek();
-        if (targetType instanceof SubstType) {
-            // Apply the same substitutions so that subtyping
-            // works as expected amid generics.
-            currClass = ((SubstType) targetType).subst().substType(currClass).toClass();
-        }
 
         // If we are inside a constructor, try to use an enclosing instance formal rather than the
         // enclosing instance field. This ensures that enclosing instance fields are not accessed
         // in the constructor before they are initialized.
-        if (!currClass.typeEquals(targetType) && !constructors.isEmpty()) {
+        if (!ts.typeEqualsErased(currClass, targetType) && !constructors.isEmpty()) {
             ConstructorDecl ctor = constructors.peek();
-            if (ctor.constructorInstance().container().typeEquals(currClass)) {
+            if (ts.typeEqualsErased(ctor.constructorInstance().container(), currClass)) {
                 List<Formal> enclosingFormals = ctor.formals().stream()
                         .filter((f) -> f.name().equals(ENCLOSING_STR))
                         .collect(Collectors.toList());
