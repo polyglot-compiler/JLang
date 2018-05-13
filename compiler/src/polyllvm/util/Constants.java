@@ -31,7 +31,7 @@ public class Constants {
     ));
 
     public static final int DEBUG_INFO_VERSION = 3;
-    public static final int DEBUG_DWARF_VERSION = 2;
+    public static final int DEBUG_DWARF_VERSION = 4;
 
     /**
      * The default size of the table for interfaces
