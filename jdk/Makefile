@@ -21,7 +21,8 @@ $(JDK_SRC): | $(JDK_SRC).zip
 	unzip -d $@ $(JDK_SRC).zip
 
 $(JDK_SRC)/patchstamp: | $(JDK_SRC)
-	for f in `find $(PATCHES) -name "*.patch"`; do patch -p0 < "$$f"; done
+	@echo "Patching JDK source files"
+	@for f in `find $(PATCHES) -name "*.patch"`; do patch -p0 < "$$f"; done
 	@date > $@
 
 # Compile JDK source files (.java --> .ll)
