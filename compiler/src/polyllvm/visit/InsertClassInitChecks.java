@@ -39,31 +39,7 @@ public class InsertClassInitChecks extends DesugarVisitor {
             Field f = (Field) n;
             FieldInstance fi = f.fieldInstance();
             if (fi.flags().isStatic() && fi.container().isClass()) {
-                return guardWithInitCheck(f, fi.container().toClass());
-            }
-        }
-
-        // Guard `new` expressions.
-        if (n instanceof New) {
-            New nw = (New) n;
-            ConstructorInstance ci = nw.constructorInstance();
-            if (ci.container().isClass()) {
-                return guardWithInitCheck(nw, ci.container().toClass());
-            }
-        }
-
-        // Guard string literals, which are implicit object instantiations.
-        if (n instanceof StringLit) {
-            StringLit sl = (StringLit) n;
-            return guardWithInitCheck(sl, ts.String());
-        }
-
-        // Guard static method calls.
-        if (n instanceof Call) {
-            Call c = (Call) n;
-            MethodInstance mi = c.methodInstance();
-            if (mi.flags().isStatic() && mi.container().isClass()) {
-                return guardWithInitCheck(c, mi.container().toClass());
+                n = guardWithInitCheck(f, fi.container().toClass());
             }
         }
 
@@ -72,25 +48,45 @@ public class InsertClassInitChecks extends DesugarVisitor {
             ClassLit cl = (ClassLit) n;
             Type type = cl.typeNode().type();
             if (type.isClass()) {
-                return guardWithInitCheck(cl, type.toClass());
+                n = guardWithInitCheck(cl, type.toClass());
             }
         }
 
-        // Initialize the containing class of every entry point.
-        // Necessary to maintain our assumption that a class is initialized
-        // before any code within its body runs.
+        // Guard instance creation.
+        if (n instanceof ConstructorDecl) {
+            ConstructorDecl cd = (ConstructorDecl) n;
+            // TODO: Might want to be able to guard native constructors too.
+            if (cd.body() != null) {
+                ConstructorInstance ci = cd.constructorInstance();
+                Stmt check = buildInitCheck(cd.position(), ci.container().toClass());
+                Block body = cd.body().prepend(check);
+                n = cd.body(body);
+            }
+        }
+
         if (n instanceof MethodDecl) {
             MethodDecl md = (MethodDecl) n;
             MethodInstance mi = md.methodInstance();
+
+            // Guard static methods.
+            // TODO: Might want to be able to guard native static methods too.
+            if (mi.flags().isStatic() && md.body() != null && !mi.name().equals(STATIC_INIT_FUNC)) {
+                Stmt check = buildInitCheck(md.position(), mi.container().toClass());
+                Block body = md.body().prepend(check);
+                n = md.body(body);
+            }
+
+            // Initialize the string class at every entry point.
+            // This lets us omit class init checks for string literals.
             boolean isEntryPoint = mi.name().equals("main")
                     && mi.flags().isPublic()
                     && mi.flags().isStatic()
                     && mi.formalTypes().size() == 1
                     && mi.formalTypes().get(0).equals(ts.arrayOf(ts.String()));
-            if (isEntryPoint) {
-                Stmt check = buildInitCheck(md.position(), mi.container().toClass());
+            if (isEntryPoint && md.body() != null) {
+                Stmt check = buildInitCheck(md.position(), ts.String());
                 Block body = md.body().prepend(check);
-                return md.body(body);
+                n = md.body(body);
             }
         }
 
