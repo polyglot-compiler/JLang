@@ -39,8 +39,8 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         // Note that the entry block is reserved exclusively for alloca instructions
         // and parameter initialization. Children translations will insert alloca instructions
         // into this block as needed.
-        LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, funcRef, "entry");
-        LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, funcRef, "body");
+        LLVMBasicBlockRef entry = v.utils.buildBlock("entry");
+        LLVMBasicBlockRef body = v.utils.buildBlock("body");
         LLVMPositionBuilderAtEnd(v.builder, entry);
 
         // Initialize formals.
@@ -57,6 +57,16 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             LLVMBuildStore(v.builder, LLVMGetParam(funcRef, idx), alloca);
         }
 
+        // Begin body.
+        LLVMPositionBuilderAtEnd(v.builder, body);
+
+        // If static method or constructor, make sure the container class has been initialized.
+        // See JLS 7, section 12.4.1.
+        if (pi.flags().isStatic() || pi instanceof ConstructorInstance) {
+            // TODO: Make sure that classes are initialized in *native* static methods too.
+            v.utils.buildClassLoadCheck(pi.container().toClass());
+        }
+
         // Register as entry point if applicable.
         boolean isEntryPoint = n.name().equals("main")
                 && n.flags().isPublic()
@@ -66,10 +76,13 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         if (isEntryPoint) {
             String className = n.procedureInstance().container().toClass().fullName();
             v.addEntryPoint(funcRef, className);
+
+            // Initialize the java.lang.String class at each entry point to avoid
+            // the need for class loading before string literals.
+            v.utils.buildClassLoadCheck(ts.String());
         }
 
         // Recurse to children.
-        LLVMPositionBuilderAtEnd(v.builder, body);
         n = (ProcedureDecl) lang().visitChildren(n, v);
 
         // Add void return if necessary.

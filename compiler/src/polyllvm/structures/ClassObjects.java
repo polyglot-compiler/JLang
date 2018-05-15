@@ -67,7 +67,7 @@ public final class ClassObjects {
         LLVMValueRef classObjStruct = v.utils.buildConstStruct(numSupertypes, classObjPtrsArr);
 
         LLVMValueRef global = v.utils.getGlobal(
-                v.mangler.classObjName(rt), LLVMTypeOf(classObjStruct));
+                v.mangler.typeInfo(rt), LLVMTypeOf(classObjStruct));
         LLVMSetExternallyInitialized(global, 0);
         LLVMSetInitializer(global, classObjStruct);
         LLVMSetLinkage(global, LLVMLinkOnceODRLinkage);

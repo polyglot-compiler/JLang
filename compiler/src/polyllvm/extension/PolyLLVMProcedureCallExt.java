@@ -100,7 +100,7 @@ abstract class PolyLLVMProcedureCallExt extends PolyLLVMExt {
 
             // Static native methods take in the class object as well.
             if (pi.flags().isStatic()) {
-                args.add(v.utils.buildClassObject(pi.container()));
+                args.add(v.utils.loadClassObject(pi.container().toClass()));
             }
         }
 

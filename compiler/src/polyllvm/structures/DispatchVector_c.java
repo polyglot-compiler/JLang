@@ -1,21 +1,21 @@
 package polyllvm.structures;
 
 import org.bytedeco.javacpp.LLVM;
-import org.bytedeco.javacpp.LLVM.*;
+import org.bytedeco.javacpp.LLVM.LLVMTypeRef;
+import org.bytedeco.javacpp.LLVM.LLVMValueRef;
 import polyglot.types.ClassType;
 import polyglot.types.MethodInstance;
 import polyglot.types.ReferenceType;
-import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
-import java.lang.Override;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static org.bytedeco.javacpp.LLVM.*;
+import static org.bytedeco.javacpp.LLVM.LLVMConstNull;
+import static org.bytedeco.javacpp.LLVM.LLVMSetInitializer;
 
 // TODO
 // There's still some cleanup to do here, namely, moving all dispatch vector code
@@ -42,8 +42,7 @@ public class DispatchVector_c implements DispatchVector {
             // These class objects are declared as static fields.
             @Override
             LLVMValueRef buildValueRef(DispatchVector_c o, ClassType erased) {
-                String fieldName = Constants.CLASS_OBJECT;
-                String mangledName = o.v.mangler.mangleStaticFieldName(erased, fieldName);
+                String mangledName = o.v.mangler.classObj(erased);
                 LLVMTypeRef elemType = o.v.utils.toLL(o.v.ts.Class());
                 return o.v.utils.getGlobal(mangledName, elemType);
             }
@@ -139,6 +138,6 @@ public class DispatchVector_c implements DispatchVector {
             LLVMValueRef dvPtr, ReferenceType recvTy, MethodInstance mi) {
         structTypeRefNonOpaque(recvTy); // Ensure non-opaque type.
         int idx = v.dispatchInfo(recvTy, mi).methodIndex();
-        return v.utils.buildStructGEP(dvPtr, 0, Layout.CLASS_METHODS.ordinal(), idx);
+        return v.utils.buildGEP(dvPtr, 0, Layout.CLASS_METHODS.ordinal(), idx);
     }
 }

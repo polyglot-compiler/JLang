@@ -111,7 +111,7 @@ public class ObjectStruct_c implements ObjectStruct {
     @Override
     public LLVMValueRef buildDispatchVectorElementPtr(LLVMValueRef instance, ReferenceType rt) {
         structTypeRefNonOpaque(rt); // Ensure non-opaque type.
-        return v.utils.buildStructGEP(instance, 0, Layout.DV.ordinal());
+        return v.utils.buildGEP(instance, 0, Layout.DV.ordinal());
     }
 
     @Override
@@ -122,7 +122,7 @@ public class ObjectStruct_c implements ObjectStruct {
         int idx = getOrComputeInstanceFields(fi.container()).indexOf(fi);
         if (idx < 0)
             throw new InternalCompilerError("Field " + fi + " not found in " + fi.container());
-        return v.utils.buildStructGEP(instance, 0, Layout.FIELDS.ordinal(), idx);
+        return v.utils.buildGEP(instance, 0, Layout.FIELDS.ordinal(), idx);
     }
 
     @Override
@@ -131,7 +131,7 @@ public class ObjectStruct_c implements ObjectStruct {
 
         // Go one past the end of the object header (see Layout#buildComponentTypeRefs).
         int idx = Layout.values().length;
-        LLVMValueRef baseRaw = v.utils.buildStructGEP(instance, 0, idx);
+        LLVMValueRef baseRaw = v.utils.buildGEP(instance, 0, idx);
         LLVMTypeRef ptrType = v.utils.ptrTypeRef(v.utils.toLL(at.base()));
         return LLVMBuildBitCast(v.builder, baseRaw, ptrType, "cast");
     }

@@ -86,12 +86,14 @@ void Java_java_lang_System_PrintStream_println__Ljava_lang_String_2() {
     unlinked("Java_java_lang_System_PrintStream_println__Ljava_lang_String_2");
 }
 
-void Java_java_lang_System_currentTimeMillis() {
-    unlinked("Java_java_lang_System_currentTimeMillis");
+jlong Java_java_lang_System_currentTimeMillis(JNIEnv *env, jclass obj) {
+    warn("Java_java_lang_System_currentTimeMillis");
+    return 0;
 }
 
-void Java_java_lang_System_nanoTime() {
-    unlinked("Java_java_lang_System_nanoTime");
+jlong Java_java_lang_System_nanoTime(JNIEnv *env, jclass obj) {
+    warn("Java_java_lang_System_nanoTime");
+    return 0;
 }
 
 void Java_java_io_FileDescriptor_set() {

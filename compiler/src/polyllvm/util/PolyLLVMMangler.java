@@ -28,6 +28,9 @@ public class PolyLLVMMangler {
     private static final String IT_STR_STR = "intf_name";
     private static final String TYPE_INFO_STR = "rtti";
     private static final String CLASS_ID_STR = "class_id";
+    private static final String CLASS_STR = "class";
+    private static final String CLASS_INFO_STR = "class_info";
+    private static final String LOAD_CLASS_STR = "load_class";
 
     // From the JNI API.
     private static final String UNDERSCORE_ESCAPE = "_1";
@@ -176,12 +179,24 @@ public class PolyLLVMMangler {
         return classSpecificGlobal(rt, IT_STR_STR);
     }
 
-    public String classObjName(ReferenceType rt) {
+    public String typeInfo(ReferenceType rt) {
         return classSpecificGlobal(rt, TYPE_INFO_STR);
     }
 
     public String typeIdentityId(ReferenceType rt) {
         return classSpecificGlobal(rt, CLASS_ID_STR);
+    }
+
+    public String classObj(ClassType ct) {
+        return classSpecificGlobal(ct, CLASS_STR);
+    }
+
+    public String classInfoGlobal(ClassType ct) {
+        return classSpecificGlobal(ct, CLASS_INFO_STR);
+    }
+
+    public String classLoadingFunc(ClassType ct) {
+        return classSpecificGlobal(ct, LOAD_CLASS_STR);
     }
 
     private String classSpecificGlobal(ReferenceType rt, String suffix) {

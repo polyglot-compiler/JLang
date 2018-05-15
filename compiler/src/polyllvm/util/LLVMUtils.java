@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.bytedeco.javacpp.LLVM.*;
-import static polyllvm.util.Constants.CLASS_OBJECT;
 
 /**
  * Helper methods for building common LLVM types and IR instructions. This
@@ -120,6 +119,10 @@ public class LLVMUtils {
         return 8;
     }
 
+    public LLVMTypeRef voidType() {
+        return LLVMVoidTypeInContext(v.context);
+    }
+
     public LLVMTypeRef i8() {
         return LLVMInt8TypeInContext(v.context);
     }
@@ -189,8 +192,8 @@ public class LLVMUtils {
     }
 
     // LLVM requires that void-returning functions have the empty string for their label.
-    public LLVMValueRef buildProcCall(LLVMValueRef p, LLVMValueRef... a) {
-        return buildCall("", v.currLandingPad(), p, a);
+    public void buildProcCall(LLVMValueRef fun, LLVMValueRef... a) {
+        buildCall("", v.currLandingPad(), fun, a);
     }
 
     // Same as above, but allows custom landing pad.
@@ -200,6 +203,12 @@ public class LLVMUtils {
 
     public LLVMValueRef buildFunCall(LLVMValueRef fun, LLVMValueRef... args) {
         return buildCall("call", v.currLandingPad(), fun, args);
+    }
+
+    public LLVMValueRef getStaticField(FieldInstance fi) {
+        String mangledName = v.mangler.mangleStaticFieldName(fi);
+        LLVMTypeRef type = v.utils.toLL(fi.type());
+        return v.utils.getGlobal(mangledName, type);
     }
 
     /**
@@ -311,10 +320,14 @@ public class LLVMUtils {
         return global;
     }
 
-    public LLVMValueRef buildClassObject(ReferenceType rt) {
-        String mangled = v.mangler.mangleStaticFieldName(rt, CLASS_OBJECT);
+    public LLVMValueRef getClassObjectGlobal(ClassType ct) {
+        String mangled = v.mangler.classObj(ct);
         LLVMTypeRef elemType = v.utils.toLL(v.ts.Class());
-        LLVMValueRef globalVar = v.utils.getGlobal(mangled, elemType);
+        return v.utils.getGlobal(mangled, elemType);
+    }
+
+    public LLVMValueRef loadClassObject(ClassType ct) {
+        LLVMValueRef globalVar = getClassObjectGlobal(ct);
         return LLVMBuildLoad(v.builder, globalVar, "class.obj");
     }
 
@@ -323,13 +336,15 @@ public class LLVMUtils {
         return LLVMBuildGEP(v.builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
 
-    public LLVMValueRef buildStructGEP(LLVMValueRef ptr, int... intIndices) {
+    public LLVMValueRef buildGEP(LLVMValueRef ptr, int... intIndices) {
         // LLVM suggests using i32 offsets for struct GEP instructions.
         LLVMValueRef[] indices = IntStream.of(intIndices)
-                .mapToObj(i -> LLVMConstInt(LLVMInt32TypeInContext(v.context),
-                        i, /* sign-extend */ 0))
+                .mapToObj(i -> LLVMConstInt(i32(), i, /*sign-extend*/ 0))
                 .toArray(LLVMValueRef[]::new);
-        return LLVMBuildGEP(v.builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
+        PointerPointer<LLVMValueRef> indicesPtr = new PointerPointer<>(indices);
+        return LLVMIsConstant(ptr) != 0
+                ? LLVMConstGEP(ptr, indicesPtr, indices.length)
+                : LLVMBuildGEP(v.builder, ptr, indicesPtr, indices.length, "gep");
     }
 
     /**
@@ -581,9 +596,8 @@ public class LLVMUtils {
         return LLVMBuildBitCast(v.builder, val, ptrTypeRef(toLL(jty)), "cast_l");
     }
 
-    public LLVMValueRef buildConstArray(LLVMTypeRef type,
-            LLVMValueRef... values) {
-        return LLVMConstArray(type, new PointerPointer<>(values), values.length);
+    public LLVMValueRef buildConstArray(LLVMTypeRef elemType, LLVMValueRef... values) {
+        return LLVMConstArray(elemType, new PointerPointer<>(values), values.length);
     }
 
     /** Returns an anonymous constant struct. */
@@ -600,6 +614,50 @@ public class LLVMUtils {
     public LLVMValueRef buildNamedConstStruct(LLVMTypeRef type, LLVMValueRef... values) {
         PointerPointer<LLVMValueRef> valArr = new PointerPointer<>(values);
         return LLVMConstNamedStruct(type, valArr, values.length);
+    }
+
+    public LLVMValueRef buildAnonGlobal(LLVMValueRef val) {
+        LLVMValueRef var = getGlobal("", LLVMTypeOf(val));
+        LLVMSetInitializer(var, val);
+        LLVMSetGlobalConstant(var, 1);
+        LLVMSetLinkage(var, LLVMPrivateLinkage);
+        return var;
+    }
+
+    public LLVMValueRef buildGlobalArrayAsPtr(LLVMTypeRef elemType, LLVMValueRef[] values) {
+        LLVMValueRef arr = buildConstArray(elemType, values);
+        LLVMValueRef global = buildAnonGlobal(arr);
+        return v.utils.buildGEP(global, 0, 0);
+    }
+
+    public LLVMValueRef buildGlobalCStr(String str) {
+        LLVMValueRef val = LLVMConstStringInContext(v.context, str, str.length(), 0);
+        LLVMValueRef global = buildAnonGlobal(val);
+        return v.utils.buildGEP(global, 0, 0);
+    }
+
+    public LLVMTypeRef classLoadFuncType() {
+        return functionType(voidType());
+    }
+
+    /** Emits a check to ensure that the given class has been loaded by the runtime. */
+    public void buildClassLoadCheck(ClassType ct) {
+        LLVMBasicBlockRef loadClass = v.utils.buildBlock("load.class");
+        LLVMBasicBlockRef end = v.utils.buildBlock("continue");
+        String classMangled = v.mangler.classObj(ct);
+        LLVMTypeRef classType = v.utils.toLL(v.ts.Class());
+        LLVMValueRef classGlobal = v.utils.getGlobal(classMangled, classType);
+        LLVMValueRef clazz = LLVMBuildLoad(v.builder, classGlobal, "class");
+        LLVMValueRef check = LLVMBuildIsNull(v.builder, clazz, "class.null");
+        LLVMBuildCondBr(v.builder, check, loadClass, end);
+
+        LLVMPositionBuilderAtEnd(v.builder, loadClass);
+        String loadClassMangled = v.mangler.classLoadingFunc(ct);
+        LLVMValueRef loadClassFunc = v.utils.getFunction(loadClassMangled, classLoadFuncType());
+        v.utils.buildProcCall(loadClassFunc);
+        LLVMBuildBr(v.builder, end);
+
+        LLVMPositionBuilderAtEnd(v.builder, end);
     }
 
     /**

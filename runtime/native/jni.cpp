@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include "stack_trace.h"
 
-// Compiler-specific representations for Java objects.
 #include "rep.h"
+#include "class.h"
 
 [[noreturn]] static void jni_Unimplemented(const char* name) {
   fprintf(stderr,
@@ -19,6 +19,26 @@
   fflush(stderr);
   abort();
 }
+
+// Begin helper methods.
+
+static char* get_field_ptr(jobject obj, jfieldID id) {
+    return reinterpret_cast<char*>(obj) + reinterpret_cast<intptr_t>(id);
+}
+
+template <typename T>
+static T get_field(jobject obj, jfieldID id) {
+    auto ptr = get_field_ptr(obj, id);
+    return *reinterpret_cast<T*>(ptr);
+}
+
+template <typename T>
+static void set_field(jobject obj, jfieldID id, T val) {
+    auto ptr = get_field_ptr(obj, id);
+    *reinterpret_cast<T*>(ptr) = val;
+}
+
+// Begin official API.
 
 extern "C" {
 
@@ -384,80 +404,46 @@ void jni_CallNonvirtualVoidMethodA(JNIEnv *env, jobject obj, jclass clazz, jmeth
 }
 
 jfieldID jni_GetFieldID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
-    jni_Unimplemented("GetFieldID");
+    auto res = get_java_field_id(clazz, name);
+    if (!res) {
+        // TODO: Should technically throw NoSuchFieldError.
+        fprintf(stderr,
+            "Could not find field %s in class %s. Aborting.\n",
+            name, get_java_class_name(clazz));
+        abort();
+    }
+    return res;
 }
 
-jobject jni_GetObjectField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetObjectField");
-}
 
-jboolean jni_GetBooleanField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetBooleanField");
-}
+// Calls a macro for each Java type and rep pair, e.g., "Object, jobject".
+#define FOR_EACH_JAVA_TYPE_AND_REP(macro) \
+    macro(Object, jobject) \
+    macro(Boolean, jboolean) \
+    macro(Byte, jbyte) \
+    macro(Char, jchar) \
+    macro(Short, jshort) \
+    macro(Int, jint) \
+    macro(Long, jlong) \
+    macro(Float, jfloat) \
+    macro(Double, jdouble)
 
-jbyte jni_GetByteField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetByteField");
-}
 
-jchar jni_GetCharField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetCharField");
-}
+// Declares JNI methods such as jni_GetObjectField.
+#define DECLARE_JNI_GET_FIELD(type, rep) \
+    rep jni_Get##type##Field(JNIEnv *env, jobject obj, jfieldID id) { \
+       return get_field<rep>(obj, id); \
+    }
+FOR_EACH_JAVA_TYPE_AND_REP(DECLARE_JNI_GET_FIELD)
 
-jshort jni_GetShortField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetShortField");
-}
 
-jint jni_GetIntField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetIntField");
-}
+// Declares JNI methods such as jni_SetObjectField.
+#define DECLARE_JNI_SET_FIELD(kind, rep) \
+    void jni_Set##kind##Field(JNIEnv *env, jobject obj, jfieldID id, rep val) { \
+       set_field<rep>(obj, id, val); \
+    }
+FOR_EACH_JAVA_TYPE_AND_REP(DECLARE_JNI_SET_FIELD)
 
-jlong jni_GetLongField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetLongField");
-}
-
-jfloat jni_GetFloatField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetFloatField");
-}
-
-jdouble jni_GetDoubleField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetDoubleField");
-}
-
-void jni_SetObjectField(JNIEnv *env, jobject obj, jfieldID fieldID, jobject val) {
-    jni_Unimplemented("SetObjectField");
-}
-
-void jni_SetBooleanField(JNIEnv *env, jobject obj, jfieldID fieldID, jboolean val) {
-    jni_Unimplemented("SetBooleanField");
-}
-
-void jni_SetByteField(JNIEnv *env, jobject obj, jfieldID fieldID, jbyte val) {
-    jni_Unimplemented("SetByteField");
-}
-
-void jni_SetCharField(JNIEnv *env, jobject obj, jfieldID fieldID, jchar val) {
-    jni_Unimplemented("SetCharField");
-}
-
-void jni_SetShortField(JNIEnv *env, jobject obj, jfieldID fieldID, jshort val) {
-    jni_Unimplemented("SetShortField");
-}
-
-void jni_SetIntField(JNIEnv *env, jobject obj, jfieldID fieldID, jint val) {
-    jni_Unimplemented("SetIntField");
-}
-
-void jni_SetLongField(JNIEnv *env, jobject obj, jfieldID fieldID, jlong val) {
-    jni_Unimplemented("SetLongField");
-}
-
-void jni_SetFloatField(JNIEnv *env, jobject obj, jfieldID fieldID, jfloat val) {
-    jni_Unimplemented("SetFloatField");
-}
-
-void jni_SetDoubleField(JNIEnv *env, jobject obj, jfieldID fieldID, jdouble val) {
-    jni_Unimplemented("SetDoubleField");
-}
 
 jmethodID jni_GetStaticMethodID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
     jni_Unimplemented("GetStaticMethodID");
@@ -882,7 +868,7 @@ void jni_SetDoubleArrayRegion(JNIEnv *env, jdoubleArray array, jsize start, jsiz
 }
 
 jint jni_RegisterNatives(JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint nMethods) {
-    fprintf(stderr, "WARNING: JNI method RegisterNatives is unimplemented, but does not abort.\n");
+    fprintf(stderr, "WARNING: JNI method RegisterNatives is unimplemented, but will not abort.\n");
     fflush(stderr);
     return 0;
 }

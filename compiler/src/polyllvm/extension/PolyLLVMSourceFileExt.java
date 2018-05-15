@@ -2,7 +2,6 @@ package polyllvm.extension;
 
 import org.bytedeco.javacpp.PointerPointer;
 import polyglot.ast.Node;
-import polyglot.main.Main;
 import polyglot.main.Options;
 import polyglot.types.TypeSystem;
 import polyglot.util.SerialVersionUID;
@@ -47,15 +46,10 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
         }
         else {
             // Try to emit an entry point even if the user did not specify one.
+            // If there are multiple entry points, this may result in duplicate
+            // symbols during linking.
             for (String entry : entryPoints.keySet()) {
-                if (options.entryPointEmitted) {
-                    throw new Main.TerminationException(
-                            "Multiple Java main functions found; " +
-                                    "please specify which to use with -entry-point <classname>");
-                }
-                System.out.println("Using the Java entry point found in " + entry);
                 buildEntryPoint(v, entryPoints.get(entry));
-                options.entryPointEmitted = true;
             }
         }
 

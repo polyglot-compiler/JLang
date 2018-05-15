@@ -1,18 +1,21 @@
 package polyllvm.extension;
 
 import org.bytedeco.javacpp.LLVM.*;
-import polyglot.ast.ClassDecl;
-import polyglot.ast.Node;
+import polyglot.ast.*;
 import polyglot.types.ClassType;
+import polyglot.types.FieldInstance;
 import polyglot.types.ParsedClassType;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
+import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.bytedeco.javacpp.LLVM.*;
+import static polyllvm.util.Constants.REGISTER_CLASS_FUNC;
 
 public class PolyLLVMClassDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -20,22 +23,140 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         ClassDecl n = (ClassDecl) node();
-        ParsedClassType ty = n.type();
-        if (ty.flags().isInterface()) {
-            // An interface need only establish its identity.
-            v.classObjs.toTypeIdentity(ty, /*extern*/ false);
-        } else {
-            initClassDataStructures(ty, v);
-        }
+        ParsedClassType ct = n.type();
+        initClassDataStructures(v, ct, n.body());
         return super.leaveTranslateLLVM(v);
     }
 
-    @SuppressWarnings("WeakerAccess")
-    public static void initClassDataStructures(ClassType ct, LLVMTranslator v) {
-        assert !ct.flags().isInterface(); // Interfaces don't have these data structures.
+    /**
+     * Builds a function that runs static initializers, and
+     * creates the java.lang.Class object representing this class.
+     *
+     * Note that this serves the same role as class loading in the JVM.
+     * Whereas the JVM reads a .class file to build backing data structures
+     * for this class, we statically emit these data structures in LLVM IR.
+     */
+    public static void buildClassLoadingFunc(LLVMTranslator v, ClassType ct, ClassBody cb) {
 
-        // Initialize the type identity
+        // Declare class object.
+        LLVMTypeRef classType = v.utils.toLL(v.ts.Class());
+        LLVMValueRef classObjectGlobal = v.utils.getClassObjectGlobal(ct);
+        LLVMSetInitializer(classObjectGlobal, LLVMConstNull(classType));
+
+        List<FieldInstance> instanceFields = ct.fields().stream()
+                .filter(fi -> !fi.flags().isStatic())
+                .collect(Collectors.toList());
+
+        // This layout must precisely mirror the layout defined in the runtime (class.cpp).
+        LLVMValueRef classInfo = v.utils.buildConstStruct(
+
+                // Class name, char*
+                v.utils.buildGlobalCStr(ct.fullName()),
+
+                // Number of instance fields, i32
+                LLVMConstInt(v.utils.i32(), instanceFields.size(), /*sign-extend*/ 0),
+
+                // Instance field names, char**
+                v.utils.buildGlobalArrayAsPtr(v.utils.i8Ptr(), instanceFields.stream()
+                        .map(fi -> v.utils.buildGlobalCStr(fi.name()))
+                        .toArray(LLVMValueRef[]::new)),
+
+                // Instance field offsets, i32*
+                v.utils.buildGlobalArrayAsPtr(v.utils.i32(), instanceFields.stream()
+                        .map(fi -> {
+                            LLVMValueRef nullPtr = LLVMConstNull(v.utils.toLL(fi.container()));
+                            LLVMValueRef offset = v.obj.buildFieldElementPtr(nullPtr, fi);
+                            return LLVMConstPtrToInt(offset, v.utils.i32());
+                        })
+                        .toArray(LLVMValueRef[]::new))
+        );
+
+        // Emit class info as a global variable.
+        String classInfoMangled = v.mangler.classInfoGlobal(ct);
+        LLVMValueRef classInfoGlobal = v.utils.getGlobal(classInfoMangled, LLVMTypeOf(classInfo));
+        LLVMSetInitializer(classInfoGlobal, classInfo);
+        LLVMSetGlobalConstant(classInfoGlobal, 1);
+        LLVMSetLinkage(classInfoGlobal, LLVMPrivateLinkage);
+
+        // Begin class loading function.
+        LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
+        String funcName = v.mangler.classLoadingFunc(ct);
+        LLVMTypeRef funcType = v.utils.classLoadFuncType();
+        LLVMValueRef func = v.utils.getFunction(funcName, funcType);
+        v.debugInfo.funcDebugInfo(funcName, func);
+        v.pushFn(func);
+
+        LLVMBasicBlockRef entry = v.utils.buildBlock("entry");
+        LLVMBasicBlockRef body = v.utils.buildBlock("body");
+        LLVMPositionBuilderAtEnd(v.builder, body);
+
+        // Allocate and store a new java.lang.Class instance.
+        // Note that we do not call any constructors for the allocated class objects.
+        LLVMValueRef calloc = LLVMGetNamedFunction(v.mod, Constants.CALLOC);
+        LLVMValueRef memory = v.utils.buildFunCall(calloc, v.obj.sizeOf(v.ts.Class()));
+        LLVMValueRef clazz = LLVMBuildBitCast(v.builder, memory, classType, "cast");
+        LLVMValueRef classGlobal = v.utils.getGlobal(v.mangler.classObj(ct), classType);
+        LLVMBuildStore(v.builder, clazz, classGlobal);
+
+        // Set the dispatch vector of the class object.
+        LLVMValueRef dvGep = v.obj.buildDispatchVectorElementPtr(clazz, v.ts.Class());
+        LLVMValueRef dvGlobal = v.dv.getDispatchVectorFor(v.ts.Class());
+        LLVMBuildStore(v.builder, dvGlobal, dvGep);
+
+        // Call into runtime to register this class.
+        LLVMTypeRef regClassFuncType = v.utils.functionType(
+                v.utils.voidType(), classType, v.utils.ptrTypeRef(LLVMTypeOf(classInfo)));
+        LLVMValueRef regClass = v.utils.getFunction(REGISTER_CLASS_FUNC, regClassFuncType);
+        v.utils.buildProcCall(regClass, clazz, classInfoGlobal);
+
+        // Load super class if necessary.
+        if (!ct.flags().isInterface() && ct.superType() != null) {
+            v.utils.buildClassLoadCheck(ct.superType().toClass());
+        }
+
+        // Run static initializers.
+        for (ClassMember m : cb.members()) {
+
+            // Run static field initializers.
+            if (m instanceof FieldDecl) {
+                FieldDecl fd = (FieldDecl) m;
+                FieldInstance fi = fd.fieldInstance();
+                if (fi.flags().isStatic() && fd.init() != null) {
+                    LLVMValueRef var = v.utils.getStaticField(fi);
+                    fd.visitChild(fd.init(), v);
+                    LLVMValueRef val = v.getTranslation(fd.init());
+                    LLVMBuildStore(v.builder, val, var);
+                }
+            }
+
+            // Run static initializer blocks.
+            if (m instanceof Initializer) {
+                Initializer init = (Initializer) m;
+                if (init.flags().isStatic()) {
+                    init.visitChild(init.body(), v);
+                }
+            }
+        }
+
+        LLVMBuildRetVoid(v.builder);
+        LLVMPositionBuilderAtEnd(v.builder, entry);
+        LLVMBuildBr(v.builder, body);
+        v.debugInfo.popScope();
+        v.popFn();
+        LLVMPositionBuilderAtEnd(v.builder, prevBlock);
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    public static void initClassDataStructures(LLVMTranslator v, ClassType ct, ClassBody cb) {
+
         v.classObjs.toTypeIdentity(ct, /*extern*/ false);
+        buildClassLoadingFunc(v, ct, cb);
+
+        if (ct.flags().isInterface()) {
+            // Interfaces don't have the remaining class data structure.
+            return;
+        }
+
         v.classObjs.classObjRef(ct);
 
         List<ClassType> interfaces = v.allInterfaces(ct);

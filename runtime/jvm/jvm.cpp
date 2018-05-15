@@ -240,7 +240,10 @@ void JVM_DisableCompiler() {
     jvm_Unimplemented("JVM_DisableCompiler");
 }
 
-void JVM_DoPrivileged() {
+jobject
+JVM_DoPrivileged(
+        JNIEnv *env, jclass cls,
+        jobject action, jobject context, jboolean wrapException) {
     jvm_Unimplemented("JVM_DoPrivileged");
 }
 

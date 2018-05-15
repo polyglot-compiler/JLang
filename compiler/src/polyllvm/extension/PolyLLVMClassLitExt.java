@@ -10,9 +10,10 @@ import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.Constants;
 import polyllvm.visit.DesugarLocally;
 import polyllvm.visit.LLVMTranslator;
+
+import static polyllvm.util.Constants.PRIMITIVE_CLASS_OBJECT_SUFFIX;
 
 public class PolyLLVMClassLitExt extends PolyLLVMExt {
 
@@ -20,11 +21,13 @@ public class PolyLLVMClassLitExt extends PolyLLVMExt {
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         ClassLit n = (ClassLit) node();
         Type t = n.typeNode().type();
-        assert t.isReference();
+        assert t.isClass();
 
-        LLVMValueRef load = v.utils.buildClassObject(t.toReference());
+        // We eagerly load the class if necessary. See JLS 7, section 12.4.1.
+        v.utils.buildClassLoadCheck(t.toClass());
 
-        v.addTranslation(n, load);
+        LLVMValueRef classObj = v.utils.loadClassObject(t.toClass());
+        v.addTranslation(n, classObj);
         return super.leaveTranslateLLVM(v);
     }
 
@@ -36,7 +39,7 @@ public class PolyLLVMClassLitExt extends PolyLLVMExt {
 
         if (t.isVoid() || t.isPrimitive()) {
             // Get the class object from the runtime library.
-            String fieldName = t.toString() + Constants.PRIMITIVE_CLASS_OBJECT_SUFFIX;
+            String fieldName = t.toString() + PRIMITIVE_CLASS_OBJECT_SUFFIX;
             return v.tnf.StaticField(pos, v.ts.RuntimeHelper(), fieldName);
         }
         else if (t.isArray()) {
@@ -47,7 +50,7 @@ public class PolyLLVMClassLitExt extends PolyLLVMExt {
             return v.tnf.StaticCall(pos, v.ts.Class(), v.ts.Class(), "forName", classNameExpr);
         }
         else {
-            assert t.isReference();
+            assert t.isClass();
             return super.desugar(v);
         }
     }
