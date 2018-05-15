@@ -11,6 +11,7 @@ import polyllvm.util.Constants;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -79,71 +80,68 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         LLVMSetLinkage(classInfoGlobal, LLVMPrivateLinkage);
 
         // Begin class loading function.
-        LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
         String funcName = v.mangler.classLoadingFunc(ct);
-        LLVMTypeRef funcType = v.utils.classLoadFuncType();
-        LLVMValueRef func = v.utils.getFunction(funcName, funcType);
-        v.debugInfo.funcDebugInfo(funcName, func);
-        v.pushFn(func);
+        String debugName = "load_" + ct.fullName();
 
-        LLVMBasicBlockRef entry = v.utils.buildBlock("entry");
-        LLVMBasicBlockRef body = v.utils.buildBlock("body");
-        LLVMPositionBuilderAtEnd(v.builder, body);
+        Runnable buildBody = () -> {
 
-        // Allocate and store a new java.lang.Class instance.
-        // Note that we do not call any constructors for the allocated class objects.
-        LLVMValueRef calloc = LLVMGetNamedFunction(v.mod, Constants.CALLOC);
-        LLVMValueRef memory = v.utils.buildFunCall(calloc, v.obj.sizeOf(v.ts.Class()));
-        LLVMValueRef clazz = LLVMBuildBitCast(v.builder, memory, classType, "cast");
-        LLVMValueRef classGlobal = v.utils.getGlobal(v.mangler.classObj(ct), classType);
-        LLVMBuildStore(v.builder, clazz, classGlobal);
+            // Allocate and store a new java.lang.Class instance.
+            // Note that we do not call any constructors for the allocated class objects.
+            LLVMValueRef calloc = LLVMGetNamedFunction(v.mod, Constants.CALLOC);
+            LLVMValueRef memory = v.utils.buildFunCall(calloc, v.obj.sizeOf(v.ts.Class()));
+            LLVMValueRef clazz = LLVMBuildBitCast(v.builder, memory, classType, "cast");
+            LLVMValueRef classGlobal = v.utils.getGlobal(v.mangler.classObj(ct), classType);
+            LLVMBuildStore(v.builder, clazz, classGlobal);
 
-        // Set the dispatch vector of the class object.
-        LLVMValueRef dvGep = v.obj.buildDispatchVectorElementPtr(clazz, v.ts.Class());
-        LLVMValueRef dvGlobal = v.dv.getDispatchVectorFor(v.ts.Class());
-        LLVMBuildStore(v.builder, dvGlobal, dvGep);
+            // Set the dispatch vector of the class object.
+            LLVMValueRef dvGep = v.obj.buildDispatchVectorElementPtr(clazz, v.ts.Class());
+            LLVMValueRef dvGlobal = v.dv.getDispatchVectorFor(v.ts.Class());
+            LLVMBuildStore(v.builder, dvGlobal, dvGep);
 
-        // Call into runtime to register this class.
-        LLVMTypeRef regClassFuncType = v.utils.functionType(
-                v.utils.voidType(), classType, v.utils.ptrTypeRef(LLVMTypeOf(classInfo)));
-        LLVMValueRef regClass = v.utils.getFunction(REGISTER_CLASS_FUNC, regClassFuncType);
-        v.utils.buildProcCall(regClass, clazz, classInfoGlobal);
+            // Call into runtime to register this class.
+            LLVMTypeRef regClassFuncType = v.utils.functionType(
+                    v.utils.voidType(), classType, v.utils.ptrTypeRef(LLVMTypeOf(classInfo)));
+            LLVMValueRef regClass = v.utils.getFunction(REGISTER_CLASS_FUNC, regClassFuncType);
+            v.utils.buildProcCall(regClass, clazz, classInfoGlobal);
 
-        // Load super class if necessary.
-        if (!ct.flags().isInterface() && ct.superType() != null) {
-            v.utils.buildClassLoadCheck(ct.superType().toClass());
-        }
+            // Load super class if necessary.
+            if (!ct.flags().isInterface() && ct.superType() != null) {
+                v.utils.buildClassLoadCheck(ct.superType().toClass());
+            }
 
-        // Run static initializers.
-        for (ClassMember m : cb.members()) {
+            // Run static initializers.
+            for (ClassMember m : cb.members()) {
 
-            // Run static field initializers.
-            if (m instanceof FieldDecl) {
-                FieldDecl fd = (FieldDecl) m;
-                FieldInstance fi = fd.fieldInstance();
-                if (fi.flags().isStatic() && fd.init() != null) {
-                    LLVMValueRef var = v.utils.getStaticField(fi);
-                    fd.visitChild(fd.init(), v);
-                    LLVMValueRef val = v.getTranslation(fd.init());
-                    LLVMBuildStore(v.builder, val, var);
+                // Run static field initializers.
+                if (m instanceof FieldDecl) {
+                    FieldDecl fd = (FieldDecl) m;
+                    FieldInstance fi = fd.fieldInstance();
+                    if (fi.flags().isStatic() && fd.init() != null) {
+                        LLVMValueRef var = v.utils.getStaticField(fi);
+                        fd.visitChild(fd.init(), v);
+                        LLVMValueRef val = v.getTranslation(fd.init());
+                        LLVMBuildStore(v.builder, val, var);
+                    }
+                }
+
+                // Run static initializer blocks.
+                if (m instanceof Initializer) {
+                    Initializer init = (Initializer) m;
+                    if (init.flags().isStatic()) {
+                        init.visitChild(init.body(), v);
+                    }
                 }
             }
 
-            // Run static initializer blocks.
-            if (m instanceof Initializer) {
-                Initializer init = (Initializer) m;
-                if (init.flags().isStatic()) {
-                    init.visitChild(init.body(), v);
-                }
-            }
-        }
+            // Return the loaded class.
+            LLVMBuildRet(v.builder, clazz);
+        };
 
-        LLVMBuildRetVoid(v.builder);
-        LLVMPositionBuilderAtEnd(v.builder, entry);
-        LLVMBuildBr(v.builder, body);
-        v.debugInfo.popScope();
-        v.popFn();
-        LLVMPositionBuilderAtEnd(v.builder, prevBlock);
+        v.utils.buildFunc(
+                ct.position(),
+                funcName, debugName,
+                v.ts.Class(), Collections.emptyList(),
+                buildBody);
     }
 
     @SuppressWarnings("WeakerAccess")

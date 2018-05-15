@@ -7,6 +7,7 @@ import polyglot.ext.jl5.types.inference.LubType;
 import polyglot.ext.jl7.types.DiamondType;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
+import polyglot.util.Position;
 import polyllvm.visit.LLVMTranslator;
 
 import java.util.ArrayList;
@@ -211,6 +212,50 @@ public class LLVMUtils {
         return v.utils.getGlobal(mangledName, type);
     }
 
+    public void buildFunc(
+            Position pos, String name, String debugName,
+            Type returnType, List<? extends Type> argTypes, Runnable bodyBuilder) {
+
+        LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
+
+        // Create type and debug info.
+        LLVMTypeRef funcType = toLLFuncTy(returnType, argTypes);
+        LLVMValueRef func = getFunction(name, funcType);
+        v.debugInfo.beginFuncDebugInfo(pos, func, name, debugName, argTypes);
+        v.pushFn(func);
+
+        // Note that the entry block is reserved exclusively for alloca instructions
+        // and parameter initialization. Translations will insert alloca instructions
+        // into this block as needed.
+        LLVMBasicBlockRef entry = v.utils.buildBlock("entry");
+        LLVMBasicBlockRef body = v.utils.buildBlock("body");
+
+        // Build body.
+        LLVMPositionBuilderAtEnd(v.builder, body);
+        bodyBuilder.run();
+
+        // Add terminator if necessary.
+        if (!v.utils.blockTerminated()) {
+            if (returnType.isVoid()) {
+                LLVMBuildRetVoid(v.builder);
+            } else {
+                LLVMBuildUnreachable(v.builder);
+            }
+        }
+
+        // Connect entry block with body.
+        // We build this branch at the end since translations need to be able
+        // to insert into the entry block before its terminator. (LLVMPositionBuilderBefore
+        // is inconvenient because it changes the debug location.)
+        LLVMPositionBuilderAtEnd(v.builder, entry);
+        LLVMBuildBr(v.builder, body);
+
+        // Cleanup.
+        v.debugInfo.popScope();
+        v.popFn();
+        LLVMPositionBuilderAtEnd(v.builder, prevBlock);
+    }
+
     /**
      * The ctor supplier should build the body of the ctor and return a pointer
      * to the data that it initializes, or return null if not applicable. (If
@@ -231,7 +276,7 @@ public class LLVMUtils {
                 v.debugInfo.diBuilder, new PointerPointer<>(), /* length */ 0);
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
                 v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
-        v.debugInfo.funcDebugInfo(func, name, name, funcDiType, 0);
+        v.debugInfo.beginFuncDebugInfo(func, name, name, funcDiType, 0);
 
         LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, func, "entry");
         LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func, "body");
@@ -539,27 +584,44 @@ public class LLVMUtils {
         return functionType(retType, argTypes);
     }
 
-    /** Returns the (erased) LLVM type reference for the given procedure */
-    public LLVMTypeRef toLL(ProcedureInstance pi) {
-        return functionType(toLLReturnType(pi), toLLParamTypes(pi));
+    private ProcedureInstance erasedProcedureInstance(ProcedureInstance pi) {
+        if (pi instanceof ConstructorInstance) return ((ConstructorInstance) pi).orig();
+        else if (pi instanceof MethodInstance) return ((MethodInstance) pi).orig();
+        else {
+            throw new InternalCompilerError("Unhandled procedure instance kind");
+        }
     }
 
-    /** Returns an LLVM type reference for the erased return type of [pi]. */
-    public LLVMTypeRef toLLReturnType(ProcedureInstance pi) {
+    /** Returns the erased return type of a procedure. */
+    public Type erasedReturnType(ProcedureInstance pi) {
+        pi = erasedProcedureInstance(pi);
         return pi instanceof MethodInstance
-                ? toLL(((MethodInstance) pi).orig().returnType())
-                : toLL(v.ts.Void());
+                ? ((MethodInstance) pi).returnType()
+                : v.ts.Void();
+    }
+
+    /** Returns the erased formal types of a procedure, including implicit parameters. */
+    public List<Type> erasedFormalTypes(ProcedureInstance pi) {
+        pi = erasedProcedureInstance(pi);
+        List<Type> formalTypes = new ArrayList<>();
+        if (!pi.flags().isStatic())
+            formalTypes.add(pi.container()); // Implicit receiver.
+        formalTypes.addAll(pi.formalTypes());
+        return formalTypes;
+    }
+
+    /**
+     * Returns the (erased) LLVM function type reference for the given procedure.
+     * The function type will include implicit parameters such as the `this` reference.
+     */
+    public LLVMTypeRef toLL(ProcedureInstance pi) {
+        LLVMTypeRef returnType = toLL(erasedReturnType(pi));
+        LLVMTypeRef[] formalTypes = toLLParamTypes(pi);
+        return functionType(returnType, formalTypes);
     }
 
     /** Returns LLVM type references for the erased parameter types of [pi]. */
     public LLVMTypeRef[] toLLParamTypes(ProcedureInstance pi) {
-        // Use the original procedure instance to ensure unsubstituted type parameters.
-        if (pi instanceof ConstructorInstance)
-            pi = ((ConstructorInstance) pi).orig();
-        else if (pi instanceof MethodInstance)
-            pi = ((MethodInstance) pi).orig();
-        else throw new InternalCompilerError("Unhandled procedure instance kind");
-
         List<LLVMTypeRef> res = new ArrayList<>();
 
         // Add implicit JNIEnv parameter.
@@ -572,13 +634,8 @@ public class LLVMUtils {
             }
         }
 
-        // Add implicit receiver parameter.
-        if (!pi.flags().isStatic()) {
-            res.add(toLL(pi.container()));
-        }
-
         // Add normal parameters.
-        pi.formalTypes().stream().map(this::toLL).forEach(res::add);
+        erasedFormalTypes(pi).stream().map(this::toLL).forEach(res::add);
 
         return res.toArray(new LLVMTypeRef[res.size()]);
     }
@@ -636,10 +693,6 @@ public class LLVMUtils {
         return v.utils.buildGEP(global, 0, 0);
     }
 
-    public LLVMTypeRef classLoadFuncType() {
-        return functionType(voidType());
-    }
-
     /** Emits a check to ensure that the given class has been loaded by the runtime. */
     public void buildClassLoadCheck(ClassType ct) {
         LLVMBasicBlockRef loadClass = v.utils.buildBlock("load.class");
@@ -653,8 +706,9 @@ public class LLVMUtils {
 
         LLVMPositionBuilderAtEnd(v.builder, loadClass);
         String loadClassMangled = v.mangler.classLoadingFunc(ct);
-        LLVMValueRef loadClassFunc = v.utils.getFunction(loadClassMangled, classLoadFuncType());
-        v.utils.buildProcCall(loadClassFunc);
+        LLVMTypeRef funcType = v.utils.functionType(toLL(v.ts.Class()));
+        LLVMValueRef loadClassFunc = v.utils.getFunction(loadClassMangled, funcType);
+        v.utils.buildFunCall(loadClassFunc);
         LLVMBuildBr(v.builder, end);
 
         LLVMPositionBuilderAtEnd(v.builder, end);

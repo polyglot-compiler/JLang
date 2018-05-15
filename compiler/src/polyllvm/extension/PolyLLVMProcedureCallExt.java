@@ -59,7 +59,7 @@ abstract class PolyLLVMProcedureCallExt extends PolyLLVMExt {
         ProcedureCall n = node();
         ProcedureInstance pi = n.procedureInstance();
 
-        LLVMTypeRef retType = v.utils.toLLReturnType(pi);
+        LLVMTypeRef retType = v.utils.toLL(v.utils.erasedReturnType(pi));
         LLVMTypeRef[] paramTypes = v.utils.toLLParamTypes(pi);
         LLVMTypeRef funcType = v.utils.functionType(retType, paramTypes);
 

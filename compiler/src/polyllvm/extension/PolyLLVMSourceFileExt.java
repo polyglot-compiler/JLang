@@ -80,7 +80,7 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
                 v.debugInfo.diBuilder, new PointerPointer<>(formals), formals.length);
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
                 v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
-        v.debugInfo.funcDebugInfo(func, ENTRY_TRAMPOLINE, ENTRY_TRAMPOLINE, funcDiType, 0);
+        v.debugInfo.beginFuncDebugInfo(func, ENTRY_TRAMPOLINE, "Java_entry_point", funcDiType, 0);
 
         LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(v.context, func, "body");
         LLVMPositionBuilderAtEnd(v.builder, block);

@@ -1,15 +1,18 @@
 package polyllvm.extension;
 
 import polyglot.ast.Formal;
-import polyglot.ast.MethodDecl;
 import polyglot.ast.Node;
 import polyglot.ast.ProcedureDecl;
-import polyglot.types.*;
+import polyglot.types.ConstructorInstance;
+import polyglot.types.LocalInstance;
+import polyglot.types.ProcedureInstance;
+import polyglot.types.Type;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
+import java.util.List;
 
 import static org.bytedeco.javacpp.LLVM.*;
 
@@ -17,96 +20,69 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
     private static boolean noImplementation(ProcedureInstance pi) {
-        return pi.flags().contains(Flags.NATIVE) || pi.flags().contains(Flags.ABSTRACT);
+        return pi.flags().isNative() || pi.flags().isAbstract();
     }
 
     @Override
     public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
-        LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
-
         ProcedureDecl n = (ProcedureDecl) node();
-        TypeSystem ts = v.ts;
         ProcedureInstance pi = n.procedureInstance();
+
         if (noImplementation(pi))
             return super.overrideTranslateLLVM(parent, v); // Ignore native and abstract methods.
+        assert pi.container().isClass();
 
-        LLVMTypeRef funcType = v.utils.toLL(pi);
-        LLVMValueRef funcRef = v.utils.getFunction(v.mangler.mangleProcName(pi), funcType);
-        v.debugInfo.funcDebugInfo(n, funcRef);
-        v.pushFn(funcRef);
-        v.addTranslation(n, funcRef);
+        String funcName = v.mangler.mangleProcName(pi);
+        String debugName = pi.container().toClass().fullName() + "#" + pi.signature();
 
-        // Note that the entry block is reserved exclusively for alloca instructions
-        // and parameter initialization. Children translations will insert alloca instructions
-        // into this block as needed.
-        LLVMBasicBlockRef entry = v.utils.buildBlock("entry");
-        LLVMBasicBlockRef body = v.utils.buildBlock("body");
-        LLVMPositionBuilderAtEnd(v.builder, entry);
+        Type retType = v.utils.erasedReturnType(pi);
+        List<Type> argTypes = v.utils.erasedFormalTypes(pi);
 
-        // Initialize formals.
-        for (int i = 0; i < n.formals().size(); ++i) {
-            Formal formal = n.formals().get(i);
-            LocalInstance li = formal.localInstance().orig();
-            LLVMTypeRef typeRef = v.utils.toLL(formal.declType());
-            LLVMValueRef alloca = v.utils.buildAlloca(formal.name(), typeRef);
+        Runnable buildBody = () -> {
 
-            v.addTranslation(li, alloca);
-            v.debugInfo.createParamVariable(v, formal, i, alloca);
+            // Initialize formals.
+            for (int i = 0; i < n.formals().size(); ++i) {
+                Formal formal = n.formals().get(i);
+                LocalInstance li = formal.localInstance().orig();
+                LLVMTypeRef typeRef = v.utils.toLL(formal.declType());
+                LLVMValueRef alloca = v.utils.buildAlloca(formal.name(), typeRef);
 
-            int idx = i + (pi.flags().isStatic() ? 0 : 1);
-            LLVMBuildStore(v.builder, LLVMGetParam(funcRef, idx), alloca);
-        }
+                v.addTranslation(li, alloca);
+                v.debugInfo.createParamVariable(v, formal, i, alloca);
 
-        // Begin body.
-        LLVMPositionBuilderAtEnd(v.builder, body);
-
-        // If static method or constructor, make sure the container class has been initialized.
-        // See JLS 7, section 12.4.1.
-        if (pi.flags().isStatic() || pi instanceof ConstructorInstance) {
-            // TODO: Make sure that classes are initialized in *native* static methods too.
-            v.utils.buildClassLoadCheck(pi.container().toClass());
-        }
-
-        // Register as entry point if applicable.
-        boolean isEntryPoint = n.name().equals("main")
-                && n.flags().isPublic()
-                && n.flags().isStatic()
-                && n.formals().size() == 1
-                && n.formals().iterator().next().declType().equals(ts.arrayOf(ts.String()));
-        if (isEntryPoint) {
-            String className = n.procedureInstance().container().toClass().fullName();
-            v.addEntryPoint(funcRef, className);
-
-            // Initialize the java.lang.String class at each entry point to avoid
-            // the need for class loading before string literals.
-            v.utils.buildClassLoadCheck(ts.String());
-        }
-
-        // Recurse to children.
-        n = (ProcedureDecl) lang().visitChildren(n, v);
-
-        // Add void return if necessary.
-        Type retType = n instanceof MethodDecl
-                ? ((MethodDecl) n).returnType().type()
-                : ts.Void();
-        if (!v.utils.blockTerminated()) {
-            if (retType.isVoid()) {
-                LLVMBuildRetVoid(v.builder);
-            } else {
-                LLVMBuildUnreachable(v.builder);
+                int idx = i + (pi.flags().isStatic() ? 0 : 1);
+                LLVMValueRef param = LLVMGetParam(v.currFn(), idx);
+                LLVMBuildStore(v.builder, param, alloca);
             }
-        }
 
-        // We build this branch at the end since child translations need to be able
-        // to insert into the entry block before its terminator. (LLVMPositionBuilderBefore
-        // is inconvenient because it changes the debug location.)
-        LLVMPositionBuilderAtEnd(v.builder, entry);
-        LLVMBuildBr(v.builder, body);
+            // If static method or constructor, make sure the container class has been initialized.
+            // See JLS 7, section 12.4.1.
+            if (pi.flags().isStatic() || pi instanceof ConstructorInstance) {
+                // TODO: Make sure that classes are initialized in *native* static methods too.
+                v.utils.buildClassLoadCheck(pi.container().toClass());
+            }
 
-        v.popFn();
-        v.debugInfo.popScope();
+            // Register as entry point if applicable.
+            boolean isEntryPoint = n.name().equals("main")
+                    && n.flags().isPublic()
+                    && n.flags().isStatic()
+                    && n.formals().size() == 1
+                    && n.formals().iterator().next().declType().equals(v.ts.arrayOf(v.ts.String()));
+            if (isEntryPoint) {
+                String className = n.procedureInstance().container().toClass().fullName();
+                v.addEntryPoint(v.currFn(), className);
 
-        LLVMPositionBuilderAtEnd(v.builder, prevBlock);
+                // Initialize the java.lang.String class at each entry point to avoid
+                // the need for class loading before string literals.
+                v.utils.buildClassLoadCheck(v.ts.String());
+            }
+
+            // Recurse to children.
+            lang().visitChildren(n, v);
+        };
+
+        v.utils.buildFunc(n.position(), funcName, debugName, retType, argTypes, buildBody);
+
         return n;
     }
 }
