@@ -21,6 +21,7 @@ public class Constants {
     public static final int LLVM_ADDR_SPACE = 0;
 
     public static final String REGISTER_CLASS_FUNC = "register_java_class";
+    public static final String GET_NATIVE_FUNC = "get_java_native_func";
     public static final String PERSONALITY_FUNC = "__java_personality_v0";
     public static final String CREATE_EXCEPTION = "createUnwindException";
     public static final String THROW_EXCEPTION = "throwUnwindException";

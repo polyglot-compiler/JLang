@@ -22,7 +22,7 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
         // initialize fields here. We only need to declare static fields as global variables.
         if (n.flags().isStatic()) {
             FieldInstance fi = n.fieldInstance();
-            String mangledName = v.mangler.mangleStaticFieldName(fi);
+            String mangledName = v.mangler.staticField(fi);
             LLVMTypeRef type = v.utils.toLL(n.declType());
             LLVMValueRef global = v.utils.getGlobal(mangledName, type);
 

@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /** Gives local and anonymous classes globally unique names. */
-public class NameLocalClasses extends DesugarVisitor {
+public class NameAnonClasses extends DesugarVisitor {
 
     /**
      * Maps (enclosing class, local class name) pairs to increasing integers.
@@ -20,7 +20,7 @@ public class NameLocalClasses extends DesugarVisitor {
      */
     private final Map<Pair<ClassType, String>, Integer> localClassNameCount = new HashMap<>();
 
-    public NameLocalClasses(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
+    public NameAnonClasses(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, ts, nf);
     }
 

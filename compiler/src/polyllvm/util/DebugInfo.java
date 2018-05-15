@@ -138,7 +138,7 @@ public class DebugInfo {
         int line = n.position().line();
         String debugName = pi.container().toClass().fullName() + "#" + n.name() + "(...)";
         LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
-                diBuilder, unit, debugName, v.mangler.mangleProcName(pi), unit, line,
+                diBuilder, unit, debugName, v.mangler.proc(pi), unit, line,
                 createFunctionType(pi, unit), /*internalLinkage*/ 0, /*definition*/ 1,
                 line, /*DINode::FlagPrototyped*/ 1 << 8, /*isOptimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);

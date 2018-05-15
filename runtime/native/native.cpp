@@ -1,0 +1,104 @@
+// This file supports dynamically looking up Java native method pointers.
+// We cannot link to native methods ahead-of-time, because native methods
+// are often registered with the VM dynamically at runtime.
+#include <cstdlib>
+#include <dlfcn.h>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include "class.h"
+#include "jni.h"
+#include "native.h"
+#include "stack_trace.h"
+
+// This serves as a cache for native method lookups,
+// as well as a way to register methods through JNI.
+static std::unordered_map<std::string, void*> native_map;
+
+// Builds a unique identifier for native methods.
+// E.g., java.lang.Object#wait(J)V.
+//
+// This intentionally builds on the format used in the
+// JNI method registerNatives();
+static std::string build_java_native_func_key(
+    jclass cls,           // e.g., java.lang.Object
+    const char* name,     // e.g., wait
+    const char* signature // e.g., (J)V
+) {
+    std::string key;
+    key += get_java_class_name(cls);
+    key += '#';
+    key += name;
+    key += signature;
+    return key;
+}
+
+// Links a native method to the given function pointer.
+void
+register_java_native_func(
+    jclass cls,            // e.g., java.lang.Object
+    const char* name,      // e.g., wait
+    const char* signature, // e.g., (J)V
+    void* func
+) {
+    printf("Registering native method %s%s\n", name, signature); // TODO
+
+    auto key = build_java_native_func_key(cls, name, signature);
+
+    decltype(native_map)::iterator it;
+    bool success;
+    tie(it, success) = native_map.emplace(key, func);
+    if (!success) {
+        // The native method was already linked; replace it.
+        it->second = func;
+    }
+}
+
+// Returns a pointer to a Java native method.
+//
+// The name and signature are used in the case that the
+// native method has been registered dynamically through JNI,
+// or in the case that the native method has been cached.
+//
+// The short symbol and long symbol are used in case the native method
+// needs to be searched for in the symbol table.
+//
+// The signature of this function must precisely match
+// the signature used in PolyLLVM.
+extern "C"
+void*
+get_java_native_func(
+    jclass cls,               // e.g., java.lang.Object
+    const char* name,         // e.g., wait
+    const char* signature,    // e.g., (J)V
+    const char* short_symbol, // e.g., Java_java_lang_Object_wait
+    const char* long_symbol   // e.g., Java_java_lang_Object_wait__J
+) {
+    // Check cache.
+    auto key = build_java_native_func_key(cls, name, signature);
+    auto it = native_map.find(key);
+    if (it != native_map.end()) {
+        printf("Found cached native method %s\n", key.c_str()); // TODO
+        return it->second;
+    }
+
+    // Search for symbol by short name first, then long name.
+    for (const char* symbol : {short_symbol, long_symbol}) {
+        if (void* func = dlsym(RTLD_DEFAULT, symbol)) {
+            printf("Found native method symbol %s\n", symbol); // TODO
+            native_map.emplace(key, func);
+            return func;
+        }
+    }
+
+    fprintf(stderr,
+        "- - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
+        "Link error.\n"
+        "The following Java native method is unlinked:\n"
+        "  %s\n"
+        "Aborting for now.\n"
+        "- - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n",
+        short_symbol);
+    dump_stack_trace();
+    abort();
+}

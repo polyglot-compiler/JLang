@@ -5,6 +5,7 @@
 
 #include "rep.h"
 #include "class.h"
+#include "native.h"
 
 [[noreturn]] static void jni_Unimplemented(const char* name) {
   fprintf(stderr,
@@ -867,9 +868,19 @@ void jni_SetDoubleArrayRegion(JNIEnv *env, jdoubleArray array, jsize start, jsiz
     jni_Unimplemented("SetDoubleArrayRegion");
 }
 
-jint jni_RegisterNatives(JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint nMethods) {
-    fprintf(stderr, "WARNING: JNI method RegisterNatives is unimplemented, but will not abort.\n");
-    fflush(stderr);
+jint
+jni_RegisterNatives(
+    JNIEnv *env, jclass clazz,
+    const JNINativeMethod *methods, jint nMethods
+) {
+    for (jint i = 0; i < nMethods; ++i) {
+        register_java_native_func(
+            clazz,
+            methods[i].name,
+            methods[i].signature,
+            methods[i].fnPtr
+        );
+    }
     return 0;
 }
 

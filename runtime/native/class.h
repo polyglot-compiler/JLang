@@ -1,5 +1,6 @@
 #ifndef CLASS_H
 #define CLASS_H
+#include "jni.h"
 
 // Returns the name of the given class (e.g., "java.lang.Object").
 const char* get_java_class_name(jclass cls);

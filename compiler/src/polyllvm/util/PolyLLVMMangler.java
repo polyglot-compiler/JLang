@@ -14,7 +14,7 @@ public class PolyLLVMMangler {
     }
 
     private static final String JAVA_PREFIX = "Java";
-    private static final String ENV_PREFIX = "Env";
+    private static final String POLYGLOT_PREFIX = "Polyglot";
     private static final String CLASS_TYPE_STR = "class";
     private static final String INTERFACE_TYPE_STR = "interface";
     private static final String CDV_TYPE_STR = "cdv_ty";
@@ -52,42 +52,42 @@ public class PolyLLVMMangler {
         else if (et.isLong())    return "J";
         else if (et.isFloat())   return "F";
         else if (et.isDouble())  return "D";
+        else if (et.isVoid())    return "V";
         else if (et.isArray())
             return BRACKET_ESCAPE + typeSignature(et.toArray().base());
         else if (et.isClass())
-            return "L" + mangleQualifiedName(et.toClass()) + SEMICOLON_ESCAPE;
+            return "L" + qualifiedName(et.toClass()) + SEMICOLON_ESCAPE;
         else
             throw new InternalCompilerError("Unsupported type for mangling: " + et);
     }
 
-    private String mangleName(String name) {
+    public String typeSignature(ProcedureInstance pi) {
+        Type returnType = pi instanceof MethodInstance
+                ? ((MethodInstance) pi).returnType()
+                : v.ts.Void();
+        String formalTypeSignature = pi.formalTypes().stream()
+                .map(this::typeSignature)
+                .reduce("", (a, b) -> a + b);
+        return "(" + formalTypeSignature + ")" + typeSignature(returnType);
+    }
+
+    private String escapedName(String name) {
         return name.replace("_", UNDERSCORE_ESCAPE);
     }
 
-    private String mangleQualifiedName(ReferenceType t) {
+    private String qualifiedName(ReferenceType t) {
         ClassType erasure = v.utils.erasureLL(t);
-        ParsedClassType base = (ParsedClassType) erasure.declaration();
-        if (base.outer() != null) {
-            return mangleQualifiedName(base.outer()) + "_" + base.name();
-        } else {
-            return base.fullName().replace('.', '_');
-        }
+        ClassType base = (ClassType) erasure.declaration();
+        return base.fullName().replace('.', '_');
     }
 
-    /**
-     * Mangles a procedure name.
-     * Native methods that are not overloaded by other native methods must use the
-     * abbreviated mangling format, which omits argument type information.
-     */
-    private String mangleProcName(ProcedureInstance pi, String name, boolean abbreviated) {
+    private String procSuffix(ProcedureInstance pi, String name, boolean abbreviated) {
         StringBuilder sb = new StringBuilder();
-        sb.append(JAVA_PREFIX);
+        sb.append(qualifiedName(pi.container()));
         sb.append('_');
-        sb.append(mangleQualifiedName(pi.container()));
-        sb.append('_');
-        sb.append(mangleName(name));
+        sb.append(escapedName(name));
         if (!abbreviated) {
-            // Add argument type information as necessary.
+            // Add argument type information.
             sb.append("__");
             for (Type t : pi.formalTypes()) {
                 sb.append(typeSignature(t));
@@ -96,50 +96,54 @@ public class PolyLLVMMangler {
         return sb.toString();
     }
 
-    public String mangleProcName(ProcedureInstance pi) {
+    private String procSuffix(ProcedureInstance pi, boolean abbreviated) {
         if (pi instanceof MethodInstance) {
             MethodInstance mi = (MethodInstance) pi;
-            boolean abbreviated = mi.flags().isNative() &&
-                    mi.container().methodsNamed(mi.name()).stream()
-                            .filter(m -> m.flags().isNative())
-                            .count() <= 1;
-            return mangleProcName(mi.orig(), mi.name(), abbreviated);
+            return procSuffix(mi.orig(), mi.name(), abbreviated);
         }
         else if (pi instanceof ConstructorInstance) {
             ConstructorInstance ci = (ConstructorInstance) pi;
-            boolean abbreviated = ci.flags().isNative() &&
-                    ci.container().toClass().constructors().stream()
-                            .filter(c -> c.flags().isNative())
-                            .count() <= 1;
-            return mangleProcName(ci.orig(), ci.container().toClass().name(), abbreviated);
+            return procSuffix(ci.orig(), ci.container().toClass().name(), abbreviated);
         }
         else {
             throw new InternalCompilerError("Unknown procedure type: " + pi.getClass());
         }
     }
 
-    public String mangleStaticFieldName(FieldInstance fi) {
-        return mangleStaticFieldName(fi.container(), fi.name());
+    public String proc(ProcedureInstance pi) {
+        return POLYGLOT_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ false);
     }
 
-    public String mangleStaticFieldName(ReferenceType rt, String fieldName) {
-        return JAVA_PREFIX + "_" + mangleQualifiedName(rt) + "_" + mangleName(fieldName);
+    public String shortNativeSymbol(ProcedureInstance pi) {
+        return JAVA_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ true);
+    }
+
+    public String longNativeSymbol(ProcedureInstance pi) {
+        return JAVA_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ false);
+    }
+
+    public String staticField(FieldInstance fi) {
+        return staticField(fi.container(), fi.name());
+    }
+
+    public String staticField(ReferenceType rt, String fieldName) {
+        return POLYGLOT_PREFIX + "_" + qualifiedName(rt) + "_" + escapedName(fieldName);
     }
 
     public String idvGlobalId(ClassType intf, ReferenceType clazz) {
-        return ENV_PREFIX +
-                "_" + mangleQualifiedName(intf) +
-                "_" + mangleQualifiedName(clazz) +
+        return POLYGLOT_PREFIX +
+                "_" + qualifiedName(intf) +
+                "_" + qualifiedName(clazz) +
                 "_" + IDV_STR;
     }
 
     public String cdvTyName(ReferenceType t) {
-        String mangled = mangleQualifiedName(t);
+        String mangled = qualifiedName(t);
         return CDV_TYPE_STR + "." + mangled;
     }
 
     public String idvTyName(ClassType intf) {
-        String intfMangled = mangleQualifiedName(intf);
+        String intfMangled = qualifiedName(intf);
         return IDV_TYPE_STR + "." + intfMangled;
     }
 
@@ -148,7 +152,7 @@ public class PolyLLVMMangler {
     }
 
     public String classTypeName(ClassType t) {
-        String className = mangleQualifiedName(t);
+        String className = qualifiedName(t);
         String prefix = v.utils.erasureLL(t).flags().isInterface()
                 ? INTERFACE_TYPE_STR
                 : CLASS_TYPE_STR;
@@ -204,6 +208,6 @@ public class PolyLLVMMangler {
     }
 
     private String typePrefix(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt);
+        return POLYGLOT_PREFIX + "_" + qualifiedName(rt);
     }
 }

@@ -72,7 +72,7 @@ public class DispatchVector_c implements DispatchVector {
 
                 // Convert a method instance into a function pointer.
                 Function<MethodInstance, LLVMValueRef> getFuncPtr = mi -> {
-                    String name = o.v.mangler.mangleProcName(mi);
+                    String name = o.v.mangler.proc(mi);
                     LLVMTypeRef type = o.v.utils.toLL(mi);
                     return o.v.utils.getFunction(name, type);
                 };

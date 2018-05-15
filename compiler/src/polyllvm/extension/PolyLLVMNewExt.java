@@ -54,7 +54,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         LLVMBuildStore(v.builder, dvGlobal, gep);
 
         // Call the constructor function
-        String mangledFuncName = v.mangler.mangleProcName(ci);
+        String mangledFuncName = v.mangler.proc(ci);
 
         LLVMTypeRef funcType = v.utils.toLL(ci);
         LLVMValueRef funcPtr = v.utils.getFunction(mangledFuncName, funcType);

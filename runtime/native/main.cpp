@@ -8,10 +8,10 @@
 
 extern "C" {
 
-void Java_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jarray args);
-jarray Java_polyllvm_runtime_Factory_createByteArray__I(jint len);
-jarray Java_polyllvm_runtime_Factory_createObjectArray__I(jint len);
-jstring Java_polyllvm_runtime_Factory_createString___3B(jarray bytes);
+void Polyglot_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jarray args);
+jarray Polyglot_polyllvm_runtime_Factory_createByteArray__I(jint len);
+jarray Polyglot_polyllvm_runtime_Factory_createObjectArray__I(jint len);
+jstring Polyglot_polyllvm_runtime_Factory_createString___3B(jarray bytes);
 
 } // extern "C"
 
@@ -47,16 +47,16 @@ int main(int argc, char** argv) {
 
     // Ignore the 0th argument, which is the name of the program.
     --argc, ++argv;
-    jarray jargs = Java_polyllvm_runtime_Factory_createObjectArray__I(argc);
+    jarray jargs = Polyglot_polyllvm_runtime_Factory_createObjectArray__I(argc);
     jstring* jargs_data = static_cast<jstring*>(Unwrap(jargs)->Data());
     for (int i = 0; i < argc; ++i) {
         size_t len = strlen(argv[i]);
-        jarray jargBytes = Java_polyllvm_runtime_Factory_createByteArray__I(len);
+        jarray jargBytes = Polyglot_polyllvm_runtime_Factory_createByteArray__I(len);
         jbyte* data = static_cast<jbyte*>(Unwrap(jargBytes)->Data());
         memcpy(data, argv[i], len);
-        jstring jargString = Java_polyllvm_runtime_Factory_createString___3B(jargBytes);
+        jstring jargString = Polyglot_polyllvm_runtime_Factory_createString___3B(jargBytes);
         jargs_data[i] = jargString;
     }
 
-    Java_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jargs);
+    Polyglot_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jargs);
 }

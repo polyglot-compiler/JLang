@@ -34,7 +34,7 @@ public class PolyLLVMDesugared extends AbstractGoal {
                 // because the type checker could complain about visibility issues. That's ok.
 
                 // Future desugar passes assume that anonymous classes have constructors and names.
-                new VisitorGoal(job, new NameLocalClasses(job, ts, nf)),
+                new VisitorGoal(job, new NameAnonClasses(job, ts, nf)),
                 new VisitorGoal(job, new DeclareExplicitAnonCtors(job, ts, nf)),
 
                 // Translate enums to normal classes.

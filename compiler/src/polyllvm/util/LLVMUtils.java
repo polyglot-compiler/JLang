@@ -207,7 +207,7 @@ public class LLVMUtils {
     }
 
     public LLVMValueRef getStaticField(FieldInstance fi) {
-        String mangledName = v.mangler.mangleStaticFieldName(fi);
+        String mangledName = v.mangler.staticField(fi);
         LLVMTypeRef type = v.utils.toLL(fi.type());
         return v.utils.getGlobal(mangledName, type);
     }
@@ -547,7 +547,7 @@ public class LLVMUtils {
             // The idxI-th method in IDV is the idxC-th method in CDV.
             MethodInstance cdvM = cdvMethods.get(idxC);
             LLVMTypeRef cdvM_LLTy = toLLFuncTy(clazz, cdvM.returnType(), cdvM.formalTypes());
-            LLVMValueRef funcVal = getFunction(v.mangler.mangleProcName(cdvM), cdvM_LLTy);
+            LLVMValueRef funcVal = getFunction(v.mangler.proc(cdvM), cdvM_LLTy);
             // Cast funcVal to the method signature used by IDV
             MethodInstance idvM = idvMethods.get(idxI);
             LLVMTypeRef idvM_LLTy = toLLFuncTy(intf, idvM.returnType(), idvM.formalTypes());
@@ -620,24 +620,36 @@ public class LLVMUtils {
         return functionType(returnType, formalTypes);
     }
 
-    /** Returns LLVM type references for the erased parameter types of [pi]. */
+    /** Returns LLVM type references for the erased parameter types of {@code pi}. */
     public LLVMTypeRef[] toLLParamTypes(ProcedureInstance pi) {
-        List<LLVMTypeRef> res = new ArrayList<>();
+        return erasedFormalTypes(pi).stream()
+                .map(this::toLL)
+                .toArray(LLVMTypeRef[]::new);
+    }
+
+    /**
+     * Returns the function type of the "real" native implementation of {@code pi},
+     * rather than the function type of the stub that we create ourselves.
+     */
+    public LLVMTypeRef getNativeFunctionType(ProcedureInstance pi) {
+        assert pi.flags().isNative();
+        List<LLVMTypeRef> formalTypeList = new ArrayList<>();
 
         // Add implicit JNIEnv parameter.
-        if (pi.flags().isNative()) {
-            res.add(ptrTypeRef(jniEnvType()));
+        formalTypeList.add(ptrTypeRef(jniEnvType()));
 
-            // Static native methods take in the class object as well.
-            if (pi.flags().isStatic()) {
-                res.add(toLL(v.ts.Class()));
-            }
+        // Static native methods take in the class object as well.
+        if (pi.flags().isStatic()) {
+            formalTypeList.add(toLL(v.ts.Class()));
         }
 
         // Add normal parameters.
-        erasedFormalTypes(pi).stream().map(this::toLL).forEach(res::add);
+        erasedFormalTypes(pi).stream().map(this::toLL).forEach(formalTypeList::add);
 
-        return res.toArray(new LLVMTypeRef[res.size()]);
+        LLVMTypeRef[] formalTypes = formalTypeList.toArray(new LLVMTypeRef[formalTypeList.size()]);
+        LLVMTypeRef returnType = toLL(erasedReturnType(pi));
+
+        return functionType(returnType, formalTypes);
     }
 
     /**
