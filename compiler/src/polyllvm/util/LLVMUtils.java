@@ -584,7 +584,7 @@ public class LLVMUtils {
         return functionType(retType, argTypes);
     }
 
-    private ProcedureInstance erasedProcedureInstance(ProcedureInstance pi) {
+    public ProcedureInstance erasedProcedureInstance(ProcedureInstance pi) {
         if (pi instanceof ConstructorInstance) return ((ConstructorInstance) pi).orig();
         else if (pi instanceof MethodInstance) return ((MethodInstance) pi).orig();
         else {
@@ -601,7 +601,7 @@ public class LLVMUtils {
     }
 
     /** Returns the erased formal types of a procedure, including implicit parameters. */
-    public List<Type> erasedFormalTypes(ProcedureInstance pi) {
+    public List<Type> erasedImplicitFormalTypes(ProcedureInstance pi) {
         pi = erasedProcedureInstance(pi);
         List<Type> formalTypes = new ArrayList<>();
         if (!pi.flags().isStatic())
@@ -622,7 +622,7 @@ public class LLVMUtils {
 
     /** Returns LLVM type references for the erased parameter types of {@code pi}. */
     public LLVMTypeRef[] toLLParamTypes(ProcedureInstance pi) {
-        return erasedFormalTypes(pi).stream()
+        return erasedImplicitFormalTypes(pi).stream()
                 .map(this::toLL)
                 .toArray(LLVMTypeRef[]::new);
     }
@@ -644,7 +644,7 @@ public class LLVMUtils {
         }
 
         // Add normal parameters.
-        erasedFormalTypes(pi).stream().map(this::toLL).forEach(formalTypeList::add);
+        erasedImplicitFormalTypes(pi).stream().map(this::toLL).forEach(formalTypeList::add);
 
         LLVMTypeRef[] formalTypes = formalTypeList.toArray(new LLVMTypeRef[formalTypeList.size()]);
         LLVMTypeRef returnType = toLL(erasedReturnType(pi));

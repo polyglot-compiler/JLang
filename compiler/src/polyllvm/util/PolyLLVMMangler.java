@@ -38,11 +38,10 @@ public class PolyLLVMMangler {
     private static final String BRACKET_ESCAPE = "_3";
 
     /**
-     * To facilitate JNI support, we mangle types as specified in the JNI API.
+     * Mangle types as specified in the JNI API.
      * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/types.html#type_signatures
-     * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names
      */
-    private String typeSignature(Type t) {
+    private String jniUnescapedSignature(Type t) {
         Type et = v.ts.erasureType(t);
         if      (et.isBoolean()) return "Z";
         else if (et.isByte())    return "B";
@@ -53,22 +52,41 @@ public class PolyLLVMMangler {
         else if (et.isFloat())   return "F";
         else if (et.isDouble())  return "D";
         else if (et.isVoid())    return "V";
-        else if (et.isArray())
-            return BRACKET_ESCAPE + typeSignature(et.toArray().base());
-        else if (et.isClass())
-            return "L" + qualifiedName(et.toClass()) + SEMICOLON_ESCAPE;
-        else
+        else if (et.isArray()) {
+            return "[" + jniUnescapedSignature(et.toArray().base());
+        }
+        else if (et.isClass()) {
+            ClassType base = (ClassType) et.toClass().declaration();
+            return "L" + base.fullName().replace('.', '/') + ";";
+        }
+        else {
             throw new InternalCompilerError("Unsupported type for mangling: " + et);
+        }
     }
 
-    public String typeSignature(ProcedureInstance pi) {
-        Type returnType = pi instanceof MethodInstance
-                ? ((MethodInstance) pi).returnType()
-                : v.ts.Void();
+    /**
+     * Mangle types as specified in the JNI API, escaped for symbol table purposes.
+     * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names
+     */
+    private String jniEscapedSignature(Type t) {
+        return jniUnescapedSignature(t)
+                .replace("_", UNDERSCORE_ESCAPE)
+                .replace("/", "_")
+                .replace(";", SEMICOLON_ESCAPE)
+                .replace("[", BRACKET_ESCAPE);
+    }
+
+    /**
+     * Returns the type signature of the given procedure for JNI purposes.
+     * E.g., (ILjava/lang/String;[I)J
+     */
+    public String jniUnescapedSignature(ProcedureInstance pi) {
+        pi = v.utils.erasedProcedureInstance(pi);
+        Type returnType = v.utils.erasedReturnType(pi);
         String formalTypeSignature = pi.formalTypes().stream()
-                .map(this::typeSignature)
+                .map(this::jniUnescapedSignature)
                 .reduce("", (a, b) -> a + b);
-        return "(" + formalTypeSignature + ")" + typeSignature(returnType);
+        return "(" + formalTypeSignature + ")" + jniUnescapedSignature(returnType);
     }
 
     private String escapedName(String name) {
@@ -90,7 +108,7 @@ public class PolyLLVMMangler {
             // Add argument type information.
             sb.append("__");
             for (Type t : pi.formalTypes()) {
-                sb.append(typeSignature(t));
+                sb.append(jniEscapedSignature(t));
             }
         }
         return sb.toString();

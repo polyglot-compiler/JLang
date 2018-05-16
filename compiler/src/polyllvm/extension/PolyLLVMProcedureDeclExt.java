@@ -41,7 +41,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         String debugName = pi.container().toClass().fullName() + "#" + pi.signature();
 
         Type retType = v.utils.erasedReturnType(pi);
-        List<Type> argTypes = v.utils.erasedFormalTypes(pi);
+        List<Type> argTypes = v.utils.erasedImplicitFormalTypes(pi);
 
         Runnable buildBody = () -> {
 
@@ -102,7 +102,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 LLVMValueRef[] runtimeCallArgs = {
                         clazz,
                         v.utils.buildGlobalCStr(n.name()),
-                        v.utils.buildGlobalCStr(v.mangler.typeSignature(pi)),
+                        v.utils.buildGlobalCStr(v.mangler.jniUnescapedSignature(pi)),
                         v.utils.buildGlobalCStr(v.mangler.shortNativeSymbol(pi)),
                         v.utils.buildGlobalCStr(v.mangler.longNativeSymbol(pi)),
                 };
