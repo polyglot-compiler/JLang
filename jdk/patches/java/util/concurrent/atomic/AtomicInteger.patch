@@ -1,0 +1,15 @@
+--- openjdk-7-src.orig/java/util/concurrent/atomic/AtomicInteger.java	2013-01-04 14:04:10.000000000 -0500
++++ openjdk-7-src/java/util/concurrent/atomic/AtomicInteger.java	2018-05-16 12:29:53.000000000 -0400
+@@ -57,10 +57,8 @@
+     private static final long valueOffset;
+ 
+     static {
+-      try {
+-        valueOffset = unsafe.objectFieldOffset
+-            (AtomicInteger.class.getDeclaredField("value"));
+-      } catch (Exception ex) { throw new Error(ex); }
++        // Modified for PolyLLVM until we have reflection.
++        valueOffset = 16;
+     }
+ 
+     private volatile int value;
