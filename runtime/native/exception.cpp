@@ -85,7 +85,7 @@ void throwUnwindException(_Unwind_Exception* exception) {
     "- - - - - - - - - - - - - - - - - -\n"
     "Aborting due to uncaught exception.\n"
     "- - - - - - - - - - - - - - - - - -\n");
-  dump_stack_trace();
+  DumpStackTrace();
   fflush(stderr);
   abort();
 }

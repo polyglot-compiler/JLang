@@ -19,7 +19,7 @@
         "Aborting for now.\n"
         "- - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
         , name);
-    dump_stack_trace();
+    DumpStackTrace();
     abort();
 }
 

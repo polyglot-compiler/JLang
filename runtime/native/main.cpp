@@ -27,7 +27,7 @@ static void sigaction(int sig, siginfo_t* info, void* ucontext) {
         "Aborting due to signal: %s\n%s"
         "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
         , strsignal(sig), cause);
-    dump_stack_trace();
+    DumpStackTrace();
     fflush(stderr);
     abort();
 }

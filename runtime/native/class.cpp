@@ -6,12 +6,13 @@
 #include <string>
 #include <unordered_map>
 #include "jni.h"
-
 #include "class.h"
+
+static constexpr bool kDebug = false;
 
 // These structs are generated statically for each class.
 // The layout must precisely mirror the layout defined in PolyLLVM.
-struct raw_class_data {
+struct RawClassData {
     char* name;
 
     int32_t num_fields;
@@ -23,11 +24,11 @@ struct raw_class_data {
 };
 
 // An optimized layout of class data.
-struct class_info {
+struct ClassInfo {
     const char* name;
     std::unordered_map<std::string, int32_t> fieldIDs;
 
-    class_info(const raw_class_data* data) {
+    ClassInfo(const RawClassData* data) {
         name = data->name;
         for (int32_t i = 0; i < data->num_fields; ++i) {
             fieldIDs.emplace(
@@ -40,33 +41,32 @@ struct class_info {
 // For simplicity we store class information in a map.
 // If we find this to be too slow, we could allocate extra memory for
 // class objects and store the information inline with each instance.
-static std::unordered_map<jclass, const class_info> info_map;
+static std::unordered_map<jclass, const ClassInfo> info_map;
 
-const char* get_java_class_name(jclass cls) {
+const char* GetJavaClassName(jclass cls) {
     return info_map.at(cls).name;
 }
 
-jfieldID get_java_field_id(jclass cls, const char* name) {
+jfieldID GetJavaFieldId(jclass cls, const char* name) {
     auto& cache = info_map.at(cls).fieldIDs;
     auto it = cache.find(name);
     if (it == cache.end())
         return nullptr;
-    // TODO
-    printf("Found field %s with offset %d\n", name, it->second);
     return reinterpret_cast<jfieldID>(it->second);
 }
 
 extern "C" {
 
 // This should be called at most once per class.
-void register_java_class(jclass cls, const raw_class_data* data) {
+void RegisterJavaClass(jclass cls, const RawClassData* data) {
 
-    // TODO
-    printf("Loading class: %s\n", data->name);
-    for (int32_t i = 0; i < data->num_fields; ++i) {
-        printf("  Found field %s with offset %d\n",
-            data->field_names[i],
-            data->field_offsets[i]);
+    if (kDebug) {
+        printf("[runtime] loading %s\n", data->name);
+        for (int32_t i = 0; i < data->num_fields; ++i) {
+            printf("  found field %s with offset %d\n",
+                data->field_names[i],
+                data->field_offsets[i]);
+        }
     }
 
     if (info_map.count(cls)) {

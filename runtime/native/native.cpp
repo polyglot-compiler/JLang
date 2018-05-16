@@ -11,6 +11,8 @@
 #include "native.h"
 #include "stack_trace.h"
 
+static constexpr bool kDebug = false;
+
 // This serves as a cache for native method lookups,
 // as well as a way to register methods through JNI.
 static std::unordered_map<std::string, void*> native_map;
@@ -20,13 +22,13 @@ static std::unordered_map<std::string, void*> native_map;
 //
 // This intentionally builds on the format used in the
 // JNI method registerNatives();
-static std::string build_java_native_func_key(
+static std::string BuildJavaNativeFuncKey(
     jclass cls,           // e.g., java.lang.Object
     const char* name,     // e.g., wait
     const char* signature // e.g., (J)V
 ) {
     std::string key;
-    key += get_java_class_name(cls);
+    key += GetJavaClassName(cls);
     key += '#';
     key += name;
     key += signature;
@@ -35,15 +37,16 @@ static std::string build_java_native_func_key(
 
 // Links a native method to the given function pointer.
 void
-register_java_native_func(
+RegisterJavaNativeFunc(
     jclass cls,            // e.g., java.lang.Object
     const char* name,      // e.g., wait
     const char* signature, // e.g., (J)V
     void* func
 ) {
-    printf("Registering native method %s%s\n", name, signature); // TODO
+    if (kDebug)
+        printf("[runtime] registering native method %s%s\n", name, signature);
 
-    auto key = build_java_native_func_key(cls, name, signature);
+    auto key = BuildJavaNativeFuncKey(cls, name, signature);
 
     decltype(native_map)::iterator it;
     bool success;
@@ -67,7 +70,7 @@ register_java_native_func(
 // the signature used in PolyLLVM.
 extern "C"
 void*
-get_java_native_func(
+GetJavaNativeFunc(
     jclass cls,               // e.g., java.lang.Object
     const char* name,         // e.g., wait
     const char* signature,    // e.g., (J)V
@@ -75,17 +78,19 @@ get_java_native_func(
     const char* long_symbol   // e.g., Java_java_lang_Object_wait__J
 ) {
     // Check cache.
-    auto key = build_java_native_func_key(cls, name, signature);
+    auto key = BuildJavaNativeFuncKey(cls, name, signature);
     auto it = native_map.find(key);
     if (it != native_map.end()) {
-        printf("Found cached native method %s\n", key.c_str()); // TODO
+        if (kDebug)
+            printf("[runtime] found cached native method %s\n", key.c_str());
         return it->second;
     }
 
     // Search for symbol by short name first, then long name.
     for (const char* symbol : {short_symbol, long_symbol}) {
         if (void* func = dlsym(RTLD_DEFAULT, symbol)) {
-            printf("Found native method symbol %s\n", symbol); // TODO
+            if (kDebug)
+                printf("[runtime] found native method symbol %s\n", symbol);
             native_map.emplace(key, func);
             return func;
         }
@@ -99,6 +104,6 @@ get_java_native_func(
         "Aborting for now.\n"
         "- - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n",
         short_symbol);
-    dump_stack_trace();
+    DumpStackTrace();
     abort();
 }

@@ -3,7 +3,7 @@
 #include "jni.h"
 
 void
-register_java_native_func(
+RegisterJavaNativeFunc(
     jclass cls,            // e.g., java.lang.Object
     const char* name,      // e.g., wait
     const char* signature, // e.g., (J)V

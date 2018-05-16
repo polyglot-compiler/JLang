@@ -2,7 +2,7 @@
 #include <execinfo.h>
 #include "stack_trace.h"
 
-void dump_stack_trace() {
+void DumpStackTrace() {
     // Dump stack trace.
     constexpr int max_frames = 256;
     void* callstack[max_frames];
