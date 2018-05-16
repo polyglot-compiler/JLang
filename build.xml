@@ -21,7 +21,6 @@
     <property name="interp.sh.name" value="${name}"/>
 
     <!-- jar file names -->
-    <property name="runtime.jar.name" value="${name}-rt.jar"/>
     <property name="compiler.jar.name" value="${name}.jar"/>
 
     <!-- source directory -->
@@ -36,12 +35,6 @@
     <!-- directory for shared libraries -->
     <property name="lib.dir" location="${basedir}/lib" />
 
-    <!-- runtime source directory -->
-    <property name="runtime.src" location="${basedir}/runtime/src" />
-
-    <!-- directory for class file targets of runtime source code -->
-    <property name="runtime.classes" location="${basedir}/runtime/classes" />
-
     <!-- distribution directory -->
     <property name="dist" location="${basedir}/dist" />
 
@@ -49,7 +42,6 @@
     <property name="compiler.bat" location="${bin.dir}/${compiler.name}.bat"/>
     <property name="interp.sh" location="${bin.dir}/${interp.sh.name}"/>
     <property name="compiler.jar" location="${lib.dir}/${compiler.jar.name}"/>
-    <property name="runtime.jar" location="${lib.dir}/${runtime.jar.name}"/>
 
     <!-- set the prefix for accessing environment variables -->
     <property environment="env" />
@@ -61,7 +53,6 @@
     <path id="standard.classpath">
         <!-- our generated classes -->
         <pathelement location="${compiler.classes}" />
-        <pathelement location="${runtime.classes}" />
 
         <!-- the java classpath -->
         <pathelement path="${java.class.path}" />
@@ -86,10 +77,6 @@
     <target name="clean" description="clean up">
         <!-- Delete the ${compiler.classes} and ${dist} directory trees -->
         <delete dir="${compiler.classes}" />
-        <delete dir="${runtime.classes}" />
-        <exec executable="make" dir="${basedir}/runtime">
-            <arg value="clean" />
-        </exec>
         <delete dir="${dist}" />
         <delete includeemptydirs="true">
             <fileset dir="${basedir}/tests">
@@ -111,7 +98,6 @@
             </fileset>
             <fileset dir="${lib.dir}">
                 <include name="${compiler.jar.name}" />
-                <include name="${runtime.jar.name}" />
             </fileset>
         </delete>
     </target>
@@ -122,11 +108,6 @@
         <tstamp />
         <!-- Create the build directory structures used by compile -->
         <mkdir dir="${compiler.classes}" />
-        <mkdir dir="${runtime.classes}" />
-        <!-- Check if runtime exists -->
-        <condition property="has-runtime">
-            <available file="${runtime.src}" type="dir"/>
-        </condition>
     </target>
 
 
@@ -145,27 +126,13 @@
        targets
        ****************************************  -->
 
-    <target name="compile-all" depends="compiler,runtime" description="Build the compiler and libraries"/>
+    <target name="compile-all" depends="compiler" description="Build the compiler and libraries"/>
 
     <target name="compiler" depends="init,check-classpath">
         <antcall target="compile-ext">
             <param name="ext" value="${name}" />
             <param name="ext.pkg" value="${package.dir}" />
         </antcall>
-    </target>
-
-    <target name="runtime" depends="init,check-classpath" description="Compile the runtime" if="has-runtime">
-        <mkdir dir="${runtime.classes}" />
-        <javac source="1.7" target="1.7" srcdir="${runtime.src}" destdir="${runtime.classes}" debug="on" includes="**" includeantruntime="false">
-            <classpath>
-                <path refid="standard.classpath" />
-            </classpath>
-        </javac>
-        <exec executable="make">
-            <arg value="PREBUILT=true"/>
-            <arg value="-C"/>
-            <arg value="runtime"/>
-        </exec>
     </target>
 
 
@@ -175,18 +142,12 @@
 
     <target name="jar" depends="compile-all">
         <jar jarfile="${compiler.jar}" basedir="${compiler.classes}" includes="${package.dir}/**" />
-        <jar jarfile="${runtime.jar}" basedir="${runtime.classes}" includes="${package.dir}/**" />
     </target>
 
 
     <target name="javadoc" depends="compiler">
         <javadoc sourcepath="${compiler.src}" destdir="${basedir}/doc/${name}-api" defaultexcludes="yes" classpathref="standard.classpath">
             <packageset dir="${compiler.src}" defaultexcludes="yes">
-                <include name="**" />
-            </packageset>
-        </javadoc>
-        <javadoc sourcepath="${runtime.src}" destdir="${basedir}/doc/${name}-runtime-api" defaultexcludes="yes" classpathref="standard.classpath">
-          <packageset dir="${runtime.src}" defaultexcludes="yes">
                 <include name="**" />
             </packageset>
         </javadoc>
@@ -204,7 +165,6 @@
         <copy todir="${dist}" includeEmptyDirs="no">
             <fileset dir="${basedir}" defaultexcludes="yes">
                 <include name="compiler/src/**" />
-                <include name="runtime/src/**" />
 
                 <include name="tests/*" />
                 <include name="README" />

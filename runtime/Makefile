@@ -1,56 +1,76 @@
-BASE_DIR = ..
-POLYLLVMC_SRC = $(shell find $(BASE_DIR)/compiler/src -name "*.java")
+SRC := src
+OUT := out
+CLASSES := $(OUT)/classes
 
-OUT_DIR = out
+# Hack to allow dependency on PolyLLVM code.
+PLC_SRC := $(shell find ../compiler/src -name "*.java")
 
-JAVA_SRC = $(shell find src -name "*.java")
-NATIVE_SRC = $(shell find native -name "*.cpp")
-JVM_SRC = jvm
+PLC := ../bin/polyllvmc
+JDK7 ?= /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
+JAVAC := $(JDK7)/bin/javac
 
-NATIVE_LL = $(NATIVE_SRC:%.cpp=$(OUT_DIR)/%.ll)
-JAVA_LL = $(JAVA_SRC:src/%.java=$(OUT_DIR)/%.ll)
-ALL_LL = $(NATIVE_LL) $(JAVA_LL)
+JAVA_SRC := $(shell find $(SRC) -name "*.java")
+NATIVE_SRC := $(shell find native -name "*.cpp")
 
-JNI_INCLUDES = \
+JAVA_CLS := $(JAVA_SRC:$(SRC)/%.java=$(CLASSES)/%.class)
+JAVA_LL := $(JAVA_SRC:$(SRC)/%.java=$(OUT)/%.ll)
+
+JAVA_OBJ := $(JAVA_SRC:$(SRC)/%.java=$(OUT)/%.o)
+NATIVE_OBJ := $(NATIVE_SRC:%.cpp=$(OUT)/%.o)
+ALL_OBJ := $(JAVA_OBJ) $(NATIVE_OBJ)
+
+JNI_INCLUDES := \
 	-I"$(JAVA_HOME)/include" \
 	-I"$(JAVA_HOME)/include/darwin" \
 	-I"$(JAVA_HOME)/include/linux"
 
-NATIVE_FLAGS = -g -Inative -Wall -Wno-unused-private-field -MMD -pthread
+CLANG := clang++
+JAVA_FLAGS := \
+	-glldb -Wno-override-module
+NATIVE_FLAGS := \
+	-glldb -std=c++14 -Inative $(JNI_INCLUDES) \
+	-Wall -Wno-unused-private-field -MMD -pthread
+LINK_FLAGS := \
+	-glldb -lgc -undefined dynamic_lookup # TODO: Ideally would would not need dynamic_lookup
 
-all: runtime.o $(JVM_SRC)/libjvm.dylib
+# We use the name "libjvm" because that is expected by JDK native code.
+LIBJVM := libjvm.dylib
+LIBJVM_VERSION := -current_version 1.0.0 -compatibility_version 1.0.0
 
-$(NATIVE_LL): $(OUT_DIR)/%.ll: %.cpp
+all: $(OUT)/$(LIBJVM)
+
+# Native code (.cpp --> .o).
+$(NATIVE_OBJ): $(OUT)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	@echo "Compiling $<"
-	@clang++ $(JNI_INCLUDES) $(NATIVE_FLAGS) -S -emit-llvm -std=c++11 -o $@ $<
+	@$(CLANG) $(NATIVE_FLAGS) -c -o $@ $<
 
-$(JVM_SRC)/libjvm.dylib: $(JVM_SRC)/jvm.cpp
+# Runtime Java code (.java --> .class)
+$(JAVA_CLS): $(JAVA_SRC)
+	@echo "Compiling $(words $(JAVA_SRC)) Java files down to Java bytecode"
+	@mkdir -p $(CLASSES)
+	@$(JAVAC) -d $(CLASSES) $(JAVA_SRC)
+
+# Runtime Java code (.java --> .ll)
+$(JAVA_LL): $(JAVA_SRC) $(JAVA_CLS) $(PLC_SRC)
+	@echo "Compiling $(words $(JAVA_SRC)) Java files down to LLVM IR"
+	@$(PLC) -c -d $(OUT) $(JAVA_SRC)
+
+# Runtime Java code (.ll --> .o).
+$(JAVA_OBJ): %.o: %.ll
+	@echo "Compiling $<"
+	@$(CLANG) $(JAVA_FLAGS) -c -o $@ $<
+
+# Link into library (.o --> .dylib).
+$(OUT)/$(LIBJVM): $(ALL_OBJ)
 	@echo "Creating libjvm"
-	@g++ $(JNI_INCLUDES) -Inative -std=c++14 -shared -current_version 1.0.0 -compatibility_version 1.0.0 -o $@ $<
-	@install_name_tool -id '@rpath/libjvm.dylib' $@
-
-# Mixing Ant and Make is tricky; this rule isn't perfect,
-# but will work in almost all cases. Note that build.xml
-# defines PREBUILT before executing this Makefile.
-$(JAVA_LL): $(JAVA_SRC) $(POLYLLVMC_SRC)
-ifndef PREBUILT
-	@echo "Building polyllvmc"
-	@ant -S -f "$(BASE_DIR)"
-endif
-	@echo "Compiling $(words $(JAVA_SRC)) Java files down to IR"
-	@$(BASE_DIR)/bin/polyllvmc -c -d $(OUT_DIR) $(JAVA_SRC)
-
-runtime.ll: $(ALL_LL)
-	@echo "Linking $(words $(ALL_LL)) IR files into $@"
-	@llvm-link -S -o $@ $(ALL_LL)
-
-runtime.o: runtime.ll
-	@clang++ -g -c -o $@ $<
+	@$(CLANG) $(LINK_FLAGS) -shared $(LIBJVM_VERSION) -o $@ $^
+	@install_name_tool -id "@rpath/$(LIBJVM)" $@
 
 .PHONY: clean
 clean:
-	rm -rf classes $(OUT_DIR) runtime.{ll,o} $(JVM_SRC)/libjvm.dylib
+	rm -rf $(OUT)
 
-# Auto-generated dependencies for native code.
--include $(NATIVE_SRC:%.cpp=out/%.d)
+# Auto-generated header dependencies for native code.
+NATIVE_DEP := $(NATIVE_OBJ:%.o=%.d)
+-include $(NATIVE_DEP)
