@@ -673,10 +673,11 @@ const char* jni_GetStringUTFChars(JNIEnv *env, jstring str, jboolean *isCopy) {
     auto chars = Unwrap(str)->Chars();
     auto len = chars->Length();
     auto data = (jchar*) chars->Data();
-    char* res = (char*) malloc(len);
+    char* res = (char*) malloc(len + 1);
     // TODO: Incorrect conversion from Java string chars to UTF-8 chars.
     for (jsize i = 0; i < len; ++i)
         res[i] = static_cast<char>(data[i]);
+    res[len] = '\0';
     *isCopy = true;
     return res;
 }

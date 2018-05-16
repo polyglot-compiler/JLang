@@ -3,6 +3,7 @@
 #include <cstring>
 #include <execinfo.h>
 #include "jni.h"
+#include "class.h"
 #include "rep.h"
 
 [[noreturn]] static void jvm_Unimplemented(const char* name) {
@@ -419,12 +420,18 @@ void JVM_GetClassModifiers() {
     jvm_Unimplemented("JVM_GetClassModifiers");
 }
 
-void JVM_GetClassName() {
-    jvm_Unimplemented("JVM_GetClassName");
+jstring
+JVM_GetClassName(JNIEnv *env, jclass cls) {
+    auto name = GetJavaClassName(cls);
+    return env->NewStringUTF(name);
 }
 
-void JVM_GetClassNameUTF() {
-    jvm_Unimplemented("JVM_GetClassNameUTF");
+const char*
+JVM_GetClassNameUTF(JNIEnv *env, jclass cls) {
+    auto name = GetJavaClassName(cls);
+    char* res = (char*) malloc(strlen(name) + 1);
+    strcpy(res, name);
+    return res;
 }
 
 void JVM_GetClassSignature() {
@@ -794,8 +801,9 @@ void JVM_RegisterSignal() {
     jvm_Unimplemented("JVM_RegisterSignal");
 }
 
-void JVM_ReleaseUTF() {
-    jvm_Unimplemented("JVM_ReleaseUTF");
+void
+JVM_ReleaseUTF(const char *utf) {
+    free(const_cast<char*>(utf));
 }
 
 void JVM_ResolveClass() {
