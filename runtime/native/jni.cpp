@@ -1,6 +1,6 @@
-#include <jni.h>
 #include <cstdio>
 #include <cstdlib>
+#include <jni.h>
 #include "stack_trace.h"
 
 #include "rep.h"
@@ -17,7 +17,6 @@
     "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
     , name);
   dump_stack_trace();
-  fflush(stderr);
   abort();
 }
 
