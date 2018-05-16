@@ -1,6 +1,3 @@
-#ifndef STACK_TRACE_H
-#define STACK_TRACE_H
+#pragma once
 
 void DumpStackTrace();
-
-#endif // STACK_TRACE_H

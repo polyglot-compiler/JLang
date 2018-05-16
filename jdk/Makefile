@@ -59,7 +59,7 @@ $(OUT)/stubs.o: stubs.cpp
 	@$(CLANG) -glldb -std=c++14 $(JNI_INCLUDES) -c -o $@ $<
 
 # Create a shared library for compiled JDK classes.
-$(OUT)/$(LIBJDK): $(OUT)/ostamp $(OUT)/stubs.o
+$(OUT)/$(LIBJDK): $(OUT)/ostamp $(OUT)/stubs.o $(LIBJVM)
 	@echo "Creating libjdk"
 	@$(CLANG) -glldb -lgc $(LIBJVM) -shared \
 		`find $(OUT) -name "*.o"` \

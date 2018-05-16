@@ -1,5 +1,5 @@
-#ifndef NATIVE_H
-#define NATIVE_H
+#pragma once
+
 #include "jni.h"
 
 void
@@ -9,5 +9,3 @@ RegisterJavaNativeFunc(
     const char* signature, // e.g., (J)V
     void* func
 );
-
-#endif // NATIVE_H

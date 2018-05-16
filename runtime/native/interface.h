@@ -1,5 +1,4 @@
-#ifndef INTERFACE_H
-#define INTERFACE_H
+#pragma once
 
 extern "C" {
 
@@ -37,5 +36,3 @@ private:
 	size_t capacity;
 	size_t getIndexForHash(int h);
 };
-
-#endif // INTERFACE_H 

@@ -5,8 +5,7 @@
 // Other native code can interact with these structures through the
 // inlined functions defined here.
 //
-#ifndef REP_H
-#define REP_H
+#pragma once
 
 #include <type_traits>
 #include <jni.h>
@@ -41,6 +40,7 @@ private:
     type_info* super_types_;
 };
 
+// Currently unimplemented.
 struct sync_vars {
 	// pthread_mutex_t* mutex;
 	// pthread_cond_t *condition_variable;
@@ -103,5 +103,3 @@ inline JStringRep* Unwrap(jstring o) {
 inline JClassRep* Unwrap(jclass o) {
     return reinterpret_cast<JClassRep*>(o);
 }
-
-#endif // REP_H

@@ -1,12 +1,15 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <execinfo.h>
-#include "jni.h"
+
+#include "stack_trace.h"
 #include "class.h"
+#include "jni.h"
 #include "rep.h"
 
-[[noreturn]] static void jvm_Unimplemented(const char* name) {
+#include "jvm.h"
+
+[[noreturn]] static void JvmUnimplemented(const char* name) {
     fprintf(stderr,
         "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
         "The following JVM method is currently unimplemented:\n"
@@ -17,18 +20,11 @@
         "Aborting for now.\n"
         "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
         , name);
-
-    // Dump stack trace.
-    constexpr int max_frames = 256;
-    void* callstack[max_frames];
-    int frames = backtrace(callstack, max_frames);
-    backtrace_symbols_fd(callstack, frames, fileno(stderr));
-
-    fflush(stderr);
+    DumpStackTrace();
     abort();
 }
 
-static void jvm_Warn(const char* name) {
+static void JvmIgnore(const char* name) {
     fprintf(stderr,
         "WARNING: JVM method %s is unimplemented, but will not abort.\n", name);
     fflush(stderr);
@@ -36,40 +32,57 @@ static void jvm_Warn(const char* name) {
 
 extern "C" {
 
-void AsyncGetCallTrace() {
-    jvm_Unimplemented("AsyncGetCallTrace");
+jint
+JVM_GetInterfaceVersion(void) {
+    JvmUnimplemented("JVM_GetInterfaceVersion");
 }
 
-jint JNI_GetDefaultJavaVMInitArgs(void *args) {
-    jvm_Unimplemented("JNI_GetDefaultJavaVMInitArgs");
+jint
+JVM_IHashCode(JNIEnv *env, jobject obj) {
+    auto addr = reinterpret_cast<intptr_t>(obj);
+    return static_cast<jint>(addr);
 }
 
-jint JNI_CreateJavaVM(JavaVM **pvm, void **penv, void *args) {
-    jvm_Unimplemented("JNI_CreateJavaVM");
+void
+JVM_MonitorWait(JNIEnv *env, jobject obj, jlong ms) {
+    JvmUnimplemented("JVM_MonitorWait");
 }
 
-jint JNI_GetCreatedJavaVMs(JavaVM **, jsize, jsize *) {
-    jvm_Unimplemented("JNI_GetCreatedJavaVMs");
+void
+JVM_MonitorNotify(JNIEnv *env, jobject obj) {
+    JvmUnimplemented("JVM_MonitorNotify");
 }
 
-void JVM_Accept() {
-    jvm_Unimplemented("JVM_Accept");
+void
+JVM_MonitorNotifyAll(JNIEnv *env, jobject obj) {
+    JvmUnimplemented("JVM_MonitorNotifyAll");
 }
 
-void JVM_ActiveProcessorCount() {
-    jvm_Unimplemented("JVM_ActiveProcessorCount");
+jobject
+JVM_Clone(JNIEnv *env, jobject obj) {
+    JvmUnimplemented("JVM_Clone");
 }
 
-void JVM_AllocateNewArray() {
-    jvm_Unimplemented("JVM_AllocateNewArray");
+jstring
+JVM_InternString(JNIEnv *env, jstring str) {
+    JvmUnimplemented("JVM_InternString");
 }
 
-void JVM_AllocateNewObject() {
-    jvm_Unimplemented("JVM_AllocateNewObject");
+jlong
+JVM_CurrentTimeMillis(JNIEnv *env, jclass ignored) {
+    JvmUnimplemented("JVM_CurrentTimeMillis");
 }
 
-void JVM_ArrayCopy(JNIEnv *env, jclass ignored, jobject src, jint src_pos,
-                   jobject dst, jint dst_pos, jint length) {
+jlong
+JVM_NanoTime(JNIEnv *env, jclass ignored) {
+    JvmUnimplemented("JVM_NanoTime");
+}
+
+void
+JVM_ArrayCopy(
+    JNIEnv *env, jclass ignored,
+    jobject src, jint src_pos, jobject dst, jint dst_pos, jint length
+) {
     jarray src_arr = reinterpret_cast<jarray>(src);
     jarray dst_arr = reinterpret_cast<jarray>(dst);
     char* src_data = static_cast<char*>(Unwrap(src_arr)->Data());
@@ -77,347 +90,370 @@ void JVM_ArrayCopy(JNIEnv *env, jclass ignored, jobject src, jint src_pos,
     memmove(dst_data + dst_pos, src_data + src_pos, length);
 }
 
-void JVM_AssertionStatusDirectives() {
-    jvm_Unimplemented("JVM_AssertionStatusDirectives");
+jobject
+JVM_InitProperties(JNIEnv *env, jobject p) {
+    JvmUnimplemented("JVM_InitProperties");
 }
 
-void JVM_Available() {
-    jvm_Unimplemented("JVM_Available");
+void
+JVM_OnExit(void (*func)(void)) {
+    JvmUnimplemented("JVM_OnExit");
 }
 
-void JVM_Bind() {
-    jvm_Unimplemented("JVM_Bind");
+void
+JVM_Exit(jint code) {
+    JvmUnimplemented("JVM_Exit");
 }
 
-void JVM_CX8Field() {
-    jvm_Unimplemented("JVM_CX8Field");
+void
+JVM_Halt(jint code) {
+    JvmUnimplemented("JVM_Halt");
 }
 
-void JVM_ClassDepth() {
-    jvm_Unimplemented("JVM_ClassDepth");
+void
+JVM_GC(void) {
+    JvmUnimplemented("JVM_GC");
 }
 
-void JVM_ClassLoaderDepth() {
-    jvm_Unimplemented("JVM_ClassLoaderDepth");
+jlong
+JVM_MaxObjectInspectionAge(void) {
+    JvmUnimplemented("JVM_MaxObjectInspectionAge");
 }
 
-void JVM_Clone() {
-    jvm_Unimplemented("JVM_Clone");
+void
+JVM_TraceInstructions(jboolean on) {
+    JvmUnimplemented("JVM_TraceInstructions");
 }
 
-void JVM_Close() {
-    jvm_Unimplemented("JVM_Close");
+void
+JVM_TraceMethodCalls(jboolean on) {
+    JvmUnimplemented("JVM_TraceMethodCalls");
 }
 
-void JVM_CompileClass() {
-    jvm_Unimplemented("JVM_CompileClass");
+jlong
+JVM_TotalMemory(void) {
+    JvmUnimplemented("JVM_TotalMemory");
 }
 
-void JVM_CompileClasses() {
-    jvm_Unimplemented("JVM_CompileClasses");
+jlong
+JVM_FreeMemory(void) {
+    JvmUnimplemented("JVM_FreeMemory");
 }
 
-void JVM_CompilerCommand() {
-    jvm_Unimplemented("JVM_CompilerCommand");
+jlong
+JVM_MaxMemory(void) {
+    JvmUnimplemented("JVM_MaxMemory");
 }
 
-void JVM_Connect() {
-    jvm_Unimplemented("JVM_Connect");
+jint
+JVM_ActiveProcessorCount(void) {
+    JvmUnimplemented("JVM_ActiveProcessorCount");
 }
 
-void JVM_ConstantPoolGetClassAt() {
-    jvm_Unimplemented("JVM_ConstantPoolGetClassAt");
+void*
+JVM_LoadLibrary(const char *name) {
+    JvmUnimplemented("JVM_LoadLibrary");
 }
 
-void JVM_ConstantPoolGetClassAtIfLoaded() {
-    jvm_Unimplemented("JVM_ConstantPoolGetClassAtIfLoaded");
+void
+JVM_UnloadLibrary(void * handle) {
+    JvmUnimplemented("JVM_UnloadLibrary");
 }
 
-void JVM_ConstantPoolGetDoubleAt() {
-    jvm_Unimplemented("JVM_ConstantPoolGetDoubleAt");
+void*
+JVM_FindLibraryEntry(void *handle, const char *name) {
+    JvmUnimplemented("JVM_FindLibraryEntry");
 }
 
-void JVM_ConstantPoolGetFieldAt() {
-    jvm_Unimplemented("JVM_ConstantPoolGetFieldAt");
+jboolean
+JVM_IsSupportedJNIVersion(jint version) {
+    JvmUnimplemented("JVM_IsSupportedJNIVersion");
 }
 
-void JVM_ConstantPoolGetFieldAtIfLoaded() {
-    jvm_Unimplemented("JVM_ConstantPoolGetFieldAtIfLoaded");
+jboolean
+JVM_IsNaN(jdouble d) {
+    JvmUnimplemented("JVM_IsNaN");
 }
 
-void JVM_ConstantPoolGetFloatAt() {
-    jvm_Unimplemented("JVM_ConstantPoolGetFloatAt");
+void
+JVM_FillInStackTrace(JNIEnv *env, jobject throwable) {
+    JvmIgnore("JVM_FillInStackTrace");
 }
 
-void JVM_ConstantPoolGetIntAt() {
-    jvm_Unimplemented("JVM_ConstantPoolGetIntAt");
+void
+JVM_PrintStackTrace(JNIEnv *env, jobject throwable, jobject printable) {
+    JvmUnimplemented("JVM_PrintStackTrace");
 }
 
-void JVM_ConstantPoolGetLongAt() {
-    jvm_Unimplemented("JVM_ConstantPoolGetLongAt");
-}
-
-void JVM_ConstantPoolGetMemberRefInfoAt() {
-    jvm_Unimplemented("JVM_ConstantPoolGetMemberRefInfoAt");
-}
-
-void JVM_ConstantPoolGetMethodAt() {
-    jvm_Unimplemented("JVM_ConstantPoolGetMethodAt");
-}
-
-void JVM_ConstantPoolGetMethodAtIfLoaded() {
-    jvm_Unimplemented("JVM_ConstantPoolGetMethodAtIfLoaded");
-}
-
-void JVM_ConstantPoolGetSize() {
-    jvm_Unimplemented("JVM_ConstantPoolGetSize");
-}
-
-void JVM_ConstantPoolGetStringAt() {
-    jvm_Unimplemented("JVM_ConstantPoolGetStringAt");
-}
-
-void JVM_ConstantPoolGetUTF8At() {
-    jvm_Unimplemented("JVM_ConstantPoolGetUTF8At");
-}
-
-void JVM_CountStackFrames() {
-    jvm_Unimplemented("JVM_CountStackFrames");
-}
-
-void JVM_CurrentClassLoader() {
-    jvm_Unimplemented("JVM_CurrentClassLoader");
-}
-
-void JVM_CurrentLoadedClass() {
-    jvm_Unimplemented("JVM_CurrentLoadedClass");
-}
-
-void JVM_CurrentThread() {
-    jvm_Unimplemented("JVM_CurrentThread");
-}
-
-void JVM_CurrentTimeMillis() {
-    jvm_Unimplemented("JVM_CurrentTimeMillis");
-}
-
-void JVM_DTraceActivate() {
-    jvm_Unimplemented("JVM_DTraceActivate");
-}
-
-void JVM_DTraceDispose() {
-    jvm_Unimplemented("JVM_DTraceDispose");
-}
-
-void JVM_DTraceGetVersion() {
-    jvm_Unimplemented("JVM_DTraceGetVersion");
-}
-
-void JVM_DTraceIsProbeEnabled() {
-    jvm_Unimplemented("JVM_DTraceIsProbeEnabled");
-}
-
-void JVM_DTraceIsSupported() {
-    jvm_Unimplemented("JVM_DTraceIsSupported");
-}
-
-void JVM_DefineClass() {
-    jvm_Unimplemented("JVM_DefineClass");
-}
-
-void JVM_DefineClassWithSource() {
-    jvm_Unimplemented("JVM_DefineClassWithSource");
-}
-
-void JVM_DefineClassWithSourceCond() {
-    jvm_Unimplemented("JVM_DefineClassWithSourceCond");
-}
-
-void JVM_DesiredAssertionStatus() {
-    jvm_Unimplemented("JVM_DesiredAssertionStatus");
-}
-
-void JVM_DisableCompiler() {
-    jvm_Unimplemented("JVM_DisableCompiler");
+jint
+JVM_GetStackTraceDepth(JNIEnv *env, jobject throwable) {
+    JvmUnimplemented("JVM_GetStackTraceDepth");
 }
 
 jobject
-JVM_DoPrivileged(
-        JNIEnv *env, jclass cls,
-        jobject action, jobject context, jboolean wrapException) {
-    jvm_Warn("JVM_DoPrivileged");
+JVM_GetStackTraceElement(JNIEnv *env, jobject throwable, jint index) {
+    JvmUnimplemented("JVM_GetStackTraceElement");
+}
+
+void
+JVM_InitializeCompiler(JNIEnv *env, jclass compCls) {
+    JvmUnimplemented("JVM_InitializeCompiler");
+}
+
+jboolean
+JVM_IsSilentCompiler(JNIEnv *env, jclass compCls) {
+    JvmUnimplemented("JVM_IsSilentCompiler");
+}
+
+jboolean
+JVM_CompileClass(JNIEnv *env, jclass compCls, jclass cls) {
+    JvmUnimplemented("JVM_CompileClass");
+}
+
+jboolean
+JVM_CompileClasses(JNIEnv *env, jclass cls, jstring jname) {
+    JvmUnimplemented("JVM_CompileClasses");
+}
+
+jobject
+JVM_CompilerCommand(JNIEnv *env, jclass compCls, jobject arg) {
+    JvmUnimplemented("JVM_CompilerCommand");
+}
+
+void
+JVM_EnableCompiler(JNIEnv *env, jclass compCls) {
+    JvmUnimplemented("JVM_EnableCompiler");
+}
+
+void
+JVM_DisableCompiler(JNIEnv *env, jclass compCls) {
+    JvmUnimplemented("JVM_DisableCompiler");
+}
+
+void
+JVM_StartThread(JNIEnv *env, jobject thread) {
+    JvmUnimplemented("JVM_StartThread");
+}
+
+void
+JVM_StopThread(JNIEnv *env, jobject thread, jobject exception) {
+    JvmUnimplemented("JVM_StopThread");
+}
+
+jboolean
+JVM_IsThreadAlive(JNIEnv *env, jobject thread) {
+    JvmUnimplemented("JVM_IsThreadAlive");
+}
+
+void
+JVM_SuspendThread(JNIEnv *env, jobject thread) {
+    JvmUnimplemented("JVM_SuspendThread");
+}
+
+void
+JVM_ResumeThread(JNIEnv *env, jobject thread) {
+    JvmUnimplemented("JVM_ResumeThread");
+}
+
+void
+JVM_SetThreadPriority(JNIEnv *env, jobject thread, jint prio) {
+    JvmUnimplemented("JVM_SetThreadPriority");
+}
+
+void
+JVM_Yield(JNIEnv *env, jclass threadClass) {
+    JvmUnimplemented("JVM_Yield");
+}
+
+void
+JVM_Sleep(JNIEnv *env, jclass threadClass, jlong millis) {
+    JvmUnimplemented("JVM_Sleep");
+}
+
+jobject
+JVM_CurrentThread(JNIEnv *env, jclass threadClass) {
+    JvmUnimplemented("JVM_CurrentThread");
+}
+
+jint
+JVM_CountStackFrames(JNIEnv *env, jobject thread) {
+    JvmUnimplemented("JVM_CountStackFrames");
+}
+
+void
+JVM_Interrupt(JNIEnv *env, jobject thread) {
+    JvmUnimplemented("JVM_Interrupt");
+}
+
+jboolean
+JVM_IsInterrupted(JNIEnv *env, jobject thread, jboolean clearInterrupted) {
+    JvmUnimplemented("JVM_IsInterrupted");
+}
+
+jboolean
+JVM_HoldsLock(JNIEnv *env, jclass threadClass, jobject obj) {
+    JvmUnimplemented("JVM_HoldsLock");
+}
+
+void
+JVM_DumpAllStacks(JNIEnv *env, jclass unused) {
+    JvmUnimplemented("JVM_DumpAllStacks");
+}
+
+jobjectArray
+JVM_GetAllThreads(JNIEnv *env, jclass dummy) {
+    JvmUnimplemented("JVM_GetAllThreads");
+}
+
+void
+JVM_SetNativeThreadName(JNIEnv *env, jobject jthread, jstring name) {
+    JvmUnimplemented("JVM_SetNativeThreadName");
+}
+
+jobjectArray
+JVM_DumpThreads(JNIEnv *env, jclass threadClass, jobjectArray threads) {
+    JvmUnimplemented("JVM_DumpThreads");
+}
+
+jclass
+JVM_CurrentLoadedClass(JNIEnv *env) {
+    JvmUnimplemented("JVM_CurrentLoadedClass");
+}
+
+jobject
+JVM_CurrentClassLoader(JNIEnv *env) {
+    JvmUnimplemented("JVM_CurrentClassLoader");
+}
+
+jobjectArray
+JVM_GetClassContext(JNIEnv *env) {
+    JvmUnimplemented("JVM_GetClassContext");
+}
+
+jint
+JVM_ClassDepth(JNIEnv *env, jstring name) {
+    JvmUnimplemented("JVM_ClassDepth");
+}
+
+jint
+JVM_ClassLoaderDepth(JNIEnv *env) {
+    JvmUnimplemented("JVM_ClassLoaderDepth");
+}
+
+jstring
+JVM_GetSystemPackage(JNIEnv *env, jstring name) {
+    JvmUnimplemented("JVM_GetSystemPackage");
+}
+
+jobjectArray
+JVM_GetSystemPackages(JNIEnv *env) {
+    JvmUnimplemented("JVM_GetSystemPackages");
+}
+
+jobject
+JVM_AllocateNewObject(JNIEnv *env, jobject obj, jclass currClass, jclass initClass) {
+    JvmUnimplemented("JVM_AllocateNewObject");
+}
+
+jobject
+JVM_AllocateNewArray(JNIEnv *env, jobject obj, jclass currClass, jint length) {
+    JvmUnimplemented("JVM_AllocateNewArray");
+}
+
+jobject
+JVM_LatestUserDefinedLoader(JNIEnv *env) {
+    JvmUnimplemented("JVM_LatestUserDefinedLoader");
+}
+
+jclass
+JVM_LoadClass0(JNIEnv *env, jobject obj, jclass currClass, jstring currClassName) {
+    JvmUnimplemented("JVM_LoadClass0");
+}
+
+jint
+JVM_GetArrayLength(JNIEnv *env, jobject arr) {
+    JvmUnimplemented("JVM_GetArrayLength");
+}
+
+jobject
+JVM_GetArrayElement(JNIEnv *env, jobject arr, jint index) {
+    JvmUnimplemented("JVM_GetArrayElement");
+}
+
+jvalue
+JVM_GetPrimitiveArrayElement(JNIEnv *env, jobject arr, jint index, jint wCode) {
+    JvmUnimplemented("JVM_GetPrimitiveArrayElement");
+}
+
+void
+JVM_SetArrayElement(JNIEnv *env, jobject arr, jint index, jobject val) {
+    JvmUnimplemented("JVM_SetArrayElement");
+}
+
+void
+JVM_SetPrimitiveArrayElement(JNIEnv *env, jobject arr, jint index, jvalue v, unsigned char vCode) {
+    JvmUnimplemented("JVM_SetPrimitiveArrayElement");
+}
+
+jobject
+JVM_NewArray(JNIEnv *env, jclass eltClass, jint length) {
+    JvmUnimplemented("JVM_NewArray");
+}
+
+jobject
+JVM_NewMultiArray(JNIEnv *env, jclass eltClass, jintArray dim) {
+    JvmUnimplemented("JVM_NewMultiArray");
+}
+
+jclass
+JVM_GetCallerClass(JNIEnv *env, int n) {
+    JvmIgnore("JVM_GetCallerClass");
     return nullptr;
 }
 
-void JVM_DumpAllStacks() {
-    jvm_Unimplemented("JVM_DumpAllStacks");
+jclass
+JVM_FindPrimitiveClass(JNIEnv *env, const char *utf) {
+    JvmUnimplemented("JVM_FindPrimitiveClass");
 }
 
-void JVM_DumpThreads() {
-    jvm_Unimplemented("JVM_DumpThreads");
+void
+JVM_ResolveClass(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_ResolveClass");
 }
 
-void JVM_EnableCompiler() {
-    jvm_Unimplemented("JVM_EnableCompiler");
+jclass
+JVM_FindClassFromBootLoader(JNIEnv *env, const char *name) {
+    JvmUnimplemented("JVM_FindClassFromBootLoader");
 }
 
-void JVM_Exit() {
-    jvm_Unimplemented("JVM_Exit");
+jclass
+JVM_FindClassFromCaller(JNIEnv *env, const char *name, jboolean init, jobject loader, jclass caller) {
+    JvmUnimplemented("JVM_FindClassFromCaller");
 }
 
-void JVM_FillInStackTrace(JNIEnv *env, jobject throwable) {
-    // TODO
-    jvm_Warn("FillInStackTrace");
+jclass
+JVM_FindClassFromClassLoader(JNIEnv *env, const char *name, jboolean init, jobject loader, jboolean throwError) {
+    JvmUnimplemented("JVM_FindClassFromClassLoader");
 }
 
-void JVM_FindClassFromBootLoader() {
-    jvm_Unimplemented("JVM_FindClassFromBootLoader");
+jclass
+JVM_FindClassFromClass(JNIEnv *env, const char *name, jboolean init, jclass from) {
+    JvmUnimplemented("JVM_FindClassFromClass");
 }
 
-void JVM_FindClassFromCaller() {
-    jvm_Unimplemented("JVM_FindClassFromCaller");
+jclass
+JVM_FindLoadedClass(JNIEnv *env, jobject loader, jstring name) {
+    JvmUnimplemented("JVM_FindLoadedClass");
 }
 
-void JVM_FindClassFromClass() {
-    jvm_Unimplemented("JVM_FindClassFromClass");
+jclass
+JVM_DefineClass(JNIEnv *env, const char *name, jobject loader, const jbyte *buf, jsize len, jobject pd) {
+    JvmUnimplemented("JVM_DefineClass");
 }
 
-void JVM_FindClassFromClassLoader() {
-    jvm_Unimplemented("JVM_FindClassFromClassLoader");
-}
-
-void JVM_FindLibraryEntry() {
-    jvm_Unimplemented("JVM_FindLibraryEntry");
-}
-
-void JVM_FindLoadedClass() {
-    jvm_Unimplemented("JVM_FindLoadedClass");
-}
-
-void JVM_FindPrimitiveClass() {
-    jvm_Unimplemented("JVM_FindPrimitiveClass");
-}
-
-void JVM_FindSignal() {
-    jvm_Unimplemented("JVM_FindSignal");
-}
-
-void JVM_FreeMemory() {
-    jvm_Unimplemented("JVM_FreeMemory");
-}
-
-void JVM_GC() {
-    jvm_Unimplemented("JVM_GC");
-}
-
-void JVM_GetAllThreads() {
-    jvm_Unimplemented("JVM_GetAllThreads");
-}
-
-void JVM_GetArrayElement() {
-    jvm_Unimplemented("JVM_GetArrayElement");
-}
-
-void JVM_GetArrayLength() {
-    jvm_Unimplemented("JVM_GetArrayLength");
-}
-
-void JVM_GetCPClassNameUTF() {
-    jvm_Unimplemented("JVM_GetCPClassNameUTF");
-}
-
-void JVM_GetCPFieldClassNameUTF() {
-    jvm_Unimplemented("JVM_GetCPFieldClassNameUTF");
-}
-
-void JVM_GetCPFieldModifiers() {
-    jvm_Unimplemented("JVM_GetCPFieldModifiers");
-}
-
-void JVM_GetCPFieldNameUTF() {
-    jvm_Unimplemented("JVM_GetCPFieldNameUTF");
-}
-
-void JVM_GetCPFieldSignatureUTF() {
-    jvm_Unimplemented("JVM_GetCPFieldSignatureUTF");
-}
-
-void JVM_GetCPMethodClassNameUTF() {
-    jvm_Unimplemented("JVM_GetCPMethodClassNameUTF");
-}
-
-void JVM_GetCPMethodModifiers() {
-    jvm_Unimplemented("JVM_GetCPMethodModifiers");
-}
-
-void JVM_GetCPMethodNameUTF() {
-    jvm_Unimplemented("JVM_GetCPMethodNameUTF");
-}
-
-void JVM_GetCPMethodSignatureUTF() {
-    jvm_Unimplemented("JVM_GetCPMethodSignatureUTF");
-}
-
-jclass JVM_GetCallerClass(JNIEnv *env, int n) {
-    // TODO
-    jvm_Warn("JVM_GetCallerClass");
-    return nullptr;
-}
-
-void JVM_GetClassAccessFlags() {
-    jvm_Unimplemented("JVM_GetClassAccessFlags");
-}
-
-void JVM_GetClassAnnotations() {
-    jvm_Unimplemented("JVM_GetClassAnnotations");
-}
-
-void JVM_GetClassCPEntriesCount() {
-    jvm_Unimplemented("JVM_GetClassCPEntriesCount");
-}
-
-void JVM_GetClassCPTypes() {
-    jvm_Unimplemented("JVM_GetClassCPTypes");
-}
-
-void JVM_GetClassConstantPool() {
-    jvm_Unimplemented("JVM_GetClassConstantPool");
-}
-
-void JVM_GetClassContext() {
-    jvm_Unimplemented("JVM_GetClassContext");
-}
-
-void JVM_GetClassDeclaredConstructors() {
-    jvm_Unimplemented("JVM_GetClassDeclaredConstructors");
-}
-
-void JVM_GetClassDeclaredFields() {
-    jvm_Unimplemented("JVM_GetClassDeclaredFields");
-}
-
-void JVM_GetClassDeclaredMethods() {
-    jvm_Unimplemented("JVM_GetClassDeclaredMethods");
-}
-
-void JVM_GetClassFieldsCount() {
-    jvm_Unimplemented("JVM_GetClassFieldsCount");
-}
-
-void JVM_GetClassInterfaces() {
-    jvm_Unimplemented("JVM_GetClassInterfaces");
-}
-
-void JVM_GetClassLoader() {
-    jvm_Unimplemented("JVM_GetClassLoader");
-}
-
-void JVM_GetClassMethodsCount() {
-    jvm_Unimplemented("JVM_GetClassMethodsCount");
-}
-
-void JVM_GetClassModifiers() {
-    jvm_Unimplemented("JVM_GetClassModifiers");
+jclass
+JVM_DefineClassWithSource(JNIEnv *env, const char *name, jobject loader, const jbyte *buf, jsize len, jobject pd, const char *source) {
+    JvmUnimplemented("JVM_DefineClassWithSource");
 }
 
 jstring
@@ -426,379 +462,368 @@ JVM_GetClassName(JNIEnv *env, jclass cls) {
     return env->NewStringUTF(name);
 }
 
+jobjectArray
+JVM_GetClassInterfaces(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_GetClassInterfaces");
+}
+
+jboolean
+JVM_IsInterface(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_IsInterface");
+}
+
+jobjectArray
+JVM_GetClassSigners(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_GetClassSigners");
+}
+
+void
+JVM_SetClassSigners(JNIEnv *env, jclass cls, jobjectArray signers) {
+    JvmUnimplemented("JVM_SetClassSigners");
+}
+
+jobject
+JVM_GetProtectionDomain(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_GetProtectionDomain");
+}
+
+void
+JVM_SetProtectionDomain(JNIEnv *env, jclass cls, jobject protection_domain) {
+    JvmUnimplemented("JVM_SetProtectionDomain");
+}
+
+jboolean
+JVM_IsArrayClass(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_IsArrayClass");
+}
+
+jboolean
+JVM_IsPrimitiveClass(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_IsPrimitiveClass");
+}
+
+jclass
+JVM_GetComponentType(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_GetComponentType");
+}
+
+jint
+JVM_GetClassModifiers(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_GetClassModifiers");
+}
+
+jobjectArray
+JVM_GetDeclaredClasses(JNIEnv *env, jclass ofClass) {
+    JvmUnimplemented("JVM_GetDeclaredClasses");
+}
+
+jclass
+JVM_GetDeclaringClass(JNIEnv *env, jclass ofClass) {
+    JvmUnimplemented("JVM_GetDeclaringClass");
+}
+
+jstring
+JVM_GetClassSignature(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_GetClassSignature");
+}
+
+jbyteArray
+JVM_GetClassAnnotations(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_GetClassAnnotations");
+}
+
+jobjectArray
+JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
+    JvmUnimplemented("JVM_GetClassDeclaredMethods");
+}
+
+jobjectArray
+JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
+    JvmUnimplemented("JVM_GetClassDeclaredFields");
+}
+
+jobjectArray
+JVM_GetClassDeclaredConstructors(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
+    JvmUnimplemented("JVM_GetClassDeclaredConstructors");
+}
+
+jint
+JVM_GetClassAccessFlags(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_GetClassAccessFlags");
+}
+
+jobject
+JVM_InvokeMethod(JNIEnv *env, jobject method, jobject obj, jobjectArray args0) {
+    JvmUnimplemented("JVM_InvokeMethod");
+}
+
+jobject
+JVM_NewInstanceFromConstructor(JNIEnv *env, jobject c, jobjectArray args0) {
+    JvmUnimplemented("JVM_NewInstanceFromConstructor");
+}
+
+jobject
+JVM_GetClassConstantPool(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_GetClassConstantPool");
+}
+
+jint
+JVM_ConstantPoolGetSize(JNIEnv *env, jobject unused, jobject jcpool) {
+    JvmUnimplemented("JVM_ConstantPoolGetSize");
+}
+
+jclass
+JVM_ConstantPoolGetClassAt(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetClassAt");
+}
+
+jclass
+JVM_ConstantPoolGetClassAtIfLoaded(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetClassAtIfLoaded");
+}
+
+jobject
+JVM_ConstantPoolGetMethodAt(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetMethodAt");
+}
+
+jobject
+JVM_ConstantPoolGetMethodAtIfLoaded(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetMethodAtIfLoaded");
+}
+
+jobject
+JVM_ConstantPoolGetFieldAt(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetFieldAt");
+}
+
+jobject
+JVM_ConstantPoolGetFieldAtIfLoaded(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetFieldAtIfLoaded");
+}
+
+jobjectArray
+JVM_ConstantPoolGetMemberRefInfoAt(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetMemberRefInfoAt");
+}
+
+jint
+JVM_ConstantPoolGetIntAt(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetIntAt");
+}
+
+jlong
+JVM_ConstantPoolGetLongAt(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetLongAt");
+}
+
+jfloat
+JVM_ConstantPoolGetFloatAt(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetFloatAt");
+}
+
+jdouble
+JVM_ConstantPoolGetDoubleAt(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetDoubleAt");
+}
+
+jstring
+JVM_ConstantPoolGetStringAt(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetStringAt");
+}
+
+jstring
+JVM_ConstantPoolGetUTF8At(JNIEnv *env, jobject unused, jobject jcpool, jint index) {
+    JvmUnimplemented("JVM_ConstantPoolGetUTF8At");
+}
+
+jobject
+JVM_DoPrivileged(JNIEnv *env, jclass cls, jobject action, jobject context, jboolean wrapException) {
+    JvmIgnore("JVM_DoPrivileged");
+    return nullptr;
+}
+
+jobject
+JVM_GetInheritedAccessControlContext(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_GetInheritedAccessControlContext");
+}
+
+jobject
+JVM_GetStackAccessControlContext(JNIEnv *env, jclass cls) {
+    JvmUnimplemented("JVM_GetStackAccessControlContext");
+}
+
+void*
+JVM_RegisterSignal(jint sig, void *handler) {
+    JvmUnimplemented("JVM_RegisterSignal");
+}
+
+jboolean
+JVM_RaiseSignal(jint sig) {
+    JvmUnimplemented("JVM_RaiseSignal");
+}
+
+jint
+JVM_FindSignal(const char *name) {
+    JvmUnimplemented("JVM_FindSignal");
+}
+
+jboolean
+JVM_DesiredAssertionStatus(JNIEnv *env, jclass unused, jclass cls) {
+    JvmUnimplemented("JVM_DesiredAssertionStatus");
+}
+
+jobject
+JVM_AssertionStatusDirectives(JNIEnv *env, jclass unused) {
+    JvmUnimplemented("JVM_AssertionStatusDirectives");
+}
+
+jboolean
+JVM_SupportsCX8(void) {
+    JvmUnimplemented("JVM_SupportsCX8");
+}
+
 const char*
-JVM_GetClassNameUTF(JNIEnv *env, jclass cls) {
-    auto name = GetJavaClassName(cls);
+JVM_GetClassNameUTF(JNIEnv *env, jclass cb) {
+    auto name = GetJavaClassName(cb);
     char* res = (char*) malloc(strlen(name) + 1);
     strcpy(res, name);
     return res;
 }
 
-void JVM_GetClassSignature() {
-    jvm_Unimplemented("JVM_GetClassSignature");
+void
+JVM_GetClassCPTypes(JNIEnv *env, jclass cb, unsigned char *types) {
+    JvmUnimplemented("JVM_GetClassCPTypes");
 }
 
-void JVM_GetClassSigners() {
-    jvm_Unimplemented("JVM_GetClassSigners");
+jint
+JVM_GetClassCPEntriesCount(JNIEnv *env, jclass cb) {
+    JvmUnimplemented("JVM_GetClassCPEntriesCount");
 }
 
-void JVM_GetComponentType() {
-    jvm_Unimplemented("JVM_GetComponentType");
+jint
+JVM_GetClassFieldsCount(JNIEnv *env, jclass cb) {
+    JvmUnimplemented("JVM_GetClassFieldsCount");
 }
 
-void JVM_GetDeclaredClasses() {
-    jvm_Unimplemented("JVM_GetDeclaredClasses");
+jint
+JVM_GetClassMethodsCount(JNIEnv *env, jclass cb) {
+    JvmUnimplemented("JVM_GetClassMethodsCount");
 }
 
-void JVM_GetDeclaringClass() {
-    jvm_Unimplemented("JVM_GetDeclaringClass");
+void
+JVM_GetMethodIxExceptionIndexes(JNIEnv *env, jclass cb, jint method_index, unsigned short *exceptions) {
+    JvmUnimplemented("JVM_GetMethodIxExceptionIndexes");
 }
 
-void JVM_GetEnclosingMethodInfo() {
-    jvm_Unimplemented("JVM_GetEnclosingMethodInfo");
+jint
+JVM_GetMethodIxExceptionsCount(JNIEnv *env, jclass cb, jint method_index) {
+    JvmUnimplemented("JVM_GetMethodIxExceptionsCount");
 }
 
-void JVM_GetFieldAnnotations() {
-    jvm_Unimplemented("JVM_GetFieldAnnotations");
+void
+JVM_GetMethodIxByteCode(JNIEnv *env, jclass cb, jint method_index, unsigned char *code) {
+    JvmUnimplemented("JVM_GetMethodIxByteCode");
 }
 
-void JVM_GetFieldIxModifiers() {
-    jvm_Unimplemented("JVM_GetFieldIxModifiers");
+jint
+JVM_GetMethodIxByteCodeLength(JNIEnv *env, jclass cb, jint method_index) {
+    JvmUnimplemented("JVM_GetMethodIxByteCodeLength");
 }
 
-void JVM_GetHostName() {
-    jvm_Unimplemented("JVM_GetHostName");
+void
+JVM_GetMethodIxExceptionTableEntry(JNIEnv *env, jclass cb, jint method_index, jint entry_index, JVM_ExceptionTableEntryType *entry) {
+    JvmUnimplemented("JVM_GetMethodIxExceptionTableEntry");
 }
 
-void JVM_GetInheritedAccessControlContext() {
-    jvm_Unimplemented("JVM_GetInheritedAccessControlContext");
+jint
+JVM_GetMethodIxExceptionTableLength(JNIEnv *env, jclass cb, int index) {
+    JvmUnimplemented("JVM_GetMethodIxExceptionTableLength");
 }
 
-void JVM_GetInterfaceVersion() {
-    jvm_Unimplemented("JVM_GetInterfaceVersion");
+jint
+JVM_GetFieldIxModifiers(JNIEnv *env, jclass cb, int index) {
+    JvmUnimplemented("JVM_GetFieldIxModifiers");
 }
 
-void JVM_GetLastErrorString() {
-    jvm_Unimplemented("JVM_GetLastErrorString");
+jint
+JVM_GetMethodIxModifiers(JNIEnv *env, jclass cb, int index) {
+    JvmUnimplemented("JVM_GetMethodIxModifiers");
 }
 
-void JVM_GetManagement() {
-    jvm_Unimplemented("JVM_GetManagement");
+jint
+JVM_GetMethodIxLocalsCount(JNIEnv *env, jclass cb, int index) {
+    JvmUnimplemented("JVM_GetMethodIxLocalsCount");
 }
 
-void JVM_GetMethodAnnotations() {
-    jvm_Unimplemented("JVM_GetMethodAnnotations");
+jint
+JVM_GetMethodIxArgsSize(JNIEnv *env, jclass cb, int index) {
+    JvmUnimplemented("JVM_GetMethodIxArgsSize");
 }
 
-void JVM_GetMethodDefaultAnnotationValue() {
-    jvm_Unimplemented("JVM_GetMethodDefaultAnnotationValue");
+jint
+JVM_GetMethodIxMaxStack(JNIEnv *env, jclass cb, int index) {
+    JvmUnimplemented("JVM_GetMethodIxMaxStack");
 }
 
-void JVM_GetMethodIxArgsSize() {
-    jvm_Unimplemented("JVM_GetMethodIxArgsSize");
+jboolean
+JVM_IsConstructorIx(JNIEnv *env, jclass cb, int index) {
+    JvmUnimplemented("JVM_IsConstructorIx");
 }
 
-void JVM_GetMethodIxByteCode() {
-    jvm_Unimplemented("JVM_GetMethodIxByteCode");
+const char*
+JVM_GetMethodIxNameUTF(JNIEnv *env, jclass cb, jint index) {
+    JvmUnimplemented("JVM_GetMethodIxNameUTF");
 }
 
-void JVM_GetMethodIxByteCodeLength() {
-    jvm_Unimplemented("JVM_GetMethodIxByteCodeLength");
+const char*
+JVM_GetMethodIxSignatureUTF(JNIEnv *env, jclass cb, jint index) {
+    JvmUnimplemented("JVM_GetMethodIxSignatureUTF");
 }
 
-void JVM_GetMethodIxExceptionIndexes() {
-    jvm_Unimplemented("JVM_GetMethodIxExceptionIndexes");
+const char*
+JVM_GetCPFieldNameUTF(JNIEnv *env, jclass cb, jint index) {
+    JvmUnimplemented("JVM_GetCPFieldNameUTF");
 }
 
-void JVM_GetMethodIxExceptionTableEntry() {
-    jvm_Unimplemented("JVM_GetMethodIxExceptionTableEntry");
+const char*
+JVM_GetCPMethodNameUTF(JNIEnv *env, jclass cb, jint index) {
+    JvmUnimplemented("JVM_GetCPMethodNameUTF");
 }
 
-void JVM_GetMethodIxExceptionTableLength() {
-    jvm_Unimplemented("JVM_GetMethodIxExceptionTableLength");
+const char*
+JVM_GetCPMethodSignatureUTF(JNIEnv *env, jclass cb, jint index) {
+    JvmUnimplemented("JVM_GetCPMethodSignatureUTF");
 }
 
-void JVM_GetMethodIxExceptionsCount() {
-    jvm_Unimplemented("JVM_GetMethodIxExceptionsCount");
+const char*
+JVM_GetCPFieldSignatureUTF(JNIEnv *env, jclass cb, jint index) {
+    JvmUnimplemented("JVM_GetCPFieldSignatureUTF");
 }
 
-void JVM_GetMethodIxLocalsCount() {
-    jvm_Unimplemented("JVM_GetMethodIxLocalsCount");
+const char*
+JVM_GetCPClassNameUTF(JNIEnv *env, jclass cb, jint index) {
+    JvmUnimplemented("JVM_GetCPClassNameUTF");
 }
 
-void JVM_GetMethodIxMaxStack() {
-    jvm_Unimplemented("JVM_GetMethodIxMaxStack");
+const char*
+JVM_GetCPFieldClassNameUTF(JNIEnv *env, jclass cb, jint index) {
+    JvmUnimplemented("JVM_GetCPFieldClassNameUTF");
 }
 
-void JVM_GetMethodIxModifiers() {
-    jvm_Unimplemented("JVM_GetMethodIxModifiers");
+const char*
+JVM_GetCPMethodClassNameUTF(JNIEnv *env, jclass cb, jint index) {
+    JvmUnimplemented("JVM_GetCPMethodClassNameUTF");
 }
 
-void JVM_GetMethodIxNameUTF() {
-    jvm_Unimplemented("JVM_GetMethodIxNameUTF");
+jint
+JVM_GetCPFieldModifiers(JNIEnv *env, jclass cb, int index, jclass calledClass) {
+    JvmUnimplemented("JVM_GetCPFieldModifiers");
 }
 
-void JVM_GetMethodIxSignatureUTF() {
-    jvm_Unimplemented("JVM_GetMethodIxSignatureUTF");
-}
-
-void JVM_GetMethodParameterAnnotations() {
-    jvm_Unimplemented("JVM_GetMethodParameterAnnotations");
-}
-
-void JVM_GetPrimitiveArrayElement() {
-    jvm_Unimplemented("JVM_GetPrimitiveArrayElement");
-}
-
-void JVM_GetProtectionDomain() {
-    jvm_Unimplemented("JVM_GetProtectionDomain");
-}
-
-void JVM_GetSockName() {
-    jvm_Unimplemented("JVM_GetSockName");
-}
-
-void JVM_GetSockOpt() {
-    jvm_Unimplemented("JVM_GetSockOpt");
-}
-
-void JVM_GetStackAccessControlContext() {
-    jvm_Unimplemented("JVM_GetStackAccessControlContext");
-}
-
-void JVM_GetStackTraceDepth() {
-    jvm_Unimplemented("JVM_GetStackTraceDepth");
-}
-
-void JVM_GetStackTraceElement() {
-    jvm_Unimplemented("JVM_GetStackTraceElement");
-}
-
-void JVM_GetSystemPackage() {
-    jvm_Unimplemented("JVM_GetSystemPackage");
-}
-
-void JVM_GetSystemPackages() {
-    jvm_Unimplemented("JVM_GetSystemPackages");
-}
-
-void JVM_GetTemporaryDirectory() {
-    jvm_Unimplemented("JVM_GetTemporaryDirectory");
-}
-
-void JVM_GetThreadStateNames() {
-    jvm_Unimplemented("JVM_GetThreadStateNames");
-}
-
-void JVM_GetThreadStateValues() {
-    jvm_Unimplemented("JVM_GetThreadStateValues");
-}
-
-typedef struct {
-    unsigned int jvm_version;
-    unsigned int update_version : 8;
-    unsigned int special_update_version : 8;
-    unsigned int reserved1 : 16;
-    unsigned int reserved2;
-    unsigned int is_attach_supported : 1;
-    unsigned int is_kernel_jvm : 1;
-    unsigned int : 30;
-    unsigned int : 32;
-    unsigned int : 32;
-} jvm_version_info;
-
-void JVM_GetVersionInfo(JNIEnv* env, jvm_version_info* info, size_t info_size) {
-    // TODO
-    jvm_Warn("JVM_GetVersionInfo");
-}
-
-void JVM_Halt() {
-    jvm_Unimplemented("JVM_Halt");
-}
-
-void JVM_HoldsLock() {
-    jvm_Unimplemented("JVM_HoldsLock");
-}
-
-jint JVM_IHashCode(JNIEnv *env, jobject obj) {
-    auto addr = reinterpret_cast<intptr_t>(obj);
-    return static_cast<jint>(addr);
-}
-
-void JVM_InitAgentProperties() {
-    jvm_Unimplemented("JVM_InitAgentProperties");
-}
-
-void JVM_InitProperties() {
-    jvm_Unimplemented("JVM_InitProperties");
-}
-
-void JVM_InitializeCompiler() {
-    jvm_Unimplemented("JVM_InitializeCompiler");
-}
-
-void JVM_InitializeSocketLibrary() {
-    jvm_Unimplemented("JVM_InitializeSocketLibrary");
-}
-
-void JVM_InternString() {
-    jvm_Unimplemented("JVM_InternString");
-}
-
-void JVM_Interrupt() {
-    jvm_Unimplemented("JVM_Interrupt");
-}
-
-void JVM_InvokeMethod() {
-    jvm_Unimplemented("JVM_InvokeMethod");
-}
-
-void JVM_IsArrayClass() {
-    jvm_Unimplemented("JVM_IsArrayClass");
-}
-
-void JVM_IsConstructorIx() {
-    jvm_Unimplemented("JVM_IsConstructorIx");
-}
-
-void JVM_IsInterface() {
-    jvm_Unimplemented("JVM_IsInterface");
-}
-
-void JVM_IsInterrupted() {
-    jvm_Unimplemented("JVM_IsInterrupted");
-}
-
-void JVM_IsNaN() {
-    jvm_Unimplemented("JVM_IsNaN");
-}
-
-void JVM_IsPrimitiveClass() {
-    jvm_Unimplemented("JVM_IsPrimitiveClass");
-}
-
-void JVM_IsSameClassPackage() {
-    jvm_Unimplemented("JVM_IsSameClassPackage");
-}
-
-void JVM_IsSilentCompiler() {
-    jvm_Unimplemented("JVM_IsSilentCompiler");
-}
-
-void JVM_IsSupportedJNIVersion() {
-    jvm_Unimplemented("JVM_IsSupportedJNIVersion");
-}
-
-void JVM_IsThreadAlive() {
-    jvm_Unimplemented("JVM_IsThreadAlive");
-}
-
-void JVM_LatestUserDefinedLoader() {
-    jvm_Unimplemented("JVM_LatestUserDefinedLoader");
-}
-
-void JVM_Listen() {
-    jvm_Unimplemented("JVM_Listen");
-}
-
-void JVM_LoadClass0() {
-    jvm_Unimplemented("JVM_LoadClass0");
-}
-
-void JVM_LoadLibrary() {
-    jvm_Unimplemented("JVM_LoadLibrary");
-}
-
-void JVM_Lseek() {
-    jvm_Unimplemented("JVM_Lseek");
-}
-
-void JVM_MaxMemory() {
-    jvm_Unimplemented("JVM_MaxMemory");
-}
-
-void JVM_MaxObjectInspectionAge() {
-    jvm_Unimplemented("JVM_MaxObjectInspectionAge");
-}
-
-void JVM_MonitorNotify() {
-    jvm_Unimplemented("JVM_MonitorNotify");
-}
-
-void JVM_MonitorNotifyAll() {
-    jvm_Unimplemented("JVM_MonitorNotifyAll");
-}
-
-void JVM_MonitorWait() {
-    jvm_Unimplemented("JVM_MonitorWait");
-}
-
-void JVM_NanoTime() {
-    jvm_Unimplemented("JVM_NanoTime");
-}
-
-void JVM_NativePath() {
-    jvm_Unimplemented("JVM_NativePath");
-}
-
-void JVM_NewArray() {
-    jvm_Unimplemented("JVM_NewArray");
-}
-
-void JVM_NewInstanceFromConstructor() {
-    jvm_Unimplemented("JVM_NewInstanceFromConstructor");
-}
-
-void JVM_NewMultiArray() {
-    jvm_Unimplemented("JVM_NewMultiArray");
-}
-
-void JVM_OnExit() {
-    jvm_Unimplemented("JVM_OnExit");
-}
-
-void JVM_Open() {
-    jvm_Unimplemented("JVM_Open");
-}
-
-void JVM_PrintStackTrace() {
-    jvm_Unimplemented("JVM_PrintStackTrace");
-}
-
-void JVM_RaiseSignal() {
-    jvm_Unimplemented("JVM_RaiseSignal");
-}
-
-void JVM_RawMonitorCreate() {
-    jvm_Unimplemented("JVM_RawMonitorCreate");
-}
-
-void JVM_RawMonitorDestroy() {
-    jvm_Unimplemented("JVM_RawMonitorDestroy");
-}
-
-void JVM_RawMonitorEnter() {
-    jvm_Unimplemented("JVM_RawMonitorEnter");
-}
-
-void JVM_RawMonitorExit() {
-    jvm_Unimplemented("JVM_RawMonitorExit");
-}
-
-void JVM_Read() {
-    jvm_Unimplemented("JVM_Read");
-}
-
-void JVM_Recv() {
-    jvm_Unimplemented("JVM_Recv");
-}
-
-void JVM_RecvFrom() {
-    jvm_Unimplemented("JVM_RecvFrom");
-}
-
-void JVM_RegisterSignal() {
-    jvm_Unimplemented("JVM_RegisterSignal");
+jint
+JVM_GetCPMethodModifiers(JNIEnv *env, jclass cb, int index, jclass calledClass) {
+    JvmUnimplemented("JVM_GetCPMethodModifiers");
 }
 
 void
@@ -806,144 +831,224 @@ JVM_ReleaseUTF(const char *utf) {
     free(const_cast<char*>(utf));
 }
 
-void JVM_ResolveClass() {
-    jvm_Unimplemented("JVM_ResolveClass");
+jboolean
+JVM_IsSameClassPackage(JNIEnv *env, jclass class1, jclass class2) {
+    JvmUnimplemented("JVM_IsSameClassPackage");
 }
 
-void JVM_ResumeThread() {
-    jvm_Unimplemented("JVM_ResumeThread");
+jint
+JVM_GetLastErrorString(char *buf, int len) {
+    JvmUnimplemented("JVM_GetLastErrorString");
 }
 
-void JVM_Send() {
-    jvm_Unimplemented("JVM_Send");
+char*
+JVM_NativePath(char *) {
+    JvmUnimplemented("JVM_NativePath");
 }
 
-void JVM_SendTo() {
-    jvm_Unimplemented("JVM_SendTo");
+jint
+JVM_Open(const char *fname, jint flags, jint mode) {
+    JvmUnimplemented("JVM_Open");
 }
 
-void JVM_SetArrayElement() {
-    jvm_Unimplemented("JVM_SetArrayElement");
+jint
+JVM_Close(jint fd) {
+    JvmUnimplemented("JVM_Close");
 }
 
-void JVM_SetClassSigners() {
-    jvm_Unimplemented("JVM_SetClassSigners");
+jint
+JVM_Read(jint fd, char *buf, jint nbytes) {
+    JvmUnimplemented("JVM_Read");
 }
 
-void JVM_SetLength() {
-    jvm_Unimplemented("JVM_SetLength");
+jint
+JVM_Write(jint fd, char *buf, jint nbytes) {
+    JvmUnimplemented("JVM_Write");
 }
 
-void JVM_SetNativeThreadName() {
-    jvm_Unimplemented("JVM_SetNativeThreadName");
+jint
+JVM_Available(jint fd, jlong *pbytes) {
+    JvmUnimplemented("JVM_Available");
 }
 
-void JVM_SetPrimitiveArrayElement() {
-    jvm_Unimplemented("JVM_SetPrimitiveArrayElement");
+jlong
+JVM_Lseek(jint fd, jlong offset, jint whence) {
+    JvmUnimplemented("JVM_Lseek");
 }
 
-void JVM_SetProtectionDomain() {
-    jvm_Unimplemented("JVM_SetProtectionDomain");
+jint
+JVM_SetLength(jint fd, jlong length) {
+    JvmUnimplemented("JVM_SetLength");
 }
 
-void JVM_SetSockOpt() {
-    jvm_Unimplemented("JVM_SetSockOpt");
+jint
+JVM_Sync(jint fd) {
+    JvmUnimplemented("JVM_Sync");
 }
 
-void JVM_SetThreadPriority() {
-    jvm_Unimplemented("JVM_SetThreadPriority");
+jint
+JVM_InitializeSocketLibrary(void) {
+    JvmUnimplemented("JVM_InitializeSocketLibrary");
 }
 
-void JVM_Sleep() {
-    jvm_Unimplemented("JVM_Sleep");
+jint
+JVM_Socket(jint domain, jint type, jint protocol) {
+    JvmUnimplemented("JVM_Socket");
 }
 
-void JVM_Socket() {
-    jvm_Unimplemented("JVM_Socket");
+jint
+JVM_SocketClose(jint fd) {
+    JvmUnimplemented("JVM_SocketClose");
 }
 
-void JVM_SocketAvailable() {
-    jvm_Unimplemented("JVM_SocketAvailable");
+jint
+JVM_SocketShutdown(jint fd, jint howto) {
+    JvmUnimplemented("JVM_SocketShutdown");
 }
 
-void JVM_SocketClose() {
-    jvm_Unimplemented("JVM_SocketClose");
+jint
+JVM_Recv(jint fd, char *buf, jint nBytes, jint flags) {
+    JvmUnimplemented("JVM_Recv");
 }
 
-void JVM_SocketShutdown() {
-    jvm_Unimplemented("JVM_SocketShutdown");
+jint
+JVM_Send(jint fd, char *buf, jint nBytes, jint flags) {
+    JvmUnimplemented("JVM_Send");
 }
 
-void JVM_StartThread() {
-    jvm_Unimplemented("JVM_StartThread");
+jint
+JVM_Timeout(int fd, long timeout) {
+    JvmUnimplemented("JVM_Timeout");
 }
 
-void JVM_StopThread() {
-    jvm_Unimplemented("JVM_StopThread");
+jint
+JVM_Listen(jint fd, jint count) {
+    JvmUnimplemented("JVM_Listen");
 }
 
-void JVM_SupportsCX8() {
-    jvm_Unimplemented("JVM_SupportsCX8");
+jint
+JVM_Connect(jint fd, struct sockaddr *him, jint len) {
+    JvmUnimplemented("JVM_Connect");
 }
 
-void JVM_SuspendThread() {
-    jvm_Unimplemented("JVM_SuspendThread");
+jint
+JVM_Bind(jint fd, struct sockaddr *him, jint len) {
+    JvmUnimplemented("JVM_Bind");
 }
 
-void JVM_Sync() {
-    jvm_Unimplemented("JVM_Sync");
+jint
+JVM_Accept(jint fd, struct sockaddr *him, jint *len) {
+    JvmUnimplemented("JVM_Accept");
 }
 
-void JVM_Timeout() {
-    jvm_Unimplemented("JVM_Timeout");
+jint
+JVM_RecvFrom(jint fd, char *buf, int nBytes, int flags, struct sockaddr *from, int *fromlen) {
+    JvmUnimplemented("JVM_RecvFrom");
 }
 
-void JVM_TotalMemory() {
-    jvm_Unimplemented("JVM_TotalMemory");
+jint
+JVM_SendTo(jint fd, char *buf, int len, int flags, struct sockaddr *to, int tolen) {
+    JvmUnimplemented("JVM_SendTo");
 }
 
-void JVM_TraceInstructions() {
-    jvm_Unimplemented("JVM_TraceInstructions");
+jint
+JVM_SocketAvailable(jint fd, jint *result) {
+    JvmUnimplemented("JVM_SocketAvailable");
 }
 
-void JVM_TraceMethodCalls() {
-    jvm_Unimplemented("JVM_TraceMethodCalls");
+jint
+JVM_GetSockName(jint fd, struct sockaddr *him, int *len) {
+    JvmUnimplemented("JVM_GetSockName");
 }
 
-void JVM_UnloadLibrary() {
-    jvm_Unimplemented("JVM_UnloadLibrary");
+jint
+JVM_GetSockOpt(jint fd, int level, int optname, char *optval, int *optlen) {
+    JvmUnimplemented("JVM_GetSockOpt");
 }
 
-void JVM_Write() {
-    jvm_Unimplemented("JVM_Write");
+jint
+JVM_SetSockOpt(jint fd, int level, int optname, const char *optval, int optlen) {
+    JvmUnimplemented("JVM_SetSockOpt");
 }
 
-void JVM_Yield() {
-    jvm_Unimplemented("JVM_Yield");
+int
+JVM_GetHostName(char* name, int namelen) {
+    JvmUnimplemented("JVM_GetHostName");
 }
 
-void JVM_handle_bsd_signal() {
-    jvm_Unimplemented("JVM_handle_bsd_signal");
+int
+jio_vsnprintf(char *str, size_t count, const char *fmt, va_list args) {
+    JvmUnimplemented("jio_vsnprintf");
 }
 
-void jio_fprintf() {
-    jvm_Unimplemented("jio_fprintf");
+int
+jio_snprintf(char *str, size_t count, const char *fmt, ...) {
+    JvmUnimplemented("jio_snprintf");
 }
 
-void jio_printf() {
-    jvm_Unimplemented("jio_printf");
+int
+jio_fprintf(FILE *, const char *fmt, ...) {
+    JvmUnimplemented("jio_fprintf");
 }
 
-void jio_snprintf() {
-    jvm_Unimplemented("jio_snprintf");
+int
+jio_vfprintf(FILE *, const char *fmt, va_list args) {
+    JvmUnimplemented("jio_vfprintf");
 }
 
-void jio_vfprintf() {
-    jvm_Unimplemented("jio_vfprintf");
+void*
+JVM_RawMonitorCreate(void) {
+    JvmUnimplemented("JVM_RawMonitorCreate");
 }
 
-void jio_vsnprintf() {
-    jvm_Unimplemented("jio_vsnprintf");
+void
+JVM_RawMonitorDestroy(void *mon) {
+    JvmUnimplemented("JVM_RawMonitorDestroy");
+}
+
+jint
+JVM_RawMonitorEnter(void *mon) {
+    JvmUnimplemented("JVM_RawMonitorEnter");
+}
+
+void
+JVM_RawMonitorExit(void *mon) {
+    JvmUnimplemented("JVM_RawMonitorExit");
+}
+
+void*
+JVM_GetManagement(jint version) {
+    JvmUnimplemented("JVM_GetManagement");
+}
+
+jobject
+JVM_InitAgentProperties(JNIEnv *env, jobject agent_props) {
+    JvmUnimplemented("JVM_InitAgentProperties");
+}
+
+jstring
+JVM_GetTemporaryDirectory(JNIEnv *env) {
+    JvmUnimplemented("JVM_GetTemporaryDirectory");
+}
+
+jobjectArray
+JVM_GetEnclosingMethodInfo(JNIEnv* env, jclass ofClass) {
+    JvmUnimplemented("JVM_GetEnclosingMethodInfo");
+}
+
+jintArray
+JVM_GetThreadStateValues(JNIEnv* env, jint javaThreadState) {
+    JvmUnimplemented("JVM_GetThreadStateValues");
+}
+
+jobjectArray
+JVM_GetThreadStateNames(JNIEnv* env, jint javaThreadState, jintArray values) {
+    JvmUnimplemented("JVM_GetThreadStateNames");
+}
+
+void
+JVM_GetVersionInfo(JNIEnv* env, jvm_version_info* info, size_t info_size) {
+    JvmIgnore("JVM_GetVersionInfo");
 }
 
 } // extern "C"
