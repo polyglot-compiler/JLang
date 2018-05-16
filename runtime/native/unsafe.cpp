@@ -9,6 +9,18 @@
 #include <jni.h>
 #include "rep.h"
 #include "stack_trace.h"
+#include "unsafe.h"
+
+// GCC built-in compare-and-swap.
+#define CAS(ptr, e, x) __sync_val_compare_and_swap(ptr, e, x)
+
+template <typename T>
+static jboolean JavaCompareAndSwap(jobject obj, jlong offset, T e, T x) {
+    auto raw_ptr = reinterpret_cast<char*>(obj) + offset;
+    auto ptr = reinterpret_cast<T*>(raw_ptr);
+    T prev = CAS(ptr, e, x);
+    return prev == e;
+}
 
 [[noreturn]] static void UnsafeUnimplemented(const char* name) {
     fprintf(stderr,
@@ -323,18 +335,27 @@ Java_sun_misc_Unsafe_throwException(JNIEnv *env, jobject, jthrowable) {
 }
 
 jboolean
-Java_sun_misc_Unsafe_compareAndSwapObject(JNIEnv *env, jobject, jobject, jlong, jobject, jobject) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_compareAndSwapObject");
+Java_sun_misc_Unsafe_compareAndSwapObject(
+    JNIEnv *env, jobject unsafe,
+    jobject obj, jlong offset, jobject e, jobject x
+) {
+    return JavaCompareAndSwap(obj, offset, e, x);
 }
 
 jboolean
-Java_sun_misc_Unsafe_compareAndSwapInt(JNIEnv *env, jobject, jobject, jlong, jint, jint) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_compareAndSwapInt");
+Java_sun_misc_Unsafe_compareAndSwapInt(
+    JNIEnv *env, jobject unsafe,
+    jobject obj, jlong offset, jint e, jint x
+) {
+    return JavaCompareAndSwap(obj, offset, e, x);
 }
 
 jboolean
-Java_sun_misc_Unsafe_compareAndSwapLong(JNIEnv *env, jobject, jobject, jlong, jlong, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_compareAndSwapLong");
+Java_sun_misc_Unsafe_compareAndSwapLong(
+    JNIEnv *env, jobject unsafe,
+    jobject obj, jlong offset, jlong e, jlong x
+) {
+    return JavaCompareAndSwap(obj, offset, e, x);
 }
 
 jobject

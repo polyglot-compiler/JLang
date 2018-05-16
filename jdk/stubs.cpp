@@ -7,8 +7,15 @@
 extern "C" {
 
 // We always return null, representing the boot class loader.
-jobject Java_java_lang_Class_getClassLoader0(JNIEnv*, jobject) {
+jobject
+Java_java_lang_Class_getClassLoader0(JNIEnv*, jobject) {
     return nullptr;
+}
+
+// Pretty sure this only matters on Windows.
+jlong
+Java_java_io_FileDescriptor_set(JNIEnv *env, jclass fdClass, jint fd) {
+    return -1;
 }
 
 void Polyglot_java_lang_Enum_compareTo__Ljava_lang_Object_2() {

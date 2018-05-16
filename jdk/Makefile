@@ -19,6 +19,7 @@ all: $(MAIN).binary
 # The zip file comes from https://sourceforge.net/projects/jdk7src/
 $(JDK_SRC): | $(JDK_SRC).zip
 	unzip -d $@ $(JDK_SRC).zip
+	cp -r $(JDK_SRC) $(JDK_SRC).orig
 
 $(JDK_SRC)/patchstamp: | $(JDK_SRC)
 	@echo "Patching JDK source files"

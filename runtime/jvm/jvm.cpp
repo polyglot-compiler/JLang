@@ -244,7 +244,8 @@ jobject
 JVM_DoPrivileged(
         JNIEnv *env, jclass cls,
         jobject action, jobject context, jboolean wrapException) {
-    jvm_Unimplemented("JVM_DoPrivileged");
+    jvm_Warn("JVM_DoPrivileged");
+    return nullptr;
 }
 
 void JVM_DumpAllStacks() {
