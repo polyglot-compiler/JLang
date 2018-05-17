@@ -50,8 +50,13 @@ const char* GetJavaClassName(jclass cls) {
 jfieldID GetJavaFieldId(jclass cls, const char* name) {
     auto& cache = info_map.at(cls).fieldIDs;
     auto it = cache.find(name);
-    if (it == cache.end())
-        return nullptr;
+    if (it == cache.end()) {
+        // TODO: Should technically throw NoSuchFieldError.
+        fprintf(stderr,
+            "Could not find field %s in class %s. Aborting.\n",
+            name, GetJavaClassName(cls));
+        abort();
+    }
     return reinterpret_cast<jfieldID>(it->second);
 }
 

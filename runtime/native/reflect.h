@@ -4,6 +4,6 @@
 
 extern "C" {
 
-bool instanceof(jobject obj, void *compare_type_id);
+bool InstanceOf(jobject obj, void *compare_type_id);
 
 } // extern "C"

@@ -2,16 +2,16 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include "stack_trace.h"
-#include "rep.h"
+
+#include "factory.h"
 #include "gc.h"
+#include "rep.h"
+#include "stack_trace.h"
 
 extern "C" {
 
 void Polyglot_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jarray args);
-jarray Polyglot_polyllvm_runtime_Factory_byteArray__I(jint len);
-jarray Polyglot_polyllvm_runtime_Factory_objectArray__I(jint len);
-jstring Polyglot_polyllvm_runtime_Factory_string___3B(jarray bytes);
+jarray Polyglot_polyllvm_runtime_Factory_ObjectArray__I(jint len);
 
 } // extern "C"
 
@@ -47,16 +47,18 @@ int main(int argc, char** argv) {
 
     // Ignore the 0th argument, which is the name of the program.
     --argc, ++argv;
-    jarray jargs = Polyglot_polyllvm_runtime_Factory_objectArray__I(argc);
-    jstring* jargs_data = static_cast<jstring*>(Unwrap(jargs)->Data());
+    jarray args = Polyglot_polyllvm_runtime_Factory_ObjectArray__I(argc);
+    jstring* args_data = reinterpret_cast<jstring*>(Unwrap(args)->Data());
     for (int i = 0; i < argc; ++i) {
         size_t len = strlen(argv[i]);
-        jarray jargBytes = Polyglot_polyllvm_runtime_Factory_byteArray__I(len);
-        jbyte* data = static_cast<jbyte*>(Unwrap(jargBytes)->Data());
-        memcpy(data, argv[i], len);
-        jstring jargString = Polyglot_polyllvm_runtime_Factory_string___3B(jargBytes);
-        jargs_data[i] = jargString;
+        jcharArray argChars = CreateJavaCharArray(len);
+        jchar* data = reinterpret_cast<jchar*>(Unwrap(argChars)->Data());
+        // TODO: Not a proper character encoding conversion.
+        for (size_t j = 0; j < len; ++j)
+            data[j] = static_cast<jchar>(argv[i][j]);
+        jstring argStr = CreateJavaString(argChars);
+        args_data[i] = argStr;
     }
 
-    Polyglot_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jargs);
+    Polyglot_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(args);
 }

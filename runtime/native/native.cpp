@@ -1,6 +1,3 @@
-// This file supports dynamically looking up Java native method pointers.
-// We cannot link to native methods ahead-of-time, because native methods
-// are often registered with the VM dynamically at runtime.
 #include <cstdlib>
 #include <dlfcn.h>
 #include <string>
@@ -8,8 +5,9 @@
 #include <unordered_map>
 #include "class.h"
 #include "jni.h"
-#include "native.h"
 #include "stack_trace.h"
+
+#include "native.h"
 
 static constexpr bool kDebug = false;
 
@@ -35,7 +33,6 @@ static std::string BuildJavaNativeFuncKey(
     return key;
 }
 
-// Links a native method to the given function pointer.
 void
 RegisterJavaNativeFunc(
     jclass cls,            // e.g., java.lang.Object
@@ -57,17 +54,6 @@ RegisterJavaNativeFunc(
     }
 }
 
-// Returns a pointer to a Java native method.
-//
-// The name and signature are used in the case that the
-// native method has been registered dynamically through JNI,
-// or in the case that the native method has been cached.
-//
-// The short symbol and long symbol are used in case the native method
-// needs to be searched for in the symbol table.
-//
-// The signature of this function must precisely match
-// the signature used in PolyLLVM.
 extern "C"
 void*
 GetJavaNativeFunc(

@@ -4,7 +4,7 @@
 
 extern "C" {
 
-bool instanceof(jobject obj, void* type_id) {
+bool InstanceOf(jobject obj, void* type_id) {
     if (obj == nullptr)
         return false;
     type_info* type_info = Unwrap(obj)->Cdv()->SuperTypes();

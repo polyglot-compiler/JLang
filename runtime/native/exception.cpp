@@ -297,7 +297,7 @@ static bool handleActionValue(int64_t *resultAction,
       void *ThisClassInfo = reinterpret_cast<void *>(P);
 
       // Recall that a null class info represents a catch-all clause.
-      if (!ThisClassInfo || instanceof(exn->jexception, ThisClassInfo)) {
+      if (!ThisClassInfo || InstanceOf(exn->jexception, ThisClassInfo)) {
         *resultAction = i + 1;
         ret = true;
         break;
