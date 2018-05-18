@@ -10,13 +10,51 @@
 
 #include "jni.h"
 
-// Returns the name of the given class (e.g., "java.lang.Object").
-const char* GetJavaClassName(jclass cls);
+extern "C" {
+// These structs are generated statically for each class, and
+// exist for the lifetime of the program.
+// The layout must precisely mirror the layout defined in PolyLLVM.
 
-// Returns a field ID, which should be interpreted as the byte offset of
-// the named field. Returns null if the field cannot be found.
-jfieldID GetJavaFieldId(jclass cls, const char* name);
+// Concrete representation for the opaque type jfieldID.
+struct JavaFieldInfo {
+    char* name;
+    int32_t offset;
+};
 
-// Returns a method ID, which is an opaque pointer to information
-// need to invoke the specified method.
-jmethodID GetJavaMethodID(jclass cls, const char* name, const char* sig);
+// Concrete representation for the opaque type jmethodID.
+struct JavaMethodInfo {
+    char* name;       // Name (without signature).
+    char* sig;        // JNI-specified signature encoding.
+    int32_t offset;   // Offset into dispatch vector. -1 for static methods.
+    void* fnPtr;      // Used for CallNonvirtual and CallStatic.
+    void* trampoline; // Trampoline for casting the fnPtr to the correct type.
+};
+
+struct JavaClassInfo {
+    char* name;
+    jclass* super_ptr;
+
+    int32_t num_fields;
+    JavaFieldInfo* fields;
+
+    int32_t num_methods;
+    JavaMethodInfo* methods;
+
+    // TODO: static fields
+};
+
+// Called by the runtime at most once per class to register
+// the class information declared above.
+void
+RegisterJavaClass(jclass cls, const JavaClassInfo* data);
+
+} // extern "C"
+
+const JavaClassInfo*
+GetJavaClassInfo(jclass cls);
+
+const JavaFieldInfo*
+GetJavaFieldInfo(jclass cls, const char* name);
+
+const JavaMethodInfo*
+GetJavaMethodInfo(jclass cls, const char* name, const char* sig);

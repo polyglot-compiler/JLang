@@ -458,7 +458,7 @@ JVM_DefineClassWithSource(JNIEnv *env, const char *name, jobject loader, const j
 
 jstring
 JVM_GetClassName(JNIEnv *env, jclass cls) {
-    auto name = GetJavaClassName(cls);
+    auto name = GetJavaClassInfo(cls)->name;
     return env->NewStringUTF(name);
 }
 
@@ -684,7 +684,7 @@ JVM_SupportsCX8(void) {
 
 const char*
 JVM_GetClassNameUTF(JNIEnv *env, jclass cb) {
-    auto name = GetJavaClassName(cb);
+    auto name = GetJavaClassInfo(cb)->name;
     char* res = (char*) malloc(strlen(name) + 1);
     strcpy(res, name);
     return res;

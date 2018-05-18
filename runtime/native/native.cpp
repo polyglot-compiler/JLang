@@ -26,7 +26,7 @@ static std::string BuildJavaNativeFuncKey(
     const char* signature // e.g., (J)V
 ) {
     std::string key;
-    key += GetJavaClassName(cls);
+    key += GetJavaClassInfo(cls)->name;
     key += '#';
     key += name;
     key += signature;

@@ -100,7 +100,7 @@ public class PolyLLVMMangler {
      * merges types with the same calling convention treatment.
      */
     private String callingConventionSignature(Type t) {
-        return t.isReference() ? "O" : jniUnescapedSignature(t);
+        return t.isReference() ? "L" : jniUnescapedSignature(t);
     }
 
     /**
