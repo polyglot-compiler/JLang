@@ -10,18 +10,29 @@
 
 static constexpr bool kDebug = false;
 
+extern "C" {
 // These structs are generated statically for each class.
 // The layout must precisely mirror the layout defined in PolyLLVM.
+
+struct RawFieldData {
+    char* name;
+    int32_t offset;
+};
+
 struct RawClassData {
     char* name;
 
     int32_t num_fields;
-    char** field_names;
-    int32_t* field_offsets;
+    RawFieldData* fields;
+
+    // char** field_names;
+    // int32_t* field_offsets;
 
     // char** static_field_names;
     // void** static_field_ptrs;
 };
+
+} // extern "C"
 
 // An optimized layout of class data.
 struct ClassInfo {
@@ -32,8 +43,8 @@ struct ClassInfo {
         name = data->name;
         for (int32_t i = 0; i < data->num_fields; ++i) {
             fieldIDs.emplace(
-                data->field_names[i],
-                data->field_offsets[i]);
+                data->fields[i].name,
+                data->fields[i].offset);
         }
     }
 };
@@ -69,8 +80,8 @@ void RegisterJavaClass(jclass cls, const RawClassData* data) {
         printf("[runtime] loading %s\n", data->name);
         for (int32_t i = 0; i < data->num_fields; ++i) {
             printf("  found field %s with offset %d\n",
-                data->field_names[i],
-                data->field_offsets[i]);
+                data->fields[i].name,
+                data->fields[i].offset);
         }
     }
 

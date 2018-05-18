@@ -14,7 +14,9 @@ import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -23,10 +25,6 @@ import static polyllvm.util.Constants.JNI_ENV_VAR_NAME;
 
 public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
-
-    private static boolean noImplementation(ProcedureInstance pi) {
-        return pi.flags().isNative() || pi.flags().isAbstract();
-    }
 
     @Override
     public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
@@ -140,6 +138,97 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         v.utils.buildFunc(n.position(), funcName, debugName, retType, argTypes, buildBody);
 
+        // Build JNI trampoline to allow this method to be called from native code.
+        buildJniTrampoline(v);
+
         return n;
+    }
+
+    /**
+     * Builds the trampoline necessary to be able to call this function from native code.
+     *
+     * Calling Java methods from native code is not as simple as finding the right function
+     * pointer, because we also need to use the right calling conventions. One option would be
+     * to use something like libffi to move arguments into the correct registers at runtime.
+     * We take a different approach: we generate a trampoline for each Java method, which
+     * takes in a function pointer, casts it to the correct type for a given method, and then
+     * calls through the pointer with arguments taken from an argument array.
+     *
+     * We reduce code bloat by using linkonce_odr linkage (and ensuring that trampolines
+     * with the same calling conventions have the same name).
+     *
+     * The function definition looks like this:
+     *     jtype trampoline(void* fnPtr, jvalue* args);
+     * Where jtype is the return type of this method, and jvalue is some
+     * type that is large enough to hold any Java value (e.g., i64).
+     */
+    protected void buildJniTrampoline(LLVMTranslator v) {
+        ProcedureDecl n = (ProcedureDecl) node();
+        ProcedureInstance pi = n.procedureInstance();
+
+        String name = v.mangler.procJniTrampoline(pi);
+        if (LLVMGetNamedFunction(v.mod, name) != null)
+            return; // We've already built this trampoline in this module.
+
+        Function<Type, Type> mergeReferenceTypes = t -> t.isReference() ? v.ts.Object() : t;
+
+        Type returnType = mergeReferenceTypes.apply(v.utils.erasedReturnType(pi));
+        LLVMTypeRef returnTypeLL = v.utils.toLL(returnType);
+
+        // Parameter debug types.
+        LLVMMetadataRef fnPtrDebugType = LLVMDIBuilderCreateBasicType(
+                v.debugInfo.diBuilder, "void*", 8 * v.utils.llvmPtrSize(), DW_ATE_address);
+        LLVMMetadataRef argsDebugType = LLVMDIBuilderCreateBasicType(
+                v.debugInfo.diBuilder, "jvalue*", 8 * v.utils.llvmPtrSize(), DW_ATE_address);
+        List<LLVMMetadataRef> argDebugTypes = Arrays.asList(fnPtrDebugType, argsDebugType);
+
+        // Parameter types.
+        LLVMTypeRef fnPtrType = v.utils.i8Ptr();
+        LLVMTypeRef argsType = v.utils.ptrTypeRef(v.utils.i64());
+        List<LLVMTypeRef> argTypesLL = Arrays.asList(fnPtrType, argsType);
+
+        Runnable buildBody = () -> {
+
+            // Ensure this definition is merged with equivalent trampolines.
+            LLVMSetLinkage(v.currFn(), LLVMLinkOnceODRLinkage);
+
+            LLVMValueRef fnPtr = LLVMGetParam(v.currFn(), 0);
+            LLVMValueRef argsPtr = LLVMGetParam(v.currFn(), 1);
+
+            // Collect arguments.
+            List<Type> forwardArgTypes = v.utils.erasedImplicitFormalTypes(pi);
+            List<LLVMValueRef> forwardArgs = new ArrayList<>();
+            for (int i = 0; i < forwardArgTypes.size(); ++i) {
+                LLVMValueRef ptr = v.utils.buildGEP(argsPtr, i);
+                Type forwardArgType = mergeReferenceTypes.apply(forwardArgTypes.get(i));
+                LLVMTypeRef castType = v.utils.ptrTypeRef(v.utils.toLL(forwardArgType));
+                LLVMValueRef cast = LLVMBuildBitCast(v.builder, ptr, castType, "cast.arg." + i);
+                LLVMValueRef load = LLVMBuildLoad(v.builder, cast, "load.arg." + i);
+                forwardArgs.add(load);
+            }
+
+            // Cast function pointer to the correct type.
+            LLVMTypeRef[] castArgTypes = forwardArgTypes.stream()
+                    .map(mergeReferenceTypes)
+                    .map(v.utils::toLL)
+                    .toArray(LLVMTypeRef[]::new);
+            LLVMTypeRef fnCastType = v.utils.ptrTypeRef(
+                    v.utils.functionType(returnTypeLL, castArgTypes));
+            fnPtr = LLVMBuildBitCast(v.builder, fnPtr, fnCastType, "cast.func");
+
+            LLVMValueRef[] forwardArgsArr = forwardArgs.toArray(new LLVMValueRef[0]);
+            if (returnType.isVoid()) {
+                v.utils.buildProcCall(fnPtr, forwardArgsArr);
+                LLVMBuildRetVoid(v.builder);
+            } else {
+                LLVMValueRef res = v.utils.buildFunCall(fnPtr, forwardArgsArr);
+                LLVMBuildRet(v.builder, res);
+            }
+        };
+
+        v.utils.buildFunc(
+                n.position(), name, /*debugName*/ name,
+                returnTypeLL, argTypesLL, argDebugTypes,
+                buildBody);
     }
 }

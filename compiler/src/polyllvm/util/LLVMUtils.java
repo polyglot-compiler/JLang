@@ -117,6 +117,7 @@ public class LLVMUtils {
     }
 
     public int llvmPtrSize() {
+        // TODO: This should not be hard-coded.
         return 8;
     }
 
@@ -130,6 +131,10 @@ public class LLVMUtils {
 
     public LLVMTypeRef i32() {
         return LLVMInt32TypeInContext(v.context);
+    }
+
+    public LLVMTypeRef i64() {
+        return LLVMInt64TypeInContext(v.context);
     }
 
     public LLVMTypeRef i8Ptr() {
@@ -215,13 +220,33 @@ public class LLVMUtils {
     public void buildFunc(
             Position pos, String name, String debugName,
             Type returnType, List<? extends Type> argTypes, Runnable bodyBuilder) {
+        // Create type and debug info.
+        LLVMTypeRef returnTypeLL = toLL(returnType);
+        List<LLVMTypeRef> argTypesLL = argTypes.stream()
+                .map(this::toLL)
+                .collect(Collectors.toList());
+        List<LLVMMetadataRef> argDebugTypes = argTypes.stream()
+                .map(v.debugInfo::debugType)
+                .collect(Collectors.toList());
+        buildFunc(pos, name, debugName, returnTypeLL, argTypesLL, argDebugTypes, bodyBuilder);
+    }
+
+    /**
+     * Convenience method for declaring an LLVM function with
+     * proper debug information and structure.
+     */
+    public void buildFunc(
+            Position pos, String name, String debugName,
+            LLVMTypeRef returnType, List<LLVMTypeRef> argTypes,
+            List<LLVMMetadataRef> argDebugTypes,
+            Runnable bodyBuilder) {
 
         LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
 
-        // Create type and debug info.
-        LLVMTypeRef funcType = toLLFuncTy(returnType, argTypes);
+        LLVMTypeRef funcType = v.utils.functionType(
+                returnType, argTypes.toArray(new LLVMTypeRef[0]));
         LLVMValueRef func = getFunction(name, funcType);
-        v.debugInfo.beginFuncDebugInfo(pos, func, name, debugName, argTypes);
+        v.debugInfo.beginFuncDebugInfo(pos, func, name, debugName, argDebugTypes);
         v.pushFn(func);
 
         // Note that the entry block is reserved exclusively for alloca instructions
@@ -236,7 +261,7 @@ public class LLVMUtils {
 
         // Add terminator if necessary.
         if (!v.utils.blockTerminated()) {
-            if (returnType.isVoid()) {
+            if (returnType.equals(v.utils.voidType())) {
                 LLVMBuildRetVoid(v.builder);
             } else {
                 LLVMBuildUnreachable(v.builder);
@@ -387,9 +412,7 @@ public class LLVMUtils {
                 .mapToObj(i -> LLVMConstInt(i32(), i, /*sign-extend*/ 0))
                 .toArray(LLVMValueRef[]::new);
         PointerPointer<LLVMValueRef> indicesPtr = new PointerPointer<>(indices);
-        return LLVMIsConstant(ptr) != 0
-                ? LLVMConstGEP(ptr, indicesPtr, indices.length)
-                : LLVMBuildGEP(v.builder, ptr, indicesPtr, indices.length, "gep");
+        return LLVMBuildGEP(v.builder, ptr, indicesPtr, indices.length, "gep");
     }
 
     /**

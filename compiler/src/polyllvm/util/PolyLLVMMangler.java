@@ -15,6 +15,7 @@ public class PolyLLVMMangler {
 
     private static final String JAVA_PREFIX = "Java";
     private static final String POLYGLOT_PREFIX = "Polyglot";
+    private static final String JNI_TRAMPOLINE_PREFIX = "Jni_trampoline";
     private static final String CLASS_TYPE_STR = "class";
     private static final String INTERFACE_TYPE_STR = "interface";
     private static final String CDV_TYPE_STR = "cdv_ty";
@@ -64,16 +65,13 @@ public class PolyLLVMMangler {
         }
     }
 
-    /**
-     * Mangle types as specified in the JNI API, escaped for symbol table purposes.
-     * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names
-     */
-    private String jniEscapedSignature(Type t) {
-        return jniUnescapedSignature(t)
+    private String escapeSignature(String signature) {
+        return signature
                 .replace("_", UNDERSCORE_ESCAPE)
                 .replace("/", "_")
                 .replace(";", SEMICOLON_ESCAPE)
                 .replace("[", BRACKET_ESCAPE);
+
     }
 
     /**
@@ -81,12 +79,41 @@ public class PolyLLVMMangler {
      * E.g., (ILjava/lang/String;[I)J
      */
     public String jniUnescapedSignature(ProcedureInstance pi) {
-        pi = v.utils.erasedProcedureInstance(pi);
+        pi = v.utils.erasedProcedureInstance(pi); // Erase generics.
         Type returnType = v.utils.erasedReturnType(pi);
         String formalTypeSignature = pi.formalTypes().stream()
                 .map(this::jniUnescapedSignature)
                 .reduce("", (a, b) -> a + b);
         return "(" + formalTypeSignature + ")" + jniUnescapedSignature(returnType);
+    }
+
+    /**
+     * Mangle types as specified in the JNI API, escaped for symbol table purposes.
+     * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names
+     */
+    private String jniEscapedSignature(Type t) {
+        return escapeSignature(jniUnescapedSignature(t));
+    }
+
+    /**
+     * Similar to {@link PolyLLVMMangler#jniUnescapedSignature(Type)}, but
+     * merges types with the same calling convention treatment.
+     */
+    private String callingConventionSignature(Type t) {
+        return t.isReference() ? "O" : jniUnescapedSignature(t);
+    }
+
+    /**
+     * Similar to {@link PolyLLVMMangler#jniUnescapedSignature(ProcedureInstance)}, but
+     * merges signatures with the same calling convention.
+     */
+    public String callingConventionSignature(ProcedureInstance pi) {
+        pi = v.utils.erasedProcedureInstance(pi); // Erase generics.
+        Type returnType = v.utils.erasedReturnType(pi);
+        String formalTypeSignature = v.utils.erasedImplicitFormalTypes(pi).stream()
+                .map(this::callingConventionSignature)
+                .reduce("", (a, b) -> a + b);
+        return "(" + formalTypeSignature + ")" + callingConventionSignature(returnType);
     }
 
     private String escapedName(String name) {
@@ -126,6 +153,10 @@ public class PolyLLVMMangler {
         else {
             throw new InternalCompilerError("Unknown procedure type: " + pi.getClass());
         }
+    }
+
+    public String procJniTrampoline(ProcedureInstance pi) {
+        return JNI_TRAMPOLINE_PREFIX + "_" + callingConventionSignature(pi);
     }
 
     public String proc(ProcedureInstance pi) {

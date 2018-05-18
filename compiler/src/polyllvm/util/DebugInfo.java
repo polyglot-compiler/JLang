@@ -159,10 +159,8 @@ public class DebugInfo {
 
     public void beginFuncDebugInfo(
             Position pos, LLVMValueRef func, String name, String debugName,
-            List<? extends Type> formalTypes) {
-        LLVMMetadataRef[] formals = formalTypes.stream()
-                .map(v.debugInfo::debugType)
-                .toArray(LLVMMetadataRef[]::new);
+            List<LLVMMetadataRef> formalDebugTypes) {
+        LLVMMetadataRef[] formals = formalDebugTypes.toArray(new LLVMMetadataRef[0]);
         LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
                 v.debugInfo.diBuilder, new PointerPointer<>(formals), formals.length);
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(

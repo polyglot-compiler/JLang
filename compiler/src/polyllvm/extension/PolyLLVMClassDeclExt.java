@@ -48,6 +48,18 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 .filter(fi -> !fi.flags().isStatic())
                 .collect(Collectors.toList());
 
+        // Instance field info, { char* name, int32_t offset }
+        LLVMTypeRef fieldInfoType = v.utils.structType(v.utils.i8Ptr(), v.utils.i32());
+        LLVMValueRef[] fieldInfoElems = instanceFields.stream()
+                .map(fi -> {
+                    LLVMValueRef name = v.utils.buildGlobalCStr(fi.name());
+                    LLVMValueRef nullPtr = LLVMConstNull(v.utils.toLL(fi.container()));
+                    LLVMValueRef gep = v.obj.buildFieldElementPtr(nullPtr, fi);
+                    LLVMValueRef offset = LLVMConstPtrToInt(gep, v.utils.i32());
+                    return v.utils.buildConstStruct(name, offset);
+                })
+                .toArray(LLVMValueRef[]::new);
+
         // This layout must precisely mirror the layout defined in the runtime (class.cpp).
         LLVMValueRef classInfo = v.utils.buildConstStruct(
 
@@ -57,19 +69,8 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 // Number of instance fields, i32
                 LLVMConstInt(v.utils.i32(), instanceFields.size(), /*sign-extend*/ 0),
 
-                // Instance field names, char**
-                v.utils.buildGlobalArrayAsPtr(v.utils.i8Ptr(), instanceFields.stream()
-                        .map(fi -> v.utils.buildGlobalCStr(fi.name()))
-                        .toArray(LLVMValueRef[]::new)),
-
-                // Instance field offsets, i32*
-                v.utils.buildGlobalArrayAsPtr(v.utils.i32(), instanceFields.stream()
-                        .map(fi -> {
-                            LLVMValueRef nullPtr = LLVMConstNull(v.utils.toLL(fi.container()));
-                            LLVMValueRef offset = v.obj.buildFieldElementPtr(nullPtr, fi);
-                            return LLVMConstPtrToInt(offset, v.utils.i32());
-                        })
-                        .toArray(LLVMValueRef[]::new))
+                // Instance fields, { char* name, int32_t offset }
+                v.utils.buildGlobalArrayAsPtr(fieldInfoType, fieldInfoElems)
         );
 
         // Emit class info as a global variable.
