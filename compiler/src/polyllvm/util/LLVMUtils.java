@@ -643,6 +643,16 @@ public class LLVMUtils {
         return functionType(returnType, formalTypes);
     }
 
+    public LLVMTypeRef toLLTrampoline(ProcedureInstance pi) {
+        Type returnTypePrecise = erasedReturnType(pi);
+        Type returnType = returnTypePrecise.isReference() ? v.ts.Object() : returnTypePrecise;
+        LLVMTypeRef[] paramTypes = {
+                v.utils.i8Ptr(),                  // Function pointer.
+                v.utils.ptrTypeRef(v.utils.i64()) // Argument pointer.
+        };
+        return functionType(toLL(returnType), paramTypes);
+    }
+
     /** Returns LLVM type references for the erased parameter types of {@code pi}. */
     public LLVMTypeRef[] toLLParamTypes(ProcedureInstance pi) {
         return erasedImplicitFormalTypes(pi).stream()

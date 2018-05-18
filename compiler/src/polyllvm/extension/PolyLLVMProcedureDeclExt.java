@@ -4,10 +4,7 @@ import org.bytedeco.javacpp.LLVM;
 import polyglot.ast.Formal;
 import polyglot.ast.Node;
 import polyglot.ast.ProcedureDecl;
-import polyglot.types.ConstructorInstance;
-import polyglot.types.LocalInstance;
-import polyglot.types.ProcedureInstance;
-import polyglot.types.Type;
+import polyglot.types.*;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.LLVMTranslator;
@@ -30,13 +27,17 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
     public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         ProcedureDecl n = (ProcedureDecl) node();
         ProcedureInstance pi = n.procedureInstance();
+        ClassType ct = pi.container().toClass();
 
-        if (pi.flags().isAbstract())
-            return super.overrideTranslateLLVM(parent, v); // Ignore abstract methods.
+        // Build JNI trampoline to allow this method to be called from native code.
+        buildJniTrampoline(v);
+
+        if (pi.flags().isAbstract() || ct.flags().isInterface())
+            return super.overrideTranslateLLVM(parent, v); // Ignore abstract/interface methods.
         assert pi.container().isClass();
 
         String funcName = v.mangler.proc(pi);
-        String debugName = pi.container().toClass().fullName() + "#" + pi.signature();
+        String debugName = ct.fullName() + "#" + pi.signature();
 
         Type retType = v.utils.erasedReturnType(pi);
         List<Type> argTypes = v.utils.erasedImplicitFormalTypes(pi);
@@ -67,7 +68,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
             // If static method or constructor, make sure the container class has been initialized.
             // See JLS 7, section 12.4.1.
             if (pi.flags().isStatic() || pi instanceof ConstructorInstance) {
-                v.utils.buildClassLoadCheck(pi.container().toClass());
+                v.utils.buildClassLoadCheck(ct);
             }
 
             // Register as entry point if applicable.
@@ -90,13 +91,14 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 lang().visitChildren(n, v);
             }
             else {
+                assert n.flags().isNative();
                 // Build trampoline to call the "real" native method.
 
                 // Call into the runtime to retrieve the native function pointer.
                 // (Note that we could cache the function pointer if performance is an issue.)
                 // The arguments here must precisely match the signature of
                 // the function defined in the runtime.
-                LLVMValueRef clazz = v.utils.loadClassObject(pi.container().toClass());
+                LLVMValueRef clazz = v.utils.loadClassObject(ct);
                 LLVMValueRef[] runtimeCallArgs = {
                         clazz,
                         v.utils.buildGlobalCStr(n.name()),
@@ -138,9 +140,6 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
 
         v.utils.buildFunc(n.position(), funcName, debugName, retType, argTypes, buildBody);
 
-        // Build JNI trampoline to allow this method to be called from native code.
-        buildJniTrampoline(v);
-
         return n;
     }
 
@@ -167,7 +166,9 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         ProcedureInstance pi = n.procedureInstance();
 
         String name = v.mangler.procJniTrampoline(pi);
-        if (LLVMGetNamedFunction(v.mod, name) != null)
+
+        LLVMValueRef preexisting = LLVMGetNamedFunction(v.mod, name);
+        if (preexisting != null && LLVMIsDeclaration(preexisting) != 0)
             return; // We've already built this trampoline in this module.
 
         Function<Type, Type> mergeReferenceTypes = t -> t.isReference() ? v.ts.Object() : t;
@@ -183,6 +184,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         List<LLVMMetadataRef> argDebugTypes = Arrays.asList(fnPtrDebugType, argsDebugType);
 
         // Parameter types.
+        // These should stay consistent with LLVMUtils#toLLTrampoline.
         LLVMTypeRef fnPtrType = v.utils.i8Ptr();
         LLVMTypeRef argsType = v.utils.ptrTypeRef(v.utils.i64());
         List<LLVMTypeRef> argTypesLL = Arrays.asList(fnPtrType, argsType);

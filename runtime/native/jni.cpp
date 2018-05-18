@@ -293,6 +293,8 @@ jfieldID jni_GetJavaFieldID(
     return GetJavaFieldId(clazz, name);
 }
 
+// TODO: Ideally we would do more error checking here,
+//       to protect against buggy native code.
 jboolean jni_GetBooleanField(JNIEnv *env, jobject obj, jfieldID id) { return GetJavaField<jboolean>(obj, id); }
 jbyte    jni_GetByteField   (JNIEnv *env, jobject obj, jfieldID id) { return GetJavaField<jbyte>   (obj, id); }
 jchar    jni_GetCharField   (JNIEnv *env, jobject obj, jfieldID id) { return GetJavaField<jchar>   (obj, id); }

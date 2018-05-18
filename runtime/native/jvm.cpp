@@ -639,8 +639,7 @@ JVM_ConstantPoolGetUTF8At(JNIEnv *env, jobject unused, jobject jcpool, jint inde
 
 jobject
 JVM_DoPrivileged(JNIEnv *env, jclass cls, jobject action, jobject context, jboolean wrapException) {
-    JvmIgnore("JVM_DoPrivileged");
-    return nullptr;
+    JvmUnimplemented("JVM_DoPrivileged");
 }
 
 jobject
