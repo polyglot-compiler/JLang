@@ -27,24 +27,28 @@
 // Begin helper methods.
 
 template <typename T>
-static T* GetJavaFieldPtr(jobject obj, jfieldID id) {
-    auto field = reinterpret_cast<const JavaFieldInfo*>(id);
-    auto raw = reinterpret_cast<char*>(obj) + field->offset;
+static T*
+GetJavaFieldPtr(jobject obj, jfieldID id) {
+    auto f = reinterpret_cast<const JavaFieldInfo*>(id);
+    auto raw = reinterpret_cast<char*>(obj) + f->offset;
     return reinterpret_cast<T*>(raw);
 }
 
 template <typename T>
-static T GetJavaField(jobject obj, jfieldID id) {
+static T
+GetJavaField(jobject obj, jfieldID id) {
     return *GetJavaFieldPtr<T>(obj, id);
 }
 
 template <typename T>
-static void SetJavaField(jobject obj, jfieldID id, T val) {
+static void
+SetJavaField(jobject obj, jfieldID id, T val) {
     *GetJavaFieldPtr<T>(obj, id) = val;
 }
 
 template <typename T>
-static T* GetJavaArrayData(jarray arr, jboolean *isCopy) {
+static T*
+GetJavaArrayData(jarray arr, jboolean *isCopy) {
     // Note: several JNI methods assume no copy.
     if (isCopy != nullptr)
         *isCopy = JNI_FALSE;
@@ -52,15 +56,13 @@ static T* GetJavaArrayData(jarray arr, jboolean *isCopy) {
 }
 
 // Returns false if the given index is out-of-bounds.
-static bool JavaArrayBoundsCheck(jarray arr, jsize index) {
+static bool
+JavaArrayBoundsCheck(jarray arr, jsize index) {
     jsize len = Unwrap(arr)->Length();
     if (index < 0 || index >= len) {
         // TODO: Should technically throw ArrayIndexOutOfBoundsException.
         fprintf(stderr,
-            "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
-            "A JNI method was called with an out-of-bounds index.\n"
-            "Aborting.\n"
-            "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
+            "ERROR: Out-of-bounds array index %d in JNI method", index);
         abort();
         return false;
     }
@@ -70,7 +72,8 @@ static bool JavaArrayBoundsCheck(jarray arr, jsize index) {
 // Similar to GetJavaArrayData, but performs a
 // bounds check for the specified region.
 template <typename T>
-static T* GetJavaArrayDataForRegion(jarray arr, jsize start, jsize len) {
+static T*
+GetJavaArrayDataForRegion(jarray arr, jsize start, jsize len) {
     if (len == 0)
         return nullptr;
     if (!JavaArrayBoundsCheck(arr, start)
@@ -81,26 +84,25 @@ static T* GetJavaArrayDataForRegion(jarray arr, jsize start, jsize len) {
 }
 
 template <typename T>
-static void GetJavaArrayRegion(
-    jarray arr, jsize start, jsize len, T* buf
-) {
+static void
+GetJavaArrayRegion(jarray arr, jsize start, jsize len, T* buf) {
     if (auto data = GetJavaArrayDataForRegion<T>(arr, start, len)) {
-        memcpy(buf, data + start * sizeof(T), len * sizeof(T));
+        std::copy(data + start, data + start + len, buf);
     }
 }
 
 template <typename T>
-static void SetJavaArrayRegion(
-    jarray arr, jsize start, jsize len, const T* buf
-) {
+static void
+SetJavaArrayRegion(jarray arr, jsize start, jsize len, const T* buf) {
     if (auto data = GetJavaArrayDataForRegion<T>(arr, start, len)) {
-        memcpy(data + start * sizeof(T), buf, len * sizeof(T));
+        std::copy(buf, buf + len, data + start);
     }
 }
 
 // Parses one Java argument from a method signature and returns
 // its single-character encoding. Updates the signature position.
-static char ParseJavaArg(const char*& s) {
+static char
+ParseJavaArg(const char*& s) {
     switch (*s) {
     case 'Z': case 'B': case 'C': case 'S':
     case 'I': case 'J': case 'F': case 'D':
@@ -117,7 +119,8 @@ static char ParseJavaArg(const char*& s) {
     }
 }
 
-static size_t CountJavaArgs(const char* sig) {
+static size_t
+CountJavaArgs(const char* sig) {
     const char* s = sig;
     assert(*s == '(');
     ++s;
@@ -131,7 +134,8 @@ static size_t CountJavaArgs(const char* sig) {
 // Uses a Java method signature encoding to move
 // a variable number of arguments into an array.
 // Assumes the array is large enough.
-static void ForwardJavaArgs(const char* sig, va_list args, jvalue* out) {
+static void
+ForwardJavaArgs(const char* sig, va_list args, jvalue* out) {
     const char* s = sig;
     jvalue* o = out;
 
@@ -159,11 +163,80 @@ static void ForwardJavaArgs(const char* sig, va_list args, jvalue* out) {
         case '[': o->l = static_cast<jarray>  (va_arg(args, jarray));  break;
         case 'L': o->l = static_cast<jobject> (va_arg(args, jobject)); break;
         default:
-            fprintf(stderr, "Malformed method signature: %s\n", sig);
+            fprintf(stderr, "ERROR: Malformed method signature:\n\t%s\n", sig);
             abort();
         }
         ++o; // Advance out position.
     }
+}
+
+// This type must precisely match the type used by PolyLLVM.
+template <typename T>
+using JniTrampolineType = T (*)(void*, const jvalue*);
+
+// Calls a Java method directly, without using a dispatch vector.
+// All other method calling functions below delegate to this one.
+template <typename T>
+static T
+CallJavaNonvirtualMethod(jmethodID id, const jvalue* args) {
+    auto m = reinterpret_cast<const JavaMethodInfo*>(id);
+    if (!m->fnPtr || !m->trampoline) {
+        fprintf(stderr,
+            "ERROR: Attempting to call Java method with trampoline %p\n"
+            "       and function pointer %p\n", m->fnPtr, m->trampoline);
+        abort();
+    }
+    auto trampoline = reinterpret_cast<JniTrampolineType<T>>(m->trampoline);
+    return trampoline(m->fnPtr, args);
+}
+
+// Calls a Java instance method directly, without using a dispatch vector.
+template <typename T>
+static T
+CallJavaNonvirtualMethod(jobject obj, jmethodID id, const jvalue* args) {
+    auto m = reinterpret_cast<const JavaMethodInfo*>(id);
+    auto num_args = CountJavaArgs(m->sig);
+
+    // Carefully include implicit receiver.
+    auto forward_args = std::vector<jvalue>(num_args + 1);
+    forward_args[0].l = obj;
+    std::copy(args, args + num_args, forward_args.begin() + 1);
+
+    return CallJavaNonvirtualMethod<T>(id, args);
+}
+
+// Calls a Java instance method using the dispatch vector of [obj].
+template <typename T>
+static T
+CallJavaInstanceMethod(jobject obj, jmethodID id, const jvalue* args) {
+    auto m = reinterpret_cast<const JavaMethodInfo*>(id);
+
+    // We could implement virtual dispatch by using dispatch vector
+    // offsets. However, it's slightly simpler to just look up more
+    // precise method info from the class of the current object,
+    // which will include a direct function pointer. Then we
+    // can do a direct call.
+    auto clazz = Unwrap(obj)->Cdv()->Class()->Wrap();
+    m = GetJavaMethodInfo(clazz, m->name, m->sig);
+    id = reinterpret_cast<jmethodID>(const_cast<JavaMethodInfo*>(m));
+
+    // TODO: The above lookup may fail due to type erasure,
+    // in particular if [obj] has a generic super class with substituted
+    // type parameter(s) which do not match the erasure type(s).
+    // See https://docs.oracle.com/javase/tutorial/java/generics/bridgeMethods.html
+
+    return CallJavaNonvirtualMethod<T>(obj, id, args);
+}
+
+// Calls a Java instance method using the dispatch vector of [obj].
+template <typename T>
+static T
+CallJavaInstanceMethod(jobject obj, jmethodID id, va_list args) {
+    auto m = reinterpret_cast<const JavaMethodInfo*>(id);
+    auto num_args = CountJavaArgs(m->sig);
+    auto forward_args = std::vector<jvalue>(num_args);
+    ForwardJavaArgs(m->sig, args, forward_args.data());
+    return CallJavaInstanceMethod<T>(obj, id, forward_args.data());
 }
 
 // Begin official API.
@@ -291,38 +364,56 @@ jmethodID jni_GetMethodID(JNIEnv *env, jclass clazz, const char *name, const cha
     JniUnimplemented("GetMethodID");
 }
 
-jobject  jni_CallObjectMethod  (JNIEnv *env, jobject obj, jmethodID id, ...) { JniUnimplemented("CallObjectMethod");  }
-jboolean jni_CallBooleanMethod (JNIEnv *env, jobject obj, jmethodID id, ...) { JniUnimplemented("CallBooleanMethod"); }
-jbyte    jni_CallByteMethod    (JNIEnv *env, jobject obj, jmethodID id, ...) { JniUnimplemented("CallByteMethod");    }
-jchar    jni_CallCharMethod    (JNIEnv *env, jobject obj, jmethodID id, ...) { JniUnimplemented("CallCharMethod");    }
-jshort   jni_CallShortMethod   (JNIEnv *env, jobject obj, jmethodID id, ...) { JniUnimplemented("CallShortMethod");   }
-jint     jni_CallIntMethod     (JNIEnv *env, jobject obj, jmethodID id, ...) { JniUnimplemented("CallIntMethod");     }
-jlong    jni_CallLongMethod    (JNIEnv *env, jobject obj, jmethodID id, ...) { JniUnimplemented("CallLongMethod");    }
-jfloat   jni_CallFloatMethod   (JNIEnv *env, jobject obj, jmethodID id, ...) { JniUnimplemented("CallFloatMethod");   }
-jdouble  jni_CallDoubleMethod  (JNIEnv *env, jobject obj, jmethodID id, ...) { JniUnimplemented("CallDoubleMethod");  }
-void     jni_CallVoidMethod    (JNIEnv *env, jobject obj, jmethodID id, ...) { JniUnimplemented("CallVoidMethod");    }
+#define ARGS JNIEnv *env, jobject obj, jmethodID id, ...
+#define START_VA va_list args; va_start(args, id)
+#define END_VA va_end(args)
+#define CALL(jrep) CallJavaInstanceMethod<jrep>(obj, id, args)
+#define IMPL(jrep) START_VA; jrep res = CALL(jrep); END_VA; return res
+jobject  jni_CallObjectMethod  (ARGS) { IMPL(jobject);  }
+jboolean jni_CallBooleanMethod (ARGS) { IMPL(jboolean); }
+jbyte    jni_CallByteMethod    (ARGS) { IMPL(jbyte);    }
+jchar    jni_CallCharMethod    (ARGS) { IMPL(jchar);    }
+jshort   jni_CallShortMethod   (ARGS) { IMPL(jshort);   }
+jint     jni_CallIntMethod     (ARGS) { IMPL(jint);     }
+jlong    jni_CallLongMethod    (ARGS) { IMPL(jlong);    }
+jfloat   jni_CallFloatMethod   (ARGS) { IMPL(jfloat);   }
+jdouble  jni_CallDoubleMethod  (ARGS) { IMPL(jdouble);  }
+void     jni_CallVoidMethod    (ARGS) { START_VA; CALL(void); END_VA; }
+#undef IMPL
+#undef CALL
+#undef END_VA
+#undef START_VA
+#undef ARGS
 
-jobject  jni_CallObjectMethodA (JNIEnv *env, jobject obj, jmethodID id, const jvalue* args) { JniUnimplemented("CallObjectMethodA");  }
-jboolean jni_CallBooleanMethodA(JNIEnv *env, jobject obj, jmethodID id, const jvalue* args) { JniUnimplemented("CallBooleanMethodA"); }
-jbyte    jni_CallByteMethodA   (JNIEnv *env, jobject obj, jmethodID id, const jvalue* args) { JniUnimplemented("CallByteMethodA");    }
-jchar    jni_CallCharMethodA   (JNIEnv *env, jobject obj, jmethodID id, const jvalue* args) { JniUnimplemented("CallCharMethodA");    }
-jshort   jni_CallShortMethodA  (JNIEnv *env, jobject obj, jmethodID id, const jvalue* args) { JniUnimplemented("CallShortMethodA");   }
-jint     jni_CallIntMethodA    (JNIEnv *env, jobject obj, jmethodID id, const jvalue* args) { JniUnimplemented("CallIntMethodA");     }
-jlong    jni_CallLongMethodA   (JNIEnv *env, jobject obj, jmethodID id, const jvalue* args) { JniUnimplemented("CallLongMethodA");    }
-jfloat   jni_CallFloatMethodA  (JNIEnv *env, jobject obj, jmethodID id, const jvalue* args) { JniUnimplemented("CallFloatMethodA");   }
-jdouble  jni_CallDoubleMethodA (JNIEnv *env, jobject obj, jmethodID id, const jvalue* args) { JniUnimplemented("CallDoubleMethodA");  }
-void     jni_CallVoidMethodA   (JNIEnv *env, jobject obj, jmethodID id, const jvalue* args) { JniUnimplemented("CallVoidMethodA");    }
+#define ARGS JNIEnv *env, jobject obj, jmethodID id, const jvalue* args
+#define IMPL(jrep) return CallJavaInstanceMethod<jrep>(obj, id, args)
+jobject  jni_CallObjectMethodA  (ARGS) { IMPL(jobject);  }
+jboolean jni_CallBooleanMethodA (ARGS) { IMPL(jboolean); }
+jbyte    jni_CallByteMethodA    (ARGS) { IMPL(jbyte);    }
+jchar    jni_CallCharMethodA    (ARGS) { IMPL(jchar);    }
+jshort   jni_CallShortMethodA   (ARGS) { IMPL(jshort);   }
+jint     jni_CallIntMethodA     (ARGS) { IMPL(jint);     }
+jlong    jni_CallLongMethodA    (ARGS) { IMPL(jlong);    }
+jfloat   jni_CallFloatMethodA   (ARGS) { IMPL(jfloat);   }
+jdouble  jni_CallDoubleMethodA  (ARGS) { IMPL(jdouble);  }
+void     jni_CallVoidMethodA    (ARGS) { IMPL(void);     }
+#undef IMPL
+#undef ARGS
 
-jobject  jni_CallObjectMethodV (JNIEnv *env, jobject obj, jmethodID id, va_list args) { JniUnimplemented("CallObjectMethodV");  }
-jboolean jni_CallBooleanMethodV(JNIEnv *env, jobject obj, jmethodID id, va_list args) { JniUnimplemented("CallBooleanMethodV"); }
-jbyte    jni_CallByteMethodV   (JNIEnv *env, jobject obj, jmethodID id, va_list args) { JniUnimplemented("CallByteMethodV");    }
-jchar    jni_CallCharMethodV   (JNIEnv *env, jobject obj, jmethodID id, va_list args) { JniUnimplemented("CallCharMethodV");    }
-jshort   jni_CallShortMethodV  (JNIEnv *env, jobject obj, jmethodID id, va_list args) { JniUnimplemented("CallShortMethodV");   }
-jint     jni_CallIntMethodV    (JNIEnv *env, jobject obj, jmethodID id, va_list args) { JniUnimplemented("CallIntMethodV");     }
-jlong    jni_CallLongMethodV   (JNIEnv *env, jobject obj, jmethodID id, va_list args) { JniUnimplemented("CallLongMethodV");    }
-jfloat   jni_CallFloatMethodV  (JNIEnv *env, jobject obj, jmethodID id, va_list args) { JniUnimplemented("CallFloatMethodV");   }
-jdouble  jni_CallDoubleMethodV (JNIEnv *env, jobject obj, jmethodID id, va_list args) { JniUnimplemented("CallDoubleMethodV");  }
-void     jni_CallVoidMethodV   (JNIEnv *env, jobject obj, jmethodID id, va_list args) { JniUnimplemented("CallVoidMethodV");    }
+#define ARGS JNIEnv *env, jobject obj, jmethodID id, va_list args
+#define IMPL(jrep) return CallJavaInstanceMethod<jrep>(obj, id, args)
+jobject  jni_CallObjectMethodV  (ARGS) { IMPL(jobject);  }
+jboolean jni_CallBooleanMethodV (ARGS) { IMPL(jboolean); }
+jbyte    jni_CallByteMethodV    (ARGS) { IMPL(jbyte);    }
+jchar    jni_CallCharMethodV    (ARGS) { IMPL(jchar);    }
+jshort   jni_CallShortMethodV   (ARGS) { IMPL(jshort);   }
+jint     jni_CallIntMethodV     (ARGS) { IMPL(jint);     }
+jlong    jni_CallLongMethodV    (ARGS) { IMPL(jlong);    }
+jfloat   jni_CallFloatMethodV   (ARGS) { IMPL(jfloat);   }
+jdouble  jni_CallDoubleMethodV  (ARGS) { IMPL(jdouble);  }
+void     jni_CallVoidMethodV    (ARGS) { IMPL(void);     }
+#undef IMPL
+#undef ARGS
 
 jobject  jni_CallNonvirtualObjectMethod  (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualObjectMethod");  }
 jboolean jni_CallNonvirtualBooleanMethod (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualBooleanMethod"); }
