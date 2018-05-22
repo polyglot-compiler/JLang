@@ -26,7 +26,7 @@ BINARY = $(SRCS:.java=.binary)
 OUTPUT = $(SRCS:.java=.output)
 
 
-all: sol ir output
+all: sol output
 
 sol: $(SOL)
 

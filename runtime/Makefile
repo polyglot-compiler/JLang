@@ -52,7 +52,7 @@ $(JAVA_CLS): $(JAVA_SRC)
 	@$(JAVAC) -d $(CLASSES) $(JAVA_SRC)
 
 # Runtime Java code (.java --> .ll)
-$(JAVA_LL): $(JAVA_SRC) $(JAVA_CLS) $(PLC_SRC)
+$(JAVA_LL): $(JAVA_CLS) $(PLC_SRC)
 	@echo "Compiling $(words $(JAVA_SRC)) Java files down to LLVM IR"
 	@$(PLC) -c -d $(OUT) $(JAVA_SRC)
 

@@ -1,3 +1,5 @@
+JDK ?= jdk-lite # Use the bare-bones JDK by default.
+
 all: compiler runtime jdk
 
 compiler:
@@ -12,12 +14,12 @@ runtime: compiler
 
 jdk: compiler runtime
 	@echo "--- Building JDK ---"
-	@$(MAKE) -C jdk
+	@$(MAKE) -C $(JDK)
 	@echo
 
 clean:
 	ant -q clean
 	$(MAKE) -C runtime clean
-	$(MAKE) -C jdk clean
+	$(MAKE) -C $(JDK) clean
 
 .PHONY: compiler runtime jdk

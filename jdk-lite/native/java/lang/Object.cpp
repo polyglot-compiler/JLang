@@ -1,5 +1,4 @@
 #include <jni.h>
-#include "rep.h"
 
 extern "C" {
 
@@ -9,7 +8,7 @@ jint Java_java_lang_Object_hashCode__(JNIEnv* env, jobject o) {
 }
 
 jclass Java_java_lang_Object_getClass__(JNIEnv* env, jobject o) {
-    return Unwrap(o)->Cdv()->Class()->Wrap();
+    return env->GetObjectClass(o);
 }
 
 } // extern "C"

@@ -1,8 +1,9 @@
 package java.lang;
 
 public class System {
-        public static PrintStream out, err;
+    public static PrintStream out;
 
+    // Hack to easily get console I/O.
     public static class PrintStream {
 
         public static void print(Object o) {
@@ -35,12 +36,4 @@ public class System {
 
         public static native void flush();
     }
-
-    public static SecurityManager getSecurityManager() {
-        return null;
-    }
-
-    public static native long currentTimeMillis();
-    public static native long nanoTime();
-    public static native int identityHashCode(Object x);
 }

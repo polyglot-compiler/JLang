@@ -3,7 +3,7 @@ package java.lang;
 public class Object {
 
     protected Object clone() throws CloneNotSupportedException {
-                                                                return this;
+        return this;
     }
 
     public boolean equals(Object other) {
@@ -11,7 +11,7 @@ public class Object {
     }
 
     protected final void finalize() throws Throwable {
-                throw new RuntimeException("Object#finalize() not implemented");
+        throw new RuntimeException("Object#finalize() not implemented");
     }
 
     public final native Class<?> getClass();
@@ -27,7 +27,7 @@ public class Object {
     }
 
     public String toString() {
-                return getClass().getName() + '@' + hashCode();
+        return getClass().getName() + '@' + hashCode();
     }
 
     public final void wait(long timeout) throws InterruptedException {
