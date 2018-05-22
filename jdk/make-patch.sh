@@ -4,7 +4,7 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-SRC=openjdk-7-src
+SRC=src
 
 set -e
 mkdir -p `dirname patches/"$1"`

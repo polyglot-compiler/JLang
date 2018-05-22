@@ -1,5 +1,5 @@
---- openjdk-7-src.orig/sun/misc/Hashing.java	2013-01-04 14:04:42.000000000 -0500
-+++ openjdk-7-src/sun/misc/Hashing.java	2018-05-12 21:02:09.000000000 -0400
+--- src.orig/sun/misc/Hashing.java	2013-01-04 14:04:42.000000000 -0500
++++ src/sun/misc/Hashing.java	2018-05-12 21:02:09.000000000 -0400
 @@ -257,12 +257,13 @@
              // not practically reversible.
              int hashing_seed[] = {
@@ -18,5 +18,5 @@
 +                // (int) (System.nanoTime() >>> 5), // resolution is poor
 +                // (int) (Runtime.getRuntime().freeMemory() >>> 4) // alloc min
              };
- 
+
              seed = murmur3_32(hashing_seed);

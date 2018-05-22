@@ -1,7 +1,7 @@
 MAIN = Main
 PLC := ../bin/polyllvmc
 JDK7 ?= /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
-JDK_SRC := openjdk-7-src
+JDK_SRC := src
 PATCHES := patches
 OUT := out
 
@@ -82,6 +82,6 @@ $(OUT)/classes/cstamp: | $(JDK_SRC)
 	@date > $@
 
 clean:
-	rm -rf $(OUT) $(MAIN).binary $(JDK_SRC)
+	rm -rf $(OUT) $(MAIN).binary $(JDK_SRC) $(JDK_SRC).orig
 
 .PHONY: all
