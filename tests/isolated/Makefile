@@ -10,79 +10,66 @@
 # Uses absolute paths to llvm commands, because Java's ProcessBuilder will
 # otherwise not be able to find them.
 
-BASE_DIR = ../..
-RUNTIME = $(BASE_DIR)/runtime
-POLYLLVMC_SRC = $(shell find $(BASE_DIR)/compiler/src -name "*.java")
-RUNTIME_SRC = $(shell find $(RUNTIME) -name "*.java") $(shell find $(RUNTIME)/native -name "*.cpp")
+BASE_DIR := ../..
+RUNTIME := $(BASE_DIR)/runtime
+JDK := $(BASE_DIR)/jdk-lite
+JDK_CLS := $(JDK)/out/classes
 
-SRCS = $(shell find * -name "*.java")
+SRC := $(shell find * -name "*.java")
 
-CLASSES = $(SRCS:.java=.class)
-SOL = $(SRCS:.java=.sol)
-LLVMIR = $(SRCS:.java=.ll)
-LINKED_LLVMIR = $(SRCS:.java=.lll)
-ASM = $(SRCS:.java=.s)
-BINARY = $(SRCS:.java=.binary)
-OUTPUT = $(SRCS:.java=.output)
+CLASSES := $(SRC:.java=.class)
+SOL := $(SRC:.java=.sol)
+LL := $(SRC:.java=.ll)
+BINARY := $(SRC:.java=.binary)
+OUTPUT := $(SRC:.java=.output)
 
+# TODO: Use flags from top-level Makefile
+CLANG := clang++
+CLANG_FLAGS := \
+	-Wno-override-module -L/usr/local/lib/ -lgc -g \
+	-L$(RUNTIME)/out -ljvm \
+	-L$(JDK)/out -ljdk \
+	-Wl,-rpath,$(RUNTIME)
 
-all: sol output
+all: output
 
 sol: $(SOL)
 
-ir: $(LLVMIR)
+ir: $(LL)
 
-asm: $(ASM)
+ll: $(LL)
 
 binary: $(BINARY)
 
 output: $(OUTPUT)
 
-$(CLASSES): $(SRCS)
-	@echo "Compiling $(words $?) tests with javac"
-	@javac -source 7 -cp $(RUNTIME)/classes $?
-	@touch $(CLASSES)
+# Compiling Java with a Makefile is never ideal, but this is sufficient.
+# Recall that $? expands to all dependencies newer than the target.
+$(SOL): $(SRC)
+	@echo "Compiling $(words $?) test(s) with javac"
+	@javac $?
+	@echo "Generating solutions for $(words $?) test(s)"
+	@for f in $?; do \
+		java -ea -cp . $(subst /,.,$${f%.java}) > $${f%.java}.sol; \
+	done
+	@touch $(SOL)
 
-%.sol: %.class
-	@echo "Generating solution for $*"
-	@java -ea -cp .:$(RUNTIME)/classes $(subst /,.,$*) > $@
-
-# Mixing Ant and Make is tricky; this rule isn't perfect,
-# but will work in almost all cases.
-ifdef BATCHED
-$(LLVMIR): $(SRCS) $(POLYLLVMC_SRC) $(RUNTIME_SRC)
-	@echo "Building polyllvmc"
-	@ant -f $(BASE_DIR)
-	@echo "Compiling $(words $(SRCS)) Java files down to IR"
-	@$(BASE_DIR)/bin/polyllvmc -assert $(SRCS)
-else
-%.ll: %.java $(POLYLLVMC_SRC) $(RUNTIME_SRC)
-	@echo "Building polyllvmc"
-	@ant -f $(BASE_DIR)
-	@echo "Compiling $<"
-	@$(BASE_DIR)/bin/polyllvmc -assert $<
-endif
-
-.PHONY: phony
-%.desugar: %.java $(POLYLLVMC_SRC) $(RUNTIME_SRC)
-	@echo "Desugaring $<"
-	@ant -f $(BASE_DIR)
-	@$(BASE_DIR)/bin/polyllvmc -assert -dump-desugared $<
-
+$(LL): $(SRC)
+	@$(MAKE) JDK=jdk-lite -C $(BASE_DIR)
+	@echo "Compiling $(words $?) Java file(s) down to LLVM IR"
+	@$(BASE_DIR)/bin/polyllvmc -cp $(JDK_CLS) -assert $?
+	@touch $(LL)
 
 %.binary: %.ll
 	@echo "Creating binary for $<"
-	@clang++ -Wno-override-module -L/usr/local/lib/ -lgc -g -o $@ $(RUNTIME)/runtime.o $<
+	@$(CLANG) $(CLANG_FLAGS) -o $@ $<
 
-.PHONY: phony
 %.output: %.binary phony
 	@echo "Generating output for $*"
 	@./$< | tee $@
 
+clean: phony
+	@echo "Removing generated files"
+	@rm -rf *.dSYM *.sol *.ll *.binary *.output *.class
 
-EXT = sol ll binary output dSYM class
-clean: $(addprefix clean-, $(EXT))
-clean-%:
-	find . -name "*.$*" -delete
-clean-dSYM:
-	rm -rf *.dSYM
+.PHONY: phony

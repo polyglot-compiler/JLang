@@ -62,7 +62,6 @@ class Array implements Cloneable, Serializable {
         }
     }
 
-    @Override
     public Array clone() {
         try {
             return (Array) super.clone();

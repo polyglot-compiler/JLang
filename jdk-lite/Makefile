@@ -9,9 +9,6 @@ CLASSES := $(OUT)/classes
 # File indicating whether .class files have been produced.
 CLS_STAMP := $(CLASSES)/cls_stamp
 
-# Hack to allow dependency on PolyLLVM code.
-PLC_SRC := $(shell find ../compiler/src -name "*.java")
-
 JAVA_SRC := $(shell find src -name "*.java")
 JAVA_CLS := $(JAVA_SRC:$(SRC)/%.java=$(CLASSES)/%.class)
 JAVA_LL := $(JAVA_SRC:$(SRC)/%.java=$(OUT)/%.ll)
@@ -37,14 +34,14 @@ classes: $(CLS_STAMP)
 
 # Runtime Java code (.java --> .class)
 $(CLS_STAMP): $(JAVA_SRC)
-	@echo "Compiling $(words $(JAVA_SRC)) Java files down to Java bytecode"
+	@echo "Compiling $(words $(JAVA_SRC)) Java files with javac (.java --> .class)"
 	@mkdir -p $(CLASSES)
 	@$(JAVAC) -d $(CLASSES) $(JAVA_SRC)
 	@date > $@
 
 # Compile JDK Java code (.java --> .ll)
-$(JAVA_LL): $(PLC_SRC)
-	@echo "Compiling $(words $(JAVA_SRC)) Java files down to LLVM IR"
+$(JAVA_LL): $(JAVA_SRC) $(PLC_SRC)
+	@echo "Compiling $(words $(JAVA_SRC)) Java files with PolyLLVM (.java --> .ll)"
 	@# We compile java.lang.Object separately, since otherwise
 	@# we get duplicate class errors from Polyglot. (TODO)
 	@$(PLC) -c -d $(OUT) $(filter %Object.java,$(JAVA_SRC))

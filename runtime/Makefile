@@ -1,43 +1,47 @@
+ifndef TOP_LEVEL_MAKEFILE_INVOKED
+$(error Please invoke the top-level Makefile)
+endif
+
 SRC := src
 OUT := out
 CLASSES := $(OUT)/classes
 
-# Hack to allow dependency on PolyLLVM code.
-PLC_SRC := $(shell find ../compiler/src -name "*.java")
-
-PLC := ../bin/polyllvmc
-JDK7 ?= /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
-JAVAC := $(JDK7)/bin/javac
+# Files indicating whether .class and .ll files have been generated.
+CLS_STAMP := $(OUT)/cls_stamp
+LL_STAMP := $(OUT)/ll_stamp
 
 JAVA_SRC := $(shell find $(SRC) -name "*.java")
-NATIVE_SRC := $(shell find native -name "*.cpp")
-
-JAVA_CLS := $(JAVA_SRC:$(SRC)/%.java=$(CLASSES)/%.class)
-JAVA_LL := $(JAVA_SRC:$(SRC)/%.java=$(OUT)/%.ll)
-
 JAVA_OBJ := $(JAVA_SRC:$(SRC)/%.java=$(OUT)/%.o)
+
+NATIVE_SRC := $(shell find native -name "*.cpp")
 NATIVE_OBJ := $(NATIVE_SRC:%.cpp=$(OUT)/%.o)
+
 ALL_OBJ := $(JAVA_OBJ) $(NATIVE_OBJ)
 
-JNI_INCLUDES := \
-	-I"$(JAVA_HOME)/include" \
-	-I"$(JAVA_HOME)/include/darwin" \
-	-I"$(JAVA_HOME)/include/linux"
-
-CLANG := clang++
 JAVA_FLAGS := \
 	-glldb -Wno-override-module
 NATIVE_FLAGS := \
 	-glldb -std=c++14 -Inative $(JNI_INCLUDES) \
 	-Wall -Wno-unused-private-field -MMD -pthread
-LINK_FLAGS := \
-	-glldb -lgc -undefined dynamic_lookup # TODO: Ideally would would not need dynamic_lookup
 
 # We use the name "libjvm" because that is expected by JDK native code.
-LIBJVM := libjvm.dylib
+LIBJVM := $(OUT)/libjvm.dylib
 LIBJVM_VERSION := -current_version 1.0.0 -compatibility_version 1.0.0
+LINK_FLAGS := \
+	-glldb -lgc -shared $(LIBJVM_VERSION) \
+	-install_name "$(realpath .)/$(LIBJVM)" \
+	-undefined dynamic_lookup # TODO: Ideally would would not need dynamic_lookup
 
-all: $(OUT)/$(LIBJVM)
+all: classes $(LIBJVM)
+
+classes: $(CLS_STAMP)
+
+# Runtime Java classes (.java --> .class)
+$(CLS_STAMP): $(JAVA_SRC)
+	@echo "Compiling $(words $(JAVA_SRC)) Java files with javac (.java --> .class)"
+	@mkdir -p $(CLASSES)
+	@$(JAVAC) -d $(CLASSES) $(JAVA_SRC)
+	@date > $@
 
 # Native code (.cpp --> .o).
 $(NATIVE_OBJ): $(OUT)/%.o: %.cpp
@@ -45,27 +49,21 @@ $(NATIVE_OBJ): $(OUT)/%.o: %.cpp
 	@echo "Compiling $<"
 	@$(CLANG) $(NATIVE_FLAGS) -c -o $@ $<
 
-# Runtime Java code (.java --> .class)
-$(JAVA_CLS): $(JAVA_SRC)
-	@echo "Compiling $(words $(JAVA_SRC)) Java files down to Java bytecode"
-	@mkdir -p $(CLASSES)
-	@$(JAVAC) -d $(CLASSES) $(JAVA_SRC)
-
-# Runtime Java code (.java --> .ll)
-$(JAVA_LL): $(JAVA_CLS) $(PLC_SRC)
-	@echo "Compiling $(words $(JAVA_SRC)) Java files down to LLVM IR"
-	@$(PLC) -c -d $(OUT) $(JAVA_SRC)
+# Runtime Java IR (.java --> .ll)
+$(LL_STAMP): $(CLS_STAMP) $(PLC_SRC)
+	@echo "Compiling $(words $(JAVA_SRC)) Java files with PolyLLVM (.java --> .ll)"
+	@$(PLC) -cp $(JDK_CLASSES) -c -d $(OUT) $(JAVA_SRC)
+	@date > $@
 
 # Runtime Java code (.ll --> .o).
-$(JAVA_OBJ): %.o: %.ll
-	@echo "Compiling $<"
-	@$(CLANG) $(JAVA_FLAGS) -c -o $@ $<
+$(JAVA_OBJ): %.o: $(LL_STAMP)
+	@echo "Compiling $(patsubst %.o,%.ll,$@)"
+	@$(CLANG) $(JAVA_FLAGS) -c -o $@ $(patsubst %.o,%.ll,$@)
 
 # Link into library (.o --> .dylib).
-$(OUT)/$(LIBJVM): $(ALL_OBJ)
+$(LIBJVM): $(ALL_OBJ)
 	@echo "Creating libjvm"
-	@$(CLANG) $(LINK_FLAGS) -shared $(LIBJVM_VERSION) -o $@ $^
-	@install_name_tool -id "@rpath/$(LIBJVM)" $@
+	@$(CLANG) $(LINK_FLAGS) -o $@ $^
 
 .PHONY: clean
 clean:

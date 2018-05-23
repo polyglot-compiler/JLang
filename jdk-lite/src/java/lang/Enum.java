@@ -1,6 +1,7 @@
 package java.lang;
 
 import java.io.Serializable;
+import java.io.ObjectInputStream;
 
 public abstract class Enum<E extends Enum<E>> implements Serializable {
     private final String name;
@@ -41,7 +42,7 @@ public abstract class Enum<E extends Enum<E>> implements Serializable {
     }
 
     public final Class<E> getDeclaringClass() {
-                                return null;
+        return null;
     }
 
     public static <T extends Enum<T>> T valueOf(Class<T> enumType,
@@ -49,7 +50,7 @@ public abstract class Enum<E extends Enum<E>> implements Serializable {
         throw new RuntimeException("java.lang.Enum#valueOf unimplemented");
     }
 
-    private void readObject( Object in) {}
+    private void readObject(ObjectInputStream in) {}
 
     private void readObjectNoData() {}
 }

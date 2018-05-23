@@ -1,21 +1,20 @@
 package java.lang;
 
 public final class Class<T> {
-    private final String name;
 
-    private Class(String name) {
-        this.name = name;
+    private static native void registerNatives();
+    static {
+        registerNatives();
     }
 
     public static Class forName(String name) {
-        return new Class(name);
+        throw new RuntimeException("unimplemented");
     }
 
-    public String getName() {
-        return name;
-    }
+    public native String getName();
 
     public String toString() {
+        String name = getName();
         switch (name) {
             case "void":
             case "boolean":
@@ -28,7 +27,7 @@ public final class Class<T> {
             case "double":
                 return name;
             default:
-                return "class " + getName();
+                return "class " + name;
         }
     }
 }

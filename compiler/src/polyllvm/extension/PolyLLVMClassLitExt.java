@@ -13,8 +13,6 @@ import polyllvm.ast.PolyLLVMExt;
 import polyllvm.visit.DesugarLocally;
 import polyllvm.visit.LLVMTranslator;
 
-import static polyllvm.util.Constants.PRIMITIVE_CLASS_OBJECT_SUFFIX;
-
 public class PolyLLVMClassLitExt extends PolyLLVMExt {
 
     @Override
@@ -37,16 +35,13 @@ public class PolyLLVMClassLitExt extends PolyLLVMExt {
         Type t = n.typeNode().type();
         Position pos = n.position();
 
-        if (t.isVoid() || t.isPrimitive()) {
-            // Get the class object from the runtime library.
-            String fieldName = t.toString() + PRIMITIVE_CLASS_OBJECT_SUFFIX;
-            return v.tnf.StaticField(pos, v.ts.RuntimeHelper(), fieldName);
-        }
-        else if (t.isArray()) {
+        if (t.isVoid() || t.isPrimitive() || t.isArray()) {
             // Call java.lang.Class.forName(...) and trust library code
             // to return the right class object.
-            // TODO: Right now this does the match the class object in the dispatch vector.
-            Expr classNameExpr = v.tnf.StringLit(pos, getArrayClassObjectName(t.toArray()));
+            String name = t.isArray()
+                    ? getArrayClassObjectName(t.toArray())
+                    : t.toString();
+            Expr classNameExpr = v.tnf.StringLit(pos, name);
             return v.tnf.StaticCall(pos, v.ts.Class(), v.ts.Class(), "forName", classNameExpr);
         }
         else {
