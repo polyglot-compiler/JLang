@@ -7,11 +7,11 @@ class ClassLiteral {
     abstract class Abstract {}
 
     public static void main(String[] args) {
-        System.out.println(int.class);
+        // System.out.println(int.class); TODO
         System.out.println(ClassLiteral.Inner.class);
         System.out.println(Object.class.toString());
-        System.out.println(byte[].class);
-        System.out.println(String[][].class);
+        // System.out.println(byte[].class); TODO
+        // System.out.println(String[][].class); TODO
         System.out.println();
 
         System.out.println(new ClassLiteral().getClass());

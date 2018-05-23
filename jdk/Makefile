@@ -1,46 +1,47 @@
-MAIN = Main
-PLC := ../bin/polyllvmc
-JDK7 ?= /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
-JDK_SRC := openjdk-7-src
+ifndef TOP_LEVEL_MAKEFILE_INVOKED
+$(error Please invoke the top-level Makefile)
+endif
+
+SRC := src
 PATCHES := patches
 OUT := out
-
-CLANG := clang++
-
-# Hack to allow dependency on PolyLLVM code.
-PLC_SRC := $(shell find ../compiler/src -name "*.java")
-
-LIBJVM := ../runtime/out/libjvm.dylib
-LIBJDK := libjdk.dylib
+CLASSES := $(OUT)/classes
 
 # PolyLLVM flags when compiling the JDK.
-PLC_FLAGS := -assert -method-filter jdk-method-filter.txt -sourcepath $(JDK_SRC)
+PLC_FLAGS := -assert -method-filter jdk-method-filter.txt -sourcepath $(SRC)
 
-JNI_INCLUDES = \
-	-I"$(JAVA_HOME)/include" \
-	-I"$(JAVA_HOME)/include/darwin" \
-	-I"$(JAVA_HOME)/include/linux"
+all: $(LIBJDK)
 
-# For now we test with Main.java.
-all: $(MAIN).binary
+.PHONY: classes
+classes: $(CLASSES)/cstamp
 
 # Extract OpenJDK 7 source.
 # The zip file comes from https://sourceforge.net/projects/jdk7src/
-$(JDK_SRC): | $(JDK_SRC).zip
+$(SRC): | $(SRC).zip
 	@echo "Unzipping JDK sources"
-	@unzip -q -d $@ $(JDK_SRC).zip
-	@cp -r $(JDK_SRC) $(JDK_SRC).orig
+	@unzip -q -d $@ $(SRC).zip
+	@cp -r $(SRC) $(SRC).orig
 
-$(JDK_SRC)/patchstamp: | $(JDK_SRC)
+# Path JDK sources to work around PolyLLVM unimplemented features.
+$(SRC)/patchstamp: | $(SRC)
 	@echo "Patching JDK source files"
 	@for f in `find $(PATCHES) -name "*.patch"`; do patch -p0 < "$$f"; done
 	@date > $@
 
+$(CLASSES)/cstamp: | $(SRC)
+	@echo "Creating JDK class files"
+	@mkdir -p $(CLASSES)
+	@find $(SRC) -name "*.java" > all.txt
+	@$(JAVAC) @all.txt -Xlint:none -d $(CLASSES)
+	@rm all.txt
+	@date > $@
+
 # Compile JDK source files (.java --> .ll)
 # Use a Hello World program to compile only the most critical slice of the JDK.
-$(OUT)/llstamp: $(MAIN).java $(JDK_SRC)/patchstamp $(PLC_SRC)
+$(OUT)/llstamp: $(SRC)/patchstamp $(PLC_SRC)
 	@echo "Compiling JDK sources"
-	@$(PLC) $(PLC_FLAGS) -d $(OUT) -entry-point $(MAIN) $(MAIN).java
+	@$(PLC) $(PLC_FLAGS) -d $(OUT) -entry-point Main Main.java
+	@rm $(OUT)/Main.ll
 	@date > $@
 	@echo "Successfully compiled `find $(OUT) -name '*.ll' | wc -l | awk '{print $1}'` files"
 
@@ -59,29 +60,21 @@ $(OUT)/stubs.o: stubs.cpp
 	@$(CLANG) -glldb -std=c++14 $(JNI_INCLUDES) -c -o $@ $<
 
 # Create a shared library for compiled JDK classes.
-$(OUT)/$(LIBJDK): $(OUT)/ostamp $(OUT)/stubs.o $(LIBJVM)
+$(LIBJDK): $(OUT)/ostamp $(OUT)/stubs.o $(LIBJVM)
 	@echo "Creating libjdk"
-	@$(CLANG) -glldb -lgc $(LIBJVM) -shared \
+	@$(CLANG) $(LIBJDK_FLAGS) \
 		`find $(OUT) -name "*.o"` \
 		$(JDK7)/jre/lib/{libjava,libnio,libnet,libzip}.dylib \
+		-headerpad_max_install_names \
 		-o $@
 
-# Create binary.
-$(MAIN).binary: $(OUT)/$(LIBJDK)
-	@# We include libjvm directly, since that's where the 'main' function is.
-	@$(CLANG) -glldb $(LIBJVM) -o $@ $<
-	@install_name_tool -add_rpath $(JDK7)/jre/lib/ $@ # Path to system JDK.
-	@install_name_tool -add_rpath $(dir $(LIBJVM)) $@ # Path to our runtime.
+	@# Path to system JDK. Needed for libjava.
+	@install_name_tool -add_rpath $(JDK7)/jre/lib $@
 
-$(OUT)/classes/cstamp: | $(JDK_SRC)
-	@echo "Creating JDK class files"
-	@mkdir -p $(OUT)/classes
-	@find $(JDK_SRC) -name "*.java" > all.txt
-	@javac @all.txt -source 7 -target 7 -Xlint:none -d $(OUT)/classes
-	@rm all.txt
-	@date > $@
+	@# Path to runtime (libjvm). Needed because libjava depends on @rpath/libjvm.
+	@install_name_tool -add_rpath $(RUNTIME)/out $@
 
 clean:
-	rm -rf $(OUT) $(MAIN).binary $(JDK_SRC)
+	rm -rf $(OUT) $(MAIN).binary $(SRC) $(SRC).orig
 
 .PHONY: all

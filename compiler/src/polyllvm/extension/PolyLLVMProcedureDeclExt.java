@@ -81,6 +81,9 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
                 String className = n.procedureInstance().container().toClass().fullName();
                 v.addEntryPoint(v.currFn(), className);
 
+                // For bootstrapping reasons, initialize the java.lang.Class class first.
+                v.utils.buildClassLoadCheck(v.ts.Class());
+
                 // Initialize the java.lang.String class at each entry point to avoid
                 // the need for class loading before string literals.
                 v.utils.buildClassLoadCheck(v.ts.String());

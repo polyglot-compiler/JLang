@@ -26,7 +26,8 @@ public class TestFunctional {
 
     @BeforeClass
     public static void setup() throws IOException, InterruptedException {
-        TestUtil.make(DIR, TIMEOUT, "ir", "-k", "BATCHED=true");
+        TestUtil.make(DIR, TIMEOUT, "clean");
+        TestUtil.make(DIR, TIMEOUT, "binary", "-k");
     }
 
     @Parameters(name = "{0}")

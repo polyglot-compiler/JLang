@@ -79,7 +79,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         LLVMValueRef classInfo = v.utils.buildConstStruct(
 
                 // Class name, char*
-                v.utils.buildGlobalCStr(ct.fullName()),
+                v.utils.buildGlobalCStr(v.mangler.userVisibleClassName(ct)),
 
                 // Super class pointer, jclass*
                 ct.superType() != null

@@ -10,7 +10,7 @@ public class Generic13 {
     // Yet A<T> is not a subtype of A<A<T>>, so the bounds on the
     // type variable are not satisfied.
     static <T extends A<T>> void f(A<T> a) {
-        System.out.println(a.getClass().getName());
+        System.out.println(a.getClass());
     }
 
     public static void main(String[] args) {
