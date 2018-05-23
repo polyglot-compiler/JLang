@@ -30,20 +30,37 @@ public class TypedNodeFactory {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    // Formals and variables.
+    // Fields, formals, and variables.
     ////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Creates a field declaration, adding a corresponding field instance to
+     * {@code container} if it does not already exist.
+     */
     public FieldDecl FieldDecl(
-            Position pos, String name, Type type, ParsedClassType container,
-            Expr init, Flags flags) {
+            Position pos, ParsedClassType container,
+            Flags flags, Type type, String name, Expr init) {
         FieldInstance fi = ts.fieldInstance(pos, container, flags, type, name);
         container.addField(fi);
-        return nf.FieldDecl(pos, flags, nf.CanonicalTypeNode(pos, type), nf.Id(pos, name), init)
-                .fieldInstance(fi);
+        CanonicalTypeNode typeNode = nf.CanonicalTypeNode(pos, type);
+        Id id = nf.Id(pos, name);
+        return nf.FieldDecl(pos, flags, typeNode, id, init).fieldInstance(fi);
     }
 
-    public Field StaticField(Position pos, String name, ReferenceType container) {
-        return Field(pos, nf.CanonicalTypeNode(pos, container), name);
+    /**
+     * Like {@link TypedNodeFactory#StaticField(Position, ReferenceType, String)},
+     * but does not assume that the static field already exists in {@code container}.
+     */
+    public Field StaticFieldForced(
+            Position pos, ReferenceType container, Flags flags, Type type, String name) {
+        FieldInstance fi = ts.fieldInstance(pos, container, flags, type, name);
+        CanonicalTypeNode receiver = nf.CanonicalTypeNode(pos, container);
+        return Field(pos, receiver, fi);
+    }
+
+    public Field StaticField(Position pos, ReferenceType container, String name) {
+        CanonicalTypeNode receiver = nf.CanonicalTypeNode(pos, container);
+        return Field(pos, receiver, name);
     }
 
     public Field Field(Position pos, Receiver receiver, String name) {
@@ -53,17 +70,23 @@ public class TypedNodeFactory {
         ClassType fromClass = container.isClass() ? container.toClass() : ts.Object();
         try {
             FieldInstance fi = ts.findField(container, name, fromClass, /*fromClient*/ true);
-            return (Field) nf.Field(pos, receiver, nf.Id(pos, name))
-                    .fieldInstance(fi)
-                    .type(fi.type());
-        } catch (SemanticException e) {
+            return Field(pos, receiver, fi);
+        }
+        catch (SemanticException e) {
             throw new InternalCompilerError(e);
         }
     }
 
+    private Field Field(Position pos, Receiver receiver, FieldInstance fi) {
+        Id id = nf.Id(pos, fi.name());
+        return (Field) nf.Field(pos, receiver, id).fieldInstance(fi).type(fi.type());
+    }
+
     public Formal Formal(Position pos, String name, Type type, Flags flags) {
-        return nf.Formal(pos, flags, nf.CanonicalTypeNode(pos, type), nf.Id(pos, name))
-                .localInstance(ts.localInstance(pos, flags, type, name));
+        TypeNode typeNode = nf.CanonicalTypeNode(pos, type);
+        Id id = nf.Id(pos, name);
+        LocalInstance li = ts.localInstance(pos, flags, type, name);
+        return nf.Formal(pos, flags, typeNode, id).localInstance(li);
     }
 
     public LocalDecl TempVar(Position pos, String name, Type type, Expr init) {
@@ -95,15 +118,17 @@ public class TypedNodeFactory {
     ////////////////////////////////////////////////////////////////////////////
 
     public MethodDecl MethodDecl(
-            Position pos, String name, ParsedClassType container, Type returnType,
-            List<Formal> formals, Block body, Flags flags) {
+            Position pos, ParsedClassType container, Flags flags, Type returnType, String name,
+            List<Formal> formals, Block body) {
         List<Type> argTypes = formals.stream().map(Formal::declType).collect(Collectors.toList());
         MethodInstance mi = ts.methodInstance(
                 pos, container, flags, returnType, name, argTypes,
-                Collections.emptyList());  // PolyLLVM does not care about exn types.
+                Collections.emptyList()); // PolyLLVM does not care about exn types.
         container.addMethod(mi);
+        TypeNode returnTypeNode = nf.CanonicalTypeNode(pos, returnType);
+        Id id = nf.Id(pos, name);
         return nf.MethodDecl(
-                pos, flags, nf.CanonicalTypeNode(pos, returnType), nf.Id(pos, name), formals,
+                pos, flags, returnTypeNode, id, formals,
                 Collections.emptyList(), // PolyLLVM does not care about exn types.
                 body, /*javaDoc*/ null)
                 .methodInstance(mi);
@@ -123,9 +148,25 @@ public class TypedNodeFactory {
                 .constructorInstance(ci);
     }
 
+    /**
+     * Like {@link TypedNodeFactory#StaticCall(Position, ClassType, Type, String, Expr...)},
+     * but does not assume that the static method already exists in {@code container}.
+     */
+    public Call StaticCallForced(
+            Position pos, ReferenceType container,
+            Flags flags, Type returnType, String name, Expr... args) {
+        List<Type> argTypes = Arrays.stream(args).map(Expr::type).collect(Collectors.toList());
+        MethodInstance mi = ts.methodInstance(
+                pos, container, flags, returnType, name, argTypes,
+                Collections.emptyList()); // PolyLLVM does not care about exn types.
+        Receiver receiver = nf.CanonicalTypeNode(pos, container);
+        return Call(pos, receiver, mi, args);
+    }
+
     public Call StaticCall(
-            Position pos, String name, ClassType container, Type returnType, Expr... args) {
-        return Call(pos, nf.CanonicalTypeNode(pos, container), name, container, returnType, args);
+            Position pos, ClassType container, Type returnType, String name, Expr... args) {
+        Receiver receiver = nf.CanonicalTypeNode(pos, container);
+        return Call(pos, receiver, name, container, returnType, args);
     }
 
     public Call Call(
@@ -136,14 +177,20 @@ public class TypedNodeFactory {
             MethodInstance mi = ts.findMethod(
                     container, name, argTypes, /*actualTypeArgs*/ null, container,
                     returnType, /*fromClient*/ true);
-            Call c = (Call) nf.Call(pos, receiver, nf.Id(pos, name), args)
-                    .methodInstance(mi)
-                    .type(returnType);
-            PolyLLVMCallExt ext = (PolyLLVMCallExt) PolyLLVMExt.ext(c);
-            return ext.determineIfDirect(c);
-        } catch (SemanticException e) {
+            return Call(pos, receiver, mi, args);
+        }
+        catch (SemanticException e) {
             throw new InternalCompilerError(e);
         }
+    }
+
+    private Call Call(Position pos, Receiver receiver, MethodInstance mi, Expr... args) {
+        Id id = nf.Id(pos, mi.name());
+        Call c = (Call) nf.Call(pos, receiver, id, args)
+                .methodInstance(mi)
+                .type(mi.returnType());
+        PolyLLVMCallExt ext = (PolyLLVMCallExt) PolyLLVMExt.ext(c);
+        return ext.determineIfDirect(c);
     }
 
     public ConstructorCall ConstructorCall(
@@ -205,7 +252,8 @@ public class TypedNodeFactory {
         return (ClassLit) nf.ClassLit(pos, nf.CanonicalTypeNode(pos, type)).type(classType);
     }
 
-    public Eval EvalAssign(Position pos, Expr target, Expr val) {
+    public Eval EvalAssign(Expr target, Expr val) {
+        Position pos = target.position();
         Assign assign = (Assign) nf.Assign(pos, target, Assign.ASSIGN, val).type(target.type());
         return nf.Eval(pos, assign);
     }

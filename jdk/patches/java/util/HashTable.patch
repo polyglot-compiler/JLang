@@ -1,0 +1,48 @@
+--- src.orig/java/util/HashTable.java	2013-01-04 14:04:08.000000000 -0500
++++ src/java/util/HashTable.java	2018-05-12 20:52:05.000000000 -0400
+@@ -218,32 +218,12 @@
+      */
+     transient boolean useAltHashing;
+
+-    // Unsafe mechanics
+-    /**
+-    * Unsafe utilities
+-    */
+-    private static final sun.misc.Unsafe UNSAFE;
+-
+-    /**
+-    * Offset of "final" hashSeed field we must set in readObject() method.
+-    */
+-    private static final long HASHSEED_OFFSET;
+-
+-     static {
+-        try {
+-            UNSAFE = sun.misc.Unsafe.getUnsafe();
+-            HASHSEED_OFFSET = UNSAFE.objectFieldOffset(
+-                Hashtable.class.getDeclaredField("hashSeed"));
+-        } catch (NoSuchFieldException | SecurityException e) {
+-            throw new Error("Failed to record hashSeed offset", e);
+-        }
+-     }
+-
++    // Modified for PolyLLVM.
+     /**
+      * A randomizing value associated with this instance that is applied to
+      * hash code of keys to make hash collisions harder to find.
+      */
+-    transient final int hashSeed = sun.misc.Hashing.randomHashSeed(this);
++    transient int hashSeed = sun.misc.Hashing.randomHashSeed(this);
+
+     private int hash(Object k) {
+         if (useAltHashing) {
+@@ -1000,8 +980,8 @@
+         s.defaultReadObject();
+
+         // set hashSeed
+-        UNSAFE.putIntVolatile(this, HASHSEED_OFFSET,
+-                sun.misc.Hashing.randomHashSeed(this));
++        // Modified for PolyLLVM.
++        this.hashSeed = sun.misc.Hashing.randomHashSeed(this);
+
+         // Read the original length of the array and number of elements
+         int origlength = s.readInt();

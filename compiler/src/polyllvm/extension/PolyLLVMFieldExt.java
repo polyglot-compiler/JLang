@@ -30,9 +30,10 @@ public class PolyLLVMFieldExt extends PolyLLVMExt {
         n.visitChild(n.target(), v);
 
         if (n.flags().isStatic()) {
-            String mangledGlobalName = v.mangler.mangleStaticFieldName(fi);
-            LLVMTypeRef elemType = v.utils.toLL(n.type());
-            return v.utils.getGlobal(mangledGlobalName, elemType);
+            // Ensure containing class is initialized. See JLS 7, section 12.4.1.
+            // TODO: Can optimize this to avoid checks when inside the container class.
+            v.utils.buildClassLoadCheck(fi.container().toClass());
+            return v.utils.getStaticField(fi);
         }
         else {
             LLVMValueRef instance = v.getTranslation(n.target());

@@ -10,6 +10,7 @@
 #include <cassert>
 
 #include "reflect.h"
+#include "stack_trace.h"
 
 // Large chunks of this file are from ExceptionDemo.cpp in llvm/examples,
 // and some chunks are from llvm/BinaryFormat/Dwarf.h.
@@ -80,7 +81,11 @@ _Unwind_Exception *createUnwindException(jobject jexception) {
 
 void throwUnwindException(_Unwind_Exception* exception) {
   _Unwind_RaiseException(exception);
-  fprintf(stderr, "Aborting due to unsuccessful exception throw.\n");
+  fprintf(stderr,
+    "- - - - - - - - - - - - - - - - - -\n"
+    "Aborting due to uncaught exception.\n"
+    "- - - - - - - - - - - - - - - - - -\n");
+  DumpStackTrace();
   fflush(stderr);
   abort();
 }
@@ -292,7 +297,7 @@ static bool handleActionValue(int64_t *resultAction,
       void *ThisClassInfo = reinterpret_cast<void *>(P);
 
       // Recall that a null class info represents a catch-all clause.
-      if (!ThisClassInfo || instanceof(exn->jexception, ThisClassInfo)) {
+      if (!ThisClassInfo || InstanceOf(exn->jexception, ThisClassInfo)) {
         *resultAction = i + 1;
         ret = true;
         break;

@@ -35,7 +35,7 @@ public class PolyLLVMArrayInitExt extends PolyLLVMExt {
             LLVMValueRef base = v.obj.buildArrayBaseElementPtr(array, n.type().toArray());
             int idx = 0;
             for (Expr expr : n.elements()) {
-                LLVMValueRef gep = v.utils.buildStructGEP(base, idx);
+                LLVMValueRef gep = v.utils.buildGEP(base, idx);
                 LLVMBuildStore(v.builder, v.getTranslation(expr), gep);
                 ++idx;
             }

@@ -13,35 +13,36 @@ public class PolyLLVMMangler {
         this.v = v;
     }
 
-    static private final String JAVA_PREFIX = "Java";
-    static private final String ENV_PREFIX = "Env";
-    static private final String CLASS_TYPE_STR = "class";
-    static private final String INTERFACE_TYPE_STR = "interface";
-    static private final String CDV_TYPE_STR = "cdv_ty";
-    static private final String IDV_TYPE_STR = "idv_ty";
-    static private final String SIZE_STR = "size";
-    static private final String CDV_STR = "cdv";
-    static private final String IDV_STR = "idv";
-    static private final String IDV_ARR_STR = "idv_arr";
-    static private final String IDV_ID_ARR_STR = "idv_id_arr";
-    static private final String IDV_ID_HASH_ARR_STR = "idv_hash_arr";
-    static private final String CLASS_INIT_STR = "init";
-    static private final String IT_INIT_STR = "it_init";
-    static private final String IT_STR_STR = "intf_name";
-    static private final String TYPE_INFO_STR = "rtti";
-    static private final String CLASS_ID_STR = "class_id";
+    private static final String JAVA_PREFIX = "Java";
+    private static final String POLYGLOT_PREFIX = "Polyglot";
+    private static final String JNI_TRAMPOLINE_PREFIX = "Jni_trampoline";
+    private static final String CLASS_TYPE_STR = "class";
+    private static final String INTERFACE_TYPE_STR = "interface";
+    private static final String CDV_TYPE_STR = "cdv_ty";
+    private static final String IDV_TYPE_STR = "idv_ty";
+    private static final String CDV_STR = "cdv";
+    private static final String IDV_STR = "idv";
+    private static final String IDV_ARR_STR = "idv_arr";
+    private static final String IDV_ID_ARR_STR = "idv_id_arr";
+    private static final String IDV_ID_HASH_ARR_STR = "idv_hash_arr";
+    private static final String IT_INIT_STR = "it_init";
+    private static final String IT_STR_STR = "intf_name";
+    private static final String TYPE_INFO_STR = "rtti";
+    private static final String CLASS_ID_STR = "class_id";
+    private static final String CLASS_STR = "class";
+    private static final String CLASS_INFO_STR = "class_info";
+    private static final String LOAD_CLASS_STR = "load_class";
 
     // From the JNI API.
-    static private final String UNDERSCORE_ESCAPE = "_1";
-    static private final String SEMICOLON_ESCAPE = "_2";
-    static private final String BRACKET_ESCAPE = "_3";
+    private static final String UNDERSCORE_ESCAPE = "_1";
+    private static final String SEMICOLON_ESCAPE = "_2";
+    private static final String BRACKET_ESCAPE = "_3";
 
     /**
-     * To facilitate JNI support, we mangle types as specified in the JNI API.
+     * Mangle types as specified in the JNI API.
      * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/types.html#type_signatures
-     * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names
      */
-    private String typeSignature(Type t) {
+    private String jniUnescapedSignature(Type t) {
         Type et = v.ts.erasureType(t);
         if      (et.isBoolean()) return "Z";
         else if (et.isByte())    return "B";
@@ -51,95 +52,156 @@ public class PolyLLVMMangler {
         else if (et.isLong())    return "J";
         else if (et.isFloat())   return "F";
         else if (et.isDouble())  return "D";
-        else if (et.isArray())
-            return BRACKET_ESCAPE + typeSignature(et.toArray().base());
-        else if (et.isClass())
-            return "L" + mangleQualifiedName(et.toClass()) + SEMICOLON_ESCAPE;
-        else
+        else if (et.isVoid())    return "V";
+        else if (et.isArray()) {
+            return "[" + jniUnescapedSignature(et.toArray().base());
+        }
+        else if (et.isClass()) {
+            ClassType base = (ClassType) et.toClass().declaration();
+            return "L" + base.fullName().replace('.', '/') + ";";
+        }
+        else {
             throw new InternalCompilerError("Unsupported type for mangling: " + et);
-    }
-
-    private String mangleName(String name) {
-        return name.replace("_", UNDERSCORE_ESCAPE);
-    }
-
-    private String mangleQualifiedName(ReferenceType t) {
-        ClassType erasure = v.utils.erasureLL(t);
-        ParsedClassType base = (ParsedClassType) erasure.declaration();
-        if (base.outer() != null) {
-            return mangleQualifiedName(base.outer()) + "_" + base.name();
-        } else {
-            return base.fullName().replace('.', '_');
         }
     }
 
-    private String mangleProcName(ProcedureInstance pi, String name) {
+    private String escapeSignature(String signature) {
+        return signature
+                .replace("_", UNDERSCORE_ESCAPE)
+                .replace("/", "_")
+                .replace(";", SEMICOLON_ESCAPE)
+                .replace("[", BRACKET_ESCAPE);
+    }
+
+    /**
+     * Returns a class name formatted for use by Class#getName() and Class#forName(...).
+     * E.g., package.Clazz$InnerClass
+     */
+    public String userVisibleClassName(ClassType t) {
+        return t.outer() != null
+                ? userVisibleClassName(t.outer()) + "$" + t.name()
+                : t.fullName();
+    }
+
+    /**
+     * Returns the type signature of the given procedure for JNI purposes.
+     * E.g., (ILjava/lang/String;[I)J
+     */
+    public String jniUnescapedSignature(ProcedureInstance pi) {
+        pi = v.utils.erasedProcedureInstance(pi); // Erase generics.
+        Type returnType = v.utils.erasedReturnType(pi);
+        String formalTypeSignature = pi.formalTypes().stream()
+                .map(this::jniUnescapedSignature)
+                .reduce("", (a, b) -> a + b);
+        return "(" + formalTypeSignature + ")" + jniUnescapedSignature(returnType);
+    }
+
+    /**
+     * Mangle types as specified in the JNI API, escaped for symbol table purposes.
+     * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/design.html#resolving_native_method_names
+     */
+    private String jniEscapedSignature(Type t) {
+        return escapeSignature(jniUnescapedSignature(t));
+    }
+
+    /**
+     * Similar to {@link PolyLLVMMangler#jniUnescapedSignature(Type)}, but
+     * merges types with the same calling convention treatment.
+     */
+    private String callingConventionSignature(Type t) {
+        return t.isReference() ? "L" : jniUnescapedSignature(t);
+    }
+
+    /**
+     * Similar to {@link PolyLLVMMangler#jniUnescapedSignature(ProcedureInstance)}, but
+     * merges signatures with the same calling convention.
+     */
+    public String callingConventionSignature(ProcedureInstance pi) {
+        pi = v.utils.erasedProcedureInstance(pi); // Erase generics.
+        Type returnType = v.utils.erasedReturnType(pi);
+        String formalTypeSignature = v.utils.erasedImplicitFormalTypes(pi).stream()
+                .map(this::callingConventionSignature)
+                .reduce("", (a, b) -> a + b);
+        return "(" + formalTypeSignature + ")" + callingConventionSignature(returnType);
+    }
+
+    private String escapedName(String name) {
+        return name.replace("_", UNDERSCORE_ESCAPE);
+    }
+
+    private String qualifiedName(ReferenceType t) {
+        ClassType erasure = v.utils.erasureLL(t);
+        ClassType base = (ClassType) erasure.declaration();
+        return base.fullName().replace('.', '_');
+    }
+
+    private String procSuffix(ProcedureInstance pi, String name, boolean abbreviated) {
         StringBuilder sb = new StringBuilder();
-        sb.append(JAVA_PREFIX);
+        sb.append(qualifiedName(pi.container()));
         sb.append('_');
-        sb.append(mangleQualifiedName(pi.container()));
-        sb.append('_');
-        sb.append(mangleName(name));
-        sb.append("__");
-        for (Type t : pi.formalTypes())
-            sb.append(typeSignature(t));
+        sb.append(escapedName(name));
+        if (!abbreviated) {
+            // Add argument type information.
+            sb.append("__");
+            for (Type t : pi.formalTypes()) {
+                sb.append(jniEscapedSignature(t));
+            }
+        }
         return sb.toString();
     }
 
-    public String mangleProcName(ProcedureInstance pi) {
+    private String procSuffix(ProcedureInstance pi, boolean abbreviated) {
         if (pi instanceof MethodInstance) {
             MethodInstance mi = (MethodInstance) pi;
-            return mangleProcName(mi.orig(), mi.name());
-        } else if (pi instanceof ConstructorInstance) {
+            return procSuffix(mi.orig(), mi.name(), abbreviated);
+        }
+        else if (pi instanceof ConstructorInstance) {
             ConstructorInstance ci = (ConstructorInstance) pi;
-            return mangleProcName(ci.orig(), ci.container().toClass().name());
-        } else {
+            return procSuffix(ci.orig(), ci.container().toClass().name(), abbreviated);
+        }
+        else {
             throw new InternalCompilerError("Unknown procedure type: " + pi.getClass());
         }
     }
 
-    public String mangleStaticFieldName(FieldInstance fi) {
-        return mangleStaticFieldName(fi.container(), fi.name());
+    public String procJniTrampoline(ProcedureInstance pi) {
+        return JNI_TRAMPOLINE_PREFIX + "_" + callingConventionSignature(pi);
     }
 
-    public String mangleStaticFieldName(ReferenceType rt, String fieldName) {
-        return JAVA_PREFIX + "_" + mangleQualifiedName(rt) + "_" + mangleName(fieldName);
+    public String proc(ProcedureInstance pi) {
+        return POLYGLOT_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ false);
     }
 
-    public String sizeVariable(ReferenceType superClass) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(superClass) + "_" + SIZE_STR;
+    public String shortNativeSymbol(ProcedureInstance pi) {
+        return JAVA_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ true);
     }
 
-    public String cdvGlobalId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + CDV_STR;
+    public String longNativeSymbol(ProcedureInstance pi) {
+        return JAVA_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ false);
     }
 
-    public String idvArrGlobalId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IDV_ARR_STR;
+    public String staticField(FieldInstance fi) {
+        return staticField(fi.container(), fi.name());
     }
 
-    public String idvIdArrGlobalId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IDV_ID_ARR_STR;
-    }
-
-    public String idvIdHashArrGlobalId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IDV_ID_HASH_ARR_STR;
+    public String staticField(ReferenceType rt, String fieldName) {
+        return POLYGLOT_PREFIX + "_" + qualifiedName(rt) + "_" + escapedName(fieldName);
     }
 
     public String idvGlobalId(ClassType intf, ReferenceType clazz) {
-        return ENV_PREFIX +
-                "_" + mangleQualifiedName(intf) +
-                "_" + mangleQualifiedName(clazz) +
+        return POLYGLOT_PREFIX +
+                "_" + qualifiedName(intf) +
+                "_" + qualifiedName(clazz) +
                 "_" + IDV_STR;
     }
 
     public String cdvTyName(ReferenceType t) {
-        String mangled = mangleQualifiedName(t);
+        String mangled = qualifiedName(t);
         return CDV_TYPE_STR + "." + mangled;
     }
 
     public String idvTyName(ClassType intf) {
-        String intfMangled = mangleQualifiedName(intf);
+        String intfMangled = qualifiedName(intf);
         return IDV_TYPE_STR + "." + intfMangled;
     }
 
@@ -148,34 +210,62 @@ public class PolyLLVMMangler {
     }
 
     public String classTypeName(ClassType t) {
-        String className = mangleQualifiedName(t);
+        String className = qualifiedName(t);
         String prefix = v.utils.erasureLL(t).flags().isInterface()
                 ? INTERFACE_TYPE_STR
                 : CLASS_TYPE_STR;
         return prefix + "." + className;
     }
 
-    public String classInitFunction(ClassDecl n) {
-        return classInitFunction(n.type());
+    public String cdvGlobalId(ReferenceType rt) {
+        return classSpecificGlobal(rt, CDV_STR);
     }
 
-    public String classInitFunction(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + CLASS_INIT_STR;
+    public String idvArrGlobalId(ReferenceType rt) {
+        return classSpecificGlobal(rt, IDV_ARR_STR);
+    }
+
+    public String idvIdArrGlobalId(ReferenceType rt) {
+        return classSpecificGlobal(rt, IDV_ID_ARR_STR);
+    }
+
+    public String idvIdHashArrGlobalId(ReferenceType rt) {
+        return classSpecificGlobal(rt, IDV_ID_HASH_ARR_STR);
     }
 
     public String interfacesInitFunction(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IT_INIT_STR;
+        return classSpecificGlobal(rt, IT_INIT_STR);
     }
 
     public String interfaceStringVariable(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + IT_STR_STR;
+        return classSpecificGlobal(rt, IT_STR_STR);
     }
 
-    public String classObjName(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + TYPE_INFO_STR;
+    public String typeInfo(ReferenceType rt) {
+        return classSpecificGlobal(rt, TYPE_INFO_STR);
     }
 
     public String typeIdentityId(ReferenceType rt) {
-        return ENV_PREFIX + "_" + mangleQualifiedName(rt) + "_" + CLASS_ID_STR;
+        return classSpecificGlobal(rt, CLASS_ID_STR);
+    }
+
+    public String classObj(ClassType ct) {
+        return classSpecificGlobal(ct, CLASS_STR);
+    }
+
+    public String classInfoGlobal(ClassType ct) {
+        return classSpecificGlobal(ct, CLASS_INFO_STR);
+    }
+
+    public String classLoadingFunc(ClassType ct) {
+        return classSpecificGlobal(ct, LOAD_CLASS_STR);
+    }
+
+    private String classSpecificGlobal(ReferenceType rt, String suffix) {
+        return typePrefix(rt) + "_" + suffix;
+    }
+
+    private String typePrefix(ReferenceType rt) {
+        return POLYGLOT_PREFIX + "_" + qualifiedName(rt);
     }
 }

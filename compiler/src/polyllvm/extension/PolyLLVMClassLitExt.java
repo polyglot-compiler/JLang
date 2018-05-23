@@ -1,7 +1,5 @@
 package polyllvm.extension;
 
-import org.bytedeco.javacpp.LLVM;
-import org.bytedeco.javacpp.LLVM.LLVMTypeRef;
 import org.bytedeco.javacpp.LLVM.LLVMValueRef;
 import polyglot.ast.ClassLit;
 import polyglot.ast.Expr;
@@ -12,7 +10,6 @@ import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.Position;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.Constants;
 import polyllvm.visit.DesugarLocally;
 import polyllvm.visit.LLVMTranslator;
 
@@ -22,14 +19,13 @@ public class PolyLLVMClassLitExt extends PolyLLVMExt {
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         ClassLit n = (ClassLit) node();
         Type t = n.typeNode().type();
-        assert t.isReference();
+        assert t.isClass();
 
-        String mangled = v.mangler.mangleStaticFieldName(t.toReference(), Constants.CLASS_OBJECT);
-        LLVMTypeRef elemType = v.utils.toLL(v.ts.Class());
-        LLVMValueRef globalVar = v.utils.getGlobal(mangled, elemType);
-        LLVMValueRef load = LLVM.LLVMBuildLoad(v.builder, globalVar, "class.obj");
+        // We eagerly load the class if necessary. See JLS 7, section 12.4.1.
+        v.utils.buildClassLoadCheck(t.toClass());
 
-        v.addTranslation(n, load);
+        LLVMValueRef classObj = v.utils.loadClassObject(t.toClass());
+        v.addTranslation(n, classObj);
         return super.leaveTranslateLLVM(v);
     }
 
@@ -39,20 +35,17 @@ public class PolyLLVMClassLitExt extends PolyLLVMExt {
         Type t = n.typeNode().type();
         Position pos = n.position();
 
-        if (t.isVoid() || t.isPrimitive()) {
-            // Get the class object from the runtime library.
-            String fieldName = t.toString() + Constants.PRIMITIVE_CLASS_OBJECT_SUFFIX;
-            return v.tnf.StaticField(pos, fieldName, v.ts.RuntimeHelper());
-        }
-        else if (t.isArray()) {
+        if (t.isVoid() || t.isPrimitive() || t.isArray()) {
             // Call java.lang.Class.forName(...) and trust library code
             // to return the right class object.
-            // TODO: Right now this does the match the class object in the dispatch vector.
-            Expr classNameExpr = v.tnf.StringLit(pos, getArrayClassObjectName(t.toArray()));
-            return v.tnf.StaticCall(pos, "forName", v.ts.Class(), v.ts.Class(), classNameExpr);
+            String name = t.isArray()
+                    ? getArrayClassObjectName(t.toArray())
+                    : t.toString();
+            Expr classNameExpr = v.tnf.StringLit(pos, name);
+            return v.tnf.StaticCall(pos, v.ts.Class(), v.ts.Class(), "forName", classNameExpr);
         }
         else {
-            assert t.isReference();
+            assert t.isClass();
             return super.desugar(v);
         }
     }

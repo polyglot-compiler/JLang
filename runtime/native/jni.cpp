@@ -1,11 +1,17 @@
-#include <jni.h>
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
-
-// Compiler-specific representations for Java objects.
+#include <cstring>
+#include <vector>
+#include "class.h"
+#include "factory.h"
+#include "native.h"
 #include "rep.h"
+#include "stack_trace.h"
 
-[[noreturn]] static void jni_Unimplemented(const char* name) {
+#include <jni.h>
+
+[[noreturn]] static void JniUnimplemented(const char* name) {
   fprintf(stderr,
     "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
     "The following JNI method is currently unimplemented:\n"
@@ -14,9 +20,226 @@
     "Aborting for now.\n"
     "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
     , name);
-  fflush(stderr);
+  DumpStackTrace();
   abort();
 }
+
+// Begin helper methods.
+
+template <typename T>
+static T*
+GetJavaFieldPtr(jobject obj, jfieldID id) {
+    auto f = reinterpret_cast<const JavaFieldInfo*>(id);
+    auto raw = reinterpret_cast<char*>(obj) + f->offset;
+    return reinterpret_cast<T*>(raw);
+}
+
+template <typename T>
+static T
+GetJavaField(jobject obj, jfieldID id) {
+    return *GetJavaFieldPtr<T>(obj, id);
+}
+
+template <typename T>
+static void
+SetJavaField(jobject obj, jfieldID id, T val) {
+    *GetJavaFieldPtr<T>(obj, id) = val;
+}
+
+template <typename T>
+static T*
+GetJavaArrayData(jarray arr, jboolean *isCopy) {
+    // Note: several JNI methods assume no copy.
+    if (isCopy != nullptr)
+        *isCopy = JNI_FALSE;
+    return reinterpret_cast<T*>(Unwrap(arr)->Data());
+}
+
+// Returns false if the given index is out-of-bounds.
+static bool
+JavaArrayBoundsCheck(jarray arr, jsize index) {
+    jsize len = Unwrap(arr)->Length();
+    if (index < 0 || index >= len) {
+        // TODO: Should technically throw ArrayIndexOutOfBoundsException.
+        fprintf(stderr,
+            "ERROR: Out-of-bounds array index %d in JNI method", index);
+        abort();
+        return false;
+    }
+    return true;
+}
+
+// Similar to GetJavaArrayData, but performs a
+// bounds check for the specified region.
+template <typename T>
+static T*
+GetJavaArrayDataForRegion(jarray arr, jsize start, jsize len) {
+    if (len == 0)
+        return nullptr;
+    if (!JavaArrayBoundsCheck(arr, start)
+            || !JavaArrayBoundsCheck(arr, start + len - 1))
+        return nullptr;
+    // Assumes no copy.
+    return GetJavaArrayData<T>(arr, /*isCopy*/ nullptr);
+}
+
+template <typename T>
+static void
+GetJavaArrayRegion(jarray arr, jsize start, jsize len, T* buf) {
+    if (auto data = GetJavaArrayDataForRegion<T>(arr, start, len)) {
+        std::copy(data + start, data + start + len, buf);
+    }
+}
+
+template <typename T>
+static void
+SetJavaArrayRegion(jarray arr, jsize start, jsize len, const T* buf) {
+    if (auto data = GetJavaArrayDataForRegion<T>(arr, start, len)) {
+        std::copy(buf, buf + len, data + start);
+    }
+}
+
+// Parses one Java argument from a method signature and returns
+// its single-character encoding. Updates the signature position.
+static char
+ParseJavaArg(const char*& s) {
+    switch (*s) {
+    case 'Z': case 'B': case 'C': case 'S':
+    case 'I': case 'J': case 'F': case 'D':
+        return *s++;
+    case '[':
+        ParseJavaArg(++s);
+        return '[';
+    case 'L':
+        while (*s++ != ';')
+            continue;
+        return 'L';
+    default:
+        return '\0';
+    }
+}
+
+static size_t
+CountJavaArgs(const char* sig) {
+    const char* s = sig;
+    assert(*s == '(');
+    ++s;
+
+    size_t count = 0;
+    while (*s != ')')
+        ParseJavaArg(s), ++count;
+    return count;
+}
+
+// Uses a Java method signature encoding to move
+// a variable number of arguments into an array.
+// Assumes the array is large enough.
+static void
+ForwardJavaArgs(const char* sig, va_list args, jvalue* out) {
+    const char* s = sig;
+    jvalue* o = out;
+
+    assert(*s == '(');
+    ++s;
+
+    static_assert(
+        sizeof(jint) == sizeof(int),
+        "We assume that jint is represented with int.\n"
+        "This is needed to handle vararg type promotions correctly.\n"
+        "See http://en.cppreference.com/w/cpp/language/variadic_arguments");
+
+    while (*s != ')') {
+        // Remember that va_arg can only be used on int, long, double,
+        // and pointers. We use static casts everywhere for visual consistency.
+        switch (ParseJavaArg(s)) {
+        case 'Z': o->z = static_cast<jboolean>(va_arg(args, jint));    break;
+        case 'B': o->b = static_cast<jbyte>   (va_arg(args, jint));    break;
+        case 'C': o->c = static_cast<jchar>   (va_arg(args, jint));    break;
+        case 'S': o->s = static_cast<jshort>  (va_arg(args, jint));    break;
+        case 'I': o->i = static_cast<jint>    (va_arg(args, jint));    break;
+        case 'J': o->j = static_cast<jlong>   (va_arg(args, jlong));   break;
+        case 'F': o->f = static_cast<jfloat>  (va_arg(args, jdouble)); break;
+        case 'D': o->d = static_cast<jdouble> (va_arg(args, jdouble)); break;
+        case '[': o->l = static_cast<jarray>  (va_arg(args, jarray));  break;
+        case 'L': o->l = static_cast<jobject> (va_arg(args, jobject)); break;
+        default:
+            fprintf(stderr, "ERROR: Malformed method signature:\n\t%s\n", sig);
+            abort();
+        }
+        ++o; // Advance out position.
+    }
+}
+
+// This type must precisely match the type used by PolyLLVM.
+template <typename T>
+using JniTrampolineType = T (*)(void*, const jvalue*);
+
+// Calls a Java method directly, without using a dispatch vector.
+// All other method calling functions below delegate to this one.
+template <typename T>
+static T
+CallJavaNonvirtualMethod(jmethodID id, const jvalue* args) {
+    auto m = reinterpret_cast<const JavaMethodInfo*>(id);
+    if (!m->fnPtr || !m->trampoline) {
+        fprintf(stderr,
+            "ERROR: Attempting to call Java method with trampoline %p\n"
+            "       and function pointer %p\n", m->fnPtr, m->trampoline);
+        abort();
+    }
+    auto trampoline = reinterpret_cast<JniTrampolineType<T>>(m->trampoline);
+    return trampoline(m->fnPtr, args);
+}
+
+// Calls a Java instance method directly, without using a dispatch vector.
+template <typename T>
+static T
+CallJavaNonvirtualMethod(jobject obj, jmethodID id, const jvalue* args) {
+    auto m = reinterpret_cast<const JavaMethodInfo*>(id);
+    auto num_args = CountJavaArgs(m->sig);
+
+    // Carefully include implicit receiver.
+    auto forward_args = std::vector<jvalue>(num_args + 1);
+    forward_args[0].l = obj;
+    std::copy(args, args + num_args, forward_args.begin() + 1);
+
+    return CallJavaNonvirtualMethod<T>(id, args);
+}
+
+// Calls a Java instance method using the dispatch vector of [obj].
+template <typename T>
+static T
+CallJavaInstanceMethod(jobject obj, jmethodID id, const jvalue* args) {
+    auto m = reinterpret_cast<const JavaMethodInfo*>(id);
+
+    // We could implement virtual dispatch by using dispatch vector
+    // offsets. However, it's slightly simpler to just look up more
+    // precise method info from the class of the current object,
+    // which will include a direct function pointer. Then we
+    // can do a direct call.
+    auto clazz = Unwrap(obj)->Cdv()->Class()->Wrap();
+    m = GetJavaMethodInfo(clazz, m->name, m->sig);
+    id = reinterpret_cast<jmethodID>(const_cast<JavaMethodInfo*>(m));
+
+    // TODO: The above lookup may fail due to type erasure,
+    // in particular if [obj] has a generic super class with substituted
+    // type parameter(s) which do not match the erasure type(s).
+    // See https://docs.oracle.com/javase/tutorial/java/generics/bridgeMethods.html
+
+    return CallJavaNonvirtualMethod<T>(obj, id, args);
+}
+
+// Calls a Java instance method using the dispatch vector of [obj].
+template <typename T>
+static T
+CallJavaInstanceMethod(jobject obj, jmethodID id, va_list args) {
+    auto m = reinterpret_cast<const JavaMethodInfo*>(id);
+    auto num_args = CountJavaArgs(m->sig);
+    auto forward_args = std::vector<jvalue>(num_args);
+    ForwardJavaArgs(m->sig, args, forward_args.data());
+    return CallJavaInstanceMethod<T>(obj, id, forward_args.data());
+}
+
+// Begin official API.
 
 extern "C" {
 
@@ -26,79 +249,79 @@ jint jni_GetVersion(JNIEnv *env) {
 }
 
 jclass jni_DefineClass(JNIEnv *env, const char *name, jobject loader, const jbyte *buf, jsize len) {
-    jni_Unimplemented("DefineClass");
+    JniUnimplemented("DefineClass");
 }
 
 jclass jni_FindClass(JNIEnv *env, const char *name) {
-    jni_Unimplemented("FindClass");
+    JniUnimplemented("FindClass");
 }
 
 jmethodID jni_FromReflectedMethod(JNIEnv *env, jobject method) {
-    jni_Unimplemented("FromReflectedMethod");
+    JniUnimplemented("FromReflectedMethod");
 }
 
 jfieldID jni_FromReflectedField(JNIEnv *env, jobject field) {
-    jni_Unimplemented("FromReflectedField");
+    JniUnimplemented("FromReflectedField");
 }
 
-jobject jni_ToReflectedMethod(JNIEnv *env, jclass cls, jmethodID methodID, jboolean isStatic) {
-    jni_Unimplemented("ToReflectedMethod");
+jobject jni_ToReflectedMethod(JNIEnv *env, jclass cls, jmethodID id, jboolean isStatic) {
+    JniUnimplemented("ToReflectedMethod");
 }
 
 jclass jni_GetSuperclass(JNIEnv *env, jclass sub) {
-    jni_Unimplemented("GetSuperclass");
+    JniUnimplemented("GetSuperclass");
 }
 
 jboolean jni_IsAssignableFrom(JNIEnv *env, jclass sub, jclass sup) {
-    jni_Unimplemented("IsAssignableFrom");
+    JniUnimplemented("IsAssignableFrom");
 }
 
-jobject jni_ToReflectedField(JNIEnv *env, jclass cls, jfieldID fieldID, jboolean isStatic) {
-    jni_Unimplemented("ToReflectedField");
+jobject jni_ToReflectedField(JNIEnv *env, jclass cls, jfieldID id, jboolean isStatic) {
+    JniUnimplemented("ToReflectedField");
 }
 
 jint jni_Throw(JNIEnv *env, jthrowable obj) {
-    jni_Unimplemented("Throw");
+    JniUnimplemented("Throw");
 }
 
 jint jni_ThrowNew(JNIEnv *env, jclass clazz, const char *msg) {
-    jni_Unimplemented("ThrowNew");
+    JniUnimplemented("ThrowNew");
 }
 
 jthrowable jni_ExceptionOccurred(JNIEnv *env) {
-    jni_Unimplemented("ExceptionOccurred");
+    JniUnimplemented("ExceptionOccurred");
 }
 
 void jni_ExceptionDescribe(JNIEnv *env) {
-    jni_Unimplemented("ExceptionDescribe");
+    JniUnimplemented("ExceptionDescribe");
 }
 
 void jni_ExceptionClear(JNIEnv *env) {
-    jni_Unimplemented("ExceptionClear");
+    JniUnimplemented("ExceptionClear");
 }
 
 void jni_FatalError(JNIEnv *env, const char *msg) {
-    jni_Unimplemented("FatalError");
+    JniUnimplemented("FatalError");
 }
 
 jint jni_PushLocalFrame(JNIEnv *env, jint capacity) {
-    jni_Unimplemented("PushLocalFrame");
+    JniUnimplemented("PushLocalFrame");
 }
 
 jobject jni_PopLocalFrame(JNIEnv *env, jobject result) {
-    jni_Unimplemented("PopLocalFrame");
+    JniUnimplemented("PopLocalFrame");
 }
 
 jobject jni_NewGlobalRef(JNIEnv *env, jobject lobj) {
-    jni_Unimplemented("NewGlobalRef");
+    JniUnimplemented("NewGlobalRef");
 }
 
 void jni_DeleteGlobalRef(JNIEnv *env, jobject gref) {
-    jni_Unimplemented("DeleteGlobalRef");
+    JniUnimplemented("DeleteGlobalRef");
 }
 
 void jni_DeleteLocalRef(JNIEnv *env, jobject obj) {
-    jni_Unimplemented("DeleteLocalRef");
+    JniUnimplemented("DeleteLocalRef");
 }
 
 jboolean jni_IsSameObject(JNIEnv *env, jobject obj1, jobject obj2) {
@@ -106,587 +329,278 @@ jboolean jni_IsSameObject(JNIEnv *env, jobject obj1, jobject obj2) {
 }
 
 jobject jni_NewLocalRef(JNIEnv *env, jobject ref) {
-    jni_Unimplemented("NewLocalRef");
+    JniUnimplemented("NewLocalRef");
 }
 
 jint jni_EnsureLocalCapacity(JNIEnv *env, jint capacity) {
-    jni_Unimplemented("EnsureLocalCapacity");
+    JniUnimplemented("EnsureLocalCapacity");
 }
 
 jobject jni_AllocObject(JNIEnv *env, jclass clazz) {
-    jni_Unimplemented("AllocObject");
+    JniUnimplemented("AllocObject");
 }
 
-jobject jni_NewObject(JNIEnv *env, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("NewObject");
+jobject jni_NewObject(JNIEnv *env, jclass clazz, jmethodID id, ...) {
+    JniUnimplemented("NewObject");
 }
 
-jobject jni_NewObjectV(JNIEnv *env, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("NewObjectV");
+jobject jni_NewObjectV(JNIEnv *env, jclass clazz, jmethodID id, va_list args) {
+    JniUnimplemented("NewObjectV");
 }
 
-jobject jni_NewObjectA(JNIEnv *env, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("NewObjectA");
+jobject jni_NewObjectA(JNIEnv *env, jclass clazz, jmethodID id, const jvalue* args) {
+    JniUnimplemented("NewObjectA");
 }
 
 jclass jni_GetObjectClass(JNIEnv *env, jobject obj) {
-    jni_Unimplemented("GetObjectClass");
+    return Unwrap(obj)->Cdv()->Class()->Wrap();
 }
 
 jboolean jni_IsInstanceOf(JNIEnv *env, jobject obj, jclass clazz) {
-    jni_Unimplemented("IsInstanceOf");
+    JniUnimplemented("IsInstanceOf");
 }
 
 jmethodID jni_GetMethodID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
-    jni_Unimplemented("GetMethodID");
-}
-
-jobject jni_CallObjectMethod(JNIEnv *env, jobject obj, jmethodID methodID, ...) {
-    jni_Unimplemented("CallObjectMethod");
-}
-
-jobject jni_CallObjectMethodV(JNIEnv *env, jobject obj, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallObjectMethodV");
-}
-
-jobject jni_CallObjectMethodA(JNIEnv *env, jobject obj, jmethodID methodID, const jvalue* args) {
-    jni_Unimplemented("CallObjectMethodA");
-}
-
-jboolean jni_CallBooleanMethod(JNIEnv *env, jobject obj, jmethodID methodID, ...) {
-    jni_Unimplemented("CallBooleanMethod");
-}
-
-jboolean jni_CallBooleanMethodV(JNIEnv *env, jobject obj, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallBooleanMethodV");
-}
-
-jboolean jni_CallBooleanMethodA(JNIEnv *env, jobject obj, jmethodID methodID, const jvalue* args) {
-    jni_Unimplemented("CallBooleanMethodA");
-}
-
-jbyte jni_CallByteMethod(JNIEnv *env, jobject obj, jmethodID methodID, ...) {
-    jni_Unimplemented("CallByteMethod");
-}
-
-jbyte jni_CallByteMethodV(JNIEnv *env, jobject obj, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallByteMethodV");
-}
-
-jbyte jni_CallByteMethodA(JNIEnv *env, jobject obj, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallByteMethodA");
-}
-
-jchar jni_CallCharMethod(JNIEnv *env, jobject obj, jmethodID methodID, ...) {
-    jni_Unimplemented("CallCharMethod");
-}
-
-jchar jni_CallCharMethodV(JNIEnv *env, jobject obj, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallCharMethodV");
-}
-
-jchar jni_CallCharMethodA(JNIEnv *env, jobject obj, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallCharMethodA");
-}
-
-jshort jni_CallShortMethod(JNIEnv *env, jobject obj, jmethodID methodID, ...) {
-    jni_Unimplemented("CallShortMethod");
-}
-
-jshort jni_CallShortMethodV(JNIEnv *env, jobject obj, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallShortMethodV");
-}
-
-jshort jni_CallShortMethodA(JNIEnv *env, jobject obj, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallShortMethodA");
-}
-
-jint jni_CallIntMethod(JNIEnv *env, jobject obj, jmethodID methodID, ...) {
-    jni_Unimplemented("CallIntMethod");
-}
-
-jint jni_CallIntMethodV(JNIEnv *env, jobject obj, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallIntMethodV");
-}
-
-jint jni_CallIntMethodA(JNIEnv *env, jobject obj, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallIntMethodA");
-}
-
-jlong jni_CallLongMethod(JNIEnv *env, jobject obj, jmethodID methodID, ...) {
-    jni_Unimplemented("CallLongMethod");
-}
-
-jlong jni_CallLongMethodV(JNIEnv *env, jobject obj, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallLongMethodV");
-}
-
-jlong jni_CallLongMethodA(JNIEnv *env, jobject obj, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallLongMethodA");
-}
-
-jfloat jni_CallFloatMethod(JNIEnv *env, jobject obj, jmethodID methodID, ...) {
-    jni_Unimplemented("CallFloatMethod");
-}
-
-jfloat jni_CallFloatMethodV(JNIEnv *env, jobject obj, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallFloatMethodV");
-}
-
-jfloat jni_CallFloatMethodA(JNIEnv *env, jobject obj, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallFloatMethodA");
-}
-
-jdouble jni_CallDoubleMethod(JNIEnv *env, jobject obj, jmethodID methodID, ...) {
-    jni_Unimplemented("CallDoubleMethod");
-}
-
-jdouble jni_CallDoubleMethodV(JNIEnv *env, jobject obj, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallDoubleMethodV");
-}
-
-jdouble jni_CallDoubleMethodA(JNIEnv *env, jobject obj, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallDoubleMethodA");
-}
-
-void jni_CallVoidMethod(JNIEnv *env, jobject obj, jmethodID methodID, ...) {
-    jni_Unimplemented("CallVoidMethod");
-}
-
-void jni_CallVoidMethodV(JNIEnv *env, jobject obj, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallVoidMethodV");
-}
-
-void jni_CallVoidMethodA(JNIEnv *env, jobject obj, jmethodID methodID, const jvalue* args) {
-    jni_Unimplemented("CallVoidMethodA");
-}
-
-jobject jni_CallNonvirtualObjectMethod(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallNonvirtualObjectMethod");
-}
-
-jobject jni_CallNonvirtualObjectMethodV(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallNonvirtualObjectMethodV");
-}
-
-jobject jni_CallNonvirtualObjectMethodA(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, const jvalue* args) {
-    jni_Unimplemented("CallNonvirtualObjectMethodA");
-}
-
-jboolean jni_CallNonvirtualBooleanMethod(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallNonvirtualBooleanMethod");
-}
-
-jboolean jni_CallNonvirtualBooleanMethodV(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallNonvirtualBooleanMethodV");
-}
-
-jboolean jni_CallNonvirtualBooleanMethodA(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, const jvalue* args) {
-    jni_Unimplemented("CallNonvirtualBooleanMethodA");
-}
-
-jbyte jni_CallNonvirtualByteMethod(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallNonvirtualByteMethod");
-}
-
-jbyte jni_CallNonvirtualByteMethodV(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallNonvirtualByteMethodV");
-}
-
-jbyte jni_CallNonvirtualByteMethodA(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallNonvirtualByteMethodA");
-}
-
-jchar jni_CallNonvirtualCharMethod(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallNonvirtualCharMethod");
-}
-
-jchar jni_CallNonvirtualCharMethodV(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallNonvirtualCharMethodV");
-}
-
-jchar jni_CallNonvirtualCharMethodA(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallNonvirtualCharMethodA");
-}
-
-jshort jni_CallNonvirtualShortMethod(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallNonvirtualShortMethod");
-}
-
-jshort jni_CallNonvirtualShortMethodV(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallNonvirtualShortMethodV");
-}
-
-jshort jni_CallNonvirtualShortMethodA(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallNonvirtualShortMethodA");
-}
-
-jint jni_CallNonvirtualIntMethod(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallNonvirtualIntMethod");
-}
-
-jint jni_CallNonvirtualIntMethodV(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallNonvirtualIntMethodV");
-}
-
-jint jni_CallNonvirtualIntMethodA(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallNonvirtualIntMethodA");
-}
-
-jlong jni_CallNonvirtualLongMethod(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallNonvirtualLongMethod");
-}
-
-jlong jni_CallNonvirtualLongMethodV(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallNonvirtualLongMethodV");
-}
-
-jlong jni_CallNonvirtualLongMethodA(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallNonvirtualLongMethodA");
-}
-
-jfloat jni_CallNonvirtualFloatMethod(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallNonvirtualFloatMethod");
-}
-
-jfloat jni_CallNonvirtualFloatMethodV(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallNonvirtualFloatMethodV");
-}
-
-jfloat jni_CallNonvirtualFloatMethodA(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallNonvirtualFloatMethodA");
-}
-
-jdouble jni_CallNonvirtualDoubleMethod(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallNonvirtualDoubleMethod");
-}
-
-jdouble jni_CallNonvirtualDoubleMethodV(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallNonvirtualDoubleMethodV");
-}
-
-jdouble jni_CallNonvirtualDoubleMethodA(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallNonvirtualDoubleMethodA");
-}
-
-void jni_CallNonvirtualVoidMethod(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallNonvirtualVoidMethod");
-}
-
-void jni_CallNonvirtualVoidMethodV(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallNonvirtualVoidMethodV");
-}
-
-void jni_CallNonvirtualVoidMethodA(JNIEnv *env, jobject obj, jclass clazz, jmethodID methodID, const jvalue* args) {
-    jni_Unimplemented("CallNonvirtualVoidMethodA");
-}
-
-jfieldID jni_GetFieldID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
-    jni_Unimplemented("GetFieldID");
-}
-
-jobject jni_GetObjectField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetObjectField");
-}
-
-jboolean jni_GetBooleanField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetBooleanField");
-}
-
-jbyte jni_GetByteField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetByteField");
-}
-
-jchar jni_GetCharField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetCharField");
-}
-
-jshort jni_GetShortField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetShortField");
-}
-
-jint jni_GetIntField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetIntField");
-}
-
-jlong jni_GetLongField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetLongField");
-}
-
-jfloat jni_GetFloatField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetFloatField");
-}
-
-jdouble jni_GetDoubleField(JNIEnv *env, jobject obj, jfieldID fieldID) {
-    jni_Unimplemented("GetDoubleField");
-}
-
-void jni_SetObjectField(JNIEnv *env, jobject obj, jfieldID fieldID, jobject val) {
-    jni_Unimplemented("SetObjectField");
-}
-
-void jni_SetBooleanField(JNIEnv *env, jobject obj, jfieldID fieldID, jboolean val) {
-    jni_Unimplemented("SetBooleanField");
-}
-
-void jni_SetByteField(JNIEnv *env, jobject obj, jfieldID fieldID, jbyte val) {
-    jni_Unimplemented("SetByteField");
-}
-
-void jni_SetCharField(JNIEnv *env, jobject obj, jfieldID fieldID, jchar val) {
-    jni_Unimplemented("SetCharField");
-}
-
-void jni_SetShortField(JNIEnv *env, jobject obj, jfieldID fieldID, jshort val) {
-    jni_Unimplemented("SetShortField");
-}
-
-void jni_SetIntField(JNIEnv *env, jobject obj, jfieldID fieldID, jint val) {
-    jni_Unimplemented("SetIntField");
-}
-
-void jni_SetLongField(JNIEnv *env, jobject obj, jfieldID fieldID, jlong val) {
-    jni_Unimplemented("SetLongField");
-}
-
-void jni_SetFloatField(JNIEnv *env, jobject obj, jfieldID fieldID, jfloat val) {
-    jni_Unimplemented("SetFloatField");
-}
-
-void jni_SetDoubleField(JNIEnv *env, jobject obj, jfieldID fieldID, jdouble val) {
-    jni_Unimplemented("SetDoubleField");
-}
+    JniUnimplemented("GetMethodID");
+}
+
+#define ARGS JNIEnv *env, jobject obj, jmethodID id, ...
+#define START_VA va_list args; va_start(args, id)
+#define END_VA va_end(args)
+#define CALL(jrep) CallJavaInstanceMethod<jrep>(obj, id, args)
+#define IMPL(jrep) START_VA; jrep res = CALL(jrep); END_VA; return res
+jobject  jni_CallObjectMethod  (ARGS) { IMPL(jobject);  }
+jboolean jni_CallBooleanMethod (ARGS) { IMPL(jboolean); }
+jbyte    jni_CallByteMethod    (ARGS) { IMPL(jbyte);    }
+jchar    jni_CallCharMethod    (ARGS) { IMPL(jchar);    }
+jshort   jni_CallShortMethod   (ARGS) { IMPL(jshort);   }
+jint     jni_CallIntMethod     (ARGS) { IMPL(jint);     }
+jlong    jni_CallLongMethod    (ARGS) { IMPL(jlong);    }
+jfloat   jni_CallFloatMethod   (ARGS) { IMPL(jfloat);   }
+jdouble  jni_CallDoubleMethod  (ARGS) { IMPL(jdouble);  }
+void     jni_CallVoidMethod    (ARGS) { START_VA; CALL(void); END_VA; }
+#undef IMPL
+#undef CALL
+#undef END_VA
+#undef START_VA
+#undef ARGS
+
+#define ARGS JNIEnv *env, jobject obj, jmethodID id, const jvalue* args
+#define IMPL(jrep) return CallJavaInstanceMethod<jrep>(obj, id, args)
+jobject  jni_CallObjectMethodA  (ARGS) { IMPL(jobject);  }
+jboolean jni_CallBooleanMethodA (ARGS) { IMPL(jboolean); }
+jbyte    jni_CallByteMethodA    (ARGS) { IMPL(jbyte);    }
+jchar    jni_CallCharMethodA    (ARGS) { IMPL(jchar);    }
+jshort   jni_CallShortMethodA   (ARGS) { IMPL(jshort);   }
+jint     jni_CallIntMethodA     (ARGS) { IMPL(jint);     }
+jlong    jni_CallLongMethodA    (ARGS) { IMPL(jlong);    }
+jfloat   jni_CallFloatMethodA   (ARGS) { IMPL(jfloat);   }
+jdouble  jni_CallDoubleMethodA  (ARGS) { IMPL(jdouble);  }
+void     jni_CallVoidMethodA    (ARGS) { IMPL(void);     }
+#undef IMPL
+#undef ARGS
+
+#define ARGS JNIEnv *env, jobject obj, jmethodID id, va_list args
+#define IMPL(jrep) return CallJavaInstanceMethod<jrep>(obj, id, args)
+jobject  jni_CallObjectMethodV  (ARGS) { IMPL(jobject);  }
+jboolean jni_CallBooleanMethodV (ARGS) { IMPL(jboolean); }
+jbyte    jni_CallByteMethodV    (ARGS) { IMPL(jbyte);    }
+jchar    jni_CallCharMethodV    (ARGS) { IMPL(jchar);    }
+jshort   jni_CallShortMethodV   (ARGS) { IMPL(jshort);   }
+jint     jni_CallIntMethodV     (ARGS) { IMPL(jint);     }
+jlong    jni_CallLongMethodV    (ARGS) { IMPL(jlong);    }
+jfloat   jni_CallFloatMethodV   (ARGS) { IMPL(jfloat);   }
+jdouble  jni_CallDoubleMethodV  (ARGS) { IMPL(jdouble);  }
+void     jni_CallVoidMethodV    (ARGS) { IMPL(void);     }
+#undef IMPL
+#undef ARGS
+
+jobject  jni_CallNonvirtualObjectMethod  (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualObjectMethod");  }
+jboolean jni_CallNonvirtualBooleanMethod (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualBooleanMethod"); }
+jbyte    jni_CallNonvirtualByteMethod    (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualByteMethod");    }
+jchar    jni_CallNonvirtualCharMethod    (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualCharMethod");    }
+jshort   jni_CallNonvirtualShortMethod   (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualShortMethod");   }
+jint     jni_CallNonvirtualIntMethod     (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualIntMethod");     }
+jlong    jni_CallNonvirtualLongMethod    (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualLongMethod");    }
+jfloat   jni_CallNonvirtualFloatMethod   (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualFloatMethod");   }
+jdouble  jni_CallNonvirtualDoubleMethod  (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualDoubleMethod");  }
+void     jni_CallNonvirtualVoidMethod    (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, ...) { JniUnimplemented("CallNonvirtualVoidMethod");    }
+
+jobject  jni_CallNonvirtualObjectMethodA (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, const jvalue* args) { JniUnimplemented("CallNonvirtualObjectMethodA");  }
+jboolean jni_CallNonvirtualBooleanMethodA(JNIEnv *env, jobject obj, jclass clazz, jmethodID id, const jvalue* args) { JniUnimplemented("CallNonvirtualBooleanMethodA"); }
+jbyte    jni_CallNonvirtualByteMethodA   (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, const jvalue* args) { JniUnimplemented("CallNonvirtualByteMethodA");    }
+jchar    jni_CallNonvirtualCharMethodA   (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, const jvalue* args) { JniUnimplemented("CallNonvirtualCharMethodA");    }
+jshort   jni_CallNonvirtualShortMethodA  (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, const jvalue* args) { JniUnimplemented("CallNonvirtualShortMethodA");   }
+jint     jni_CallNonvirtualIntMethodA    (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, const jvalue* args) { JniUnimplemented("CallNonvirtualIntMethodA");     }
+jlong    jni_CallNonvirtualLongMethodA   (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, const jvalue* args) { JniUnimplemented("CallNonvirtualLongMethodA");    }
+jfloat   jni_CallNonvirtualFloatMethodA  (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, const jvalue* args) { JniUnimplemented("CallNonvirtualFloatMethodA");   }
+jdouble  jni_CallNonvirtualDoubleMethodA (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, const jvalue* args) { JniUnimplemented("CallNonvirtualDoubleMethodA");  }
+void     jni_CallNonvirtualVoidMethodA   (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, const jvalue* args) { JniUnimplemented("CallNonvirtualVoidMethodA");    }
+
+jobject  jni_CallNonvirtualObjectMethodV (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, va_list args) { JniUnimplemented("CallNonvirtualObjectMethodV");  }
+jboolean jni_CallNonvirtualBooleanMethodV(JNIEnv *env, jobject obj, jclass clazz, jmethodID id, va_list args) { JniUnimplemented("CallNonvirtualBooleanMethodV"); }
+jbyte    jni_CallNonvirtualByteMethodV   (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, va_list args) { JniUnimplemented("CallNonvirtualByteMethodV");    }
+jchar    jni_CallNonvirtualCharMethodV   (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, va_list args) { JniUnimplemented("CallNonvirtualCharMethodV");    }
+jshort   jni_CallNonvirtualShortMethodV  (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, va_list args) { JniUnimplemented("CallNonvirtualShortMethodV");   }
+jint     jni_CallNonvirtualIntMethodV    (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, va_list args) { JniUnimplemented("CallNonvirtualIntMethodV");     }
+jlong    jni_CallNonvirtualLongMethodV   (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, va_list args) { JniUnimplemented("CallNonvirtualLongMethodV");    }
+jfloat   jni_CallNonvirtualFloatMethodV  (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, va_list args) { JniUnimplemented("CallNonvirtualFloatMethodV");   }
+jdouble  jni_CallNonvirtualDoubleMethodV (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, va_list args) { JniUnimplemented("CallNonvirtualDoubleMethodV");  }
+void     jni_CallNonvirtualVoidMethodV   (JNIEnv *env, jobject obj, jclass clazz, jmethodID id, va_list args) { JniUnimplemented("CallNonvirtualVoidMethodV");    }
+
+jfieldID jni_GetJavaFieldID(
+    JNIEnv *env, jclass clazz, const char *name, const char *sig
+) {
+    // Scare casts to wrap field info in opaque pointer.
+    auto field = GetJavaFieldInfo(clazz, name);
+    auto no_const = const_cast<JavaFieldInfo*>(field);
+    return reinterpret_cast<jfieldID>(no_const);
+}
+
+// TODO: Ideally we would do more error checking here,
+//       to protect against buggy native code.
+#define ARGS JNIEnv *env, jobject obj, jfieldID id
+#define IMPL(jrep) return GetJavaField<jrep>(obj, id)
+jboolean jni_GetBooleanField (ARGS) { IMPL(jboolean); }
+jbyte    jni_GetByteField    (ARGS) { IMPL(jbyte);    }
+jchar    jni_GetCharField    (ARGS) { IMPL(jchar);    }
+jshort   jni_GetShortField   (ARGS) { IMPL(jshort);   }
+jint     jni_GetIntField     (ARGS) { IMPL(jint);     }
+jlong    jni_GetLongField    (ARGS) { IMPL(jlong);    }
+jfloat   jni_GetFloatField   (ARGS) { IMPL(jfloat);   }
+jdouble  jni_GetDoubleField  (ARGS) { IMPL(jdouble);  }
+jobject  jni_GetObjectField  (ARGS) { IMPL(jobject);  }
+#undef IMPL
+#undef ARGS
+
+#define ARGS(jrep) JNIEnv *env, jobject obj, jfieldID id, jrep val
+#define IMPL(jrep) return SetJavaField<jrep>(obj, id, val)
+void jni_SetBooleanField (ARGS(jboolean)) { IMPL(jboolean); }
+void jni_SetByteField    (ARGS(jbyte))    { IMPL(jbyte);    }
+void jni_SetCharField    (ARGS(jchar))    { IMPL(jchar);    }
+void jni_SetShortField   (ARGS(jshort))   { IMPL(jshort);   }
+void jni_SetIntField     (ARGS(jint))     { IMPL(jint);     }
+void jni_SetLongField    (ARGS(jlong))    { IMPL(jlong);    }
+void jni_SetFloatField   (ARGS(jfloat))   { IMPL(jfloat);   }
+void jni_SetDoubleField  (ARGS(jdouble))  { IMPL(jdouble);  }
+void jni_SetObjectField  (ARGS(jobject))  { IMPL(jobject);  }
+#undef IMPL
+#undef ARGS
 
 jmethodID jni_GetStaticMethodID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
-    jni_Unimplemented("GetStaticMethodID");
+    JniUnimplemented("GetStaticMethodID");
 }
 
-jobject jni_CallStaticObjectMethod(JNIEnv *env, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallStaticObjectMethod");
-}
+jobject  jni_CallStaticObjectMethod  (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticObjectMethod");  }
+jboolean jni_CallStaticBooleanMethod (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticBooleanMethod"); }
+jbyte    jni_CallStaticByteMethod    (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticByteMethod");    }
+jchar    jni_CallStaticCharMethod    (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticCharMethod");    }
+jshort   jni_CallStaticShortMethod   (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticShortMethod");   }
+jint     jni_CallStaticIntMethod     (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticIntMethod");     }
+jlong    jni_CallStaticLongMethod    (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticLongMethod");    }
+jfloat   jni_CallStaticFloatMethod   (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticFloatMethod");   }
+jdouble  jni_CallStaticDoubleMethod  (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticDoubleMethod");  }
+void     jni_CallStaticVoidMethod    (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticVoidMethod");    }
 
-jobject jni_CallStaticObjectMethodV(JNIEnv *env, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallStaticObjectMethodV");
-}
+jobject  jni_CallStaticObjectMethodV (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticObjectMethodV");  }
+jboolean jni_CallStaticBooleanMethodV(JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticBooleanMethodV"); }
+jbyte    jni_CallStaticByteMethodV   (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticByteMethodV");    }
+jchar    jni_CallStaticCharMethodV   (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticCharMethodV");    }
+jshort   jni_CallStaticShortMethodV  (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticShortMethodV");   }
+jint     jni_CallStaticIntMethodV    (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticIntMethodV");     }
+jlong    jni_CallStaticLongMethodV   (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticLongMethodV");    }
+jfloat   jni_CallStaticFloatMethodV  (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticFloatMethodV");   }
+jdouble  jni_CallStaticDoubleMethodV (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticDoubleMethodV");  }
+void     jni_CallStaticVoidMethodV   (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticVoidMethodV");    }
 
-jobject jni_CallStaticObjectMethodA(JNIEnv *env, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallStaticObjectMethodA");
-}
-
-jboolean jni_CallStaticBooleanMethod(JNIEnv *env, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallStaticBooleanMethod");
-}
-
-jboolean jni_CallStaticBooleanMethodV(JNIEnv *env, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallStaticBooleanMethodV");
-}
-
-jboolean jni_CallStaticBooleanMethodA(JNIEnv *env, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallStaticBooleanMethodA");
-}
-
-jbyte jni_CallStaticByteMethod(JNIEnv *env, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallStaticByteMethod");
-}
-
-jbyte jni_CallStaticByteMethodV(JNIEnv *env, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallStaticByteMethodV");
-}
-
-jbyte jni_CallStaticByteMethodA(JNIEnv *env, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallStaticByteMethodA");
-}
-
-jchar jni_CallStaticCharMethod(JNIEnv *env, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallStaticCharMethod");
-}
-
-jchar jni_CallStaticCharMethodV(JNIEnv *env, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallStaticCharMethodV");
-}
-
-jchar jni_CallStaticCharMethodA(JNIEnv *env, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallStaticCharMethodA");
-}
-
-jshort jni_CallStaticShortMethod(JNIEnv *env, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallStaticShortMethod");
-}
-
-jshort jni_CallStaticShortMethodV(JNIEnv *env, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallStaticShortMethodV");
-}
-
-jshort jni_CallStaticShortMethodA(JNIEnv *env, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallStaticShortMethodA");
-}
-
-jint jni_CallStaticIntMethod(JNIEnv *env, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallStaticIntMethod");
-}
-
-jint jni_CallStaticIntMethodV(JNIEnv *env, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallStaticIntMethodV");
-}
-
-jint jni_CallStaticIntMethodA(JNIEnv *env, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallStaticIntMethodA");
-}
-
-jlong jni_CallStaticLongMethod(JNIEnv *env, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallStaticLongMethod");
-}
-
-jlong jni_CallStaticLongMethodV(JNIEnv *env, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallStaticLongMethodV");
-}
-
-jlong jni_CallStaticLongMethodA(JNIEnv *env, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallStaticLongMethodA");
-}
-
-jfloat jni_CallStaticFloatMethod(JNIEnv *env, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallStaticFloatMethod");
-}
-
-jfloat jni_CallStaticFloatMethodV(JNIEnv *env, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallStaticFloatMethodV");
-}
-
-jfloat jni_CallStaticFloatMethodA(JNIEnv *env, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallStaticFloatMethodA");
-}
-
-jdouble jni_CallStaticDoubleMethod(JNIEnv *env, jclass clazz, jmethodID methodID, ...) {
-    jni_Unimplemented("CallStaticDoubleMethod");
-}
-
-jdouble jni_CallStaticDoubleMethodV(JNIEnv *env, jclass clazz, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallStaticDoubleMethodV");
-}
-
-jdouble jni_CallStaticDoubleMethodA(JNIEnv *env, jclass clazz, jmethodID methodID, const jvalue *args) {
-    jni_Unimplemented("CallStaticDoubleMethodA");
-}
-
-void jni_CallStaticVoidMethod(JNIEnv *env, jclass cls, jmethodID methodID, ...) {
-    jni_Unimplemented("CallStaticVoidMethod");
-}
-
-void jni_CallStaticVoidMethodV(JNIEnv *env, jclass cls, jmethodID methodID, va_list args) {
-    jni_Unimplemented("CallStaticVoidMethodV");
-}
-
-void jni_CallStaticVoidMethodA(JNIEnv *env, jclass cls, jmethodID methodID, const jvalue* args) {
-    jni_Unimplemented("CallStaticVoidMethodA");
-}
+jobject  jni_CallStaticObjectMethodA (JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticObjectMethodA");  }
+jboolean jni_CallStaticBooleanMethodA(JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticBooleanMethodA"); }
+jbyte    jni_CallStaticByteMethodA   (JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticByteMethodA");    }
+jchar    jni_CallStaticCharMethodA   (JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticCharMethodA");    }
+jshort   jni_CallStaticShortMethodA  (JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticShortMethodA");   }
+jint     jni_CallStaticIntMethodA    (JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticIntMethodA");     }
+jlong    jni_CallStaticLongMethodA   (JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticLongMethodA");    }
+jfloat   jni_CallStaticFloatMethodA  (JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticFloatMethodA");   }
+jdouble  jni_CallStaticDoubleMethodA (JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticDoubleMethodA");  }
+void     jni_CallStaticVoidMethodA   (JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticVoidMethodA");    }
 
 jfieldID jni_GetStaticFieldID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
-    jni_Unimplemented("GetStaticFieldID");
+    JniUnimplemented("GetStaticFieldID");
 }
 
-jobject jni_GetStaticObjectField(JNIEnv *env, jclass clazz, jfieldID fieldID) {
-    jni_Unimplemented("GetStaticObjectField");
-}
+jobject  jni_GetStaticObjectField (JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticObjectField");  }
+jboolean jni_GetStaticBooleanField(JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticBooleanField"); }
+jbyte    jni_GetStaticByteField   (JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticByteField");    }
+jchar    jni_GetStaticCharField   (JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticCharField");    }
+jshort   jni_GetStaticShortField  (JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticShortField");   }
+jint     jni_GetStaticIntField    (JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticIntField");     }
+jlong    jni_GetStaticLongField   (JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticLongField");    }
+jfloat   jni_GetStaticFloatField  (JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticFloatField");   }
+jdouble  jni_GetStaticDoubleField (JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticDoubleField");  }
 
-jboolean jni_GetStaticBooleanField(JNIEnv *env, jclass clazz, jfieldID fieldID) {
-    jni_Unimplemented("GetStaticBooleanField");
-}
-
-jbyte jni_GetStaticByteField(JNIEnv *env, jclass clazz, jfieldID fieldID) {
-    jni_Unimplemented("GetStaticByteField");
-}
-
-jchar jni_GetStaticCharField(JNIEnv *env, jclass clazz, jfieldID fieldID) {
-    jni_Unimplemented("GetStaticCharField");
-}
-
-jshort jni_GetStaticShortField(JNIEnv *env, jclass clazz, jfieldID fieldID) {
-    jni_Unimplemented("GetStaticShortField");
-}
-
-jint jni_GetStaticIntField(JNIEnv *env, jclass clazz, jfieldID fieldID) {
-    jni_Unimplemented("GetStaticIntField");
-}
-
-jlong jni_GetStaticLongField(JNIEnv *env, jclass clazz, jfieldID fieldID) {
-    jni_Unimplemented("GetStaticLongField");
-}
-
-jfloat jni_GetStaticFloatField(JNIEnv *env, jclass clazz, jfieldID fieldID) {
-    jni_Unimplemented("GetStaticFloatField");
-}
-
-jdouble jni_GetStaticDoubleField(JNIEnv *env, jclass clazz, jfieldID fieldID) {
-    jni_Unimplemented("GetStaticDoubleField");
-}
-
-void jni_SetStaticObjectField(JNIEnv *env, jclass clazz, jfieldID fieldID, jobject value) {
-    jni_Unimplemented("SetStaticObjectField");
-}
-
-void jni_SetStaticBooleanField(JNIEnv *env, jclass clazz, jfieldID fieldID, jboolean value) {
-    jni_Unimplemented("SetStaticBooleanField");
-}
-
-void jni_SetStaticByteField(JNIEnv *env, jclass clazz, jfieldID fieldID, jbyte value) {
-    jni_Unimplemented("SetStaticByteField");
-}
-
-void jni_SetStaticCharField(JNIEnv *env, jclass clazz, jfieldID fieldID, jchar value) {
-    jni_Unimplemented("SetStaticCharField");
-}
-
-void jni_SetStaticShortField(JNIEnv *env, jclass clazz, jfieldID fieldID, jshort value) {
-    jni_Unimplemented("SetStaticShortField");
-}
-
-void jni_SetStaticIntField(JNIEnv *env, jclass clazz, jfieldID fieldID, jint value) {
-    jni_Unimplemented("SetStaticIntField");
-}
-
-void jni_SetStaticLongField(JNIEnv *env, jclass clazz, jfieldID fieldID, jlong value) {
-    jni_Unimplemented("SetStaticLongField");
-}
-
-void jni_SetStaticFloatField(JNIEnv *env, jclass clazz, jfieldID fieldID, jfloat value) {
-    jni_Unimplemented("SetStaticFloatField");
-}
-
-void jni_SetStaticDoubleField(JNIEnv *env, jclass clazz, jfieldID fieldID, jdouble value) {
-    jni_Unimplemented("SetStaticDoubleField");
-}
+void jni_SetStaticObjectField (JNIEnv *env, jclass clazz, jfieldID id, jobject  value) { JniUnimplemented("SetStaticObjectField");  }
+void jni_SetStaticBooleanField(JNIEnv *env, jclass clazz, jfieldID id, jboolean value) { JniUnimplemented("SetStaticBooleanField"); }
+void jni_SetStaticByteField   (JNIEnv *env, jclass clazz, jfieldID id, jbyte    value) { JniUnimplemented("SetStaticByteField");    }
+void jni_SetStaticCharField   (JNIEnv *env, jclass clazz, jfieldID id, jchar    value) { JniUnimplemented("SetStaticCharField");    }
+void jni_SetStaticShortField  (JNIEnv *env, jclass clazz, jfieldID id, jshort   value) { JniUnimplemented("SetStaticShortField");   }
+void jni_SetStaticIntField    (JNIEnv *env, jclass clazz, jfieldID id, jint     value) { JniUnimplemented("SetStaticIntField");     }
+void jni_SetStaticLongField   (JNIEnv *env, jclass clazz, jfieldID id, jlong    value) { JniUnimplemented("SetStaticLongField");    }
+void jni_SetStaticFloatField  (JNIEnv *env, jclass clazz, jfieldID id, jfloat   value) { JniUnimplemented("SetStaticFloatField");   }
+void jni_SetStaticDoubleField (JNIEnv *env, jclass clazz, jfieldID id, jdouble  value) { JniUnimplemented("SetStaticDoubleField");  }
 
 jstring jni_NewString(JNIEnv *env, const jchar *unicode, jsize len) {
-    jni_Unimplemented("NewString");
+    JniUnimplemented("NewString");
 }
 
 jsize jni_GetStringLength(JNIEnv *env, jstring str) {
-    jni_Unimplemented("GetStringLength");
+    return Unwrap(str)->Chars()->Length();
 }
 
-const jchar *jni_GetStringChars(JNIEnv *env, jstring str, jboolean *isCopy) {
-    jni_Unimplemented("GetStringChars");
+const jchar* jni_GetStringChars(JNIEnv *env, jstring str, jboolean *isCopy) {
+    auto chars = reinterpret_cast<jcharArray>(Unwrap(str)->Chars()->Wrap());
+    return env->GetCharArrayElements(chars, isCopy);
 }
 
-void jni_ReleaseStringChars(JNIEnv *env, jstring str, const jchar *chars) {
-    jni_Unimplemented("ReleaseStringChars");
+void jni_ReleaseStringChars(JNIEnv *env, jstring str, const jchar *elems) {
+    auto chars = reinterpret_cast<jcharArray>(Unwrap(str)->Chars()->Wrap());
+    auto elems_cast = const_cast<jchar*>(elems);
+    env->ReleaseCharArrayElements(chars, elems_cast, /*mode*/ 0);
 }
 
 jstring jni_NewStringUTF(JNIEnv *env, const char *utf) {
-    jni_Unimplemented("NewStringUTF");
+    jsize len = strlen(utf);
+    jcharArray chars = env->NewCharArray(len);
+    jchar* data = env->GetCharArrayElements(chars, /*isCopy*/ nullptr);
+    // TODO: Not a proper character encoding conversion.
+    for (jsize i = 0; i < len; ++i)
+        data[i] = static_cast<jchar>(utf[i]);
+    env->ReleaseCharArrayElements(chars, data, /*mode*/ 0);
+    return CreateJavaString(chars);
 }
 
 jsize jni_GetStringUTFLength(JNIEnv *env, jstring str) {
-    jni_Unimplemented("GetStringUTFLength");
+    auto chars = env->GetStringUTFChars(str, /*isCopy*/ nullptr);
+    jsize len = strlen(chars);
+    env->ReleaseStringUTFChars(str, chars);
+    return len;
 }
 
 const char* jni_GetStringUTFChars(JNIEnv *env, jstring str, jboolean *isCopy) {
-    jni_Unimplemented("GetStringUTFChars");
+    auto len = env->GetStringLength(str);
+    auto chars = env->GetStringChars(str, /*isCopy*/ nullptr);
+    char* res = (char*) malloc(len + 1);
+    // TODO: Incorrect conversion from Java string chars to UTF-8 chars.
+    for (jsize i = 0; i < len; ++i)
+        res[i] = static_cast<char>(chars[i]);
+    res[len] = '\0';
+    env->ReleaseStringChars(str, chars);
+    if (isCopy != nullptr)
+        *isCopy = true;
+    return res;
 }
 
 void jni_ReleaseStringUTFChars(JNIEnv *env, jstring str, const char* chars) {
-    jni_Unimplemented("ReleaseStringUTFChars");
+    free(const_cast<char*>(chars));
 }
 
 jsize jni_GetArrayLength(JNIEnv *env, jarray array) {
@@ -694,253 +608,158 @@ jsize jni_GetArrayLength(JNIEnv *env, jarray array) {
 }
 
 jobjectArray jni_NewObjectArray(JNIEnv *env, jsize len, jclass clazz, jobject init) {
-    jni_Unimplemented("NewObjectArray");
+    JniUnimplemented("NewObjectArray");
 }
 
-jobject jni_GetObjectArrayElement(JNIEnv *env, jobjectArray array, jsize index) {
-    jobject* data = static_cast<jobject*>(Unwrap(array)->Data());
+jobject jni_GetObjectArrayElement(
+    JNIEnv *env, jobjectArray arr, jsize index
+) {
+    if (!JavaArrayBoundsCheck(arr, index))
+        return nullptr;
+    // Assumes no copy.
+    auto data = GetJavaArrayData<jobject>(arr, /*isCopy*/ nullptr);
     return data[index];
 }
 
-void jni_SetObjectArrayElement(JNIEnv *env, jobjectArray array, jsize index, jobject val) {
-    jobject* data = static_cast<jobject*>(Unwrap(array)->Data());
+void jni_SetObjectArrayElement(
+    JNIEnv *env, jobjectArray arr, jsize index, jobject val
+) {
+    if (!JavaArrayBoundsCheck(arr, index))
+        return;
+    // Assumes no copy.
+    auto data = GetJavaArrayData<jobject>(arr, /*isCopy*/ nullptr);
     data[index] = val;
 }
 
-jbooleanArray jni_NewBooleanArray(JNIEnv *env, jsize len) {
-    jni_Unimplemented("NewBooleanArray");
-}
+#define ARGS JNIEnv *env, jsize len
+jbooleanArray jni_NewBooleanArray (ARGS) { return CreateJavaBooleanArray(len); }
+jbyteArray    jni_NewByteArray    (ARGS) { return CreateJavaByteArray   (len); }
+jcharArray    jni_NewCharArray    (ARGS) { return CreateJavaCharArray   (len); }
+jshortArray   jni_NewShortArray   (ARGS) { return CreateJavaShortArray  (len); }
+jintArray     jni_NewIntArray     (ARGS) { return CreateJavaIntArray    (len); }
+jlongArray    jni_NewLongArray    (ARGS) { return CreateJavaLongArray   (len); }
+jfloatArray   jni_NewFloatArray   (ARGS) { return CreateJavaFloatArray  (len); }
+jdoubleArray  jni_NewDoubleArray  (ARGS) { return CreateJavaDoubleArray (len); }
+#undef ARGS
 
-jbyteArray jni_NewByteArray(JNIEnv *env, jsize len) {
-    jni_Unimplemented("NewByteArray");
-}
+jboolean* jni_GetBooleanArrayElements(JNIEnv *env, jbooleanArray arr, jboolean *isCopy) { return GetJavaArrayData<jboolean>(arr, isCopy); }
+jbyte*    jni_GetByteArrayElements   (JNIEnv *env, jbyteArray    arr, jboolean *isCopy) { return GetJavaArrayData<jbyte>   (arr, isCopy); }
+jchar*    jni_GetCharArrayElements   (JNIEnv *env, jcharArray    arr, jboolean *isCopy) { return GetJavaArrayData<jchar>   (arr, isCopy); }
+jshort*   jni_GetShortArrayElements  (JNIEnv *env, jshortArray   arr, jboolean *isCopy) { return GetJavaArrayData<jshort>  (arr, isCopy); }
+jint*     jni_GetIntArrayElements    (JNIEnv *env, jintArray     arr, jboolean *isCopy) { return GetJavaArrayData<jint>    (arr, isCopy); }
+jlong*    jni_GetLongArrayElements   (JNIEnv *env, jlongArray    arr, jboolean *isCopy) { return GetJavaArrayData<jlong>   (arr, isCopy); }
+jfloat*   jni_GetFloatArrayElements  (JNIEnv *env, jfloatArray   arr, jboolean *isCopy) { return GetJavaArrayData<jfloat>  (arr, isCopy); }
+jdouble*  jni_GetDoubleArrayElements (JNIEnv *env, jdoubleArray  arr, jboolean *isCopy) { return GetJavaArrayData<jdouble> (arr, isCopy); }
 
-jcharArray jni_NewCharArray(JNIEnv *env, jsize len) {
-    jni_Unimplemented("NewCharArray");
-}
+// We do not make a copy of array elements, so these are no-ops.
+void jni_ReleaseBooleanArrayElements(JNIEnv *env, jbooleanArray arr, jboolean* data, jint mode) {}
+void jni_ReleaseByteArrayElements   (JNIEnv *env, jbyteArray    arr, jbyte* data,    jint mode) {}
+void jni_ReleaseCharArrayElements   (JNIEnv *env, jcharArray    arr, jchar* data,    jint mode) {}
+void jni_ReleaseShortArrayElements  (JNIEnv *env, jshortArray   arr, jshort* data,   jint mode) {}
+void jni_ReleaseIntArrayElements    (JNIEnv *env, jintArray     arr, jint* data,     jint mode) {}
+void jni_ReleaseLongArrayElements   (JNIEnv *env, jlongArray    arr, jlong* data,    jint mode) {}
+void jni_ReleaseFloatArrayElements  (JNIEnv *env, jfloatArray   arr, jfloat* data,   jint mode) {}
+void jni_ReleaseDoubleArrayElements (JNIEnv *env, jdoubleArray  arr, jdouble* data,  jint mode) {}
 
-jshortArray jni_NewShortArray(JNIEnv *env, jsize len) {
-    jni_Unimplemented("NewShortArray");
-}
+void jni_GetBooleanArrayRegion(JNIEnv *env, jbooleanArray arr, jsize start, jsize len, jboolean *buf) { GetJavaArrayRegion<jboolean>(arr, start, len, buf); }
+void jni_GetByteArrayRegion   (JNIEnv *env, jbyteArray    arr, jsize start, jsize len, jbyte    *buf) { GetJavaArrayRegion<jbyte>   (arr, start, len, buf); }
+void jni_GetCharArrayRegion   (JNIEnv *env, jcharArray    arr, jsize start, jsize len, jchar    *buf) { GetJavaArrayRegion<jchar>   (arr, start, len, buf); }
+void jni_GetShortArrayRegion  (JNIEnv *env, jshortArray   arr, jsize start, jsize len, jshort   *buf) { GetJavaArrayRegion<jshort>  (arr, start, len, buf); }
+void jni_GetIntArrayRegion    (JNIEnv *env, jintArray     arr, jsize start, jsize len, jint     *buf) { GetJavaArrayRegion<jint>    (arr, start, len, buf); }
+void jni_GetLongArrayRegion   (JNIEnv *env, jlongArray    arr, jsize start, jsize len, jlong    *buf) { GetJavaArrayRegion<jlong>   (arr, start, len, buf); }
+void jni_GetFloatArrayRegion  (JNIEnv *env, jfloatArray   arr, jsize start, jsize len, jfloat   *buf) { GetJavaArrayRegion<jfloat>  (arr, start, len, buf); }
+void jni_GetDoubleArrayRegion (JNIEnv *env, jdoubleArray  arr, jsize start, jsize len, jdouble  *buf) { GetJavaArrayRegion<jdouble> (arr, start, len, buf); }
 
-jintArray jni_NewIntArray(JNIEnv *env, jsize len) {
-    jni_Unimplemented("NewIntArray");
-}
+void jni_SetBooleanArrayRegion(JNIEnv *env, jbooleanArray arr, jsize start, jsize len, const jboolean *buf) { SetJavaArrayRegion<jboolean>(arr, start, len, buf); }
+void jni_SetByteArrayRegion   (JNIEnv *env, jbyteArray    arr, jsize start, jsize len, const jbyte    *buf) { SetJavaArrayRegion<jbyte>   (arr, start, len, buf); }
+void jni_SetCharArrayRegion   (JNIEnv *env, jcharArray    arr, jsize start, jsize len, const jchar    *buf) { SetJavaArrayRegion<jchar>   (arr, start, len, buf); }
+void jni_SetShortArrayRegion  (JNIEnv *env, jshortArray   arr, jsize start, jsize len, const jshort   *buf) { SetJavaArrayRegion<jshort>  (arr, start, len, buf); }
+void jni_SetIntArrayRegion    (JNIEnv *env, jintArray     arr, jsize start, jsize len, const jint     *buf) { SetJavaArrayRegion<jint>    (arr, start, len, buf); }
+void jni_SetLongArrayRegion   (JNIEnv *env, jlongArray    arr, jsize start, jsize len, const jlong    *buf) { SetJavaArrayRegion<jlong>   (arr, start, len, buf); }
+void jni_SetFloatArrayRegion  (JNIEnv *env, jfloatArray   arr, jsize start, jsize len, const jfloat   *buf) { SetJavaArrayRegion<jfloat>  (arr, start, len, buf); }
+void jni_SetDoubleArrayRegion (JNIEnv *env, jdoubleArray  arr, jsize start, jsize len, const jdouble  *buf) { SetJavaArrayRegion<jdouble> (arr, start, len, buf); }
 
-jlongArray jni_NewLongArray(JNIEnv *env, jsize len) {
-    jni_Unimplemented("NewLongArray");
-}
-
-jfloatArray jni_NewFloatArray(JNIEnv *env, jsize len) {
-    jni_Unimplemented("NewFloatArray");
-}
-
-jdoubleArray jni_NewDoubleArray(JNIEnv *env, jsize len) {
-    jni_Unimplemented("NewDoubleArray");
-}
-
-#define RETURN_ARRAY_DATA_NO_COPY(type) \
-    if (isCopy != nullptr) *isCopy = JNI_FALSE; \
-    return static_cast<type*>(Unwrap(array)->Data())
-
-jboolean* jni_GetBooleanArrayElements(JNIEnv *env, jbooleanArray array, jboolean *isCopy) {
-    RETURN_ARRAY_DATA_NO_COPY(jboolean);
-}
-
-jbyte* jni_GetByteArrayElements(JNIEnv *env, jbyteArray array, jboolean *isCopy) {
-    RETURN_ARRAY_DATA_NO_COPY(jbyte);
-}
-
-jchar* jni_GetCharArrayElements(JNIEnv *env, jcharArray array, jboolean *isCopy) {
-    RETURN_ARRAY_DATA_NO_COPY(jchar);
-}
-
-jshort* jni_GetShortArrayElements(JNIEnv *env, jshortArray array, jboolean *isCopy) {
-    RETURN_ARRAY_DATA_NO_COPY(jshort);
-}
-
-jint* jni_GetIntArrayElements(JNIEnv *env, jintArray array, jboolean *isCopy) {
-    RETURN_ARRAY_DATA_NO_COPY(jint);
-}
-
-jlong* jni_GetLongArrayElements(JNIEnv *env, jlongArray array, jboolean *isCopy) {
-    RETURN_ARRAY_DATA_NO_COPY(jlong);
-}
-
-jfloat* jni_GetFloatArrayElements(JNIEnv *env, jfloatArray array, jboolean *isCopy) {
-    RETURN_ARRAY_DATA_NO_COPY(jfloat);
-}
-
-jdouble* jni_GetDoubleArrayElements(JNIEnv *env, jdoubleArray array, jboolean *isCopy) {
-    RETURN_ARRAY_DATA_NO_COPY(jdouble);
-}
-
-void jni_ReleaseBooleanArrayElements(JNIEnv *env, jbooleanArray array, jboolean *elems, jint mode) {
-    // We use a conservative garbage collector, so nothing to do here.
-}
-
-void jni_ReleaseByteArrayElements(JNIEnv *env, jbyteArray array, jbyte *elems, jint mode) {
-    // We use a conservative garbage collector, so nothing to do here.
-}
-
-void jni_ReleaseCharArrayElements(JNIEnv *env, jcharArray array, jchar *elems, jint mode) {
-    // We use a conservative garbage collector, so nothing to do here.
-}
-
-void jni_ReleaseShortArrayElements(JNIEnv *env, jshortArray array, jshort *elems, jint mode) {
-    // We use a conservative garbage collector, so nothing to do here.
-}
-
-void jni_ReleaseIntArrayElements(JNIEnv *env, jintArray array, jint *elems, jint mode) {
-    // We use a conservative garbage collector, so nothing to do here.
-}
-
-void jni_ReleaseLongArrayElements(JNIEnv *env, jlongArray array, jlong *elems, jint mode) {
-    // We use a conservative garbage collector, so nothing to do here.
-}
-
-void jni_ReleaseFloatArrayElements(JNIEnv *env, jfloatArray array, jfloat *elems, jint mode) {
-    // We use a conservative garbage collector, so nothing to do here.
-}
-
-void jni_ReleaseDoubleArrayElements(JNIEnv *env, jdoubleArray array, jdouble *elems, jint mode) {
-    // We use a conservative garbage collector, so nothing to do here.
-}
-
-void jni_GetBooleanArrayRegion(JNIEnv *env, jbooleanArray array, jsize start, jsize l, jboolean *buf) {
-    jni_Unimplemented("GetBooleanArrayRegion");
-}
-
-void jni_GetByteArrayRegion(JNIEnv *env, jbyteArray array, jsize start, jsize len, jbyte *buf) {
-    jni_Unimplemented("GetByteArrayRegion");
-}
-
-void jni_GetCharArrayRegion(JNIEnv *env, jcharArray array, jsize start, jsize len, jchar *buf) {
-    jni_Unimplemented("GetCharArrayRegion");
-}
-
-void jni_GetShortArrayRegion(JNIEnv *env, jshortArray array, jsize start, jsize len, jshort *buf) {
-    jni_Unimplemented("GetShortArrayRegion");
-}
-
-void jni_GetIntArrayRegion(JNIEnv *env, jintArray array, jsize start, jsize len, jint *buf) {
-    jni_Unimplemented("GetIntArrayRegion");
-}
-
-void jni_GetLongArrayRegion(JNIEnv *env, jlongArray array, jsize start, jsize len, jlong *buf) {
-    jni_Unimplemented("GetLongArrayRegion");
-}
-
-void jni_GetFloatArrayRegion(JNIEnv *env, jfloatArray array, jsize start, jsize len, jfloat *buf) {
-    jni_Unimplemented("GetFloatArrayRegion");
-}
-
-void jni_GetDoubleArrayRegion(JNIEnv *env, jdoubleArray array, jsize start, jsize len, jdouble *buf) {
-    jni_Unimplemented("GetDoubleArrayRegion");
-}
-
-void jni_SetBooleanArrayRegion(JNIEnv *env, jbooleanArray array, jsize start, jsize l, const jboolean *buf) {
-    jni_Unimplemented("SetBooleanArrayRegion");
-}
-
-void jni_SetByteArrayRegion(JNIEnv *env, jbyteArray array, jsize start, jsize len, const jbyte *buf) {
-    jni_Unimplemented("SetByteArrayRegion");
-}
-
-void jni_SetCharArrayRegion(JNIEnv *env, jcharArray array, jsize start, jsize len, const jchar *buf) {
-    jni_Unimplemented("SetCharArrayRegion");
-}
-
-void jni_SetShortArrayRegion(JNIEnv *env, jshortArray array, jsize start, jsize len, const jshort *buf) {
-    jni_Unimplemented("SetShortArrayRegion");
-}
-
-void jni_SetIntArrayRegion(JNIEnv *env, jintArray array, jsize start, jsize len, const jint *buf) {
-    jni_Unimplemented("SetIntArrayRegion");
-}
-
-void jni_SetLongArrayRegion(JNIEnv *env, jlongArray array, jsize start, jsize len, const jlong *buf) {
-    jni_Unimplemented("SetLongArrayRegion");
-}
-
-void jni_SetFloatArrayRegion(JNIEnv *env, jfloatArray array, jsize start, jsize len, const jfloat *buf) {
-    jni_Unimplemented("SetFloatArrayRegion");
-}
-
-void jni_SetDoubleArrayRegion(JNIEnv *env, jdoubleArray array, jsize start, jsize len, const jdouble *buf) {
-    jni_Unimplemented("SetDoubleArrayRegion");
-}
-
-jint jni_RegisterNatives(JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint nMethods) {
-    jni_Unimplemented("RegisterNatives");
+jint jni_RegisterNatives(
+    JNIEnv *env, jclass clazz,
+    const JNINativeMethod *methods, jint nMethods
+) {
+    for (jint i = 0; i < nMethods; ++i) {
+        RegisterJavaNativeFunc(
+            clazz,
+            methods[i].name,
+            methods[i].signature,
+            methods[i].fnPtr
+        );
+    }
+    return 0;
 }
 
 jint jni_UnregisterNatives(JNIEnv *env, jclass clazz) {
-    jni_Unimplemented("UnregisterNatives");
+    JniUnimplemented("UnregisterNatives");
 }
 
 jint jni_MonitorEnter(JNIEnv *env, jobject obj) {
-    jni_Unimplemented("MonitorEnter");
+    JniUnimplemented("MonitorEnter");
 }
 
 jint jni_MonitorExit(JNIEnv *env, jobject obj) {
-    jni_Unimplemented("MonitorExit");
+    JniUnimplemented("MonitorExit");
 }
 
 jint jni_GetJavaVM(JNIEnv *env, JavaVM **vm) {
-    jni_Unimplemented("GetJavaVM");
+    JniUnimplemented("GetJavaVM");
 }
 
 void jni_GetStringRegion(JNIEnv *env, jstring str, jsize start, jsize len, jchar *buf) {
-    jni_Unimplemented("GetStringRegion");
+    JniUnimplemented("GetStringRegion");
 }
 
 void jni_GetStringUTFRegion(JNIEnv *env, jstring str, jsize start, jsize len, char *buf) {
-    jni_Unimplemented("GetStringUTFRegion");
+    JniUnimplemented("GetStringUTFRegion");
 }
 
 void* jni_GetPrimitiveArrayCritical(JNIEnv *env, jarray array, jboolean *isCopy) {
-    jni_Unimplemented("GetPrimitiveArrayCritical");
+    JniUnimplemented("GetPrimitiveArrayCritical");
 }
 
 void jni_ReleasePrimitiveArrayCritical(JNIEnv *env, jarray array, void *carray, jint mode) {
-    jni_Unimplemented("ReleasePrimitiveArrayCritical");
+    JniUnimplemented("ReleasePrimitiveArrayCritical");
 }
 
 const jchar* jni_GetStringCritical(JNIEnv *env, jstring string, jboolean *isCopy) {
-    jni_Unimplemented("GetStringCritical");
+    JniUnimplemented("GetStringCritical");
 }
 
 void jni_ReleaseStringCritical(JNIEnv *env, jstring string, const jchar *cstring) {
-    jni_Unimplemented("ReleaseStringCritical");
+    JniUnimplemented("ReleaseStringCritical");
 }
 
 jweak jni_NewWeakGlobalRef(JNIEnv *env, jobject obj) {
-    jni_Unimplemented("NewWeakGlobalRef");
+    JniUnimplemented("NewWeakGlobalRef");
 }
 
 void jni_DeleteWeakGlobalRef(JNIEnv *env, jweak ref) {
-    jni_Unimplemented("DeleteWeakGlobalRef");
+    JniUnimplemented("DeleteWeakGlobalRef");
 }
 
 jboolean jni_ExceptionCheck(JNIEnv *env) {
-    jni_Unimplemented("ExceptionCheck");
+    JniUnimplemented("ExceptionCheck");
 }
 
 jobject jni_NewDirectByteBuffer(JNIEnv* env, void* address, jlong capacity) {
-    jni_Unimplemented("NewDirectByteBuffer");
+    JniUnimplemented("NewDirectByteBuffer");
 }
 
 void* jni_GetDirectBufferAddress(JNIEnv* env, jobject buf) {
-    jni_Unimplemented("GetDirectBufferAddress");
+    JniUnimplemented("GetDirectBufferAddress");
 }
 
 jlong jni_GetDirectBufferCapacity(JNIEnv* env, jobject buf) {
-    jni_Unimplemented("GetDirectBufferCapacity");
+    JniUnimplemented("GetDirectBufferCapacity");
 }
 
 jobjectRefType jni_GetObjectRefType(JNIEnv* env, jobject obj) {
-    jni_Unimplemented("GetObjectRefType");
+    JniUnimplemented("GetObjectRefType");
 }
 
 const struct JNINativeInterface_ jni_NativeInterface = {
@@ -1055,7 +874,7 @@ const struct JNINativeInterface_ jni_NativeInterface = {
     jni_CallNonvirtualVoidMethodV,
     jni_CallNonvirtualVoidMethodA,
 
-    jni_GetFieldID,
+    jni_GetJavaFieldID,
 
     jni_GetObjectField,
     jni_GetBooleanField,
@@ -1225,23 +1044,23 @@ const struct JNINativeInterface_ jni_NativeInterface = {
 extern const JNIEnv jni_JNIEnv = {&jni_NativeInterface};
 
 jint jni_DestroyJavaVM(JavaVM *vm) {
-    jni_Unimplemented("DestroyJavaVM");
+    JniUnimplemented("DestroyJavaVM");
 }
 
 jint jni_AttachCurrentThread(JavaVM *vm, void **penv, void *args) {
-    jni_Unimplemented("AttachCurrentThread");
+    JniUnimplemented("AttachCurrentThread");
 }
 
 jint jni_DetachCurrentThread(JavaVM *vm) {
-    jni_Unimplemented("DetachCurrentThread");
+    JniUnimplemented("DetachCurrentThread");
 }
 
 jint jni_GetEnv(JavaVM *vm, void **penv, jint version) {
-    jni_Unimplemented("GetEnv");
+    JniUnimplemented("GetEnv");
 }
 
 jint jni_AttachCurrentThreadAsDaemon(JavaVM *vm, void **penv, void *args) {
-    jni_Unimplemented("AttachCurrentThreadAsDaemon");
+    JniUnimplemented("AttachCurrentThreadAsDaemon");
 }
 
 const struct JNIInvokeInterface_ jni_InvokeInterface = {

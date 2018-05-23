@@ -14,14 +14,14 @@ public class Constants {
     public static final String RUNTIME_ARRAY = RUNTIME_PACKAGE + ".Array";
     public static final String RUNTIME_ARRAY_TYPE = RUNTIME_ARRAY + ".Type";
 
-    public static final String CLASS_OBJECT = "class$object";
     public static final String PRIMITIVE_CLASS_OBJECT_SUFFIX = "ClassObject";
 
     public static final String CALLOC = "GC_malloc";
-    public static final String ENTRY_TRAMPOLINE =
-            "Java_polyllvm_runtime_MainWrapper_main___3Ljava_lang_String_2";
+    public static final String ENTRY_TRAMPOLINE = "Java_polyllvm_runtime_MainWrapper_main";
     public static final int LLVM_ADDR_SPACE = 0;
 
+    public static final String REGISTER_CLASS_FUNC = "RegisterJavaClass";
+    public static final String GET_NATIVE_FUNC = "GetJavaNativeFunc";
     public static final String PERSONALITY_FUNC = "__java_personality_v0";
     public static final String CREATE_EXCEPTION = "createUnwindException";
     public static final String THROW_EXCEPTION = "throwUnwindException";
@@ -32,7 +32,7 @@ public class Constants {
     ));
 
     public static final int DEBUG_INFO_VERSION = 3;
-    public static final int DEBUG_DWARF_VERSION = 2;
+    public static final int DEBUG_DWARF_VERSION = 4;
 
     /**
      * The default size of the table for interfaces

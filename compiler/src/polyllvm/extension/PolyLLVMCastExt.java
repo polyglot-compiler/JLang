@@ -145,12 +145,12 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             // Convert directly to wrapper type.
             // This may be preceded by a primitive narrowing conversion (e.g., `Byte b = 1;`).
             Expr primCast = v.tnf.Cast(e, v.ts.primitiveTypeOfWrapper(to));
-            return v.tnf.StaticCall(pos, "valueOf", to, to, primCast);
+            return v.tnf.StaticCall(pos, to, to, "valueOf", primCast);
         } else {
             // Convert to wrapper type.
             // This may be followed by a widening reference conversion.
             ClassType wrapType = v.ts.wrapperClassOfPrimitive(from);
-            Call wrap = v.tnf.StaticCall(pos, "valueOf", wrapType, wrapType, e);
+            Call wrap = v.tnf.StaticCall(pos, wrapType, wrapType, "valueOf", e);
             assert wrapType.isSubtype(to);
             return v.tnf.Cast(wrap, to);
         }
@@ -188,7 +188,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         }
         else if (from.isPrimitive()) {
             // Call String.valueOf(...)
-            return v.tnf.StaticCall(pos, "valueOf", v.ts.String(), v.ts.String(), e);
+            return v.tnf.StaticCall(pos, v.ts.String(), v.ts.String(), "valueOf", e);
         }
         else if (e instanceof StringLit) {
             // Optimization.
@@ -207,7 +207,7 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
             // if e has a null value or if e.toString() has a null value.
             // This is needed even for String types, since they could be null.
             ClassType helperType = v.tnf.typeForName(Constants.RUNTIME_HELPER).toClass();
-            return v.tnf.StaticCall(pos, "toString", helperType, v.ts.String(), e);
+            return v.tnf.StaticCall(pos, helperType, v.ts.String(), "toString", e);
         }
     }
 

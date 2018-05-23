@@ -57,10 +57,10 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
             leafType = n.type().toArray().ultimateBase();
         }
         String leafTypeStr = getLeafTypeString(leafType);
-        Field leafTypeField = v.tnf.StaticField(pos, leafTypeStr, leafTypeEnum);
+        Field leafTypeField = v.tnf.StaticField(pos, leafTypeEnum, leafTypeStr);
         ArrayInit lens = (ArrayInit) v.nf.ArrayInit(pos, n.dims()).type(v.ts.arrayOf(v.ts.Int()));
         String name = "createMultidimensional";
-        return v.tnf.StaticCall(pos, name, arrType, arrType, leafTypeField, lens);
+        return v.tnf.StaticCall(pos, arrType, arrType, name, leafTypeField, lens);
     }
 
     // Returns the name of the enum constant corresponding to the given array leaf type.

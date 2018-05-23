@@ -9,14 +9,7 @@ class MainWrapper {
     static native void main(String[] args);
 
     static void runMain(String[] args) {
-        try {
-            main(args);
-        }
-        catch (Throwable e) {
-            System.err.println(
-                "Terminating due to uncaught "
-                + e.getClass().getName() + " with message:\n" + e.getMessage());
-            // TODO: System.exit(1);
-        }
+        // TODO: Print stack trace.
+        main(args);
     }
 }

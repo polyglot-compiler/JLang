@@ -126,7 +126,7 @@ public class PolyLLVMTryExt extends PolyLLVMExt {
         Try n = (Try) node();
 
         // Useful functions, types, and constants.
-        LLVMValueRef nullBytePtr = LLVMConstPointerNull(v.utils.i8Ptr());
+        LLVMValueRef nullBytePtr = LLVMConstNull(v.utils.i8Ptr());
         LLVMValueRef personalityFunc = v.utils.getFunction(
                 Constants.PERSONALITY_FUNC,
                 v.utils.functionType(LLVMInt32TypeInContext(v.context)));

@@ -11,16 +11,4 @@ class Helper {
         String res = o.toString();
         return res == null ? "null" : res;
     }
-
-    // These classes implicitly generate class objects,
-    // which we use for primitive types.
-    static final Class voidClassObject    = Class.forName("void");
-    static final Class booleanClassObject = Class.forName("boolean");
-    static final Class byteClassObject    = Class.forName("byte");
-    static final Class charClassObject    = Class.forName("char");
-    static final Class shortClassObject   = Class.forName("short");
-    static final Class intClassObject     = Class.forName("int");
-    static final Class longClassObject    = Class.forName("long");
-    static final Class floatClassObject   = Class.forName("float");
-    static final Class doubleClassObject  = Class.forName("double");
 }

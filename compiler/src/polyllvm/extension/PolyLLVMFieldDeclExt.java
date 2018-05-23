@@ -1,7 +1,6 @@
 package polyllvm.extension;
 
 import polyglot.ast.FieldDecl;
-import polyglot.ast.Lit;
 import polyglot.ast.Node;
 import polyglot.types.FieldInstance;
 import polyglot.util.SerialVersionUID;
@@ -19,33 +18,18 @@ public class PolyLLVMFieldDeclExt extends PolyLLVMExt {
     public Node overrideTranslateLLVM(Node parent, LLVMTranslator v) {
         FieldDecl n = (FieldDecl) node();
 
-        // Only static fields require a translation here;
-        // non-static field initializers are handled in constructors.
+        // Initializers are desugared into standalone functions, so no need
+        // initialize fields here. We only need to declare static fields as global variables.
         if (n.flags().isStatic()) {
             FieldInstance fi = n.fieldInstance();
-            String mangledName = v.mangler.mangleStaticFieldName(fi);
+            String mangledName = v.mangler.staticField(fi);
             LLVMTypeRef type = v.utils.toLL(n.declType());
             LLVMValueRef global = v.utils.getGlobal(mangledName, type);
-            if (n.init() == null) {
-                // LLVMConstNull will give zero for any type, including numeric and pointer types.
-                LLVMSetInitializer(global, LLVMConstNull(type));
-            } else {
-                if (n instanceof Lit) {
-                    n.init().visit(v);
-                    LLVMValueRef val = v.getTranslation(n.init());
-                    assert LLVMIsConstant(val) == 1 : "literal should translate to a constant";
-                    LLVMSetInitializer(global, val);
-                } else {
-                    LLVMSetInitializer(global, LLVMConstNull(type));
-                    v.utils.buildCtor(() -> {
-                        n.init().visit(v);
-                        LLVMValueRef val = v.getTranslation(n.init());
-                        LLVMBuildStore(v.builder, val, global);
-                        return global;
-                    });
-                }
-            }
-            v.addTranslation(n, global);
+
+            // LLVMConstNull will give zero for any type, including numeric and pointer types.
+            // TODO: Could initialize constant fields at compile time here. Coordinate with DesugarInitializers.
+            // TODO: Could use LLVMSetGlobalConstant for constant final fields.
+            LLVMSetInitializer(global, LLVMConstNull(type));
         }
 
         return super.leaveTranslateLLVM(v);

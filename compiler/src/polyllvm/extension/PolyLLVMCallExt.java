@@ -27,6 +27,18 @@ public class PolyLLVMCallExt extends PolyLLVMProcedureCallExt {
      */
     private boolean direct = false;
 
+    @Override
+    public Node leaveTranslateLLVM(LLVMTranslator v) {
+
+        // Add a placeholder translation marking success for methods that
+        // return `void`, since all expressions must have some translation.
+        if (node().methodInstance().returnType().isVoid())
+            v.addTranslation(node(), new Object());
+
+        // Most of the translation happens here in this call.
+        return super.leaveTranslateLLVM(v);
+    }
+
     /** Sets {@link this#direct} appropriately. */
     public Call determineIfDirect(Call c) {
         PolyLLVMCallExt ext = (PolyLLVMCallExt) PolyLLVMExt.ext(c);

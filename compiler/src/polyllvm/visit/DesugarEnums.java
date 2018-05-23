@@ -164,15 +164,16 @@ public class DesugarEnums extends DesugarVisitor {
                 .filter((fi) -> fi instanceof EnumInstance)
                 .map((fi) -> {
                     EnumInstance ei = (EnumInstance) fi;
-                    return tnf.StaticField(pos, ei.name(), enumType);
+                    return tnf.StaticField(pos, enumType, ei.name());
                 })
                 .collect(Collectors.toList());
 
         // Create field.
         Expr init = nf.ArrayInit(pos, decls).type(ts.arrayOf(enumType));
         return tnf.FieldDecl(
-                pos, "values", ts.arrayOf(enumType), enumType, init,
-                Flags.NONE.Private().Static().Final());
+                pos, enumType, Flags.NONE.Private().Static().Final(),
+                ts.arrayOf(enumType), "values", init
+        );
     }
 
     /** public static T[] values() { return (T[]) T.values.clone(); } */
@@ -180,7 +181,7 @@ public class DesugarEnums extends DesugarVisitor {
         Position pos = enumType.position();
 
         // Find field.
-        Field f = tnf.StaticField(pos, "values", enumType);
+        Field f = tnf.StaticField(pos, enumType, "values");
 
         // Clone, cast, and return
         Call call = tnf.Call(pos, f, "clone", ts.Object(), ts.Object());
@@ -189,8 +190,9 @@ public class DesugarEnums extends DesugarVisitor {
 
         // Declare method.
         return tnf.MethodDecl(
-                pos, "values", enumType, ts.arrayOf(enumType),
-                Collections.emptyList(), nf.Block(pos, ret), Flags.NONE.Public().Static().Final());
+                pos, enumType, Flags.NONE.Public().Static().Final(),
+                ts.arrayOf(enumType), "values", Collections.emptyList(),
+                nf.Block(pos, ret));
     }
 
     /** public static T valueOf(String s) { return (T) Enum.valueOf(T.class, s); } */
@@ -203,7 +205,7 @@ public class DesugarEnums extends DesugarVisitor {
         ClassLit clazz = tnf.ClassLit(pos, enumType);
         Local s = tnf.Local(pos, formal);
         ClassType container = enumType.superType().toClass();
-        Call call = tnf.StaticCall(pos, "valueOf", container, enumType, clazz, s);
+        Call call = tnf.StaticCall(pos, container, enumType, "valueOf", clazz, s);
 
         // Cast and return.
         Cast cast = tnf.Cast(call, enumType);
@@ -211,7 +213,8 @@ public class DesugarEnums extends DesugarVisitor {
 
         // Declare method.
         return tnf.MethodDecl(
-                pos, "valueOf", enumType, enumType, Collections.singletonList(formal),
-                nf.Block(pos, ret), Flags.NONE.Public().Static().Final());
+                pos, enumType, Flags.NONE.Public().Static().Final(),
+                enumType, "valueOf", Collections.singletonList(formal),
+                nf.Block(pos, ret));
     }
 }

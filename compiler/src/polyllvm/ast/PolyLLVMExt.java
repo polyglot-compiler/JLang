@@ -15,7 +15,6 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class PolyLLVMExt extends Ext_c implements PolyLLVMOps {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
-
     public static PolyLLVMExt ext(Node n) {
         Ext e = n.ext();
         while (e != null && !(e instanceof PolyLLVMExt)) {

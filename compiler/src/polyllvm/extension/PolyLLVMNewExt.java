@@ -26,7 +26,7 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
 
         // This is an anonymous class! Initialize class data structures.
         if (n.body() != null) {
-            PolyLLVMClassDeclExt.initClassDataStructures(n.type().toClass(), v);
+            PolyLLVMClassDeclExt.initClassDataStructures(v, n.type().toClass(), n.body());
         }
 
         // Most of the translation happens in this super call.
@@ -48,12 +48,13 @@ public class PolyLLVMNewExt extends PolyLLVMProcedureCallExt {
         LLVMValueRef objCast = LLVMBuildBitCast(v.builder, obj, v.utils.toLL(clazz), "obj_cast");
 
         // Set the Dispatch vector
+        // TODO: Could probably do this inside the constructor function instead?
         LLVMValueRef gep = v.obj.buildDispatchVectorElementPtr(objCast, clazz);
         LLVMValueRef dvGlobal = v.dv.getDispatchVectorFor(clazz);
         LLVMBuildStore(v.builder, dvGlobal, gep);
 
         // Call the constructor function
-        String mangledFuncName = v.mangler.mangleProcName(ci);
+        String mangledFuncName = v.mangler.proc(ci);
 
         LLVMTypeRef funcType = v.utils.toLL(ci);
         LLVMValueRef funcPtr = v.utils.getFunction(mangledFuncName, funcType);

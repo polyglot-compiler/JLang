@@ -34,12 +34,8 @@ public class PolyLLVMDesugared extends AbstractGoal {
                 // because the type checker could complain about visibility issues. That's ok.
 
                 // Future desugar passes assume that anonymous classes have constructors and names.
-                new VisitorGoal(job, new NameLocalClasses(job, ts, nf)),
+                new VisitorGoal(job, new NameAnonClasses(job, ts, nf)),
                 new VisitorGoal(job, new DeclareExplicitAnonCtors(job, ts, nf)),
-
-                // Future desugar passes assume that class initialization code exists
-                // within class constructors.
-                new VisitorGoal(job, new DesugarClassInitializers(job, ts, nf)),
 
                 // Translate enums to normal classes.
                 new VisitorGoal(job, new DesugarEnums(job, ts, nf)),
@@ -51,11 +47,14 @@ public class PolyLLVMDesugared extends AbstractGoal {
                 // should not create qualified Special nodes.
                 new DesugarInnerClasses(job, ts, nf),
 
-                // Declare static fields to hold class objects,
-                new VisitorGoal(job, new DeclareClassObjects(job, ts, nf)),
+                // Future desugar passes assume that instance initialization code
+                // is called at the beginning of each constructor.
+                new VisitorGoal(job, new DesugarInstanceInitializers(job, ts, nf)),
 
-                // Local desugar transformations should be applied last.
-                new VisitorGoal(job, new DesugarLocally(job, ts, nf))
+                // Local desugar transformations.
+                // It's usually unsafe to run a pass after this one, since
+                // additional passes might create new non-desugared nodes.
+                new VisitorGoal(job, new DesugarLocally(job, ts, nf)),
         };
     }
 

@@ -194,8 +194,8 @@ class DeclareCaptures extends DesugarVisitor {
             // Declare and initialize capture fields.
             List<FieldDecl> fields = captures.get(ct).stream()
                     .map((li) -> tnf.FieldDecl(
-                            li.position(), CAPTURE_PREFIX + li.name(), li.type(),
-                            ct, /*init*/ null, Flags.FINAL))
+                            li.position(), ct,
+                            Flags.FINAL, li.type(), CAPTURE_PREFIX + li.name(), /*init*/ null))
                     .collect(Collectors.toList());
             cb = prependConstructorInitializedFields(ct, cb, fields);
         }

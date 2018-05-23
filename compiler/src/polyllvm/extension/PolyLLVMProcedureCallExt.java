@@ -11,7 +11,6 @@ import polyglot.types.ProcedureInstance;
 import polyglot.types.Type;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
-import polyllvm.util.Constants;
 import polyllvm.visit.DesugarLocally;
 import polyllvm.visit.LLVMTranslator;
 
@@ -59,7 +58,7 @@ abstract class PolyLLVMProcedureCallExt extends PolyLLVMExt {
         ProcedureCall n = node();
         ProcedureInstance pi = n.procedureInstance();
 
-        LLVMTypeRef retType = v.utils.toLLReturnType(pi);
+        LLVMTypeRef retType = v.utils.toLL(v.utils.erasedReturnType(pi));
         LLVMTypeRef[] paramTypes = v.utils.toLLParamTypes(pi);
         LLVMTypeRef funcType = v.utils.functionType(retType, paramTypes);
 
@@ -94,11 +93,6 @@ abstract class PolyLLVMProcedureCallExt extends PolyLLVMExt {
         ProcedureInstance pi = n.procedureInstance();
         List<LLVMValueRef> args = new ArrayList<>();
 
-        // Add JNIEnv reference.
-        if (pi.flags().isNative()) {
-            args.add(v.utils.getGlobal(Constants.JNI_ENV_VAR_NAME, v.utils.jniEnvType()));
-        }
-
         // Add receiver argument.
         if (!pi.flags().isStatic()) {
             args.add(buildReceiverArg(v));
@@ -127,7 +121,7 @@ abstract class PolyLLVMProcedureCallExt extends PolyLLVMExt {
      */
     protected LLVMValueRef buildFuncPtr(LLVMTranslator v, LLVMTypeRef funcType) {
         ProcedureCall n = node();
-        String funcName = v.mangler.mangleProcName(n.procedureInstance());
+        String funcName = v.mangler.proc(n.procedureInstance());
         return v.utils.getFunction(funcName, funcType);
     }
 

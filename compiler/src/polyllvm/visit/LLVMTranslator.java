@@ -317,6 +317,8 @@ public class LLVMTranslator extends NodeVisitor {
         List<MethodInstance> res = new ArrayList<>();
         for (ClassType it : allInterfaces(ct)) {
             for (MethodInstance mj : it.methods()) {
+                if (mj.flags().isStatic())
+                    continue; // Interfaces may have static methods after certain desugar passes.
                 boolean novel = res.stream()
                         .noneMatch(mi -> ts.areOverrideEquivalent(
                                 (JL5MethodInstance) mi,

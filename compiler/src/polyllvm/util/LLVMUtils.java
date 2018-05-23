@@ -7,6 +7,7 @@ import polyglot.ext.jl5.types.inference.LubType;
 import polyglot.ext.jl7.types.DiamondType;
 import polyglot.types.*;
 import polyglot.util.InternalCompilerError;
+import polyglot.util.Position;
 import polyllvm.visit.LLVMTranslator;
 
 import java.util.ArrayList;
@@ -116,7 +117,12 @@ public class LLVMUtils {
     }
 
     public int llvmPtrSize() {
+        // TODO: This should not be hard-coded.
         return 8;
+    }
+
+    public LLVMTypeRef voidType() {
+        return LLVMVoidTypeInContext(v.context);
     }
 
     public LLVMTypeRef i8() {
@@ -125,6 +131,10 @@ public class LLVMUtils {
 
     public LLVMTypeRef i32() {
         return LLVMInt32TypeInContext(v.context);
+    }
+
+    public LLVMTypeRef i64() {
+        return LLVMInt64TypeInContext(v.context);
     }
 
     public LLVMTypeRef i8Ptr() {
@@ -188,8 +198,8 @@ public class LLVMUtils {
     }
 
     // LLVM requires that void-returning functions have the empty string for their label.
-    public LLVMValueRef buildProcCall(LLVMValueRef p, LLVMValueRef... a) {
-        return buildCall("", v.currLandingPad(), p, a);
+    public void buildProcCall(LLVMValueRef fun, LLVMValueRef... a) {
+        buildCall("", v.currLandingPad(), fun, a);
     }
 
     // Same as above, but allows custom landing pad.
@@ -199,6 +209,76 @@ public class LLVMUtils {
 
     public LLVMValueRef buildFunCall(LLVMValueRef fun, LLVMValueRef... args) {
         return buildCall("call", v.currLandingPad(), fun, args);
+    }
+
+    public LLVMValueRef getStaticField(FieldInstance fi) {
+        String mangledName = v.mangler.staticField(fi);
+        LLVMTypeRef type = v.utils.toLL(fi.type());
+        return v.utils.getGlobal(mangledName, type);
+    }
+
+    public void buildFunc(
+            Position pos, String name, String debugName,
+            Type returnType, List<? extends Type> argTypes, Runnable bodyBuilder) {
+        // Create type and debug info.
+        LLVMTypeRef returnTypeLL = toLL(returnType);
+        List<LLVMTypeRef> argTypesLL = argTypes.stream()
+                .map(this::toLL)
+                .collect(Collectors.toList());
+        List<LLVMMetadataRef> argDebugTypes = argTypes.stream()
+                .map(v.debugInfo::debugType)
+                .collect(Collectors.toList());
+        buildFunc(pos, name, debugName, returnTypeLL, argTypesLL, argDebugTypes, bodyBuilder);
+    }
+
+    /**
+     * Convenience method for declaring an LLVM function with
+     * proper debug information and structure.
+     */
+    public void buildFunc(
+            Position pos, String name, String debugName,
+            LLVMTypeRef returnType, List<LLVMTypeRef> argTypes,
+            List<LLVMMetadataRef> argDebugTypes,
+            Runnable bodyBuilder) {
+
+        LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
+
+        LLVMTypeRef funcType = v.utils.functionType(
+                returnType, argTypes.toArray(new LLVMTypeRef[0]));
+        LLVMValueRef func = getFunction(name, funcType);
+        v.debugInfo.beginFuncDebugInfo(pos, func, name, debugName, argDebugTypes);
+        v.pushFn(func);
+
+        // Note that the entry block is reserved exclusively for alloca instructions
+        // and parameter initialization. Translations will insert alloca instructions
+        // into this block as needed.
+        LLVMBasicBlockRef entry = v.utils.buildBlock("entry");
+        LLVMBasicBlockRef body = v.utils.buildBlock("body");
+
+        // Build body.
+        LLVMPositionBuilderAtEnd(v.builder, body);
+        bodyBuilder.run();
+
+        // Add terminator if necessary.
+        if (!v.utils.blockTerminated()) {
+            if (returnType.equals(v.utils.voidType())) {
+                LLVMBuildRetVoid(v.builder);
+            } else {
+                LLVMBuildUnreachable(v.builder);
+            }
+        }
+
+        // Connect entry block with body.
+        // We build this branch at the end since translations need to be able
+        // to insert into the entry block before its terminator. (LLVMPositionBuilderBefore
+        // is inconvenient because it changes the debug location.)
+        LLVMPositionBuilderAtEnd(v.builder, entry);
+        LLVMBuildBr(v.builder, body);
+
+        // Cleanup.
+        v.debugInfo.popScope();
+        v.popFn();
+        LLVMPositionBuilderAtEnd(v.builder, prevBlock);
     }
 
     /**
@@ -221,7 +301,7 @@ public class LLVMUtils {
                 v.debugInfo.diBuilder, new PointerPointer<>(), /* length */ 0);
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
                 v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
-        v.debugInfo.funcDebugInfo(func, name, name, funcDiType, 0);
+        v.debugInfo.beginFuncDebugInfo(func, name, name, funcDiType, 0);
 
         LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, func, "entry");
         LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(v.context, func, "body");
@@ -310,18 +390,29 @@ public class LLVMUtils {
         return global;
     }
 
+    public LLVMValueRef getClassObjectGlobal(ClassType ct) {
+        String mangled = v.mangler.classObj(ct);
+        LLVMTypeRef elemType = v.utils.toLL(v.ts.Class());
+        return v.utils.getGlobal(mangled, elemType);
+    }
+
+    public LLVMValueRef loadClassObject(ClassType ct) {
+        LLVMValueRef globalVar = getClassObjectGlobal(ct);
+        return LLVMBuildLoad(v.builder, globalVar, "class.obj");
+    }
+
     public LLVMValueRef buildGEP(LLVMValueRef ptr, LLVMValueRef... indices) {
         // TODO: If safe to do so, might be better to use LLVMBuildInBoundsGEP.
         return LLVMBuildGEP(v.builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
     }
 
-    public LLVMValueRef buildStructGEP(LLVMValueRef ptr, int... intIndices) {
+    public LLVMValueRef buildGEP(LLVMValueRef ptr, int... intIndices) {
         // LLVM suggests using i32 offsets for struct GEP instructions.
         LLVMValueRef[] indices = IntStream.of(intIndices)
-                .mapToObj(i -> LLVMConstInt(LLVMInt32TypeInContext(v.context),
-                        i, /* sign-extend */ 0))
+                .mapToObj(i -> LLVMConstInt(i32(), i, /*sign-extend*/ 0))
                 .toArray(LLVMValueRef[]::new);
-        return LLVMBuildGEP(v.builder, ptr, new PointerPointer<>(indices), indices.length, "gep");
+        PointerPointer<LLVMValueRef> indicesPtr = new PointerPointer<>(indices);
+        return LLVMBuildGEP(v.builder, ptr, indicesPtr, indices.length, "gep");
     }
 
     /**
@@ -456,7 +547,7 @@ public class LLVMUtils {
      * {@code intf}.
      *
      * @param intf a Java interface type
-     *             {@link LLVMTranslator#allInterfaces(ClassType) implemented} by
+     *             {@link LLVMTranslator#allInterfaces(ReferenceType)} implemented by
      *             {@code clazz}
      * @param clazz the non-abstract Java class type
      */
@@ -479,7 +570,7 @@ public class LLVMUtils {
             // The idxI-th method in IDV is the idxC-th method in CDV.
             MethodInstance cdvM = cdvMethods.get(idxC);
             LLVMTypeRef cdvM_LLTy = toLLFuncTy(clazz, cdvM.returnType(), cdvM.formalTypes());
-            LLVMValueRef funcVal = getFunction(v.mangler.mangleProcName(cdvM), cdvM_LLTy);
+            LLVMValueRef funcVal = getFunction(v.mangler.proc(cdvM), cdvM_LLTy);
             // Cast funcVal to the method signature used by IDV
             MethodInstance idvM = idvMethods.get(idxI);
             LLVMTypeRef idvM_LLTy = toLLFuncTy(intf, idvM.returnType(), idvM.formalTypes());
@@ -516,43 +607,82 @@ public class LLVMUtils {
         return functionType(retType, argTypes);
     }
 
-    /** Returns the (erased) LLVM type reference for the given procedure */
-    public LLVMTypeRef toLL(ProcedureInstance pi) {
-        return functionType(toLLReturnType(pi), toLLParamTypes(pi));
+    public ProcedureInstance erasedProcedureInstance(ProcedureInstance pi) {
+        if (pi instanceof ConstructorInstance) return ((ConstructorInstance) pi).orig();
+        else if (pi instanceof MethodInstance) return ((MethodInstance) pi).orig();
+        else {
+            throw new InternalCompilerError("Unhandled procedure instance kind");
+        }
     }
 
-    /** Returns an LLVM type reference for the erased return type of [pi]. */
-    public LLVMTypeRef toLLReturnType(ProcedureInstance pi) {
+    /** Returns the erased return type of a procedure. */
+    public Type erasedReturnType(ProcedureInstance pi) {
+        pi = erasedProcedureInstance(pi);
         return pi instanceof MethodInstance
-                ? toLL(((MethodInstance) pi).orig().returnType())
-                : toLL(v.ts.Void());
+                ? ((MethodInstance) pi).returnType()
+                : v.ts.Void();
     }
 
-    /** Returns LLVM type references for the erased parameter types of [pi]. */
-    public LLVMTypeRef[] toLLParamTypes(ProcedureInstance pi) {
-        // Use the original procedure instance to ensure unsubstituted type parameters.
-        if (pi instanceof ConstructorInstance)
-            pi = ((ConstructorInstance) pi).orig();
-        else if (pi instanceof MethodInstance)
-            pi = ((MethodInstance) pi).orig();
-        else throw new InternalCompilerError("Unhandled procedure instance kind");
+    /** Returns the erased formal types of a procedure, including implicit parameters. */
+    public List<Type> erasedImplicitFormalTypes(ProcedureInstance pi) {
+        pi = erasedProcedureInstance(pi);
+        List<Type> formalTypes = new ArrayList<>();
+        if (!pi.flags().isStatic())
+            formalTypes.add(pi.container()); // Implicit receiver.
+        formalTypes.addAll(pi.formalTypes());
+        return formalTypes;
+    }
 
-        List<LLVMTypeRef> res = new ArrayList<>();
+    /**
+     * Returns the (erased) LLVM function type reference for the given procedure.
+     * The function type will include implicit parameters such as the `this` reference.
+     */
+    public LLVMTypeRef toLL(ProcedureInstance pi) {
+        LLVMTypeRef returnType = toLL(erasedReturnType(pi));
+        LLVMTypeRef[] formalTypes = toLLParamTypes(pi);
+        return functionType(returnType, formalTypes);
+    }
+
+    public LLVMTypeRef toLLTrampoline(ProcedureInstance pi) {
+        Type returnTypePrecise = erasedReturnType(pi);
+        Type returnType = returnTypePrecise.isReference() ? v.ts.Object() : returnTypePrecise;
+        LLVMTypeRef[] paramTypes = {
+                v.utils.i8Ptr(),                  // Function pointer.
+                v.utils.ptrTypeRef(v.utils.i64()) // Argument pointer.
+        };
+        return functionType(toLL(returnType), paramTypes);
+    }
+
+    /** Returns LLVM type references for the erased parameter types of {@code pi}. */
+    public LLVMTypeRef[] toLLParamTypes(ProcedureInstance pi) {
+        return erasedImplicitFormalTypes(pi).stream()
+                .map(this::toLL)
+                .toArray(LLVMTypeRef[]::new);
+    }
+
+    /**
+     * Returns the function type of the "real" native implementation of {@code pi},
+     * rather than the function type of the stub that we create ourselves.
+     */
+    public LLVMTypeRef getNativeFunctionType(ProcedureInstance pi) {
+        assert pi.flags().isNative();
+        List<LLVMTypeRef> formalTypeList = new ArrayList<>();
 
         // Add implicit JNIEnv parameter.
-        if (pi.flags().isNative()) {
-            res.add(ptrTypeRef(jniEnvType()));
-        }
+        formalTypeList.add(ptrTypeRef(jniEnvType()));
 
-        // Add implicit receiver parameter.
-        if (!pi.flags().isStatic()) {
-            res.add(toLL(pi.container()));
+        // Static native methods take in the class object as well.
+        if (pi.flags().isStatic()) {
+            formalTypeList.add(toLL(v.ts.Class()));
         }
 
         // Add normal parameters.
-        pi.formalTypes().stream().map(this::toLL).forEach(res::add);
+        erasedImplicitFormalTypes(pi).stream().map(this::toLL).forEach(formalTypeList::add);
 
-        return res.toArray(new LLVMTypeRef[res.size()]);
+        LLVMTypeRef[] formalTypes = formalTypeList.toArray(new LLVMTypeRef[formalTypeList.size()]);
+        LLVMTypeRef returnType = toLL(erasedReturnType(pi));
+
+        return functionType(returnType, formalTypes);
     }
 
     /**
@@ -568,9 +698,8 @@ public class LLVMUtils {
         return LLVMBuildBitCast(v.builder, val, ptrTypeRef(toLL(jty)), "cast_l");
     }
 
-    public LLVMValueRef buildConstArray(LLVMTypeRef type,
-            LLVMValueRef... values) {
-        return LLVMConstArray(type, new PointerPointer<>(values), values.length);
+    public LLVMValueRef buildConstArray(LLVMTypeRef elemType, LLVMValueRef... values) {
+        return LLVMConstArray(elemType, new PointerPointer<>(values), values.length);
     }
 
     /** Returns an anonymous constant struct. */
@@ -587,6 +716,47 @@ public class LLVMUtils {
     public LLVMValueRef buildNamedConstStruct(LLVMTypeRef type, LLVMValueRef... values) {
         PointerPointer<LLVMValueRef> valArr = new PointerPointer<>(values);
         return LLVMConstNamedStruct(type, valArr, values.length);
+    }
+
+    public LLVMValueRef buildAnonGlobal(LLVMValueRef val) {
+        LLVMValueRef var = getGlobal("", LLVMTypeOf(val));
+        LLVMSetInitializer(var, val);
+        LLVMSetGlobalConstant(var, 1);
+        LLVMSetLinkage(var, LLVMPrivateLinkage);
+        return var;
+    }
+
+    public LLVMValueRef buildGlobalArrayAsPtr(LLVMTypeRef elemType, LLVMValueRef[] values) {
+        LLVMValueRef arr = buildConstArray(elemType, values);
+        LLVMValueRef global = buildAnonGlobal(arr);
+        return v.utils.buildGEP(global, 0, 0);
+    }
+
+    public LLVMValueRef buildGlobalCStr(String str) {
+        LLVMValueRef val = LLVMConstStringInContext(v.context, str, str.length(), 0);
+        LLVMValueRef global = buildAnonGlobal(val);
+        return v.utils.buildGEP(global, 0, 0);
+    }
+
+    /** Emits a check to ensure that the given class has been loaded by the runtime. */
+    public void buildClassLoadCheck(ClassType ct) {
+        LLVMBasicBlockRef loadClass = v.utils.buildBlock("load.class");
+        LLVMBasicBlockRef end = v.utils.buildBlock("continue");
+        String classMangled = v.mangler.classObj(ct);
+        LLVMTypeRef classType = v.utils.toLL(v.ts.Class());
+        LLVMValueRef classGlobal = v.utils.getGlobal(classMangled, classType);
+        LLVMValueRef clazz = LLVMBuildLoad(v.builder, classGlobal, "class");
+        LLVMValueRef check = LLVMBuildIsNull(v.builder, clazz, "class.null");
+        LLVMBuildCondBr(v.builder, check, loadClass, end);
+
+        LLVMPositionBuilderAtEnd(v.builder, loadClass);
+        String loadClassMangled = v.mangler.classLoadingFunc(ct);
+        LLVMTypeRef funcType = v.utils.functionType(toLL(v.ts.Class()));
+        LLVMValueRef loadClassFunc = v.utils.getFunction(loadClassMangled, funcType);
+        v.utils.buildFunCall(loadClassFunc);
+        LLVMBuildBr(v.builder, end);
+
+        LLVMPositionBuilderAtEnd(v.builder, end);
     }
 
     /**

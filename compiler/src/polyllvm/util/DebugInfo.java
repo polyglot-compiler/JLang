@@ -13,6 +13,7 @@ import java.io.File;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.List;
 
 import static org.bytedeco.javacpp.LLVM.*;
 import static polyllvm.util.Constants.DEBUG_DWARF_VERSION;
@@ -131,28 +132,40 @@ public class DebugInfo {
         insertDeclareAtEnd(v, alloc, localVar, p);
     }
 
-    public void funcDebugInfo(ProcedureDecl n, LLVMValueRef funcRef) {
+    public void beginFuncDebugInfo(ProcedureDecl n, LLVMValueRef funcRef) {
         ProcedureInstance pi = n.procedureInstance();
         LLVMMetadataRef unit = debugFile;
         int line = n.position().line();
+        String debugName = pi.container().toClass().fullName() + "#" + n.name() + "(...)";
         LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
-                diBuilder, unit, n.name(), v.mangler.mangleProcName(pi), unit, line,
+                diBuilder, unit, debugName, v.mangler.proc(pi), unit, line,
                 createFunctionType(pi, unit), /*internalLinkage*/ 0, /*definition*/ 1,
                 line, /*DINode::FlagPrototyped*/ 1 << 8, /*isOptimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);
         pushScope(sp);
     }
 
-    public void funcDebugInfo(
-            LLVMValueRef funcRef, String name, String linkageName,
+    public void beginFuncDebugInfo(
+            LLVMValueRef funcRef, String name, String debugName,
             LLVMMetadataRef funcType, int line) {
         LLVMMetadataRef unit = debugFile;
         LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
-                diBuilder, unit, name, linkageName, unit, line,
+                diBuilder, unit, debugName, name, unit, line,
                 funcType, /*internalLinkage*/ 0, /*definition*/ 1,
                 line, /*DINode::FlagPrototyped*/ 1 << 8, /*isOptimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);
         pushScope(sp);
+    }
+
+    public void beginFuncDebugInfo(
+            Position pos, LLVMValueRef func, String name, String debugName,
+            List<LLVMMetadataRef> formalDebugTypes) {
+        LLVMMetadataRef[] formals = formalDebugTypes.toArray(new LLVMMetadataRef[0]);
+        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
+                v.debugInfo.diBuilder, new PointerPointer<>(formals), formals.length);
+        LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
+                v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
+        v.debugInfo.beginFuncDebugInfo(func, name, debugName, funcDiType, pos.line());
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

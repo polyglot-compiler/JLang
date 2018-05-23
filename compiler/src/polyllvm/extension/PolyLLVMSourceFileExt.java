@@ -2,7 +2,6 @@ package polyllvm.extension;
 
 import org.bytedeco.javacpp.PointerPointer;
 import polyglot.ast.Node;
-import polyglot.main.Main;
 import polyglot.main.Options;
 import polyglot.types.TypeSystem;
 import polyglot.util.SerialVersionUID;
@@ -16,6 +15,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
+import static polyllvm.util.Constants.ENTRY_TRAMPOLINE;
 
 public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
@@ -36,19 +36,21 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
 
         // Call an entry point within the current module if possible.
         Map<String, LLVMValueRef> entryPoints = v.getEntryPoints();
-        String entryPointClass = ((PolyLLVMOptions) Options.global).entryPointClass;
+        PolyLLVMOptions options = (PolyLLVMOptions) Options.global;
+        String entryPointClass = options.entryPointClass;
+
         if (entryPointClass != null) {
-            if (!entryPoints.containsKey(entryPointClass))
-                throw new Main.TerminationException(
-                        "No entry point found for class " + entryPointClass);
-            buildEntryPoint(v, entryPoints.get(entryPointClass));
+            if (entryPoints.containsKey(entryPointClass)) {
+                buildEntryPoint(v, entryPoints.get(entryPointClass));
+            }
         }
-        else if (entryPoints.size() > 1) {
-            throw new Main.TerminationException(
-                    "Multiple Java main functions found; please specify which to use");
-        }
-        else if (!entryPoints.isEmpty()) {
-            buildEntryPoint(v, entryPoints.values().iterator().next());
+        else {
+            // Try to emit an entry point even if the user did not specify one.
+            // If there are multiple entry points, this may result in duplicate
+            // symbols during linking.
+            for (String entry : entryPoints.keySet()) {
+                buildEntryPoint(v, entryPoints.get(entry));
+            }
         }
 
         // Build ctor functions, if any.
@@ -63,23 +65,27 @@ public class PolyLLVMSourceFileExt extends PolyLLVMExt {
     private static void buildEntryPoint(LLVMTranslator v, LLVMValueRef javaEntryPoint) {
         TypeSystem ts = v.ts;
         LLVMTypeRef jniEnvT = v.utils.ptrTypeRef(v.utils.jniEnvType());
+        LLVMTypeRef classObj = v.utils.toLL(v.ts.Class());
         LLVMTypeRef strArgsT = v.utils.toLL(ts.arrayOf(ts.String()));
-        LLVMTypeRef funcType = v.utils.functionType(LLVMVoidTypeInContext(v.context), jniEnvT, strArgsT);
+        LLVMTypeRef voidT = LLVMVoidTypeInContext(v.context);
+        LLVMTypeRef funcType = v.utils.functionType(voidT, jniEnvT, classObj, strArgsT);
 
-        LLVMValueRef func = LLVMAddFunction(v.mod, Constants.ENTRY_TRAMPOLINE, funcType);
+        LLVMValueRef func = LLVMAddFunction(v.mod, ENTRY_TRAMPOLINE, funcType);
         v.pushFn(func);
 
-        LLVMMetadataRef[] formals = Stream.of(ts.Object(), ts.arrayOf(ts.String()))
+        LLVMMetadataRef[] formals = Stream.of(ts.Object(), ts.Class(), ts.arrayOf(ts.String()))
                 .map(v.debugInfo::debugType)
                 .toArray(LLVMMetadataRef[]::new);
-        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(v.debugInfo.diBuilder, new PointerPointer<>(formals), formals.length);
-        LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
-        v.debugInfo.funcDebugInfo(func, Constants.ENTRY_TRAMPOLINE, Constants.ENTRY_TRAMPOLINE, funcDiType, 0);
+        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
+                v.debugInfo.diBuilder, new PointerPointer<>(formals), formals.length);
+        LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
+                v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
+        v.debugInfo.beginFuncDebugInfo(func, ENTRY_TRAMPOLINE, "Java_entry_point", funcDiType, 0);
 
         LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(v.context, func, "body");
         LLVMPositionBuilderAtEnd(v.builder, block);
 
-        v.utils.buildProcCall(javaEntryPoint, LLVMGetParam(func, 1));
+        v.utils.buildProcCall(javaEntryPoint, LLVMGetParam(func, 2));
         LLVMBuildRetVoid(v.builder);
         v.debugInfo.popScope();
 
