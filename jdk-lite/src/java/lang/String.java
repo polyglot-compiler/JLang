@@ -34,7 +34,6 @@ public final class String {
         return new String(value);
     }
 
-    @Override
     public boolean equals(Object o) {
         if (!(o instanceof String))
             return false;
@@ -47,7 +46,6 @@ public final class String {
         return true;
     }
 
-    @Override
     public String toString() {
         return this;
     }

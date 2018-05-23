@@ -10,9 +10,6 @@ public class AssertionError extends Error {
     }
 
     public AssertionError(Object detailMessage) {
-        this("" +  detailMessage);
-        if (detailMessage instanceof Throwable) {
-            initCause((Throwable) detailMessage);
-        }
+        this(detailMessage.toString());
     }
 }

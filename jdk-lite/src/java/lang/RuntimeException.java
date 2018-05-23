@@ -1,7 +1,6 @@
 package java.lang;
 
 public class RuntimeException extends Exception {
-    static final long serialVersionUID = -7034897190745766939L;
 
     public RuntimeException() {
         super();
@@ -17,11 +16,5 @@ public class RuntimeException extends Exception {
 
     public RuntimeException(Throwable cause) {
         super(cause);
-    }
-
-    protected RuntimeException(String message, Throwable cause,
-                               boolean enableSuppression,
-                               boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
     }
 }

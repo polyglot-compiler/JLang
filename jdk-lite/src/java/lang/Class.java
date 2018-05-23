@@ -8,7 +8,7 @@ public final class Class<T> {
     }
 
     public static Class forName(String name) {
-                        return new Class(name);
+        return new Class(name);
     }
 
     public String getName() {

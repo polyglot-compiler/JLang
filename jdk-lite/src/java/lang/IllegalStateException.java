@@ -19,5 +19,4 @@ class IllegalStateException extends RuntimeException {
         super(cause);
     }
 
-    static final long serialVersionUID = -1848914673093119416L;
 }

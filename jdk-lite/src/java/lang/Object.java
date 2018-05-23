@@ -27,18 +27,18 @@ public class Object {
     }
 
     public String toString() {
-        return getClass().getName() + '@' + hashCode();
+        throw new RuntimeException("Object#toString() not implemented");
     }
 
-    public final void wait(long timeout) throws InterruptedException {
+    public final void wait(long timeout) {
         throw new RuntimeException("Object#wait(long) not implemented");
     }
 
-    public final void wait(long timeout, int nanos) throws InterruptedException {
+    public final void wait(long timeout, int nanos) {
         throw new RuntimeException("Object#wait(long,int) not implemented");
     }
 
-    public final void wait() throws InterruptedException {
+    public final void wait() {
         throw new RuntimeException("Object#wait() not implemented");
     }
 }

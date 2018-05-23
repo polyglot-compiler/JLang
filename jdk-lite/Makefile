@@ -1,11 +1,13 @@
+ifndef TOP_LEVEL_MAKEFILE_INVOKED
+$(error Please invoke the top-level Makefile)
+endif
+
 SRC := src
 OUT := out
 CLASSES := $(OUT)/classes
 
-CLANG := clang++
-PLC := ../bin/polyllvmc
-JDK7 ?= /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
-JAVAC := $(JDK7)/bin/javac
+# File indicating whether .class files have been produced.
+CLS_STAMP := $(CLASSES)/cls_stamp
 
 # Hack to allow dependency on PolyLLVM code.
 PLC_SRC := $(shell find ../compiler/src -name "*.java")
@@ -20,35 +22,33 @@ NATIVE_OBJ := $(NATIVE_SRC:%.cpp=$(OUT)/%.o)
 
 ALL_OBJ := $(JAVA_OBJ) $(NATIVE_OBJ)
 
-LIBJVM := ../runtime/out/libjvm.dylib
+LIBJVM := $(RUNTIME)/out/libjvm.dylib
 LIBJDK := $(OUT)/libjdk.dylib
 
 PLC_FLAGS := -assert
 
-JNI_INCLUDES := \
-	-I"$(JDK7)/include" \
-	-I"$(JDK7)/include/darwin" \
-	-I"$(JDK7)/include/linux"
-
 JAVA_FLAGS := -glldb -Wno-override-module
 NATIVE_FLAGS := -glldb -std=c++14 $(JNI_INCLUDES) -Wall -pthread
-LINK_FLAGS := -glldb -lgc
+LINK_FLAGS := -glldb -lgc -shared -install_name "$(realpath .)/$(LIBJDK)"
 
-all: $(LIBJDK)
+all: classes $(LIBJDK)
+
+classes: $(CLS_STAMP)
 
 # Runtime Java code (.java --> .class)
-$(JAVA_CLS): $(JAVA_SRC)
+$(CLS_STAMP): $(JAVA_SRC)
 	@echo "Compiling $(words $(JAVA_SRC)) Java files down to Java bytecode"
 	@mkdir -p $(CLASSES)
 	@$(JAVAC) -d $(CLASSES) $(JAVA_SRC)
+	@date > $@
 
 # Compile JDK Java code (.java --> .ll)
-$(JAVA_LL): $(JAVA_CLS) $(PLC_SRC)
+$(JAVA_LL): $(PLC_SRC)
 	@echo "Compiling $(words $(JAVA_SRC)) Java files down to LLVM IR"
 	@# We compile java.lang.Object separately, since otherwise
 	@# we get duplicate class errors from Polyglot. (TODO)
-	@$(PLC) -cp $(CLASSES) -c -d $(OUT) $(filter %Object.java,$(JAVA_SRC))
-	@$(PLC) -cp $(CLASSES) -c -d $(OUT) $(filter-out %Object.java,$(JAVA_SRC))
+	@$(PLC) -c -d $(OUT) $(filter %Object.java,$(JAVA_SRC))
+	@$(PLC) -c -d $(OUT) $(filter-out %Object.java,$(JAVA_SRC))
 
 # Compile LLVM IR (.ll --> .o).
 $(JAVA_OBJ): %.o: %.ll
@@ -64,7 +64,7 @@ $(NATIVE_OBJ): $(OUT)/%.o: %.cpp
 # Create a shared library for compiled JDK classes.
 $(LIBJDK): $(LIBJVM) $(ALL_OBJ)
 	@echo "Creating libjdk"
-	@$(CLANG) -glldb -lgc -shared -o $@ $^
+	@$(CLANG) $(LINK_FLAGS) -o $@ $^
 
 clean:
 	rm -rf $(OUT)

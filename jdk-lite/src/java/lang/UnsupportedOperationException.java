@@ -17,5 +17,4 @@ public class UnsupportedOperationException extends RuntimeException {
         super(cause);
     }
 
-    static final long serialVersionUID = -1242599979055084673L;
 }
