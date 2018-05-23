@@ -27,9 +27,13 @@ export JDK_CLASSES := $(JDK)/out/classes
 # PolyLLVM runtime.
 export RUNTIME := $(realpath runtime)
 export RUNTIME_CLASSES := $(RUNTIME)/out/classes
+export LIBJVM := $(RUNTIME)/out/libjvm.dylib
 
 # Clang.
 export CLANG := clang++
+
+export LIBJDK := $(JDK)/out/libjdk.dylib
+export LIBJDK_FLAGS := -glldb -lgc $(LIBJVM) -shared -install_name $(LIBJDK)
 
 
 all: compiler runtime jdk
@@ -42,17 +46,17 @@ compiler:
 
 runtime: compiler jdk-classes
 	@echo "--- Building runtime ---"
-	@$(MAKE) -s -C $(RUNTIME)
+	@$(MAKE) -C $(RUNTIME)
 	@echo
 
 jdk-classes:
 	@echo "--- Building $(notdir $(JDK)) classes ---"
-	@$(MAKE) -s -C $(JDK) classes
+	@$(MAKE) -C $(JDK) classes
 	@echo
 
 jdk: compiler runtime
 	@echo "--- Building $(notdir $(JDK)) ---"
-	@$(MAKE) -s -C $(JDK)
+	@$(MAKE) -C $(JDK)
 	@echo
 
 clean:

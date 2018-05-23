@@ -7,7 +7,7 @@ jstring JVM_GetClassName(JNIEnv *env, jclass cls);
 
 // Need mutable C-strings here, for RegisterNatives to accept them.
 char getNameName[] = "getName";
-char getNameSig[] = "()Ljava.lang.String;";
+char getNameSig[] = "()Ljava/lang/String;";
 
 static JNINativeMethod methods[] = {
     {getNameName, getNameSig, (void*) &JVM_GetClassName},

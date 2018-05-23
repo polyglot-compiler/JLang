@@ -12,7 +12,10 @@
 
 BASE_DIR := ../..
 RUNTIME := $(BASE_DIR)/runtime
-JDK := $(BASE_DIR)/jdk-lite
+
+# Use bare-bones JDK by default.
+JDK ?= jdk-lite
+JDK := $(BASE_DIR)/$(JDK)
 JDK_CLS := $(JDK)/out/classes
 
 SRC := $(shell find * -name "*.java")
@@ -28,8 +31,7 @@ CLANG := clang++
 CLANG_FLAGS := \
 	-Wno-override-module -L/usr/local/lib/ -lgc -g \
 	-L$(RUNTIME)/out -ljvm \
-	-L$(JDK)/out -ljdk \
-	-Wl,-rpath,$(RUNTIME)
+	-L$(JDK)/out -ljdk
 
 all: output
 
@@ -55,7 +57,6 @@ $(SOL): $(SRC)
 	@touch $(SOL)
 
 $(LL): $(SRC)
-	@$(MAKE) JDK=jdk-lite -C $(BASE_DIR)
 	@echo "Compiling $(words $?) Java file(s) down to LLVM IR"
 	@$(BASE_DIR)/bin/polyllvmc -cp $(JDK_CLS) -assert $?
 	@touch $(LL)

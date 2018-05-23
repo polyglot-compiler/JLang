@@ -20,16 +20,15 @@ NATIVE_OBJ := $(NATIVE_SRC:%.cpp=$(OUT)/%.o)
 ALL_OBJ := $(JAVA_OBJ) $(NATIVE_OBJ)
 
 LIBJVM := $(RUNTIME)/out/libjvm.dylib
-LIBJDK := $(OUT)/libjdk.dylib
 
 PLC_FLAGS := -assert
 
 JAVA_FLAGS := -glldb -Wno-override-module
 NATIVE_FLAGS := -glldb -std=c++14 $(JNI_INCLUDES) -Wall -pthread
-LINK_FLAGS := -glldb -lgc -shared -install_name "$(realpath .)/$(LIBJDK)"
 
 all: classes $(LIBJDK)
 
+.PHONY: classes
 classes: $(CLS_STAMP)
 
 # Runtime Java code (.java --> .class)
@@ -61,7 +60,7 @@ $(NATIVE_OBJ): $(OUT)/%.o: %.cpp
 # Create a shared library for compiled JDK classes.
 $(LIBJDK): $(LIBJVM) $(ALL_OBJ)
 	@echo "Creating libjdk"
-	@$(CLANG) $(LINK_FLAGS) -o $@ $^
+	@$(CLANG) $(LIBJDK_FLAGS) -o $@ $^
 
 clean:
 	rm -rf $(OUT)

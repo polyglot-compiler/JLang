@@ -71,7 +71,16 @@ public class PolyLLVMMangler {
                 .replace("/", "_")
                 .replace(";", SEMICOLON_ESCAPE)
                 .replace("[", BRACKET_ESCAPE);
+    }
 
+    /**
+     * Returns a class name formatted for use by Class#getName() and Class#forName(...).
+     * E.g., package.Clazz$InnerClass
+     */
+    public String userVisibleClassName(ClassType t) {
+        return t.outer() != null
+                ? userVisibleClassName(t.outer()) + "$" + t.name()
+                : t.fullName();
     }
 
     /**
