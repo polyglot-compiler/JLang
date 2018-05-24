@@ -15,8 +15,6 @@
         "The following JVM method is currently unimplemented:\n"
         "  %s\n"
         "It is defined in " __FILE__ ".\n"
-        "Note that the signature of this stub may not be correct;\n"
-        "you can find the correct signature in jvm.h within the JDK.\n"
         "Aborting for now.\n"
         "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
         , name);

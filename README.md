@@ -1,14 +1,14 @@
 PolyLLVM
 ========
 
-PolyLLVM adds an LLVM back end to the [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler, translating Java ASTs into LLVM IR.
+PolyLLVM adds an LLVM back end to the [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler, translating Java down to LLVM IR.
 
-Since Polyglot translates extended Java code into vanilla Java ASTs, PolyLLVM should be interoperable with other Polyglot extensions by default. However, it also aims to be extensible itself, so that one can write optimized LLVM translations for language extensions when needed.
+Since Polyglot already translates extended Java code into vanilla Java ASTs, PolyLLVM should be interoperable with other Polyglot extensions by default. However, PolyLLVM aims to be extensible itself, so that one can write optimized LLVM translations for language extensions when needed.
 
 A user manual and developer guide can be found on the PolyLLVM [website](http://gharrma.github.io/polyllvm/).
 
 
-Quick Start Guide
+Quick start guide
 -----------------
 
 PolyLLVM has the following dependencies, which you will need to download and install prior to use.
@@ -25,14 +25,28 @@ PolyLLVM has the following dependencies, which you will need to download and ins
 
 Finally, build PolyLLVM by running `ant` at the top level of the repository.
 
-If wanting to run tests from IntelliJ, run the `TestAll` class, using the top level of the repository as the working directory.
+If you want to run unit tests from IntelliJ, run the `TestAll` class, using the top level of the repository as the working directory.
 
 
-Navigating the Codebase
------------------------
+Status (May 2018)
+-----------------
 
-- Source files are in the [compiler/src/polyllvm](compiler/src/polyllvm) directory. The [ast](compiler/src/polyllvm/ast) subdirectory contains LLVM IR nodes. Most translation code resides in the [extension](compiler/src/polyllvm/extension) subdirectory.
+All translations from Java to LLVM IR are complete, with the exception of the `synchronized` keyword (see below on concurrency support). This means that all Java 7 language features---expressions, control flow, exceptions, method dispatch, switch statements, try-with-resources, initializer blocks, implicit type conversions, etc.---are translated robustly and as specified by the [JLS](https://docs.oracle.com/javase/specs/jls/se7/html/index.html). All of our [unit tests](tests/isolated) pass.
 
-- The [runtime](runtime) directory contains supporting files such as Java library source files and native code. A Makefile is used to produce LLVM IR from library files.
+However, PolyLLVM is still a work in progress for two important reasons.
 
-- The [tests/isolated](tests/isolated) directory contains single-file Java programs, and the [tests/group](tests/group) directory contains multi-file Java programs. The JUnit test suite compiles and runs these programs with both `javac` and `polyllvm`, then compares the results. A Makefile is used to speed up compile times.
+(1) JDK support. The JDK includes thousands of classes that are critical to the Java ecosystem, such as `java.lang.Class`, `java.util.ArrayList`, `java.io.File`, and `java.net.Socket`. Thus it is important to be able to compile programs that rely on the JDK. So far we can fully support a hand-written "bare-bones" JDK that includes only the JDK classes that are necessary for unit tests (`java.lang.Object`, `java.lang.Class`, `java.lang.System`, etc.). This has allowed us to test the compiler before trying to compile the entire JDK. Support for the full JDK is close, but not finished. Please see issue #54 for more information.
+
+(2) Concurrency support. Support for multiple threads and synchronization has not been started, as JDK support took priority. PolyLLVM will ignore the Java `synchronized` keyword, and the [native runtime code](runtime/native) is generally not thread-safe. Please see issue #5 for more information.
+
+All other loose ends (minor bugs, build system issues, etc.) are tracked as GitHub issues as well.
+
+
+Project structure
+-----------------
+
+- Source files are in the [compiler/src/polyllvm](compiler/src/polyllvm) directory. Most translation code resides in the [extension](compiler/src/polyllvm/extension) subdirectory.
+
+- The [runtime](runtime) directory contains Java code and native code needed to implement Java semantics at runtime (think: exceptions, JNI, reflection, etc.).
+
+- The [tests/isolated](tests/isolated) directory contains unit tests for translations from Java to LLVM IR. The JUnit test suite compiles and runs these programs with both `javac` and `polyllvm`, then compares the results.
