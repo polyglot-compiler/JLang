@@ -171,7 +171,7 @@ public class PolyLLVMProcedureDeclExt extends PolyLLVMExt {
         String name = v.mangler.procJniTrampoline(pi);
 
         LLVMValueRef preexisting = LLVMGetNamedFunction(v.mod, name);
-        if (preexisting != null && LLVMIsDeclaration(preexisting) != 0)
+        if (preexisting != null && LLVMIsDeclaration(preexisting) == 0)
             return; // We've already built this trampoline in this module.
 
         Function<Type, Type> mergeReferenceTypes = t -> t.isReference() ? v.ts.Object() : t;
