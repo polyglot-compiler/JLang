@@ -16,6 +16,8 @@ Before contributing, please do the following.
 (1) Read through the rest of this README.
 (2) Read through all GitHub issues carefully, to get the most up-to-date picture of the current state of the project.
 (3) Read through the [developer guide](http://gharrma.github.io/polyllvm/developer-guide.html) on the website, to get technical details on the most critical subcomponents of PolyLLVM.
+(4) If you need to work on compiler translations, get familiar with [LLVM IR](https://llvm.org/docs/LangRef.html).
+(5) If you need to work on native runtime code, get familiar with [JNI](https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/design.html).
 
 
 Quick start guide
