@@ -10,16 +10,15 @@ PolyLLVM adds an LLVM backend to the [Polyglot](https://www.cs.cornell.edu/proje
 
 Since Polyglot translates extended Java code into vanilla Java ASTs, PolyLLVM should be interoperable with other Polyglot extensions by default. However, it also aims to be extensible itself, so that one can write optimized LLVM translations for language extensions when needed.
 
-The backend is in development for Java 1.4, with future support planned for the most recent version of Java. The project covers the key features of Java for ahead of time compilation and static linking of programs. It provides an easy way to integrate projects with LLVM code, and allows for the full suite of LLVM tools to be used.
+To be more concrete, here's what Polyglot + PolyLLVM will allow you to do:
 
-Supported Features
-------------------
+(1) (Optional) Extend Java with custom language features or type annotations using Polyglot, and write a pass to translate these features back into standard Java.
+(2) Translate Java source files (`.java`) down to LLVM IR (`.ll`), and then from there down to object files (`.o`) using the the [LLVM](https://llvm.org) toolchain.
+(3) Link object files together along with PolyLLVM-compiled [OpenJDK](http://openjdk.java.net/projects/jdk7/) classes to create a standalone executable. PolyLLVM implements a runtime to provide the JVM functionality that the JDK expects, such as reflection and cross-language method calls.
 
-The project currently supports the basic arithmetic operations, variables, loops, arrays, class dispatch, interface dispatch, exceptions, inner/local/anonymous classes, and instanceof checks. We are currently working on implementing threading and library support.
+Status
+------
 
-Unsupported Features
---------------------
+PolyLLVM currently supports all Java 7 language features, minus concurrency support. This includes expressions, control flow, exceptions, method dispatch, switch statements, try-with-resources, initializer blocks, implicit type conversions, etc. OpenJDK 7 support is still a work in progress.
 
-We do not currently plan to support dynamic class loading or reflection.
-
-When converting floating point values to integral types, we deviate from the JLS when the floating point value is NaN, or too large to fit into the integral type. (In those cases, LLVM will produce undefined behavior, whereas Java might convert to a predefined constant.)
+See the [README](https://github.com/gharrma/polyllvm) in the repository for the most up-to-date status.

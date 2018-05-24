@@ -14,10 +14,8 @@ Contributing
 Before contributing, please do the following.
 
 (1) Read through the rest of this README.
-
-(2) Read through all GitHub issues carefully, to get the most up-to-date picture on the current state of the project.
-
-(3) Read through the [developer guide](http://gharrma.github.io/polyllvm/developer-guide.html) on the website, to get an overview of the most critical subcomponents of PolyLLVM.
+(2) Read through all GitHub issues carefully, to get the most up-to-date picture of the current state of the project.
+(3) Read through the [developer guide](http://gharrma.github.io/polyllvm/developer-guide.html) on the website, to get technical details on the most critical subcomponents of PolyLLVM.
 
 
 Quick start guide
