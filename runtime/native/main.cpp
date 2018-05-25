@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
     // Set up signal handling to report (for example) null pointer exceptions.
     struct sigaction sa;
     sa.sa_sigaction = sigaction;
-    sa.sa_mask = 0;
+    sigemptyset(&sa.sa_mask);
     sa.sa_flags =  SA_SIGINFO;
     sigaction(SIGSEGV, &sa, 0);
     sigaction(SIGBUS, &sa, 0);
