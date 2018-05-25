@@ -35,6 +35,7 @@ export CLANG := clang++
 export LIBJDK := $(JDK)/out/libjdk.dylib
 export LIBJDK_FLAGS := -glldb -lgc $(LIBJVM) -shared -install_name $(LIBJDK)
 
+sinclude defs.$(shell uname)
 
 all: polyglot compiler runtime jdk
 
