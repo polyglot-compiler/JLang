@@ -9,13 +9,15 @@ Building
 --------
 
 The Makefile in this directory will:
-(1) Extract JDK source files from the tracked zip file.
-(2) Apply PolyLLVM-specific patches to work around a few unsupported features such as reflection and threads. These patches should be removed as the corresponding features are implemented.
-(3) Use PolyLLVM to compile the JDK Java source files down to LLVM IR.
-(4) Use clang to compile LLVM IR down to object files.
+(1) Extract JDK source files from the tracked zip file.<br>
+(2) Apply PolyLLVM-specific patches to work around a few unsupported features such as reflection and threads. These patches should be removed as the corresponding features are implemented.<br>
+(3) Use PolyLLVM to compile the JDK Java source files down to LLVM IR.<br>
+(4) Use clang to compile LLVM IR down to object files.<br>
 (5) Use clang to link object files from the JDK into a shared library.
 
 Notes
 -----
 
 - In addition to direct source patches, there is also a file called `jdk-method-filter.txt`, which PolyLLVM uses to filter out about a dozen methods and field initializers that cause problems due to differences between PolyLLVM and javac. The file has a comment for each method explaining why the method causes issues. This takes advantage of Polyglot's `-method-filter` flag.
+
+- At the time of writing, we use the `Main.java` file here in order to compile only the slice of the JDK that is required for a Hello World program. This slice is quite large (1000+ files), and includes many of the most important JDK classes.

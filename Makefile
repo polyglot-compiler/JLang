@@ -1,6 +1,11 @@
 # Indicates to sub-Makefiles that it was invoked by this one.
 export TOP_LEVEL_MAKEFILE_INVOKED := true
 
+# Submodules.
+POLYGLOT := lib/polyglot/
+JAVACPP_PRESETS := lib/javacpp-presets/
+SUBMODULES := $(addsuffix .git,$(POLYGLOT) $(JAVACPP_PRESETS))
+
 # PolyLLVM.
 export PLC := $(realpath bin/polyllvmc)
 
@@ -37,10 +42,10 @@ export LIBJDK_FLAGS := -glldb -lgc $(LIBJVM) -shared -install_name $(LIBJDK)
 
 sinclude defs.$(shell uname)
 
-all: polyglot compiler runtime jdk
+all: compiler runtime jdk
 
 # Compiler.
-compiler:
+compiler: polyglot
 	@echo "--- Building compiler ---"
 	@ant -S
 	@echo
@@ -60,21 +65,18 @@ jdk: compiler runtime
 	@$(MAKE) -C $(JDK)
 	@echo
 
-polyglot: polyglot.jar
+polyglot: | $(SUBMODULES)
+	@echo "--- Building Polyglot ---"
+	@cd $(POLYGLOT); ant -S jar
+	@echo
 
-polyglot.jar: submodules
-	cd lib/polyglot; ant jar
-
-submodules:
+$(SUBMODULES):
 	git submodule update --init
-
 
 clean:
 	@echo "Cleaning compiler, runtime, and jdk"
 	@ant -q -S clean
 	@$(MAKE) -s -C $(RUNTIME) clean
 	@$(MAKE) -s -C $(JDK) clean
-
-VPATH = lib/polyglot/lib
 
 .PHONY: compiler runtime jdk-classes jdk

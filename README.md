@@ -31,11 +31,11 @@ PolyLLVM has the following dependencies, which you will need to download and ins
 
 - [LLVM](http://llvm.org) and [Clang](https://clang.llvm.org) are needed to build the runtime and create binaries from Java programs. PolyLLVM is tested with version 5.0.1, which you can download [here](http://releases.llvm.org/download.html#5.0.1). It may be possible to install through a package manager (e.g., `sudo apt install llvm && sudo apt install clang`). After installation be sure that `llc --version` (for example) and `clang++ --version` report consistent versions. You may have to alter your PATH to pick the right version, especially on a Mac for which a version of `Clang` comes bundled with the command line developer tools.
 
-- The [Boehm-Demers-Weiser garbage collector](http://www.hboehm.info/gc/) is also required for creating binaries. PolyLLVM is tested with version 7.6.4, which you can download [here](http://www.hboehm.info/gc/gc_source/) or install through a package manager. A typical install from source looks like this: `./configure && make && make install`. Note that the garbage collector depends on [libatomic_ops](https://github.com/ivmai/libatomic_ops), which is often available through a package manager.
-
-- [Polyglot](https://github.com/polyglot-compiler/polyglot/) is the required front end for PolyLLVM, and exists as a git submodule. Run `git submodule init` and then `git submodule update` at the top level of the repository. To build: `cd lib/polyglot && ant && ant jar`.
+- The [Boehm-Demers-Weiser garbage collector](http://www.hboehm.info/gc/) is also required for creating binaries. PolyLLVM is tested with version 7.6.4, which you can download [here](http://www.hboehm.info/gc/gc_source/) or install through a package manager (`brew install boehmgc`). A typical install from source looks like this: `./configure && make && make install`. Note that the garbage collector depends on [libatomic_ops](https://github.com/ivmai/libatomic_ops), which is often available through a package manager.
 
 - [Git LFS](https://git-lfs.github.com) is required to use PolyLLVM with OpenJDK 7. We use Git LFS to track a zip file containing all OpenJDK 7 Java source files. The alternative is requiring a checkout and build of the full OpenJDK tree, which is notoriously difficult to configure.
+
+Note that [Polyglot](https://github.com/polyglot-compiler/polyglot/) is also required, but is tracked as a git submodule and will be built automatically.
 
 Finally, build PolyLLVM by running `make` at the top level of the repository. By default this will build only a "bare-bones" JDK, which is enough to run the [unit tests](tests/isolated). Note that PolyLLVM is usually tested on OS X; see issue #55 for updates on whether the build system supports Linux.
 
