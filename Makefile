@@ -36,7 +36,7 @@ export LIBJDK := $(JDK)/out/libjdk.dylib
 export LIBJDK_FLAGS := -glldb -lgc $(LIBJVM) -shared -install_name $(LIBJDK)
 
 
-all: compiler runtime jdk
+all: polyglot compiler runtime jdk
 
 # Compiler.
 compiler:
@@ -59,10 +59,21 @@ jdk: compiler runtime
 	@$(MAKE) -C $(JDK)
 	@echo
 
+polyglot: polyglot.jar
+
+polyglot.jar: submodules
+	cd lib/polyglot; ant jar
+
+submodules:
+	git submodule update --init
+
+
 clean:
 	@echo "Cleaning compiler, runtime, and jdk"
 	@ant -q -S clean
 	@$(MAKE) -s -C $(RUNTIME) clean
 	@$(MAKE) -s -C $(JDK) clean
+
+VPATH = lib/polyglot/lib
 
 .PHONY: compiler runtime jdk-classes jdk

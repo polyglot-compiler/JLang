@@ -1,4 +1,5 @@
 #include <jni.h>
+#include <cinttypes>
 
 extern "C" {
 

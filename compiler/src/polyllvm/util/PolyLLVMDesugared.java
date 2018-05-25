@@ -63,17 +63,18 @@ public class PolyLLVMDesugared extends AbstractGoal {
      * Used to find missing dependencies ahead-of-time.
      */
     private static final String[] neededTypes = {
+            "java.lang.ArrayIndexOutOfBoundsException",
+            "java.lang.AssertionError",
             "java.lang.Class",
             "java.lang.ClassCastException",
-            "java.lang.NullPointerException",
-            "java.lang.IndexOutOfBoundsException",
-            "java.lang.ArrayIndexOutOfBoundsException",
-            "java.util.Iterator",
-            "java.lang.Iterable",
-            "java.lang.AssertionError",
-            "java.lang.Throwable",
-            "java.lang.Exception",
             "java.lang.Error",
+            "java.lang.Exception",
+            "java.lang.IndexOutOfBoundsException",
+            "java.lang.Iterable",
+            "java.lang.NullPointerException",
+            "java.lang.String",
+            "java.lang.Throwable",
+            "java.util.Iterator",
             Constants.RUNTIME_ARRAY,
             Constants.RUNTIME_ARRAY_TYPE,
             Constants.RUNTIME_HELPER

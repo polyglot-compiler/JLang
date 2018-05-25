@@ -9,6 +9,7 @@
 
 #include <type_traits>
 #include <jni.h>
+#include <cinttypes>
 #include "interface.h"
 
 // Ensure that our C++ representations are POD types,
