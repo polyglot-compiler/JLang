@@ -13,10 +13,10 @@ Contributing
 
 Before contributing, please do the following.
 
-(1) Read through the rest of this README.
-(2) Read through all GitHub issues carefully, to get the most up-to-date picture of the current state of the project.
-(3) Read through the [developer guide](http://gharrma.github.io/polyllvm/developer-guide.html) on the website, to get technical details on the most critical subcomponents of PolyLLVM.
-(4) If you need to work on compiler translations, get familiar with [LLVM IR](https://llvm.org/docs/LangRef.html).
+(1) Read through the rest of this README.<br>
+(2) Read through all GitHub issues carefully, to get the most up-to-date picture of the current state of the project.<br>
+(3) Read through the [developer guide](http://gharrma.github.io/polyllvm/developer-guide.html) on the website, to get technical details on the most critical subcomponents of PolyLLVM.<br>
+(4) If you need to work on compiler translations, get familiar with [LLVM IR](https://llvm.org/docs/LangRef.html).<br>
 (5) If you need to work on native runtime code, get familiar with [JNI](https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/design.html).
 
 
@@ -65,9 +65,9 @@ All translations from Java to LLVM IR are complete, with the exception of the `s
 
 However, PolyLLVM is still a work in progress for two important reasons.
 
-(1) JDK support. The JDK includes thousands of classes that are critical to the Java ecosystem, such as `java.lang.Class`, `java.util.ArrayList`, `java.io.File`, and `java.net.Socket`. Thus it is important to be able to compile programs that rely on the JDK. So far we can fully support a hand-written "bare-bones" JDK that includes only the JDK classes that are necessary for unit tests (`java.lang.Object`, `java.lang.Class`, `java.lang.System`, etc.). This has allowed us to test the compiler before trying to compile the entire JDK. Support for the full JDK is close, but not finished. Please see issue #54 for more information.
+(1) JDK support. The JDK includes thousands of classes that are critical to the Java ecosystem, such as `java.lang.Class`, `java.util.ArrayList`, `java.io.File`, and `java.net.Socket`. Thus it is important to be able to compile programs that rely on the JDK. So far we can fully support a hand-written "bare-bones" JDK that includes only the JDK classes that are necessary for unit tests (`java.lang.Object`, `java.lang.Class`, `java.lang.System`, etc.). This has allowed us to test the compiler before trying to compile the entire JDK. Support for the full JDK is close, but not finished. Please see [issue #54](https://github.com/gharrma/polyllvm/issues/54) for more information.
 
-(2) Concurrency support. Support for multiple threads and synchronization has not been started, as JDK support took priority. PolyLLVM will ignore the Java `synchronized` keyword, and the [native runtime code](runtime/native) is generally not thread-safe. Please see issue #5 for more information.
+(2) Concurrency support. Support for multiple threads and synchronization has not been started, as JDK support took priority. PolyLLVM will ignore the Java `synchronized` keyword, and the [native runtime code](runtime/native) is generally not thread-safe. Please see [issue #5](https://github.com/gharrma/polyllvm/issues/5) for more information.
 
 All other loose ends (minor bugs, build system issues, etc.) are tracked as GitHub issues as well. If you would like to contribute, please read through all of these tracked issues carefully!
 

@@ -20,8 +20,41 @@ PolyLLVM is built as an extension to the
 [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler. Since
 PolyLLVM is a backend only, it does not extend the parser, nor the type
 system built into polyglot. PolyLLVM simply adds compiler passes for desugaring
-and translating Java ASTs into LLVM IR. The project also contains native code
-for supporting Java semantics at runtime, and support for compiling OpenJDK 7.
+and translating Java ASTs into LLVM IR.
+
+The project also contains native code for supporting Java semantics at runtime,
+and support for compiling OpenJDK 7. Compiling the JDK is particularly difficult
+because it requires a large amount of JVM functionality (e.g., reflection),
+which we must implement ourselves.
+
+
+Related Documentation
+---------------------
+
+- The [Polyglot tutorial](http://www.cs.cornell.edu/Projects/polyglot/pldi14/tutorial/)
+should at least be skimmed to get an idea of how Polyglot works. For the purposes
+of PolyLLVM, the most important things to know about Polyglot are its type system (especially
+how it handles generics), its scheduler framework, its AST visitor framework, and
+its AST node extension framework (`NodeFactory`, `ExtFactory`, etc.).
+
+- See the [LLVM language reference manual](https://llvm.org/docs/LangRef.html)
+to learn how to read and write LLVM IR.
+
+- See the [LLVM documentation homepage](https://llvm.org/docs/index.html) for
+links to documentation on exception handling, debug information, FAQ,
+optimization passes, garbage collection (if we ever want to move to a
+non-conservative GC), coroutines, and much more.
+
+- The [JLS](https://docs.oracle.com/javase/specs/jls/se7/html/index.html)
+should be used to implement Java language semantics closely.
+
+- The Java Native Interface (JNI)
+is specified [here](https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/functions.html).
+
+- The [LLVM C API](http://llvm.org/doxygen/group__LLVMC.html),
+should be referenced whenever writing translations to LLVM IR. The
+[Instruction Builder module](http://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html)
+is particularly useful, since that's used to create LLVM instructions.
 
 
 Building and Workflow
@@ -98,10 +131,13 @@ The LLVM C API is limited in that it does not have a stable API for debug
 information. Other languages (Go, Rust, etc.) get around this by manually
 creating their own C bindings. Our solution: start with the LLVM Go bindings,
 and create custom additional bindings as needed. This process is automated
-through a fork of `javacpp-presets` at `https://github.com/gharrma/javacpp-presets`,
+through a [fork of javacpp-presets](https://github.com/gharrma/javacpp-presets),
 which is tracked as a git submodule. Cloning with `--depth 1` is recommended. To
 build, `cd` into the `llvm` subdirectory and run `mvn install`. This will
-produce the needed `.jar` files in the `llvm/target` directory. For convenience we provide up-to-date `.jar` files in the PolyLLVM repository directly, for OS X and Linux.
+produce the needed `.jar` files in the `llvm/target` directory. For convenience
+we provide up-to-date `.jar` files in the PolyLLVM repository
+[directly](https://github.com/gharrma/polyllvm/tree/master/lib),
+for OS X and Linux.
 
 
 Desugaring Passes
