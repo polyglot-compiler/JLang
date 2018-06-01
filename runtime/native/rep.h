@@ -50,6 +50,7 @@ struct sync_vars {
 // Representation for java.lang.Object.
 struct JObjectRep {
     DispatchVector* Cdv() { return cdv_; }
+    sync_vars* SyncVars() { return sync_vars_; }
     jobject Wrap() { return reinterpret_cast<jobject>(this); }
 private:
     DispatchVector* cdv_;

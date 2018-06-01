@@ -1,0 +1,2 @@
+export SHARED_LIB_EXT := so
+export JDK7_LIB_PATH := $(JDK7)/jre/lib/amd64

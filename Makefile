@@ -1,6 +1,10 @@
 # Indicates to sub-Makefiles that it was invoked by this one.
 export TOP_LEVEL_MAKEFILE_INVOKED := true
 
+# Platform-specific flags; these defaults can be overriden in defs.<platform> files,
+# where <platform> is the result of `uname` in bash.
+export SHARED_LIB_EXT := so
+
 # Submodules.
 POLYGLOT := lib/polyglot/
 JAVACPP_PRESETS := lib/javacpp-presets/
@@ -22,24 +26,30 @@ export JNI_INCLUDES := \
 	-I"$(JDK7)/include" \
 	-I"$(JDK7)/include/darwin" \
 	-I"$(JDK7)/include/linux"
+export JDK7_LIB_PATH := $(JDK7)/jre/lib
 
-# PolyLLVM JDK.
-# Use the bare-bones JDK by default.
+# JDK. Use the bare-bones JDK by default.
 JDK ?= jdk-lite
 export JDK := $(realpath $(JDK))
 export JDK_CLASSES := $(JDK)/out/classes
 
-# PolyLLVM runtime.
+# Runtime.
 export RUNTIME := $(realpath runtime)
 export RUNTIME_CLASSES := $(RUNTIME)/out/classes
-export LIBJVM := $(RUNTIME)/out/libjvm.dylib
 
 # Clang.
 export CLANG := clang++
+export SHARED_LIB_FLAGS := -g -lgc -shared -rdynamic
 
-export LIBJDK := $(JDK)/out/libjdk.dylib
-export LIBJDK_FLAGS := -glldb -lgc $(LIBJVM) -shared -install_name $(LIBJDK)
+# JDK lib.
+export LIBJDK = $(JDK)/out/libjdk.$(SHARED_LIB_EXT)
+export LIBJDK_FLAGS = $(SHARED_LIB_FLAGS) -Wl,-rpath,$(RUNTIME)/out
 
+# Runtime lib.
+export LIBJVM = $(RUNTIME)/out/libjvm.$(SHARED_LIB_EXT)
+export LIBJVM_FLAGS = $(SHARED_LIB_FLAGS)
+
+# Platform-specific overrides.
 sinclude defs.$(shell uname)
 
 all: compiler runtime jdk

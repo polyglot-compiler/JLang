@@ -26,12 +26,13 @@ LL := $(SRC:.java=.ll)
 BINARY := $(SRC:.java=.binary)
 OUTPUT := $(SRC:.java=.output)
 
-# TODO: Use flags from top-level Makefile
 CLANG := clang++
 CLANG_FLAGS := \
-	-Wno-override-module -L/usr/local/lib/ -lgc -g \
+	-Wno-override-module -lgc -g \
 	-L$(RUNTIME)/out -ljvm \
-	-L$(JDK)/out -ljdk
+	-L$(JDK)/out -ljdk \
+	-Wl,-rpath,$(JDK)/out -Wl,-rpath,$(RUNTIME)/out \
+	-rdynamic
 
 all: output
 

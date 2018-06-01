@@ -33,7 +33,7 @@ PolyLLVM has the following dependencies, which you will need to download and ins
 
 - The [Boehm-Demers-Weiser garbage collector](http://www.hboehm.info/gc/) is also required for creating binaries. PolyLLVM is tested with version 7.6.4, which you can download [here](http://www.hboehm.info/gc/gc_source/) or install through a package manager (`brew install boehmgc`). A typical install from source looks like this: `./configure && make && make install`. Note that the garbage collector depends on [libatomic_ops](https://github.com/ivmai/libatomic_ops), which is often available through a package manager.
 
-- [Git LFS](https://git-lfs.github.com) is required to use PolyLLVM with OpenJDK 7. We use Git LFS to track a zip file containing all OpenJDK 7 Java source files. The alternative is requiring a checkout and build of the full OpenJDK tree, which is notoriously difficult to configure.
+- [Git LFS](https://git-lfs.github.com) is required to use PolyLLVM with OpenJDK 7. We use Git LFS to track a zip file containing all OpenJDK 7 Java source files. (The alternative is requiring a checkout and build of the full OpenJDK tree, which is notoriously difficult to configure.) Be sure to do a `git lfs pull` so that `jdk/src.zip` is downloaded; otherwise you will see strange error messages when trying to build.
 
 Note that [Polyglot](https://github.com/polyglot-compiler/polyglot/) is also required, but is tracked as a git submodule and will be built automatically.
 

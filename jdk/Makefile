@@ -2,6 +2,8 @@ ifndef TOP_LEVEL_MAKEFILE_INVOKED
 $(error Please invoke the top-level Makefile)
 endif
 
+SHELL=/bin/bash
+
 SRC := src
 PATCHES := patches
 OUT := out
@@ -57,22 +59,18 @@ $(OUT)/ostamp: $(OUT)/llstamp
 # These are due to methods that the JDK normally registers at runtime.
 $(OUT)/stubs.o: stubs.cpp
 	@echo "Compiling missing symbol stubs"
-	@$(CLANG) -glldb -std=c++14 $(JNI_INCLUDES) -c -o $@ $<
+	@$(CLANG) -g -std=c++14 -fPIC $(JNI_INCLUDES) -c -o $@ $<
 
 # Create a shared library for compiled JDK classes.
+# Notice that we link directly with the system JDK's native code.
 $(LIBJDK): $(OUT)/ostamp $(OUT)/stubs.o $(LIBJVM)
 	@echo "Creating libjdk"
 	@$(CLANG) $(LIBJDK_FLAGS) \
 		`find $(OUT) -name "*.o"` \
-		$(JDK7)/jre/lib/{libjava,libnio,libnet,libzip}.dylib \
-		-headerpad_max_install_names \
+		$(LIBJVM) \
+		$(JDK7_LIB_PATH)/{libjava,libnio,libnet,libzip}.$(SHARED_LIB_EXT) \
+		-Wl,-rpath,$(JDK7_LIB_PATH) \
 		-o $@
-
-	@# Path to system JDK. Needed for libjava.
-	@install_name_tool -add_rpath $(JDK7)/jre/lib $@
-
-	@# Path to runtime (libjvm). Needed because libjava depends on @rpath/libjvm.
-	@install_name_tool -add_rpath $(RUNTIME)/out $@
 
 clean:
 	rm -rf $(OUT) $(MAIN).binary $(SRC) $(SRC).orig

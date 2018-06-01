@@ -1,0 +1,6 @@
+export SHARED_LIB_EXT := dylib
+
+# TODO: Ideally would would not need dynamic_lookup here.
+export LIBJVM_FLAGS += \
+	-current_version 1.0.0 -compatibility_version 1.0.0 \
+	-undefined dynamic_lookup

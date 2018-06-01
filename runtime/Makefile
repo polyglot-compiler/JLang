@@ -19,18 +19,10 @@ NATIVE_OBJ := $(NATIVE_SRC:%.cpp=$(OUT)/%.o)
 ALL_OBJ := $(JAVA_OBJ) $(NATIVE_OBJ)
 
 JAVA_FLAGS := \
-	-glldb -Wno-override-module
+	-g -Wno-override-module -fPIC
 NATIVE_FLAGS := \
-	-glldb -std=c++14 -Inative $(JNI_INCLUDES) \
-	-Wall -Wno-unused-private-field -MMD -pthread
-
-# We use the name "libjvm" because that is expected by JDK native code.
-LIBJVM := $(OUT)/libjvm.dylib
-LIBJVM_VERSION := -current_version 1.0.0 -compatibility_version 1.0.0
-LINK_FLAGS := \
-	-glldb -lgc -shared $(LIBJVM_VERSION) \
-	-install_name "$(realpath .)/$(LIBJVM)" \
-	-undefined dynamic_lookup # TODO: Ideally would would not need dynamic_lookup
+	-g -fPIC -std=c++14 -Inative $(JNI_INCLUDES) \
+	-Wall -MMD -pthread
 
 all: classes $(LIBJVM)
 
@@ -60,10 +52,10 @@ $(JAVA_OBJ): %.o: $(LL_STAMP)
 	@echo "Compiling $(patsubst %.o,%.ll,$@)"
 	@$(CLANG) $(JAVA_FLAGS) -c -o $@ $(patsubst %.o,%.ll,$@)
 
-# Link into library (.o --> .dylib).
+# Link into library (.o --> .so/.dylib).
 $(LIBJVM): $(ALL_OBJ)
 	@echo "Creating libjvm"
-	@$(CLANG) $(LINK_FLAGS) -o $@ $^
+	@$(CLANG) $(LIBJVM_FLAGS) -o $@ $^
 
 .PHONY: clean
 clean:
