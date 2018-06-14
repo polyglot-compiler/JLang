@@ -10,3 +10,6 @@
 *.DS_STORE
 .*.sw?
 *.out
+.settings/
+.cproject
+.project

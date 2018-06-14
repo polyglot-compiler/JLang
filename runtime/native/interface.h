@@ -2,6 +2,8 @@
 
 extern "C" {
 
+void* __getInterfaceMethod(jobject obj, int intf_id_hash, void* intf_id, int method_index);
+
 struct idv_ht_node {
 	idv_ht_node* next;
 	void* intf_id;

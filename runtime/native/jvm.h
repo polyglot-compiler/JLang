@@ -1,6 +1,7 @@
 #pragma once
 
 #include "jni.h"
+#include "jni_help.h"
 
 extern "C" {
 

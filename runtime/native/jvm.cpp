@@ -637,7 +637,14 @@ JVM_ConstantPoolGetUTF8At(JNIEnv *env, jobject unused, jobject jcpool, jint inde
 
 jobject
 JVM_DoPrivileged(JNIEnv *env, jclass cls, jobject action, jobject context, jboolean wrapException) {
-    JvmUnimplemented("JVM_DoPrivileged");
+  //TODO throw NPE if action is null
+  if (action == NULL) { fprintf(stderr, "ERROR: Null privileged action"); return NULL; }
+  //TODO we are just straight up calling the 'run' method, but doPrivileged
+  //does a lot more
+  auto pActionClazz = GetJavaClassFromName("java.security.PrivilegedAction");
+  //  auto pActionClazz = jni_FindClass(env, "java/security/PrivilegedAction");
+  return CallJavaInstanceMethod<jobject>(action, pActionClazz, "run", "()Ljava/lang/Object;", NULL);
+
 }
 
 jobject

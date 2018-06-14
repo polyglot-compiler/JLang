@@ -349,6 +349,11 @@ public class LLVMTranslator extends NodeVisitor {
         return res;
     }
 
+    public ClassType getImplementingInterface(MethodInstance method) {
+    	ClassType cont = method.container().toClass();
+    	return cont.flags().isInterface() ? cont : null;
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Loops, labels, break, and continue.
     ////////////////////////////////////////////////////////////////////////////

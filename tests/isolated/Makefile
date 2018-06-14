@@ -36,6 +36,11 @@ CLANG_FLAGS := \
 
 all: output
 
+check: sol output
+	@for i in $(ls *.sol | awk -F'.' '{print $1}'); do \
+	 diff -q $i.sol $i.output; \
+	done > check
+
 sol: $(SOL)
 
 ir: $(LL)
@@ -62,6 +67,10 @@ $(LL): $(SRC)
 	@$(BASE_DIR)/bin/polyllvmc -cp $(JDK_CLS) -assert $?
 	@touch $(LL)
 
+%.ll: %.java
+	@echo "Compiling file to LLVM IR"
+	@$(BASE_DIR)/bin/polyllvmc -cp $(JDK_CLS) -assert $?
+
 %.binary: %.ll
 	@echo "Creating binary for $<"
 	@$(CLANG) $(CLANG_FLAGS) -o $@ $<
@@ -72,6 +81,6 @@ $(LL): $(SRC)
 
 clean: phony
 	@echo "Removing generated files"
-	@rm -rf *.dSYM *.sol *.ll *.binary *.output *.class
+	@rm -rf *.dSYM *.sol *.ll *.binary *.output *.class check
 
 .PHONY: phony

@@ -68,7 +68,9 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 v.utils.i8Ptr(), // char* signature
                 v.utils.i32(),   // int32_t offset into dispatch vector
                 v.utils.i8Ptr(), // void* function pointer
-                v.utils.i8Ptr()  // void* trampoline pointer
+                v.utils.i8Ptr() , // void* trampoline pointer
+                v.utils.i8Ptr(),  // void* for interface methods, the interface method id.
+                v.utils.i32()     // int32_t A precomputed hash of the intf_id.
         );
         LLVMValueRef[] methodInfoElems = Stream.concat(
                 ct.methods().stream(), ct.constructors().stream())
@@ -132,6 +134,12 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 v.utils.buildClassLoadCheck(ct.superType().toClass());
             }
 
+            // We actually also need to load interfaces to
+            // Since we need their information registers for runtime interface calls.
+            for (ClassType intf : v.allInterfaces(ct)) {
+            	v.utils.buildClassLoadCheck(intf);
+            }
+
             // Call into runtime to register this class.
             LLVMTypeRef regClassFuncType = v.utils.functionType(
                     v.utils.voidType(), classType, v.utils.ptrTypeRef(LLVMTypeOf(classInfo)));
@@ -182,6 +190,8 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
      *   int32_t offset;   // Offset into dispatch vector. -1 for static methods and constructors.
      *   void* fnPtr;      // Direct function pointer. Null for abstract/interface methods.
      *   void* trampoline; // Trampoline for casting the function pointer to the correct type.
+     *   void* intf_id;    // For interface methods, the interface method id.
+     *   int32_t intf_id_hash; // A precomputed hash of the intf_id.
      };
      */
     protected static LLVMValueRef buildMethodInfo(
@@ -194,6 +204,8 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         LLVMValueRef sig = v.utils.buildGlobalCStr(v.mangler.jniUnescapedSignature(pi));
 
         LLVMValueRef offset;
+        LLVMValueRef intfPtr = LLVMConstNull(v.utils.i8Ptr());
+        LLVMValueRef hash = LLVMConstNull(v.utils.i32());
         if (pi.flags().isStatic() || pi instanceof ConstructorInstance) {
             offset = LLVMConstInt(v.utils.i32(), -1, /*sign-extend*/ 1);
         } else {
@@ -201,6 +213,11 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
             LLVMValueRef nullPtr = LLVMConstNull(v.utils.ptrTypeRef(v.dv.structTypeRef(ct)));
             LLVMValueRef gep = v.dv.buildFuncElementPtr(nullPtr, ct, mi);
             offset = LLVMConstPtrToInt(gep, v.utils.i32());
+            ClassType intf = v.getImplementingInterface(mi);
+            if (intf != null) {
+            	intfPtr = v.classObjs.toTypeIdentity(intf);
+            	hash = LLVMConstInt(v.utils.i32(), v.utils.intfHash(intf), 0);
+            }
         }
 
         LLVMValueRef fnPtr = pi.flags().isAbstract() || ct.flags().isInterface()
@@ -211,7 +228,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 v.mangler.procJniTrampoline(pi), v.utils.toLLTrampoline(pi));
         LLVMValueRef trampolineCast = LLVMConstBitCast(trampoline, v.utils.i8Ptr());
 
-        return v.utils.buildConstStruct(name, sig, offset, fnPtrCast, trampolineCast);
+        return v.utils.buildConstStruct(name, sig, offset, fnPtrCast, trampolineCast, intfPtr, hash);
     }
 
     @SuppressWarnings("WeakerAccess")

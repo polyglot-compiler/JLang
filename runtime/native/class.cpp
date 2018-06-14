@@ -6,8 +6,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <unordered_map>
+#include <string>
 #include "jni.h"
-
 #include "class.h"
 
 static constexpr bool kDebug = false;
@@ -16,6 +16,7 @@ static constexpr bool kDebug = false;
 // If we find this to be too slow, we could allocate extra memory for
 // class objects and store the information inline with each instance.
 static std::unordered_map<jclass, const JavaClassInfo*> classes;
+static std::unordered_map<std::string, const jclass> cnames;
 
 extern "C" {
 
@@ -47,6 +48,8 @@ void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
 
     assert(classes.count(cls) == 0 && "Java class was loaded twice!");
     classes.emplace(cls, info);
+    std::string cname(info->name);
+    cnames.emplace(cname, cls);
 }
 
 } // extern "C"
@@ -56,6 +59,10 @@ GetJavaClassInfo(jclass cls) {
     return classes.at(cls);
 }
 
+const jclass
+GetJavaClassFromName(const char* name) {
+  return cnames.at(std::string(name));
+}
 const JavaFieldInfo*
 GetJavaFieldInfo(jclass cls, const char* name) {
     auto* clazz = classes.at(cls);

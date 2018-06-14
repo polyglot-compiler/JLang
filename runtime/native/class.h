@@ -28,6 +28,8 @@ struct JavaMethodInfo {
     int32_t offset;   // Offset into dispatch vector. -1 for static methods.
     void* fnPtr;      // Used for CallNonvirtual and CallStatic.
     void* trampoline; // Trampoline for casting the fnPtr to the correct type.
+    void* intf_id;    // For interface methods, the interface id.
+    int32_t intf_id_hash; // A precomputed hash of the intf_id.
 };
 
 struct JavaClassInfo {
@@ -52,6 +54,9 @@ RegisterJavaClass(jclass cls, const JavaClassInfo* data);
 
 const JavaClassInfo*
 GetJavaClassInfo(jclass cls);
+
+const jclass
+GetJavaClassFromName(const char* name);
 
 const JavaFieldInfo*
 GetJavaFieldInfo(jclass cls, const char* name);
