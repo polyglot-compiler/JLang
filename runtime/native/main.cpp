@@ -12,7 +12,7 @@ extern "C" {
 
 void Polyglot_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jarray args);
 jarray Polyglot_polyllvm_runtime_Factory_ObjectArray__I(jint len);
-
+void Polyglot_java_lang_System_initializeSystemClass__();
 } // extern "C"
 
 static void sigaction(int sig, siginfo_t* info, void* ucontext) {
@@ -59,6 +59,6 @@ int main(int argc, char** argv) {
         jstring argStr = CreateJavaString(argChars);
         args_data[i] = argStr;
     }
-
+    Polyglot_java_lang_System_initializeSystemClass__();
     Polyglot_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(args);
 }

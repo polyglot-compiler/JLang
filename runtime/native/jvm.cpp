@@ -1,6 +1,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <chrono>
+#include <sys/time.h>
 
 #include "stack_trace.h"
 #include "class.h"
@@ -68,12 +70,16 @@ JVM_InternString(JNIEnv *env, jstring str) {
 
 jlong
 JVM_CurrentTimeMillis(JNIEnv *env, jclass ignored) {
-    JvmUnimplemented("JVM_CurrentTimeMillis");
+  timeval t;
+  if (gettimeofday( &t, NULL) == -1)
+    JvmUnimplemented("CurrentTimeMillisFailed");
+  return jlong(t.tv_sec) * 1000  +  jlong(t.tv_usec) / 1000;
 }
 
 jlong
 JVM_NanoTime(JNIEnv *env, jclass ignored) {
-    JvmUnimplemented("JVM_NanoTime");
+  auto time = std::chrono::system_clock::now().time_since_epoch();
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
 }
 
 void
