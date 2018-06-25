@@ -260,6 +260,6 @@ CallJavaInstanceMethod(jobject obj, jclass intf, const char* name, const char* s
   auto methodInfo = methodInfoPair.first;
   auto methodIndex = methodInfoPair.second;
   void* methodToCall = __getInterfaceMethod(obj, methodInfo->intf_id_hash, methodInfo->intf_id, methodIndex);
-  return ((T (*)(jobject)) methodToCall)(NULL);
+  return ((T (*)(jobject)) methodToCall)(obj);
 }
 #endif
