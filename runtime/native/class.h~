@@ -9,7 +9,6 @@
 #pragma once
 
 #include "jni.h"
-#include <utility>
 
 extern "C" {
 // These structs are generated statically for each class, and
@@ -62,5 +61,5 @@ GetJavaClassFromName(const char* name);
 const JavaFieldInfo*
 GetJavaFieldInfo(jclass cls, const char* name);
 
-const std::pair<JavaMethodInfo*,int32_t>
+const JavaMethodInfo*
 GetJavaMethodInfo(jclass cls, const char* name, const char* sig);

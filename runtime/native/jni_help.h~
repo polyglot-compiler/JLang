@@ -221,7 +221,7 @@ CallJavaInstanceMethod(jobject obj, jmethodID id, const jvalue* args) {
     // which will include a direct function pointer. Then we
     // can do a direct call.
     auto clazz = Unwrap(obj)->Cdv()->Class()->Wrap();
-    m = GetJavaMethodInfo(clazz, m->name, m->sig).first;
+    m = GetJavaMethodInfo(clazz, m->name, m->sig);
     id = reinterpret_cast<jmethodID>(const_cast<JavaMethodInfo*>(m));
 
     // TODO: The above lookup may fail due to type erasure,
@@ -237,7 +237,7 @@ template <typename T>
 static T
 CallJavaInstanceMethod(jobject obj, const char* name, const char* sig, const jvalue* args) {
   auto clazz = Unwrap(obj)->Cdv()->Class()->Wrap();
-  auto m = GetJavaMethodInfo(clazz, name, sig).first;
+  auto m = GetJavaMethodInfo(clazz, name, sig);
   auto id = reinterpret_cast<jmethodID>(const_cast<JavaMethodInfo*>(m));
   return CallJavaNonvirtualMethod<T>(obj, id, args);
 }
@@ -256,10 +256,8 @@ CallJavaInstanceMethod(jobject obj, jmethodID id, va_list args) {
 template <typename T>
 static T
 CallJavaInstanceMethod(jobject obj, jclass intf, const char* name, const char* sig, const jvalue* args) {
-  auto methodInfoPair = GetJavaMethodInfo(intf, name, sig);
-  auto methodInfo = methodInfoPair.first;
-  auto methodIndex = methodInfoPair.second;
-  void* methodToCall = __getInterfaceMethod(obj, methodInfo->intf_id_hash, methodInfo->intf_id, methodIndex);
+  auto methodInfo = GetJavaMethodInfo(intf, name, sig);
+  void* methodToCall = __getInterfaceMethod(obj, methodInfo->intf_id_hash, methodInfo->intf_id, methodInfo->offset);
   return ((T (*)(jobject)) methodToCall)(NULL);
 }
 #endif
