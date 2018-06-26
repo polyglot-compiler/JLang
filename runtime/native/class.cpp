@@ -35,6 +35,11 @@ void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
             printf("  found field %s with offset %d\n", f->name, f->offset);
         }
 
+        for (int32_t i = 0; i < info->num_static_fields; ++i) {
+            auto* f = &info->static_fields[i];
+            printf("  found static field %s with sig %s and ptr %p\n", f->name, f->sig, f->ptr);
+        }
+
         for (int32_t i = 0; i < info->num_methods; ++i) {
             auto* m = &info->methods[i];
             printf(
@@ -63,6 +68,25 @@ const jclass
 GetJavaClassFromName(const char* name) {
   return cnames.at(std::string(name));
 }
+
+const JavaStaticFieldInfo*
+GetJavaStaticFieldInfo(jclass cls, const char* name, const char* sig) {
+    auto* clazz = classes.at(cls);
+    auto* fields = clazz->static_fields;
+    for (int32_t i = 0, e = clazz->num_static_fields; i < e; ++i) {
+        auto* f = &fields[i];
+        if (strcmp(name, f->name) == 0 && strcmp(sig, f->sig) == 0) {
+            return f;
+        }
+    }
+
+    // TODO: Should technically throw NoSuchFieldError.
+    fprintf(stderr,
+        "Could not find static field %s in class %s. Aborting.\n",
+        name, clazz->name);
+    abort();
+}
+
 const JavaFieldInfo*
 GetJavaFieldInfo(jclass cls, const char* name) {
     auto* clazz = classes.at(cls);

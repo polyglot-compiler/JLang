@@ -27,6 +27,20 @@
 
 // Begin helper methods.
 
+template <typename T>
+static T*
+GetJavaStaticFieldPtr(jfieldID id) {
+  auto f = reinterpret_cast<const JavaStaticFieldInfo*>(id);
+  auto ptr = f->ptr;
+  return reinterpret_cast<T*>(ptr);
+}
+
+//TODO check the type signature as well
+template <typename T>
+static void
+SetJavaStaticField(jclass clazz, jfieldID id, T obj) {
+  *GetJavaStaticFieldPtr<T>(id) = obj;
+}
 
 template <typename T>
 static T*

@@ -21,6 +21,13 @@ struct JavaFieldInfo {
     char* name;
     int32_t offset;
 };
+//This is also a representation for the jfieldID type, but
+//represented differently since static fields are implemented as global pointers.
+struct JavaStaticFieldInfo {
+    char* name;
+    char* sig;
+    void* ptr;
+};
 
 // Concrete representation for the opaque type jmethodID.
 struct JavaMethodInfo {
@@ -40,10 +47,12 @@ struct JavaClassInfo {
     int32_t num_fields;
     JavaFieldInfo* fields;
 
+    int32_t num_static_fields;
+    JavaStaticFieldInfo* static_fields;
+
     int32_t num_methods;
     JavaMethodInfo* methods;
 
-    // TODO: static fields
 };
 
 // Called by the runtime at most once per class to register
@@ -61,6 +70,9 @@ GetJavaClassFromName(const char* name);
 
 const JavaFieldInfo*
 GetJavaFieldInfo(jclass cls, const char* name);
+
+const JavaStaticFieldInfo*
+GetJavaStaticFieldInfo(jclass cls, const char* name, const char* sig);
 
 const std::pair<JavaMethodInfo*,int32_t>
 GetJavaMethodInfo(jclass cls, const char* name, const char* sig);

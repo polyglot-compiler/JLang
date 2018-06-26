@@ -11,6 +11,7 @@ import polyllvm.visit.LLVMTranslator;
 import java.lang.Override;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -43,24 +44,37 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         LLVMValueRef classObjectGlobal = v.utils.getClassObjectGlobal(ct);
         LLVMSetInitializer(classObjectGlobal, LLVMConstNull(classType));
 
-        List<FieldInstance> instanceFields = ct.fields().stream()
-                .filter(fi -> !fi.flags().isStatic())
-                .collect(Collectors.toList());
-
         // Instance field info.
         LLVMTypeRef fieldInfoType = v.utils.structType(
                 v.utils.i8Ptr(), // char* name
                 v.utils.i32()    // int32_t offset
         );
-        LLVMValueRef[] fieldInfoElems = instanceFields.stream()
-                .map(fi -> {
-                    LLVMValueRef name = v.utils.buildGlobalCStr(fi.name());
-                    LLVMValueRef nullPtr = LLVMConstNull(v.utils.toLL(ct));
-                    LLVMValueRef gep = v.obj.buildFieldElementPtr(nullPtr, fi);
-                    LLVMValueRef offset = LLVMConstPtrToInt(gep, v.utils.i32());
-                    return v.utils.buildConstStruct(name, offset);
-                })
-                .toArray(LLVMValueRef[]::new);
+        LLVMValueRef[] fieldInfoElems = ct.fields().stream().filter(fi -> !fi.flags().isStatic())
+            	.map(fi -> {  
+            		LLVMValueRef name = v.utils.buildGlobalCStr(fi.name());
+            		LLVMValueRef nullPtr = LLVMConstNull(v.utils.toLL(ct));
+            		LLVMValueRef gep = v.obj.buildFieldElementPtr(nullPtr, fi);
+            		LLVMValueRef offset = LLVMConstPtrToInt(gep, v.utils.i32());
+            		return v.utils.buildConstStruct(name, offset);
+            	})
+            	.toArray(LLVMValueRef[]::new);
+
+        // Static field info.
+        LLVMTypeRef staticFieldType = v.utils.structType(
+        		v.utils.i8Ptr(), // char* name
+        		v.utils.i8Ptr(), // char* sig (field type)
+        		v.utils.i8Ptr() //  void* to field, stored as global var
+        );
+
+        LLVMValueRef[] staticFieldElems = ct.fields().stream().filter(fi -> fi.flags().isStatic())
+            	.map(fi -> {  
+            		LLVMValueRef name = v.utils.buildGlobalCStr(fi.name());
+            		LLVMValueRef signature = v.utils.buildGlobalCStr(v.mangler.jniUnescapedSignature(fi.type()));
+            		LLVMValueRef ptr = v.utils.getStaticField(fi);
+            		LLVMValueRef staticPtr = LLVMConstBitCast(ptr, v.utils.i8Ptr());
+            		return v.utils.buildConstStruct(name, signature, staticPtr);
+            	})
+            	.toArray(LLVMValueRef[]::new);
 
         // Method info. Includes constructors. Does not include inherited methods.
         LLVMTypeRef methodInfoType = v.utils.structType(
@@ -94,11 +108,19 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 // Instance fields, { char* name, int32_t offset }
                 v.utils.buildGlobalArrayAsPtr(fieldInfoType, fieldInfoElems),
 
+                // Number of static fields, i32
+                LLVMConstInt(v.utils.i32(), staticFieldElems.length, /*sign-extend*/ 0),
+
+                // Static fields, { char* name, void* ptr }
+                v.utils.buildGlobalArrayAsPtr(staticFieldType, staticFieldElems),
+
                 // Number of methods, i32
                 LLVMConstInt(v.utils.i32(), methodInfoElems.length, /*sign-extend*/ 0),
 
                 // Methods, { char* name, char* sig, int32_t offset, void* fnPtr, void* trampoline }
                 v.utils.buildGlobalArrayAsPtr(methodInfoType, methodInfoElems)
+                
+                
         );
 
         // Emit class info as a global variable.

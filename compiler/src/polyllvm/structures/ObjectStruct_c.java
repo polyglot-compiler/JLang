@@ -7,6 +7,7 @@ import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static org.bytedeco.javacpp.LLVM.*;
@@ -15,7 +16,8 @@ public class ObjectStruct_c implements ObjectStruct {
     protected final LLVMTranslator v;
     protected final Map<ClassType, LLVMTypeRef> typeCache = new HashMap<>();
     protected final Map<ReferenceType, List<FieldInstance>> fieldCache = new HashMap<>();
-
+    protected final Map<ReferenceType, List<FieldInstance>> staticFieldCache = new HashMap<>();
+    
     public ObjectStruct_c(LLVMTranslator v) {
         this.v = v;
     }
@@ -138,25 +140,37 @@ public class ObjectStruct_c implements ObjectStruct {
 
     /** Returns an ordered list of all type-erased fields in the given reference type. */
     protected List<FieldInstance> getOrComputeInstanceFields(ReferenceType rt) {
-        ClassType erased = v.utils.erasureLL(rt);
+       return getOrComputeFields(rt, false);
+    }
+    
+    protected List<FieldInstance> getOrComputeStaticFields(ReferenceType rt) {
+        return getOrComputeFields(rt, true);
+    }
 
+    /** Returns an ordered list of all type-erased fields in the given reference type. */
+    private List<FieldInstance> getOrComputeFields(ReferenceType rt, boolean useStatic) {
+        ClassType erased = v.utils.erasureLL(rt);
+        //Use appropriate cache for the requested field type
+        Map<ReferenceType, List<FieldInstance>> cache = (useStatic) ? staticFieldCache : fieldCache;
         // Note: cannot use Map#computeIfAbsent here, because that combined with
         // recursion leads to a ConcurrentModificationException.
-        if (!fieldCache.containsKey(erased)) {
+        if (!cache.containsKey(erased)) {
 
             // Add fields from super type.
             List<FieldInstance> res = new ArrayList<>();
             if (erased.superType() != null)
                 res.addAll(getOrComputeInstanceFields(erased.superType().toReference()));
 
-            // Add own fields.
+            // Add own fields - filter based on requested type
+            Predicate<? super FieldInstance> filter = (useStatic) ? fi -> fi.flags().isStatic() :
+            														fi -> !fi.flags().isStatic();
             erased.fields().stream()
-                    .filter(fi -> !fi.flags().isStatic()) // Non-static.
+                    .filter(filter)
                     .forEach(res::add);
 
-            fieldCache.put(erased, res);
+            cache.put(erased, res);
         }
 
-        return fieldCache.get(erased);
+        return cache.get(erased);
     }
 }

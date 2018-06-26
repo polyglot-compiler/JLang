@@ -42,7 +42,7 @@ public class PolyLLVMMangler {
      * Mangle types as specified in the JNI API.
      * https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/types.html#type_signatures
      */
-    private String jniUnescapedSignature(Type t) {
+    public String jniUnescapedSignature(Type t) {
         Type et = v.ts.erasureType(t);
         if      (et.isBoolean()) return "Z";
         else if (et.isByte())    return "B";

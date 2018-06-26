@@ -253,7 +253,7 @@ void jni_SetObjectField  (ARGS(jobject))  { IMPL(jobject);  }
 #undef ARGS
 
 jmethodID jni_GetStaticMethodID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
-    JniUnimplemented("GetStaticMethodID");
+  JniUnimplemented("GetStaticMethodID");
 }
 
 jobject  jni_CallStaticObjectMethod  (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticObjectMethod");  }
@@ -290,7 +290,9 @@ jdouble  jni_CallStaticDoubleMethodA (JNIEnv *env, jclass cls, jmethodID id, con
 void     jni_CallStaticVoidMethodA   (JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticVoidMethodA");    }
 
 jfieldID jni_GetStaticFieldID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
-    JniUnimplemented("GetStaticFieldID");
+  auto field = GetJavaStaticFieldInfo(clazz, name, sig);
+  auto no_const = const_cast<JavaStaticFieldInfo*>(field);
+  return reinterpret_cast<jfieldID>(no_const);
 }
 
 jobject  jni_GetStaticObjectField (JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticObjectField");  }
@@ -303,15 +305,19 @@ jlong    jni_GetStaticLongField   (JNIEnv *env, jclass clazz, jfieldID id) { Jni
 jfloat   jni_GetStaticFloatField  (JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticFloatField");   }
 jdouble  jni_GetStaticDoubleField (JNIEnv *env, jclass clazz, jfieldID id) { JniUnimplemented("GetStaticDoubleField");  }
 
-void jni_SetStaticObjectField (JNIEnv *env, jclass clazz, jfieldID id, jobject  value) { JniUnimplemented("SetStaticObjectField");  }
-void jni_SetStaticBooleanField(JNIEnv *env, jclass clazz, jfieldID id, jboolean value) { JniUnimplemented("SetStaticBooleanField"); }
-void jni_SetStaticByteField   (JNIEnv *env, jclass clazz, jfieldID id, jbyte    value) { JniUnimplemented("SetStaticByteField");    }
-void jni_SetStaticCharField   (JNIEnv *env, jclass clazz, jfieldID id, jchar    value) { JniUnimplemented("SetStaticCharField");    }
-void jni_SetStaticShortField  (JNIEnv *env, jclass clazz, jfieldID id, jshort   value) { JniUnimplemented("SetStaticShortField");   }
-void jni_SetStaticIntField    (JNIEnv *env, jclass clazz, jfieldID id, jint     value) { JniUnimplemented("SetStaticIntField");     }
-void jni_SetStaticLongField   (JNIEnv *env, jclass clazz, jfieldID id, jlong    value) { JniUnimplemented("SetStaticLongField");    }
-void jni_SetStaticFloatField  (JNIEnv *env, jclass clazz, jfieldID id, jfloat   value) { JniUnimplemented("SetStaticFloatField");   }
-void jni_SetStaticDoubleField (JNIEnv *env, jclass clazz, jfieldID id, jdouble  value) { JniUnimplemented("SetStaticDoubleField");  }
+#define ARGS(jrep) JNIEnv *env, jclass clazz, jfieldID id, jrep val
+#define IMPL(jrep) return SetJavaStaticField<jrep>(clazz, id, val)
+void jni_SetStaticObjectField  (ARGS(jobject))  { IMPL(jobject); }
+void jni_SetStaticBooleanField (ARGS(jboolean)) { IMPL(jboolean); }
+void jni_SetStaticByteField    (ARGS(jbyte))    { IMPL(jbyte); }
+void jni_SetStaticCharField    (ARGS(jchar))    { IMPL(jchar); }
+void jni_SetStaticShortField   (ARGS(jshort))   { IMPL(jshort); }
+void jni_SetStaticIntField     (ARGS(jint))     { IMPL(jint); }
+void jni_SetStaticLongField    (ARGS(jlong))    { IMPL(jlong); }
+void jni_SetStaticFloatField   (ARGS(jfloat))   { IMPL(jfloat); }
+void jni_SetStaticDoubleField  (ARGS(jdouble))  { IMPL(jdouble); }
+#undef IMPL
+#undef ARGS
 
 jstring jni_NewString(JNIEnv *env, const jchar *unicode, jsize len) {
     JniUnimplemented("NewString");
