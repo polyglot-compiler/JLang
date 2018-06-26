@@ -298,6 +298,12 @@ public class TypedNodeFactory {
         return (Binary) nf.Binary(l.position(), l, Binary.COND_OR, r).type(ts.Boolean());
     }
 
+    public Binary CondAnd(Expr l, Expr r) {
+    	assert l.type().typeEquals(ts.Boolean());
+        assert r.type().typeEquals(ts.Boolean());
+        return (Binary) nf.Binary(l.position(), l, Binary.COND_AND, r).type(ts.Boolean());
+    }
+
     public ArrayAccess ArrayAccess(Expr base, Expr index, boolean alreadyGuarded) {
         assert base.type().isArray();
         ArrayAccess n = (ArrayAccess) nf.ArrayAccess(base.position(), base, index)
@@ -321,5 +327,9 @@ public class TypedNodeFactory {
 
     public NullLit NullLit(Position pos) {
         return (NullLit) nf.NullLit(pos).type(ts.Null());
+    }
+
+    public Binary IsNull(Expr e) {
+    	return (Binary) nf.Binary(e.position(), e, Binary.EQ, NullLit(e.position())).type(ts.Boolean());
     }
 }

@@ -172,7 +172,9 @@ public class PolyLLVMCastExt extends PolyLLVMExt {
         LocalDecl val = v.tnf.TempSSA("castExpr", e);
         Throw throwExn = v.tnf.Throw(pos, v.ts.ClassCastException(), Collections.emptyList());
         Instanceof check = v.tnf.InstanceOf(v.tnf.Local(pos, val), to);
-        If guard = v.tnf.If(v.tnf.Not(check), throwExn);
+        Binary nullCheck = v.tnf.IsNull(v.tnf.Local(pos,  val));
+		Binary isSafe = v.tnf.CondOr(nullCheck, check);
+        If guard = v.tnf.If(v.tnf.Not(isSafe), throwExn);
         Cast cast = v.tnf.Cast(v.tnf.Local(pos, val), to);
         Cast bitcast = context(cast, GUARDED_BITCAST);
         return v.tnf.ESeq(Arrays.asList(val, guard), bitcast);

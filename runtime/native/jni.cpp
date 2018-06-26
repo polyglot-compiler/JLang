@@ -114,7 +114,11 @@ jobject jni_NewObjectA(JNIEnv *env, jclass clazz, jmethodID id, const jvalue* ar
 }
 
 jclass jni_GetObjectClass(JNIEnv *env, jobject obj) {
+  if (obj) {
     return Unwrap(obj)->Cdv()->Class()->Wrap();
+  } else {
+    return NULL;
+  }
 }
 
 jboolean jni_IsInstanceOf(JNIEnv *env, jobject obj, jclass clazz) {
@@ -122,7 +126,7 @@ jboolean jni_IsInstanceOf(JNIEnv *env, jobject obj, jclass clazz) {
 }
 
 jmethodID jni_GetMethodID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
-    JniUnimplemented("GetMethodID");
+  return reinterpret_cast<jmethodID>(GetJavaMethodInfo(clazz, name, sig).first);
 }
 
 #define ARGS JNIEnv *env, jobject obj, jmethodID id, ...

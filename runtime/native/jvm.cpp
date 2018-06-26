@@ -96,7 +96,8 @@ JVM_ArrayCopy(
 
 jobject
 JVM_InitProperties(JNIEnv *env, jobject p) {
-    JvmUnimplemented("JVM_InitProperties");
+  return p;
+
 }
 
 void
