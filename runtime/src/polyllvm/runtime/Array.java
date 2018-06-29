@@ -10,17 +10,19 @@ import java.io.Serializable;
  */
 class Array implements Cloneable, Serializable {
     public final int length;
+    private final int elementSize;
     // Array data is only visible to the compiler.
-
+    
     /**
      * Single-dimensional arrays. To create a new array, the compiler will
      * allocate enough memory for an instance of this class plus the
      * array data, then emit a call to this constructor.
      */
-    Array(int length) {
+    Array(int length, int elementSize) {
         // Note that entries have already been cleared,
         // since we use calloc to allocate memory.
         this.length = length;
+	this.elementSize = elementSize;
     }
 
     enum Type { BOOLEAN, BYTE, CHAR, SHORT, INT, LONG, FLOAT, DOUBLE, OBJECT }

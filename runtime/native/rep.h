@@ -61,12 +61,14 @@ ASSERT_POD(JObjectRep);
 // Representation for Java built-in arrays.
 struct JArrayRep {
     jsize Length() { return len_ ; }
+    jsize ElemSize() { return elem_size_ ; }
     void* Data() { return data_; }
     JObjectRep* Super() { return &header_; }
     jarray Wrap() { return reinterpret_cast<jarray>(this); }
 private:
     JObjectRep header_;
     jsize len_;
+    jsize elem_size_;
     char data_[0];
 };
 ASSERT_POD(JArrayRep);

@@ -50,7 +50,8 @@ jint jni_ThrowNew(JNIEnv *env, jclass clazz, const char *msg) {
 }
 
 jthrowable jni_ExceptionOccurred(JNIEnv *env) {
-    JniUnimplemented("ExceptionOccurred");
+  //TODO
+  return NULL;
 }
 
 void jni_ExceptionDescribe(JNIEnv *env) {
@@ -82,7 +83,8 @@ void jni_DeleteGlobalRef(JNIEnv *env, jobject gref) {
 }
 
 void jni_DeleteLocalRef(JNIEnv *env, jobject obj) {
-    JniUnimplemented("DeleteLocalRef");
+  //TODO
+  //    JniUnimplemented("DeleteLocalRef");
 }
 
 jboolean jni_IsSameObject(JNIEnv *env, jobject obj1, jobject obj2) {
@@ -346,7 +348,8 @@ jstring jni_NewStringUTF(JNIEnv *env, const char *utf) {
     for (jsize i = 0; i < len; ++i)
         data[i] = static_cast<jchar>(utf[i]);
     env->ReleaseCharArrayElements(chars, data, /*mode*/ 0);
-    return CreateJavaString(chars);
+    jstring res = CreateJavaString(chars);
+    return res;
 }
 
 jsize jni_GetStringUTFLength(JNIEnv *env, jstring str) {

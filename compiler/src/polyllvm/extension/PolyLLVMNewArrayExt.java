@@ -104,20 +104,22 @@ public class PolyLLVMNewArrayExt extends PolyLLVMExt {
         ConstructorInstance arrayConstructor;
         try {
             arrayConstructor = ts.findConstructor(
-                    arrType, Collections.singletonList(ts.Int()), arrType, /*fromClient*/ true);
+                    arrType, Collections.nCopies(2, ts.Int()), arrType, /*fromClient*/ true);
         } catch (SemanticException e) {
             throw new InternalCompilerError(e);
         }
         int sizeOfType = v.utils.sizeOfType(elemT);
 
         LLVMTypeRef i64 = LLVMInt64TypeInContext(v.context);
+        LLVMTypeRef i32 = LLVMInt32TypeInContext(v.context);
+        LLVMValueRef elemSizeArg = LLVMConstInt(i32, sizeOfType, /*sign-extend*/ 0);
         LLVMValueRef arrLen64 = LLVMBuildSExt(v.builder, len, i64, "arr.len");
         LLVMValueRef elemSize = LLVMConstInt(i64, sizeOfType, /*sign-extend*/ 0);
         LLVMValueRef contentSize = LLVMBuildMul(v.builder, elemSize, arrLen64, "mul");
         LLVMValueRef headerSize = v.obj.sizeOf(arrType);
         LLVMValueRef size = LLVMBuildAdd(v.builder, headerSize, contentSize, "size");
 
-        LLVMValueRef[] arg = {len};
+        LLVMValueRef[] arg = {len, elemSizeArg};
         return PolyLLVMNewExt.translateWithArgsAndSize(v, arg, size, arrayConstructor);
     }
 }

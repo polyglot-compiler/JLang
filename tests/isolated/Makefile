@@ -34,12 +34,12 @@ CLANG_FLAGS := \
 	-Wl,-rpath,$(JDK)/out -Wl,-rpath,$(RUNTIME)/out \
 	-rdynamic
 
-all: output
+all: check
 
 check: sol output
-	@for i in $(ls *.sol | awk -F'.' '{print $1}'); do \
-	 diff -q $i.sol $i.output; \
-	done > check
+	@echo "******** CHECKING CORRECTNESS *********"
+	@./checkDiffs.sh
+
 
 sol: $(SOL)
 
