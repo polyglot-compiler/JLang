@@ -87,12 +87,13 @@ JVM_ArrayCopy(
     JNIEnv *env, jclass ignored,
     jobject src, jint src_pos, jobject dst, jint dst_pos, jint length
 ) {
+  //TODO check bounds
     jarray src_arr = reinterpret_cast<jarray>(src);
     jarray dst_arr = reinterpret_cast<jarray>(dst);
     jsize elemsize = (Unwrap(src_arr)->ElemSize());
     char* src_data = static_cast<char*>(Unwrap(src_arr)->Data());
     char* dst_data = static_cast<char*>(Unwrap(dst_arr)->Data());
-    memmove(dst_data + dst_pos, src_data + src_pos, sizeof(char) * elemsize * length);
+    memmove(dst_data + (dst_pos * elemsize), src_data + (src_pos * elemsize), elemsize * length);
 }
 
 jobject

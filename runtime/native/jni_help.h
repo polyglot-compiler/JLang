@@ -12,6 +12,8 @@
 #include "rep.h"
 #include "stack_trace.h"
 
+typedef uint8_t u_char;
+
 [[noreturn]] static void JniUnimplemented(const char* name) {
   fprintf(stderr,
     "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
@@ -275,5 +277,58 @@ CallJavaInstanceMethod(jobject obj, jclass intf, const char* name, const char* s
   auto methodIndex = methodInfoPair.second;
   void* methodToCall = __getInterfaceMethod(obj, methodInfo->intf_id_hash, methodInfo->intf_id, methodIndex);
   return ((T (*)(jobject)) methodToCall)(obj);
+}
+
+
+
+
+
+//UTF8 helpers
+// Writes a jchar a utf8 and returns the end                                                                                                        
+static u_char* utf8_write(u_char* base, jchar ch) {
+  if ((ch != 0) && (ch <=0x7f)) {
+    base[0] = (u_char) ch;
+    return base + 1;
+  }
+
+  if (ch <= 0x7FF) {
+    /* 11 bits or less. */
+    unsigned char high_five = ch >> 6;
+    unsigned char low_six = ch & 0x3F;
+    base[0] = high_five | 0xC0; /* 110xxxxx */
+    base[1] = low_six | 0x80;   /* 10xxxxxx */
+    return base + 2;
+  }
+  /* possibly full 16 bits. */
+  char high_four = ch >> 12;
+  char mid_six = (ch >> 6) & 0x3F;
+  char low_six = ch & 0x3f;
+  base[0] = high_four | 0xE0; /* 1110xxxx */
+  base[1] = mid_six | 0x80;   /* 10xxxxxx */
+  base[2] = low_six | 0x80;   /* 10xxxxxx */
+  return base + 3;
+}
+
+
+static int utf8_length(jchar* base, int length) {
+  int result = 0;
+  for (int index = 0; index < length; index++) {
+    jchar c = base[index];
+    if ((0x0001 <= c) && (c <= 0x007F)) result += 1;
+    else if (c <= 0x07FF) result += 2;
+    else result += 3;
+  }
+  return result;
+}
+
+static char* as_utf8(jchar* base, int length, u_char* result) {
+  int utf8_len = utf8_length(base, length);
+  u_char* p = result;
+  for (int index = 0; index < length; index++) {
+    p = utf8_write(p, base[index]);
+  }
+  *p = '\0';
+  assert(p == &result[utf8_len]);
+  return (char*) result;
 }
 #endif
