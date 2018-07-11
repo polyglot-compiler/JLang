@@ -2,7 +2,9 @@
 
 #include <unwind.h>
 #include "rep.h"
+#include "jni.h"
 
+void throwClassNotFoundException(JNIEnv *env, const char* name);
 extern "C" {
 
 _Unwind_Exception *createUnwindException(jobject jexception);

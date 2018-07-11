@@ -6,6 +6,7 @@
 
 #include "stack_trace.h"
 #include "class.h"
+#include "exception.h"
 #include "jni.h"
 #include "rep.h"
 
@@ -420,7 +421,8 @@ JVM_GetCallerClass(JNIEnv *env, int n) {
 
 jclass
 JVM_FindPrimitiveClass(JNIEnv *env, const char *utf) {
-    JvmUnimplemented("JVM_FindPrimitiveClass");
+  //TODO throw ClassNotFoundException if not primitive type
+  return GetPrimitiveClass(utf);
 }
 
 void
@@ -435,7 +437,12 @@ JVM_FindClassFromBootLoader(JNIEnv *env, const char *name) {
 
 jclass
 JVM_FindClassFromCaller(JNIEnv *env, const char *name, jboolean init, jobject loader, jclass caller) {
-    JvmUnimplemented("JVM_FindClassFromCaller");
+  auto clazz = GetJavaClassFromName(name);
+  if (clazz != NULL) {
+    return clazz;
+  } else {
+    throwClassNotFoundException(env, name);
+  }
 }
 
 jclass
@@ -476,7 +483,12 @@ JVM_GetClassInterfaces(JNIEnv *env, jclass cls) {
 
 jboolean
 JVM_IsInterface(JNIEnv *env, jclass cls) {
-    JvmUnimplemented("JVM_IsInterface");
+  auto info = GetJavaClassInfo(cls);
+  if (info) {
+    return info->isIntf;
+  } else {
+    return J_FALSE;
+  }
 }
 
 jobjectArray

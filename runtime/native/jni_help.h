@@ -14,6 +14,7 @@
 
 typedef uint8_t u_char;
 
+#define J_FALSE ((jboolean) 0)
 [[noreturn]] static void JniUnimplemented(const char* name) {
   fprintf(stderr,
     "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"

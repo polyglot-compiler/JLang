@@ -9,8 +9,11 @@
 #include <string>
 #include "jni.h"
 #include "class.h"
+#include "rep.h"
 
 static constexpr bool kDebug = false;
+
+static JClassRep* intKlass = (JClassRep*)malloc(sizeof(JClassRep));
 
 // For simplicity we store class information in a map.
 // If we find this to be too slow, we could allocate extra memory for
@@ -24,12 +27,17 @@ void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
 
     if (kDebug) {
 
-        printf("loading class %s with super class %s\n",
+        printf("loading %s %s with super class %s\n",
+	       (info->isIntf ? "interface" : "class"),
             info->name,
             info->super_ptr
                 ? GetJavaClassInfo(*info->super_ptr)->name
                 : "[none]");
 
+	for (int32_t i = 0; i < info->num_intfs; ++i) {
+	  jclass* intf = info->intfs[i];
+	  printf("  implements interface %p\n", *intf);
+	}
         for (int32_t i = 0; i < info->num_fields; ++i) {
             auto* f = &info->fields[i];
             printf("  found field %s with offset %d\n", f->name, f->offset);
@@ -58,15 +66,32 @@ void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
 }
 
 } // extern "C"
-
+        
 const JavaClassInfo*
 GetJavaClassInfo(jclass cls) {
+  try {
     return classes.at(cls);
+  } catch (const std::out_of_range& oor) {
+    return NULL;
+  }
+}
+
+const jclass
+GetPrimitiveClass(const char* name) {
+  if (strcmp(name, "int") == 0) {
+    return intKlass->Wrap();
+  } else {
+    return NULL;
+  }
 }
 
 const jclass
 GetJavaClassFromName(const char* name) {
-  return cnames.at(std::string(name));
+  try {
+    return cnames.at(std::string(name));
+  } catch (const std::out_of_range& oor) {
+    return NULL;
+  }
 }
 
 const JavaStaticFieldInfo*

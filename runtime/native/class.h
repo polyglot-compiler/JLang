@@ -43,6 +43,10 @@ struct JavaMethodInfo {
 struct JavaClassInfo {
     char* name;
     jclass* super_ptr;
+    jboolean isIntf;
+
+    int32_t num_intfs;
+    jclass** intfs;
 
     int32_t num_fields;
     JavaFieldInfo* fields;
@@ -61,6 +65,9 @@ void
 RegisterJavaClass(jclass cls, const JavaClassInfo* data);
 
 } // extern "C"
+
+const jclass
+GetPrimitiveClass(const char *name);
 
 const JavaClassInfo*
 GetJavaClassInfo(jclass cls);

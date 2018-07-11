@@ -91,6 +91,10 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 .map(pi -> buildMethodInfo(v, ct, pi))
                 .toArray(LLVMValueRef[]::new);
 
+        LLVMValueRef[] interfaceInfoElems = v.allInterfaces(ct).stream()
+        		.map(intf -> v.utils.getClassObjectGlobal(intf))
+        		.toArray(LLVMValueRef[]::new);
+
         // This layout must precisely mirror the layout defined in the runtime (class.cpp).
         LLVMValueRef classInfo = v.utils.buildConstStruct(
 
@@ -102,6 +106,16 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                         ? v.utils.getClassObjectGlobal(ct.superType().toClass())
                         : LLVMConstNull(v.utils.ptrTypeRef(classType)),
 
+                // Boolean isInterface, jboolean (i8)
+                LLVMConstInt(v.utils.i8(), ct.flags().isInterface() ? 1 : 0, /*zero-extend*/ 1),
+                
+                // Number of implemented interfaces, i32
+                LLVMConstInt(v.utils.i32(), interfaceInfoElems.length, /*sign-extend*/ 0),
+                
+                // Implemented Interface Pointers, jclass**
+                v.utils.buildGlobalArrayAsPtr(v.utils.ptrTypeRef(classType),
+                		interfaceInfoElems),
+                        
                 // Number of instance fields, i32
                 LLVMConstInt(v.utils.i32(), fieldInfoElems.length, /*sign-extend*/ 0),
 
