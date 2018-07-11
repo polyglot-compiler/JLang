@@ -7,13 +7,18 @@
 #include <cstring>
 #include <unordered_map>
 #include <string>
+#include <stdio.h>
 #include "jni.h"
 #include "class.h"
 #include "rep.h"
 
-static constexpr bool kDebug = false;
+#define MEMCPY(a,b,c) memcpy((void *) a, (void *) b, c)
+static constexpr bool kDebug = true;
 
 static JClassRep* intKlass = (JClassRep*)malloc(sizeof(JClassRep));
+
+jclass initArrayKlass();
+jclass globalArrayKlass = NULL;
 
 // For simplicity we store class information in a map.
 // If we find this to be too slow, we could allocate extra memory for
@@ -22,6 +27,10 @@ static std::unordered_map<jclass, const JavaClassInfo*> classes;
 static std::unordered_map<std::string, const jclass> cnames;
 
 extern "C" {
+
+extern void Polyglot_polyllvm_runtime_ObjectArray_load_class();
+extern jclass Polyglot_polyllvm_runtime_ObjectArray_class;
+
 
 void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
 
@@ -66,7 +75,36 @@ void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
 }
 
 } // extern "C"
-        
+
+//Force this class load function to be called at initialization
+jclass initArrayKlass() {
+  Polyglot_polyllvm_runtime_ObjectArray_load_class();
+  return Polyglot_polyllvm_runtime_ObjectArray_class;
+}        
+
+//This assumes char* is non-null, C-string with len > 0
+bool isArrayClassName(const char* name) {
+  return name[0] == '[';
+}
+
+//This assumes char* is non-null, C-string with len > 0
+//It also assumes that it has not been initialized
+const jclass initArrayClass(const char* name) {
+  if (globalArrayKlass == NULL) {
+    globalArrayKlass = initArrayKlass();
+  }
+  jclass newKlazz = (jclass)malloc(sizeof(JClassRep));
+  memcpy(newKlazz, globalArrayKlass, sizeof(JClassRep));
+  JavaClassInfo* newInfo = (JavaClassInfo*)malloc(sizeof(JavaClassInfo));
+  memcpy(newInfo, GetJavaClassInfo(globalArrayKlass), sizeof(JavaClassInfo));
+  int nameLen = strlen(name) + 1; //add the '\0' terminator
+  char* newName = (char*)malloc(nameLen);
+  memcpy(newName, name, nameLen);
+  newInfo->name = newName;
+  RegisterJavaClass(newKlazz, newInfo);
+  return newKlazz;
+}
+
 const JavaClassInfo*
 GetJavaClassInfo(jclass cls) {
   try {
@@ -90,7 +128,11 @@ GetJavaClassFromName(const char* name) {
   try {
     return cnames.at(std::string(name));
   } catch (const std::out_of_range& oor) {
-    return NULL;
+    if (isArrayClassName(name)) {
+      return initArrayClass(name);
+    } else {
+      return NULL;
+    }
   }
 }
 
