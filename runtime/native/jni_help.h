@@ -223,7 +223,7 @@ CallJavaNonvirtualMethod(jobject obj, jmethodID id, const jvalue* args) {
     forward_args[0].l = obj;
     std::copy(args, args + num_args, forward_args.begin() + 1);
 
-    return CallJavaNonvirtualMethod<T>(id, args);
+    return CallJavaNonvirtualMethod<T>(id, forward_args.data());
 }
 
 // Calls a Java instance method using the dispatch vector of [obj].

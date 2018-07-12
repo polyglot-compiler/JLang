@@ -13,7 +13,7 @@
 #include "rep.h"
 
 #define MEMCPY(a,b,c) memcpy((void *) a, (void *) b, c)
-static constexpr bool kDebug = true;
+static constexpr bool kDebug = false;
 
 static JClassRep* intKlass = (JClassRep*)malloc(sizeof(JClassRep));
 
