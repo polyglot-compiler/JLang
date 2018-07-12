@@ -13,8 +13,11 @@ jclass jni_DefineClass(JNIEnv *env, const char *name, jobject loader, const jbyt
     JniUnimplemented("DefineClass");
 }
 
+/* name is in the java/lang/String format and is a valid C-string */
 jclass jni_FindClass(JNIEnv *env, const char *name) {
-  JniUnimplemented("FindClass");
+  //TODO this should do a classpath (java.class.path) search for compiled files
+  if (name == NULL) return NULL;
+  return GetJavaClassFromPathName(name);
 }
 
 jmethodID jni_FromReflectedMethod(JNIEnv *env, jobject method) {
@@ -95,8 +98,14 @@ jobject jni_NewLocalRef(JNIEnv *env, jobject ref) {
     JniUnimplemented("NewLocalRef");
 }
 
+#define MAX_CAPACITY 4000
 jint jni_EnsureLocalCapacity(JNIEnv *env, jint capacity) {
-    JniUnimplemented("EnsureLocalCapacity");
+  //JDK actually just does tracing here and returns false iff capacity > 4000
+  if (capacity > MAX_CAPACITY) {
+    return JNI_ERR;
+  } else {
+    return JNI_OK;
+  }
 }
 
 jobject jni_AllocObject(JNIEnv *env, jclass clazz) {

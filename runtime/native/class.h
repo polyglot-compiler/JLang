@@ -66,14 +66,22 @@ RegisterJavaClass(jclass cls, const JavaClassInfo* data);
 
 } // extern "C"
 
+//Assumes non-null valid C-string for name
 const jclass
 GetPrimitiveClass(const char *name);
 
 const JavaClassInfo*
 GetJavaClassInfo(jclass cls);
 
+//Assumes non-null valid C-string for name
+//name is in java.lang.String format
 const jclass
 GetJavaClassFromName(const char* name);
+
+//Assumes non-null valid C-string for name
+//name is in java/lang/String format
+const jclass
+GetJavaClassFromPathName(const char* name);
 
 const JavaFieldInfo*
 GetJavaFieldInfo(jclass cls, const char* name);

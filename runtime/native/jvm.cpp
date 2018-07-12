@@ -487,7 +487,7 @@ JVM_IsInterface(JNIEnv *env, jclass cls) {
   if (info) {
     return info->isIntf;
   } else {
-    return J_FALSE;
+    return JNI_FALSE;
   }
 }
 
@@ -1001,24 +1001,30 @@ JVM_GetHostName(char* name, int namelen) {
     JvmUnimplemented("JVM_GetHostName");
 }
 
-int
-jio_vsnprintf(char *str, size_t count, const char *fmt, va_list args) {
-    JvmUnimplemented("jio_vsnprintf");
-}
-
-int
-jio_snprintf(char *str, size_t count, const char *fmt, ...) {
+extern "C" {
+  int
+  jio_vsnprintf(char *str, size_t count, const char *fmt, va_list args) {
+    //FROM JDK (but what else would you write?
+    // see bug 4399518, 4417214
+    if ((intptr_t)count <= 0) return -1;
+    return vsnprintf(str, count, fmt, args);
+  }
+  
+  int
+  jio_snprintf(char *str, size_t count, const char *fmt, ...) {
     JvmUnimplemented("jio_snprintf");
-}
-
-int
-jio_fprintf(FILE *, const char *fmt, ...) {
+  }
+  
+  int
+  jio_fprintf(FILE *, const char *fmt, ...) {
     JvmUnimplemented("jio_fprintf");
-}
-
-int
-jio_vfprintf(FILE *, const char *fmt, va_list args) {
+  }
+  
+  int
+  jio_vfprintf(FILE *, const char *fmt, va_list args) {
     JvmUnimplemented("jio_vfprintf");
+  }
+  
 }
 
 void*

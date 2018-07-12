@@ -124,6 +124,21 @@ GetPrimitiveClass(const char* name) {
 }
 
 const jclass
+GetJavaClassFromPathName(const char* name) {
+  int nameLen = strlen(name);
+  char pathName[nameLen + 1];
+  for (int i = 0; i <= nameLen; i++) {
+    char c = name[i];
+    if (c == '/') {
+      c = '.';
+    }
+    pathName[i] = c;
+  }
+  return GetJavaClassFromName(pathName);
+}
+
+
+const jclass
 GetJavaClassFromName(const char* name) {
   try {
     return cnames.at(std::string(name));
