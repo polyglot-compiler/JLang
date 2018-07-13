@@ -90,7 +90,8 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 ct.methods().stream(), ct.constructors().stream())
                 .map(pi -> buildMethodInfo(v, ct, pi))
                 .toArray(LLVMValueRef[]::new);
-
+        
+        //Info about implemented interfaces. Needed by runtime reflection
         LLVMValueRef[] interfaceInfoElems = v.allInterfaces(ct).stream()
         		.map(intf -> v.utils.getClassObjectGlobal(intf))
         		.toArray(LLVMValueRef[]::new);
