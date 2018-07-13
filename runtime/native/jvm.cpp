@@ -664,7 +664,7 @@ JVM_DoPrivileged(JNIEnv *env, jclass cls, jobject action, jobject context, jbool
   //does a lot more
   auto pActionClazz = GetJavaClassFromName("java.security.PrivilegedAction");
   //  auto pActionClazz = jni_FindClass(env, "java/security/PrivilegedAction");
-  jobject result = CallJavaInstanceMethod<jobject>(action, pActionClazz, "run", "()Ljava/lang/Object;", NULL);
+  jobject result = CallJavaInterfaceMethod<jobject>(action, pActionClazz, "run", "()Ljava/lang/Object;", NULL);
   return result;
 }
 

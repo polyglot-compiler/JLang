@@ -53,7 +53,7 @@ jint jni_ThrowNew(JNIEnv *env, jclass clazz, const char *msg) {
 }
 
 jthrowable jni_ExceptionOccurred(JNIEnv *env) {
-  //TODO
+  //TODO do something here (ExceptionOccurred)
   return NULL;
 }
 
@@ -78,15 +78,17 @@ jobject jni_PopLocalFrame(JNIEnv *env, jobject result) {
 }
 
 jobject jni_NewGlobalRef(JNIEnv *env, jobject lobj) {
-    JniUnimplemented("NewGlobalRef");
+  //TODO, do something real here for global ref
+  return lobj;
 }
 
 void jni_DeleteGlobalRef(JNIEnv *env, jobject gref) {
-    JniUnimplemented("DeleteGlobalRef");
+  //TODO handle delete global ref if necessary
+  //    JniUnimplemented("DeleteGlobalRef");
 }
 
 void jni_DeleteLocalRef(JNIEnv *env, jobject obj) {
-  //TODO
+  //TODO handle DeleteLocalRef if necessary (or remove TODO if not)
   //    JniUnimplemented("DeleteLocalRef");
 }
 
@@ -112,16 +114,20 @@ jobject jni_AllocObject(JNIEnv *env, jclass clazz) {
     JniUnimplemented("AllocObject");
 }
 
+  //TODO let's make objects!
 jobject jni_NewObject(JNIEnv *env, jclass clazz, jmethodID id, ...) {
-    JniUnimplemented("NewObject");
+  va_list args; va_start(args, id);
+  jobject res = CallJavaStaticMethod<jobject>(clazz, id, args);
+  va_end(args);
+  return res;
 }
 
 jobject jni_NewObjectV(JNIEnv *env, jclass clazz, jmethodID id, va_list args) {
-    JniUnimplemented("NewObjectV");
+  return CallJavaStaticMethod<jobject>(clazz, id, args);
 }
 
 jobject jni_NewObjectA(JNIEnv *env, jclass clazz, jmethodID id, const jvalue* args) {
-    JniUnimplemented("NewObjectA");
+  return CallJavaNonvirtualMethod<jobject>(id, args);
 }
 
 jclass jni_GetObjectClass(JNIEnv *env, jobject obj) {
@@ -264,30 +270,44 @@ void jni_SetObjectField  (ARGS(jobject))  { IMPL(jobject);  }
 #undef ARGS
 
 jmethodID jni_GetStaticMethodID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
-  JniUnimplemented("GetStaticMethodID");
+  return reinterpret_cast<jmethodID>(GetJavaStaticMethodInfo(clazz, name, sig).first);
 }
 
-jobject  jni_CallStaticObjectMethod  (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticObjectMethod");  }
-jboolean jni_CallStaticBooleanMethod (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticBooleanMethod"); }
-jbyte    jni_CallStaticByteMethod    (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticByteMethod");    }
-jchar    jni_CallStaticCharMethod    (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticCharMethod");    }
-jshort   jni_CallStaticShortMethod   (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticShortMethod");   }
-jint     jni_CallStaticIntMethod     (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticIntMethod");     }
-jlong    jni_CallStaticLongMethod    (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticLongMethod");    }
-jfloat   jni_CallStaticFloatMethod   (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticFloatMethod");   }
-jdouble  jni_CallStaticDoubleMethod  (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticDoubleMethod");  }
-void     jni_CallStaticVoidMethod    (JNIEnv *env, jclass cls, jmethodID id, ...) { JniUnimplemented("CallStaticVoidMethod");    }
+#define ARGS JNIEnv *env, jclass cls, jmethodID id, ...
+#define START_VA va_list args; va_start(args, id)
+#define END_VA va_end(args)
+#define CALL(jrep) CallJavaStaticMethod<jrep>(cls, id, args)
+#define IMPL(jrep) START_VA; jrep res = CALL(jrep); END_VA; return res
+jobject  jni_CallStaticObjectMethod  (ARGS) { IMPL(jobject); }
+jboolean jni_CallStaticBooleanMethod (ARGS) { IMPL(jboolean); }
+jbyte    jni_CallStaticByteMethod    (ARGS) { IMPL(jbyte); }
+jchar    jni_CallStaticCharMethod    (ARGS) { IMPL(jchar); }
+jshort   jni_CallStaticShortMethod   (ARGS) { IMPL(jshort); }
+jint     jni_CallStaticIntMethod     (ARGS) { IMPL(jint); }
+jlong    jni_CallStaticLongMethod    (ARGS) { IMPL(jlong); }
+jfloat   jni_CallStaticFloatMethod   (ARGS) { IMPL(jfloat); }
+jdouble  jni_CallStaticDoubleMethod  (ARGS) { IMPL(jdouble); }
+void     jni_CallStaticVoidMethod    (ARGS) { START_VA; CALL(void); END_VA; }
+#undef IMPL
+#undef CALL
+#undef END_VA
+#undef START_VA
+#undef ARGS
 
-jobject  jni_CallStaticObjectMethodV (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticObjectMethodV");  }
-jboolean jni_CallStaticBooleanMethodV(JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticBooleanMethodV"); }
-jbyte    jni_CallStaticByteMethodV   (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticByteMethodV");    }
-jchar    jni_CallStaticCharMethodV   (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticCharMethodV");    }
-jshort   jni_CallStaticShortMethodV  (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticShortMethodV");   }
-jint     jni_CallStaticIntMethodV    (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticIntMethodV");     }
-jlong    jni_CallStaticLongMethodV   (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticLongMethodV");    }
-jfloat   jni_CallStaticFloatMethodV  (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticFloatMethodV");   }
-jdouble  jni_CallStaticDoubleMethodV (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticDoubleMethodV");  }
-void     jni_CallStaticVoidMethodV   (JNIEnv *env, jclass cls, jmethodID id, va_list args) { JniUnimplemented("CallStaticVoidMethodV");    }
+#define ARGS JNIEnv *env, jclass cls, jmethodID id, va_list args
+#define IMPL(jrep) return CallJavaStaticMethod<jrep>(cls, id, args)
+  jobject  jni_CallStaticObjectMethodV (ARGS) { IMPL(jobject); }
+  jboolean jni_CallStaticBooleanMethodV (ARGS) { IMPL(jboolean); }
+  jbyte    jni_CallStaticByteMethodV   (ARGS) { IMPL(jbyte); }
+  jchar    jni_CallStaticCharMethodV   (ARGS) { IMPL(jchar); }
+  jshort   jni_CallStaticShortMethodV  (ARGS) { IMPL(jshort); }
+  jint     jni_CallStaticIntMethodV    (ARGS) { IMPL(jint); }
+  jlong    jni_CallStaticLongMethodV   (ARGS) { IMPL(jlong); }
+  jfloat   jni_CallStaticFloatMethodV  (ARGS) { IMPL(jfloat); }
+  jdouble  jni_CallStaticDoubleMethodV (ARGS) { IMPL(jdouble); }
+  void     jni_CallStaticVoidMethodV   (ARGS) { CallJavaStaticMethod<void>(cls, id, args); }
+#undef IMPL
+#undef ARGS
 
 jobject  jni_CallStaticObjectMethodA (JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticObjectMethodA");  }
 jboolean jni_CallStaticBooleanMethodA(JNIEnv *env, jclass cls, jmethodID id, const jvalue* args) { JniUnimplemented("CallStaticBooleanMethodA"); }
@@ -373,6 +393,7 @@ const char* jni_GetStringUTFChars(JNIEnv *env, jstring str, jboolean *isCopy) {
     auto chars = env->GetStringChars(str, /*isCopy*/ nullptr);
     char* res = (char*) malloc(len + 1);
     // TODO: Incorrect conversion from Java string chars to UTF-8 chars.
+    // only works for 1 byte long UTF-16 chars (a.k.a. things that are already in UTF-8 form)
     for (jsize i = 0; i < len; ++i)
         res[i] = static_cast<char>(chars[i]);
     res[len] = '\0';
@@ -539,7 +560,8 @@ void jni_DeleteWeakGlobalRef(JNIEnv *env, jweak ref) {
 }
 
 jboolean jni_ExceptionCheck(JNIEnv *env) {
-    JniUnimplemented("ExceptionCheck");
+  //TODO implement pending exceptions
+  return JNI_FALSE;
 }
 
 jobject jni_NewDirectByteBuffer(JNIEnv* env, void* address, jlong capacity) {

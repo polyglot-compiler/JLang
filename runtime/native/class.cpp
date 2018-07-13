@@ -188,7 +188,7 @@ GetJavaFieldInfo(jclass cls, const char* name) {
 }
 
 const std::pair<JavaMethodInfo*,int32_t>
-TryGetJavaMethodInfo(jclass cls, const char* name, const char* sig) {
+TryGetJavaMethodInfo(jclass cls, const char* name, const char* sig, bool search_super) {
     auto* clazz = classes.at(cls);
     auto* methods = clazz->methods;
     for (int32_t i = 0, e = clazz->num_methods; i < e; ++i) {
@@ -199,23 +199,21 @@ TryGetJavaMethodInfo(jclass cls, const char* name, const char* sig) {
     }
 
     // Recurse to super class.
-    if (auto super_ptr = clazz->super_ptr) {
+    if (search_super) {
+      if  (auto super_ptr = clazz->super_ptr) {
         // TODO: Technically might not want to recurse for 'private' methods.
-        return TryGetJavaMethodInfo(*super_ptr, name, sig);
+	return TryGetJavaMethodInfo(*super_ptr, name, sig, true);
+      }
     }
     return std::pair<JavaMethodInfo*,int32_t>(nullptr,-1);
 }
 
 const std::pair<JavaMethodInfo*,int32_t>
 GetJavaMethodInfo(jclass cls, const char* name, const char* sig) {
-  auto res = TryGetJavaMethodInfo(cls, name, sig);
-    if (res.first) {
-        return res;
-    } else {
-        // TODO: Should technically throw NoSuchMethodError.
-        fprintf(stderr,
-            "Could not find method %s%s in class %s. Aborting\n",
-            name, sig, GetJavaClassInfo(cls)->name);
-        abort();
-    }
+  return TryGetJavaMethodInfo(cls, name, sig, true);
+}
+
+const std::pair<JavaMethodInfo*, int32_t>
+GetJavaStaticMethodInfo(jclass cls, const char* name, const char* sig) {
+  return TryGetJavaMethodInfo(cls, name, sig, false);
 }

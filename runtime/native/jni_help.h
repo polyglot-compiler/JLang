@@ -218,12 +218,15 @@ CallJavaNonvirtualMethod(jobject obj, jmethodID id, const jvalue* args) {
     auto m = reinterpret_cast<const JavaMethodInfo*>(id);
     auto num_args = CountJavaArgs(m->sig);
 
-    // Carefully include implicit receiver.
-    auto forward_args = std::vector<jvalue>(num_args + 1);
-    forward_args[0].l = obj;
-    std::copy(args, args + num_args, forward_args.begin() + 1);
-
-    return CallJavaNonvirtualMethod<T>(id, forward_args.data());
+    // Carefully include implicit receiver for non-static methods
+    const jvalue* final_args = args;
+    if (!IS_STATIC_METHOD(m)) {
+      auto forward_args = std::vector<jvalue>(num_args + 1);
+      forward_args[0].l = obj;
+      std::copy(args, args + num_args, forward_args.begin() + 1);
+      final_args = forward_args.data();
+    }
+    return CallJavaNonvirtualMethod<T>(id, final_args);
 }
 
 // Calls a Java instance method using the dispatch vector of [obj].
@@ -239,6 +242,7 @@ CallJavaInstanceMethod(jobject obj, jmethodID id, const jvalue* args) {
     // can do a direct call.
     auto clazz = Unwrap(obj)->Cdv()->Class()->Wrap();
     m = GetJavaMethodInfo(clazz, m->name, m->sig).first;
+    if (m == NULL) { return (T)NULL; }
     id = reinterpret_cast<jmethodID>(const_cast<JavaMethodInfo*>(m));
 
     // TODO: The above lookup may fail due to type erasure,
@@ -249,12 +253,12 @@ CallJavaInstanceMethod(jobject obj, jmethodID id, const jvalue* args) {
     return CallJavaNonvirtualMethod<T>(obj, id, args);
 }
 
-
 template <typename T>
 static T
 CallJavaInstanceMethod(jobject obj, const char* name, const char* sig, const jvalue* args) {
   auto clazz = Unwrap(obj)->Cdv()->Class()->Wrap();
   auto m = GetJavaMethodInfo(clazz, name, sig).first;
+  if (m == NULL) { return (T)NULL; }
   auto id = reinterpret_cast<jmethodID>(const_cast<JavaMethodInfo*>(m));
   return CallJavaNonvirtualMethod<T>(obj, id, args);
 }
@@ -272,16 +276,25 @@ CallJavaInstanceMethod(jobject obj, jmethodID id, va_list args) {
 
 template <typename T>
 static T
-CallJavaInstanceMethod(jobject obj, jclass intf, const char* name, const char* sig, const jvalue* args) {
+CallJavaInterfaceMethod(jobject obj, jclass intf, const char* name, const char* sig, const jvalue* args) {
   auto methodInfoPair = GetJavaMethodInfo(intf, name, sig);
   auto methodInfo = methodInfoPair.first;
+  if (methodInfo == NULL) { return (T)NULL; }
   auto methodIndex = methodInfoPair.second;
   void* methodToCall = __getInterfaceMethod(obj, methodInfo->intf_id_hash, methodInfo->intf_id, methodIndex);
   return ((T (*)(jobject)) methodToCall)(obj);
 }
 
-
-
+// Calls a Java instance method using the dispatch vector of [obj].
+template <typename T>
+static T
+CallJavaStaticMethod(jclass cls, jmethodID id, va_list args) {
+    auto m = reinterpret_cast<const JavaMethodInfo*>(id);
+    auto num_args = CountJavaArgs(m->sig);
+    auto forward_args = std::vector<jvalue>(num_args);
+    ForwardJavaArgs(m->sig, args, forward_args.data());
+    return CallJavaNonvirtualMethod<T>(id, forward_args.data());
+}
 
 
 //UTF8 helpers

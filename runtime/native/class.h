@@ -11,6 +11,9 @@
 #include "jni.h"
 #include <utility>
 
+#define IS_STATIC_METHOD(minfo) (minfo->offset == -1)
+#define IS_INTERFACE_METHOD(minfo) (minfo->inft_id == NULL && minfo->intf_id_hash == 0)
+
 extern "C" {
 // These structs are generated statically for each class, and
 // exist for the lifetime of the program.
@@ -91,3 +94,6 @@ GetJavaStaticFieldInfo(jclass cls, const char* name, const char* sig);
 
 const std::pair<JavaMethodInfo*,int32_t>
 GetJavaMethodInfo(jclass cls, const char* name, const char* sig);
+
+const std::pair<JavaMethodInfo*, int32_t>
+GetJavaStaticMethodInfo(jclass cls, const char* name, const char* sig);

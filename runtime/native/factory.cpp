@@ -31,3 +31,9 @@ jdoubleArray  CreateJavaDoubleArray (jint len) { return Polyglot_polyllvm_runtim
 jstring CreateJavaString(jcharArray chars) {
     return Polyglot_polyllvm_runtime_Factory_String___3C(chars);
 }
+
+//TODO: Allocate enough memory for a new object of type clazz
+//And initialize its dispacth vector
+jobject CreateNewJavaObject(jclass clazz) {
+  return NULL;
+}
