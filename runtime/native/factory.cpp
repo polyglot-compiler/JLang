@@ -1,6 +1,9 @@
 #include "jni.h"
 
 #include "factory.h"
+#include "class.h"
+#include "rep.h"
+#include "gc.h"
 
 // The name must match that used in polyllvm.runtime.Factory,
 // and the mangling and calling conventions must match those used by PolyLLVM.
@@ -32,8 +35,12 @@ jstring CreateJavaString(jcharArray chars) {
     return Polyglot_polyllvm_runtime_Factory_String___3C(chars);
 }
 
-//TODO: Allocate enough memory for a new object of type clazz
-//And initialize its dispacth vector
-jobject CreateNewJavaObject(jclass clazz) {
-  return NULL;
+jobject CreateJavaObject(jclass clazz) {
+  auto info = GetJavaClassInfo(clazz);
+  //TODO set exception (class is interface or abstract)
+  if (info == NULL || info->cdv == NULL) { return NULL; }
+  JObjectRep* new_obj = (JObjectRep*) GC_MALLOC(info->obj_size);
+  if (new_obj == NULL) { return NULL; }
+  new_obj->SetCdv(reinterpret_cast<DispatchVector*>(info->cdv));
+  return new_obj->Wrap();
 }

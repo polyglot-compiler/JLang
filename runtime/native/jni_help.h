@@ -296,7 +296,17 @@ CallJavaStaticMethod(jclass cls, jmethodID id, va_list args) {
     return CallJavaNonvirtualMethod<T>(id, forward_args.data());
 }
 
-
+//TODO cleanup the messy code repetition in this file
+static void
+CallJavaConstructor(jobject obj, jmethodID id, va_list args) {
+    auto m = reinterpret_cast<const JavaMethodInfo*>(id);
+    auto num_args = CountJavaArgs(m->sig);
+    auto forward_args = std::vector<jvalue>(num_args + 1);
+    forward_args[0].l = obj;
+    ForwardJavaArgs(m->sig, args, &(forward_args[1]));
+    CallJavaNonvirtualMethod<void>(id, forward_args.data());
+    return;
+}
 //UTF8 helpers
 // Writes a jchar a utf8 and returns the end                                                                                                        
 static u_char* utf8_write(u_char* base, jchar ch) {

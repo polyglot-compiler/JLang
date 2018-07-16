@@ -9,6 +9,7 @@
 #pragma once
 
 #include "jni.h"
+
 #include <utility>
 
 #define IS_STATIC_METHOD(minfo) (minfo->offset == -1)
@@ -46,6 +47,9 @@ struct JavaMethodInfo {
 struct JavaClassInfo {
     char* name;
     jclass* super_ptr;
+    void* cdv; //is a DispatchVector*
+    int32_t obj_size;
+
     jboolean isIntf;
 
     int32_t num_intfs;

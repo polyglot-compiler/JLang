@@ -6,6 +6,7 @@ import polyglot.types.*;
 import polyglot.util.SerialVersionUID;
 import polyllvm.ast.PolyLLVMExt;
 import polyllvm.util.Constants;
+import polyllvm.util.LLVMUtils;
 import polyllvm.visit.LLVMTranslator;
 
 import java.lang.Override;
@@ -27,6 +28,11 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         ParsedClassType ct = n.type();
         initClassDataStructures(v, ct, n.body());
         return super.leaveTranslateLLVM(v);
+    }
+
+    private static int sizeOfClassObj(LLVMTranslator v, ClassType ct) {
+    	
+    	return 0;
     }
 
     /**
@@ -106,6 +112,14 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 ct.superType() != null
                         ? v.utils.getClassObjectGlobal(ct.superType().toClass())
                         : LLVMConstNull(v.utils.ptrTypeRef(classType)),
+
+                // Dispatch Vector pointer (NULL if not an instantiatable class), void*
+                ct.flags().isInterface() || ct.flags().isAbstract() ?
+                		LLVMConstNull(v.utils.i8Ptr()) :
+                		v.utils.buildCastToBytePtr(v.dv.getDispatchVectorFor(ct)),
+  
+                // Object size (Base Object Rep + all fields) in bytes, i32
+                v.obj.sizeOf(ct),
 
                 // Boolean isInterface, jboolean (i8)
                 LLVMConstInt(v.utils.i8(), ct.flags().isInterface() ? 1 : 0, /*zero-extend*/ 1),

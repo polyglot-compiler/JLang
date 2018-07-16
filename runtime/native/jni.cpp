@@ -117,7 +117,9 @@ jobject jni_AllocObject(JNIEnv *env, jclass clazz) {
   //TODO let's make objects!
 jobject jni_NewObject(JNIEnv *env, jclass clazz, jmethodID id, ...) {
   va_list args; va_start(args, id);
-  jobject res = CallJavaStaticMethod<jobject>(clazz, id, args);
+  jobject res = CreateJavaObject(clazz);
+  //now to call constructor
+  CallJavaConstructor(res, id, args);
   va_end(args);
   return res;
 }

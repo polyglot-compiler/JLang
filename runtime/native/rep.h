@@ -52,6 +52,7 @@ struct JObjectRep {
     DispatchVector* Cdv() { return cdv_; }
     sync_vars* SyncVars() { return sync_vars_; }
     jobject Wrap() { return reinterpret_cast<jobject>(this); }
+    void SetCdv(DispatchVector* cdv)  { cdv_ = cdv; }
 private:
     DispatchVector* cdv_;
     sync_vars* sync_vars_;

@@ -18,3 +18,6 @@ jdoubleArray  CreateJavaDoubleArray (jint len);
 
 // Strings.
 jstring CreateJavaString(jcharArray chars);
+
+// Objects.
+jobject CreateJavaObject(jclass clazz);
