@@ -437,7 +437,7 @@ JVM_FindClassFromBootLoader(JNIEnv *env, const char *name) {
 
 jclass
 JVM_FindClassFromCaller(JNIEnv *env, const char *name, jboolean init, jobject loader, jclass caller) {
-  auto clazz = GetJavaClassFromName(name);
+  auto clazz = GetJavaClassFromPathName(name);
   if (clazz != NULL) {
     return clazz;
   } else {
