@@ -11,4 +11,12 @@ class Helper {
         String res = o.toString();
         return res == null ? "null" : res;
     }
+
+    static void arrayStore(Object[] arr, int i, Object o) {
+	arr[i] = o;
+    }
+
+    static Object arrayLoad(Object[] arr, int i) {
+	return arr[i];
+    }
 }

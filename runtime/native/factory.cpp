@@ -17,6 +17,7 @@ jintArray     Polyglot_polyllvm_runtime_Factory_IntArray__I    (jint);
 jlongArray    Polyglot_polyllvm_runtime_Factory_LongArray__I   (jint);
 jfloatArray   Polyglot_polyllvm_runtime_Factory_FloatArray__I  (jint);
 jdoubleArray  Polyglot_polyllvm_runtime_Factory_DoubleArray__I (jint);
+jobjectArray  Polyglot_polyllvm_runtime_Factory_ObjectArray__I (jint);
 
 jstring Polyglot_polyllvm_runtime_Factory_String___3C(jarray);
 
@@ -30,6 +31,7 @@ jintArray     CreateJavaIntArray    (jint len) { return Polyglot_polyllvm_runtim
 jlongArray    CreateJavaLongArray   (jint len) { return Polyglot_polyllvm_runtime_Factory_LongArray__I   (len); }
 jfloatArray   CreateJavaFloatArray  (jint len) { return Polyglot_polyllvm_runtime_Factory_FloatArray__I  (len); }
 jdoubleArray  CreateJavaDoubleArray (jint len) { return Polyglot_polyllvm_runtime_Factory_DoubleArray__I (len); }
+jobjectArray  CreateJavaObjectArray (jint len) { return Polyglot_polyllvm_runtime_Factory_ObjectArray__I (len); }
 
 jstring CreateJavaString(jcharArray chars) {
     return Polyglot_polyllvm_runtime_Factory_String___3C(chars);

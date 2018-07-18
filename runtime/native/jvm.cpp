@@ -440,8 +440,14 @@ JVM_FindClassFromCaller(JNIEnv *env, const char *name, jboolean init, jobject lo
   auto clazz = GetJavaClassFromPathName(name);
   if (clazz != NULL) {
     return clazz;
-  } else {
-    throwClassNotFoundException(env, name);
+  } else { //try to load class from jdklib
+    clazz = LoadJavaClassFromLib(name);
+    if (clazz == NULL) {
+      throwClassNotFoundException(env, name);
+      return NULL; //to make the compiler happy
+    } else {
+      return clazz;
+    }
   }
 }
 
@@ -563,7 +569,13 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
 
 jobjectArray
 JVM_GetClassDeclaredConstructors(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
-    JvmUnimplemented("JVM_GetClassDeclaredConstructors");
+  //TODO ignore primitive and array types (return empty array for those)
+  auto class_info = GetJavaClassInfo(ofClass);
+  if (class_info == NULL) {
+    return CreateJavaObjectArray(0);
+  } else {
+    return GetJavaConstructors(ofClass, class_info, publicOnly);
+  }
 }
 
 jint

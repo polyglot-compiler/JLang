@@ -7,10 +7,12 @@
 #include <cstring>
 #include <unordered_map>
 #include <string>
+#include <dlfcn.h>
 #include <stdio.h>
 #include "jni.h"
 #include "class.h"
 #include "rep.h"
+
 
 #define MEMCPY(a,b,c) memcpy((void *) a, (void *) b, c)
 static constexpr bool kDebug = false;
@@ -125,16 +127,16 @@ GetPrimitiveClass(const char* name) {
 
 const jclass
 GetJavaClassFromPathName(const char* name) {
-  int nameLen = strlen(name);
-  char pathName[nameLen + 1];
-  for (int i = 0; i <= nameLen; i++) {
+  int name_len = strlen(name);
+  char path_name[name_len + 1];
+  for (int i = 0; i <= name_len; i++) {
     char c = name[i];
     if (c == '/') {
       c = '.';
     }
-    pathName[i] = c;
+    path_name[i] = c;
   }
-  return GetJavaClassFromName(pathName);
+  return GetJavaClassFromName(path_name);
 }
 
 
@@ -216,4 +218,34 @@ GetJavaMethodInfo(jclass cls, const char* name, const char* sig) {
 const std::pair<JavaMethodInfo*, int32_t>
 GetJavaStaticMethodInfo(jclass cls, const char* name, const char* sig) {
   return TryGetJavaMethodInfo(cls, name, sig, false);
+}
+
+//java.lang.Object -> Polyglot_java_lang_Object_load_class
+#define LOADER_PREFIX "Polyglot_"
+#define LOADER_PREFIX_LEN 9
+#define LOADER_SUFFIX "_load_class"
+#define LOADER_SUFFIX_LEN 10
+#define LOADER_NAME_CHARS (LOADER_PREFIX_LEN + LOADER_SUFFIX_LEN)
+
+typedef jclass (*class_loader)();
+
+jclass
+LoadJavaClassFromLib(const char* name) {
+ int name_len = strlen(name);
+ int new_len = name_len  + LOADER_NAME_CHARS + 1;
+ char class_load_name[new_len];
+ strcpy(class_load_name, LOADER_PREFIX);
+ int i = 0;
+ for (; i < name_len; i++) {
+   char next_char = name[i];
+   class_load_name[LOADER_PREFIX_LEN + i] = (next_char == '.' || next_char == '/') ? '_' : next_char;
+ }
+ class_load_name[LOADER_PREFIX_LEN + i] = '\0';
+ strcat(class_load_name, LOADER_SUFFIX);
+ auto class_load_func = reinterpret_cast<class_loader>(dlsym(RTLD_DEFAULT, class_load_name));
+ if (class_load_func != NULL) {
+   return class_load_func();
+ } else {
+   return NULL;
+ }
 }

@@ -257,8 +257,10 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         LLVMValueRef offset;
         LLVMValueRef intfPtr = LLVMConstNull(v.utils.i8Ptr());
         LLVMValueRef hash = LLVMConstNull(v.utils.i32());
-        if (pi.flags().isStatic() || pi instanceof ConstructorInstance) {
-            offset = LLVMConstInt(v.utils.i32(), -1, /*sign-extend*/ 1);
+        if (pi.flags().isStatic()) {
+            offset = LLVMConstInt(v.utils.i32(), Constants.STATIC_METHOD_INFO_OFFSET, /*sign-extend*/ 1);
+        } else if (pi instanceof ConstructorInstance) {
+        	offset = LLVMConstInt(v.utils.i32(), Constants.CTOR_METHOD_INFO_OFFSET, /*sign-extend*/ 1);
         } else {
             MethodInstance mi = (MethodInstance) pi;
             LLVMValueRef nullPtr = LLVMConstNull(v.utils.ptrTypeRef(v.dv.structTypeRef(ct)));

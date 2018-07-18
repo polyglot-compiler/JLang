@@ -10,10 +10,14 @@
 #include "factory.h"
 #include "native.h"
 #include "rep.h"
+#include "reflect.h"
 #include "stack_trace.h"
 
 typedef uint8_t u_char;
-
+#define POLYGLOT_ARRAY_STORE Polyglot_polyllvm_runtime_Helper_arrayStore___3Ljava_lang_Object_2ILjava_lang_Object_2
+extern "C" {
+  void POLYGLOT_ARRAY_STORE(jobjectArray, jint, jobject);
+} //extern "C"
 
 [[noreturn]] static void JniUnimplemented(const char* name) {
   fprintf(stderr,
@@ -263,6 +267,9 @@ CallJavaInstanceMethod(jobject obj, const char* name, const char* sig, const jva
   return CallJavaNonvirtualMethod<T>(obj, id, args);
 }
 
+//Is exactly the same as a normal instance method, sugar for clarity
+#define CallJavaConstructor(obj, id, args) CallJavaInstanceMethod<jobject>(obj, id, args)
+
 // Calls a Java instance method using the dispatch vector of [obj].
 template <typename T>
 static T
@@ -296,16 +303,24 @@ CallJavaStaticMethod(jclass cls, jmethodID id, va_list args) {
     return CallJavaNonvirtualMethod<T>(id, forward_args.data());
 }
 
-//TODO cleanup the messy code repetition in this file
-static void
-CallJavaConstructor(jobject obj, jmethodID id, va_list args) {
-    auto m = reinterpret_cast<const JavaMethodInfo*>(id);
-    auto num_args = CountJavaArgs(m->sig);
-    auto forward_args = std::vector<jvalue>(num_args + 1);
-    forward_args[0].l = obj;
-    ForwardJavaArgs(m->sig, args, &(forward_args[1]));
-    CallJavaNonvirtualMethod<void>(id, forward_args.data());
-    return;
+static jobjectArray
+GetJavaConstructors(jclass clazz, const JavaClassInfo* info, jboolean publicOnly) {
+    //TODO pass public/private info to runtime, for now ignore the publicOnly
+    int ctor_count = 0;
+    for (int i = 0; i < info->num_methods; i++) {
+      if (IS_CONSTRUCTOR(&(info->methods[i]))) {
+	ctor_count++;
+      }
+    }
+    jobjectArray res = CreateJavaObjectArray(ctor_count);
+    int ctors_copied = 0;
+    for (int i = 0; ctors_copied < ctor_count; i++) {
+      if (IS_CONSTRUCTOR(&(info->methods[i]))) {
+	POLYGLOT_ARRAY_STORE(res, (jint)ctors_copied, CreateConstructor(clazz, info, info->methods[i]));
+	ctors_copied++;
+      }
+    }
+    return res;
 }
 //UTF8 helpers
 // Writes a jchar a utf8 and returns the end                                                                                                        

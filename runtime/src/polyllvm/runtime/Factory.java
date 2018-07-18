@@ -14,8 +14,8 @@ class Factory {
 
     static String String(char[] chars) { return new String(chars); }
 
-    // TODO
     static Object[] ObjectArray(int len) {
         return new Object[len];
     }
+
 }

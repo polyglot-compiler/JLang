@@ -20,6 +20,8 @@ public class Constants {
     public static final String ENTRY_TRAMPOLINE = "Java_polyllvm_runtime_MainWrapper_main";
     public static final int LLVM_ADDR_SPACE = 0;
 
+    public static final int CTOR_METHOD_INFO_OFFSET = -2;
+    public static final int STATIC_METHOD_INFO_OFFSET = -1;
     public static final String REGISTER_CLASS_FUNC = "RegisterJavaClass";
     public static final String GET_NATIVE_FUNC = "GetJavaNativeFunc";
     public static final String PERSONALITY_FUNC = "__java_personality_v0";

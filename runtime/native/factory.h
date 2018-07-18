@@ -15,6 +15,7 @@ jintArray     CreateJavaIntArray    (jint len);
 jlongArray    CreateJavaLongArray   (jint len);
 jfloatArray   CreateJavaFloatArray  (jint len);
 jdoubleArray  CreateJavaDoubleArray (jint len);
+jobjectArray  CreateJavaObjectArray (jint len);
 
 // Strings.
 jstring CreateJavaString(jcharArray chars);
