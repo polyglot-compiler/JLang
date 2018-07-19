@@ -22,3 +22,4 @@ jstring CreateJavaString(jcharArray chars);
 
 // Objects.
 jobject CreateJavaObject(jclass clazz);
+

@@ -15,6 +15,10 @@
 
 typedef uint8_t u_char;
 #define POLYGLOT_ARRAY_STORE Polyglot_polyllvm_runtime_Helper_arrayStore___3Ljava_lang_Object_2ILjava_lang_Object_2
+
+static jobject mainThread = NULL;
+static jobject mainThreadGroup = NULL;
+
 extern "C" {
   void POLYGLOT_ARRAY_STORE(jobjectArray, jint, jobject);
 } //extern "C"
@@ -322,6 +326,23 @@ GetJavaConstructors(jclass clazz, const JavaClassInfo* info, jboolean publicOnly
     }
     return res;
 }
+
+static jobject
+GetMainThread() {
+  if (mainThread == NULL) {
+    if (mainThreadGroup == NULL) {
+      auto thread_group_clazz = LoadJavaClassFromLib("java.lang.ThreadGroup");
+      mainThreadGroup = CreateJavaObject(thread_group_clazz);
+      CallJavaInstanceMethod<jobject>(mainThreadGroup, "<init>", "()V", NULL);
+    }
+    auto thread_clazz = GetJavaClassFromName("java.lang.Thread");
+    mainThread = CreateJavaObject(thread_clazz);
+    const jobject  mainThreadArgs[] = { mainThreadGroup, NULL };
+    CallJavaInstanceMethod<jobject>(mainThread, "<init>", "(Ljava/lang/ThreadGroup;Ljava/lang/Runnable;)V", reinterpret_cast<const jvalue*>(mainThreadArgs));
+  }
+  return mainThread;
+}
+
 //UTF8 helpers
 // Writes a jchar a utf8 and returns the end                                                                                                        
 static u_char* utf8_write(u_char* base, jchar ch) {

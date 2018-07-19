@@ -5,6 +5,7 @@
 #include "rep.h"
 #include "gc.h"
 
+
 // The name must match that used in polyllvm.runtime.Factory,
 // and the mangling and calling conventions must match those used by PolyLLVM.
 extern "C" {
@@ -20,6 +21,7 @@ jdoubleArray  Polyglot_polyllvm_runtime_Factory_DoubleArray__I (jint);
 jobjectArray  Polyglot_polyllvm_runtime_Factory_ObjectArray__I (jint);
 
 jstring Polyglot_polyllvm_runtime_Factory_String___3C(jarray);
+
 
 } // extern "C"
 

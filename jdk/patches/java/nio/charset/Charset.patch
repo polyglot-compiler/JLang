@@ -1,0 +1,17 @@
+--- src.orig/java/nio/charset/Charset.java	2018-07-19 16:42:59.000000000 -0400
++++ src/java/nio/charset/Charset.java	2018-07-19 16:44:38.000000000 -0400
+@@ -613,13 +613,7 @@
+     public static Charset defaultCharset() {
+         if (defaultCharset == null) {
+             synchronized (Charset.class) {
+-                String csn = AccessController.doPrivileged(
+-                    new GetPropertyAction("file.encoding"));
+-                Charset cs = lookup(csn);
+-                if (cs != null)
+-                    defaultCharset = cs;
+-                else
+-                    defaultCharset = forName("UTF-8");
++		defaultCharset = new US_ASCII();
+             }
+         }
+         return defaultCharset;

@@ -18,7 +18,6 @@
 static constexpr bool kDebug = false;
 
 static JClassRep* intKlass = (JClassRep*)malloc(sizeof(JClassRep));
-
 jclass initArrayKlass();
 jclass globalArrayKlass = NULL;
 

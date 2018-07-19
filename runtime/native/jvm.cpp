@@ -280,7 +280,8 @@ JVM_Sleep(JNIEnv *env, jclass threadClass, jlong millis) {
 
 jobject
 JVM_CurrentThread(JNIEnv *env, jclass threadClass) {
-    JvmUnimplemented("JVM_CurrentThread");
+  //TODO real multi-threading
+  return GetMainThread();
 }
 
 jint

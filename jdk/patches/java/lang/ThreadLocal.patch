@@ -1,0 +1,73 @@
+--- src.orig/java/lang/ThreadLocal.java	2018-07-19 15:59:52.000000000 -0400
++++ src/java/lang/ThreadLocal.java	2018-07-19 16:36:37.000000000 -0400
+@@ -124,11 +124,12 @@
+     protected T initialValue() {
+         return null;
+     }
+-
++    private T value;
+     /**
+      * Creates a thread local variable.
+      */
+     public ThreadLocal() {
++    	value = initialValue();
+     }
+ 
+     /**
+@@ -140,14 +141,7 @@
+      * @return the current thread's value of this thread-local
+      */
+     public T get() {
+-        Thread t = Thread.currentThread();
+-        ThreadLocalMap map = getMap(t);
+-        if (map != null) {
+-            ThreadLocalMap.Entry e = map.getEntry(this);
+-            if (e != null)
+-                return (T)e.value;
+-        }
+-        return setInitialValue();
++       return this.value;
+     }
+ 
+     /**
+@@ -157,14 +151,7 @@
+      * @return the initial value
+      */
+     private T setInitialValue() {
+-        T value = initialValue();
+-        Thread t = Thread.currentThread();
+-        ThreadLocalMap map = getMap(t);
+-        if (map != null)
+-            map.set(this, value);
+-        else
+-            createMap(t, value);
+-        return value;
++       this.value = initialValue();
+     }
+ 
+     /**
+@@ -177,12 +164,7 @@
+      *        this thread-local.
+      */
+     public void set(T value) {
+-        Thread t = Thread.currentThread();
+-        ThreadLocalMap map = getMap(t);
+-        if (map != null)
+-            map.set(this, value);
+-        else
+-            createMap(t, value);
++      this.value = value;
+     }
+ 
+     /**
+@@ -197,9 +179,7 @@
+      * @since 1.5
+      */
+      public void remove() {
+-         ThreadLocalMap m = getMap(Thread.currentThread());
+-         if (m != null)
+-             m.remove(this);
++    	 this.value = initialValue();
+      }
+ 
+     /**
