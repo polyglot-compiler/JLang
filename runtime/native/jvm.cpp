@@ -3,6 +3,7 @@
 #include <cstring>
 #include <chrono>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include "stack_trace.h"
 #include "class.h"
@@ -235,47 +236,54 @@ JVM_EnableCompiler(JNIEnv *env, jclass compCls) {
 
 void
 JVM_DisableCompiler(JNIEnv *env, jclass compCls) {
-    JvmUnimplemented("JVM_DisableCompiler");
+  return;
 }
 
 void
 JVM_StartThread(JNIEnv *env, jobject thread) {
-    JvmUnimplemented("JVM_StartThread");
+  //TODO someday there will be synchronization
+  return;
 }
 
 void
 JVM_StopThread(JNIEnv *env, jobject thread, jobject exception) {
-    JvmUnimplemented("JVM_StopThread");
+    //TODO someday there will be synchronization
+    return;
 }
 
 jboolean
 JVM_IsThreadAlive(JNIEnv *env, jobject thread) {
-    JvmUnimplemented("JVM_IsThreadAlive");
+  return (thread == mainThread) ? mainThreadIsAlive : JNI_FALSE;
 }
 
 void
 JVM_SuspendThread(JNIEnv *env, jobject thread) {
-    JvmUnimplemented("JVM_SuspendThread");
+  //TODO someday there will be synchronization
+  return;
 }
 
 void
 JVM_ResumeThread(JNIEnv *env, jobject thread) {
-    JvmUnimplemented("JVM_ResumeThread");
+  //TODO someday there will be synchronization
+  return;
 }
 
 void
 JVM_SetThreadPriority(JNIEnv *env, jobject thread, jint prio) {
-    JvmUnimplemented("JVM_SetThreadPriority");
+  //TODO someday there will be synchronization
+  return;
 }
 
 void
 JVM_Yield(JNIEnv *env, jclass threadClass) {
-    JvmUnimplemented("JVM_Yield");
+  //TODO someday there will be synchronization
+  return;
 }
 
 void
 JVM_Sleep(JNIEnv *env, jclass threadClass, jlong millis) {
-    JvmUnimplemented("JVM_Sleep");
+  usleep(millis * 1000);
+  return;
 }
 
 jobject
@@ -683,12 +691,14 @@ JVM_DoPrivileged(JNIEnv *env, jclass cls, jobject action, jobject context, jbool
 
 jobject
 JVM_GetInheritedAccessControlContext(JNIEnv *env, jclass cls) {
-    JvmUnimplemented("JVM_GetInheritedAccessControlContext");
+  return NULL;
 }
 
 jobject
 JVM_GetStackAccessControlContext(JNIEnv *env, jclass cls) {
-    JvmUnimplemented("JVM_GetStackAccessControlContext");
+  //TODO is NULL ok here if we don't want to implement Access Control?
+  // I don't know
+  return NULL;
 }
 
 void*

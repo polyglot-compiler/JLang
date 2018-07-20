@@ -1,0 +1,126 @@
+--- src.orig/java/lang/Thread.java	2018-07-20 15:19:24.000000000 -0400
++++ src/java/lang/Thread.java	2018-07-20 15:22:58.000000000 -0400
+@@ -346,14 +346,14 @@
+      * @param name the name of the new Thread
+      * @param stackSize the desired stack size for the new thread, or
+      *        zero to indicate that this parameter is to be ignored.
++     * @param parent TODO
+      */
+     private void init(ThreadGroup g, Runnable target, String name,
+-                      long stackSize) {
++                      long stackSize, Thread parent) {
+         if (name == null) {
+             throw new NullPointerException("name cannot be null");
+         }
+ 
+-        Thread parent = currentThread();
+         SecurityManager security = System.getSecurityManager();
+         if (g == null) {
+             /* Determine if it's an applet or not */
+@@ -387,17 +387,21 @@
+         g.addUnstarted();
+ 
+         this.group = g;
+-        this.daemon = parent.isDaemon();
+-        this.priority = parent.getPriority();
++        this.daemon = (parent == null) ? false : parent.isDaemon();
++        this.priority = (parent == null) ? NORM_PRIORITY : parent.getPriority();
+         this.name = name.toCharArray();
+-        if (security == null || isCCLOverridden(parent.getClass()))
+-            this.contextClassLoader = parent.getContextClassLoader();
+-        else
+-            this.contextClassLoader = parent.contextClassLoader;
++        if (parent == null) {
++        	this.contextClassLoader = null;
++        } else {
++        		if (security == null || isCCLOverridden(parent.getClass()))
++        			this.contextClassLoader = parent.getContextClassLoader();
++        		else
++        			this.contextClassLoader = parent.contextClassLoader;
++        }
+         this.inheritedAccessControlContext = AccessController.getContext();
+         this.target = target;
+         setPriority(priority);
+-        if (parent.inheritableThreadLocals != null)
++        if (parent != null && parent.inheritableThreadLocals != null)
+             this.inheritableThreadLocals =
+                 ThreadLocal.createInheritedMap(parent.inheritableThreadLocals);
+         /* Stash the specified stack size in case the VM cares */
+@@ -427,7 +431,7 @@
+      * {@code "Thread-"+}<i>n</i>, where <i>n</i> is an integer.
+      */
+     public Thread() {
+-        init(null, null, "Thread-" + nextThreadNum(), 0);
++        init(null, null, "Thread-" + nextThreadNum(), 0, Thread.currentThread());
+     }
+ 
+     /**
+@@ -443,7 +447,7 @@
+      *         nothing.
+      */
+     public Thread(Runnable target) {
+-        init(null, target, "Thread-" + nextThreadNum(), 0);
++        init(null, target, "Thread-" + nextThreadNum(), 0, Thread.currentThread());
+     }
+ 
+     /**
+@@ -470,9 +474,13 @@
+      *          thread group
+      */
+     public Thread(ThreadGroup group, Runnable target) {
+-        init(group, target, "Thread-" + nextThreadNum(), 0);
++        init(group, target, "Thread-" + nextThreadNum(), 0, Thread.currentThread());
+     }
+ 
++    //called by runtime
++    private Thread(ThreadGroup group, Runnable target, Thread parent) {
++        init(group, target, "Thread-" + nextThreadNum(), 0, parent);
++    }
+     /**
+      * Allocates a new {@code Thread} object. This constructor has the same
+      * effect as {@linkplain #Thread(ThreadGroup,Runnable,String) Thread}
+@@ -482,7 +490,7 @@
+      *          the name of the new thread
+      */
+     public Thread(String name) {
+-        init(null, null, name, 0);
++        init(null, null, name, 0, Thread.currentThread());
+     }
+ 
+     /**
+@@ -506,7 +514,7 @@
+      *          thread group
+      */
+     public Thread(ThreadGroup group, String name) {
+-        init(group, null, name, 0);
++        init(group, null, name, 0, Thread.currentThread());
+     }
+ 
+     /**
+@@ -522,7 +530,7 @@
+      *         the name of the new thread
+      */
+     public Thread(Runnable target, String name) {
+-        init(null, target, name, 0);
++        init(null, target, name, 0, Thread.currentThread());
+     }
+ 
+     /**
+@@ -570,7 +578,7 @@
+      *          thread group or cannot override the context class loader methods.
+      */
+     public Thread(ThreadGroup group, Runnable target, String name) {
+-        init(group, target, name, 0);
++        init(group, target, name, 0, Thread.currentThread());
+     }
+ 
+     /**
+@@ -649,7 +657,7 @@
+      */
+     public Thread(ThreadGroup group, Runnable target, String name,
+                   long stackSize) {
+-        init(group, target, name, stackSize);
++        init(group, target, name, stackSize, Thread.currentThread());
+     }
+ 
+     /**

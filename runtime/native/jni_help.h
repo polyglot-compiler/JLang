@@ -16,6 +16,7 @@
 typedef uint8_t u_char;
 #define POLYGLOT_ARRAY_STORE Polyglot_polyllvm_runtime_Helper_arrayStore___3Ljava_lang_Object_2ILjava_lang_Object_2
 
+static jboolean mainThreadIsAlive = JNI_FALSE;
 static jobject mainThread = NULL;
 static jobject mainThreadGroup = NULL;
 
@@ -337,8 +338,11 @@ GetMainThread() {
     }
     auto thread_clazz = GetJavaClassFromName("java.lang.Thread");
     mainThread = CreateJavaObject(thread_clazz);
-    const jobject  mainThreadArgs[] = { mainThreadGroup, NULL };
-    CallJavaInstanceMethod<jobject>(mainThread, "<init>", "(Ljava/lang/ThreadGroup;Ljava/lang/Runnable;)V", reinterpret_cast<const jvalue*>(mainThreadArgs));
+    const jobject  mainThreadArgs[] = { mainThreadGroup, NULL, NULL };
+    CallJavaInstanceMethod<jobject>(mainThread, "<init>",
+				    "(Ljava/lang/ThreadGroup;Ljava/lang/Runnable;Ljava/lang/Thread;)V",
+				    reinterpret_cast<const jvalue*>(mainThreadArgs));
+    mainThreadIsAlive = JNI_TRUE;
   }
   return mainThread;
 }

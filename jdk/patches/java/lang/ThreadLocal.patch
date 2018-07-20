@@ -1,5 +1,5 @@
---- src.orig/java/lang/ThreadLocal.java	2018-07-19 15:59:52.000000000 -0400
-+++ src/java/lang/ThreadLocal.java	2018-07-19 16:36:37.000000000 -0400
+--- src.orig/java/lang/ThreadLocal.java	2018-07-20 15:26:42.000000000 -0400
++++ src/java/lang/ThreadLocal.java	2018-07-20 15:29:37.000000000 -0400
 @@ -124,11 +124,12 @@
      protected T initialValue() {
          return null;
@@ -42,7 +42,7 @@
 -        else
 -            createMap(t, value);
 -        return value;
-+       this.value = initialValue();
++	return this.value = initialValue();
      }
  
      /**
