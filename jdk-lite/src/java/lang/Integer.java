@@ -2,6 +2,8 @@ package java.lang;
 
 public final class Integer extends Number {
 
+	public static final int MAX_VALUE = 214748364;
+
     public static String toString(int i) {
         return String.valueOf(i);
     }

@@ -18,4 +18,8 @@ public final class Float extends Number {
     public float floatValue() {
         return value;
     }
+
+    public static boolean isNaN(float f) {
+    	return f != f;
+    }
 }
