@@ -13,11 +13,10 @@ public class HashtableTest {
 	Hashtable<Object, Object> hash2 = new Hashtable<>();
 	hash2.put("world", "hello");
 	System.out.println(hash2.get("world"));
-	for (int i = 0; i < 10; i++) {
-	    hash.put("yes" + i, "" + i);
-	}
 	for (Map.Entry<String, String> e : hash.entrySet()) {
-	    System.out.println(e.getKey() + ":" + e.getValue());
+	    if (e.getKey().equals("hello")) {
+		System.out.println(e.getKey() + ":" + e.getValue());
+	    }
 	}    
     }
 }

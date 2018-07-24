@@ -18,7 +18,9 @@ import java.util.List;
  * Preserves typing.
  */
 public class DesugarInstanceInitializers extends DesugarVisitor {
-    private static final String INSTANCE_INIT_FUNC = "init$instance";
+    private static final int OUTER_CLASS_FORMAL_IDX = 0;
+	private static final String ENCLOSING_FORMAL_NAME = "enclosingFormal$";
+	private static final String INSTANCE_INIT_FUNC = "init$instance";
 
     public DesugarInstanceInitializers(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, ts, nf);
@@ -34,6 +36,10 @@ public class DesugarInstanceInitializers extends DesugarVisitor {
 
         // Collect class initialization code.
         List<Stmt> initCode = new ArrayList<>();
+        Formal enclosingClassFormal = DesugarInnerClasses.hasEnclosingParameter(ct) ?
+        		tnf.Formal(ct.position(), ENCLOSING_FORMAL_NAME, ct.outer(), Flags.FINAL) :
+        		null;
+
         for (ClassMember member : cb.members()) {
 
             // Build initialization assignments for each initialized non-static field.
@@ -44,7 +50,10 @@ public class DesugarInstanceInitializers extends DesugarVisitor {
                     continue;
                 Special receiver = tnf.UnqualifiedThis(pos, ct);
                 Field field = tnf.Field(pos, receiver, fd.name());
-                Stmt assign = tnf.EvalAssign(field, fd.init());
+                Expr rhs = (fd.name().equals(DeclareEnclosingInstances.ENCLOSING_STR))
+                		? tnf.Local(pos, enclosingClassFormal)
+                		: fd.init() ;
+                Stmt assign = tnf.EvalAssign(field, rhs);
                 initCode.add(assign);
             }
 
@@ -61,10 +70,13 @@ public class DesugarInstanceInitializers extends DesugarVisitor {
             return super.leaveClassBody(ct, cb); // Optimization.
 
         // Declare init method.
-        MethodDecl initMethod = tnf.MethodDecl(
+		MethodDecl initMethod = tnf.MethodDecl(
                 ct.position(), ct,
                 Flags.NONE.Private().Final(), ts.Void(), INSTANCE_INIT_FUNC,
-                Collections.emptyList(),
+                DesugarInnerClasses.hasEnclosingParameter(ct) ?
+                		Collections.singletonList(
+                				enclosingClassFormal)
+                		: Collections.emptyList(),
                 nf.Block(ct.position(), initCode));
         cb = cb.addMember(initMethod);
 
@@ -85,12 +97,18 @@ public class DesugarInstanceInitializers extends DesugarVisitor {
                 stmts.add(call);
             }
 
-            // Call init function.
+            // Call init function
+            ;
+            Expr[] args = (DesugarInnerClasses.hasEnclosingParameter(ct)) ?
+            		new Expr[] {
+            				tnf.Local(ct.position(), ctor.formals().get(OUTER_CLASS_FORMAL_IDX))
+            				} :
+            			new Expr[0];
             Call callInitFunc = tnf.Call(
                     ct.position(),
                     tnf.UnqualifiedThis(ct.position(), ct),
                     INSTANCE_INIT_FUNC,
-                    ct, ts.Void());
+                    ct, ts.Void(), args);
             stmts.add(nf.Eval(ct.position(), callInitFunc));
 
             // Add back remaining constructor code.

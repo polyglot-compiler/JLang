@@ -39,6 +39,10 @@ import static polyllvm.visit.DeclareEnclosingInstances.ENCLOSING_STR;
 public class DesugarInnerClasses extends AbstractGoal {
     private final Goal declare, substitute;
 
+    public static boolean hasEnclosingParameter(ParsedClassType ct) {
+    	return ct.isInnerClass() && ct.hasEnclosingInstance(ct.outer());
+    }
+
     public DesugarInnerClasses(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
         super(job, "Desugar local classes");
         declare = new VisitorGoal(job, new DeclareEnclosingInstances(job, ts, nf));
@@ -72,10 +76,10 @@ class DeclareEnclosingInstances extends DesugarVisitor {
     @Override
     public ClassBody leaveClassBody(ParsedClassType ct, ClassBody cb) {
 
-        if (ct.isInnerClass() && ct.hasEnclosingInstance(ct.outer())) {
+    	if (DesugarInnerClasses.hasEnclosingParameter(ct)) {
             FieldDecl field = tnf.FieldDecl(
                     cb.position(), ct, Flags.FINAL, ct.outer(), ENCLOSING_STR,
-                    /*init*/ null);
+                    /*init*/ tnf.This(cb.position(), ct.outer()));
             // Most of the rewriting happens in this helper function.
             cb = prependConstructorInitializedFields(ct, cb, Collections.singletonList(field));
         }

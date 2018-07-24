@@ -20,7 +20,9 @@ NATIVE_OBJ := $(NATIVE_SRC:%.cpp=$(OUT)/%.o)
 ALL_OBJ := $(JAVA_OBJ) $(NATIVE_OBJ)
 
 PLC_FLAGS := -assert
-
+ifdef DBUG
+DEBUG_FLAGS := -dump-desugared
+endif
 JAVA_FLAGS := -g -Wno-override-module -fPIC
 NATIVE_FLAGS := -g -std=c++14 $(JNI_INCLUDES) -fPIC -Wall -pthread
 
@@ -41,8 +43,8 @@ $(JAVA_LL): $(JAVA_SRC) $(PLC_SRC)
 	@echo "Compiling $(words $(JAVA_SRC)) Java files with PolyLLVM (.java --> .ll)"
 	@# We compile java.lang.Object separately, since otherwise
 	@# we get duplicate class errors from Polyglot. (TODO)
-	@$(PLC) -c -d $(OUT) $(filter %Object.java,$(JAVA_SRC))
-	@$(PLC) -c -d $(OUT) $(filter-out %Object.java,$(JAVA_SRC))
+	@$(PLC) -c -d $(OUT) $(DEBUG_FLAGS) $(filter %Object.java,$(JAVA_SRC)) > dump.txt
+	@$(PLC) -c -d $(OUT) $(DEBUG_FLAGS) $(filter-out %Object.java,$(JAVA_SRC)) >> dump.txt
 
 # Compile LLVM IR (.ll --> .o).
 $(JAVA_OBJ): %.o: %.ll

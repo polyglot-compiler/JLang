@@ -122,7 +122,7 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
                 v.obj.sizeOf(ct),
 
                 // Boolean isInterface, jboolean (i8)
-                LLVMConstInt(v.utils.i8(), ct.flags().isInterface() ? 1 : 0, /*zero-extend*/ 1),
+                LLVMConstInt(v.utils.i8(), ct.flags().isInterface() ? 1 : 0, /*sign-extend*/ 0),
                 
                 // Number of implemented interfaces, i32
                 LLVMConstInt(v.utils.i32(), interfaceInfoElems.length, /*sign-extend*/ 0),
