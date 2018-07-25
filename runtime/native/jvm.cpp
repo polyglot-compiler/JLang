@@ -1024,30 +1024,36 @@ JVM_GetHostName(char* name, int namelen) {
     JvmUnimplemented("JVM_GetHostName");
 }
 
+//FROM JDK (but what else would you write?
 extern "C" {
   int
   jio_vsnprintf(char *str, size_t count, const char *fmt, va_list args) {
-    //FROM JDK (but what else would you write?
     // see bug 4399518, 4417214
     if ((intptr_t)count <= 0) return -1;
     return vsnprintf(str, count, fmt, args);
   }
   
-  int
-  jio_snprintf(char *str, size_t count, const char *fmt, ...) {
-    JvmUnimplemented("jio_snprintf");
+  int jio_snprintf(char *str, size_t count, const char *fmt, ...) {
+    va_list args;
+    int len;
+    va_start(args, fmt);
+    len = jio_vsnprintf(str, count, fmt, args);
+    va_end(args);
+    return len;
   }
-  
-  int
-  jio_fprintf(FILE *, const char *fmt, ...) {
-    JvmUnimplemented("jio_fprintf");
+
+  int jio_fprintf(FILE* f, const char *fmt, ...) {
+    int len;
+    va_list args;
+    va_start(args, fmt);
+    len = jio_vfprintf(f, fmt, args);
+    va_end(args);
+    return len;
   }
-  
-  int
-  jio_vfprintf(FILE *, const char *fmt, va_list args) {
-    JvmUnimplemented("jio_vfprintf");
+
+  int jio_vfprintf(FILE* f, const char *fmt, va_list args) {
+    return vfprintf(f, fmt, args);
   }
-  
 }
 
 void*

@@ -1,6 +1,33 @@
---- src.orig/java/nio/charset/Charset.java	2018-07-19 16:42:59.000000000 -0400
-+++ src/java/nio/charset/Charset.java	2018-07-19 16:44:38.000000000 -0400
-@@ -613,13 +613,7 @@
+--- src.orig/java/nio/charset/Charset.java	2018-07-25 12:19:03.000000000 -0400
++++ src/java/nio/charset/Charset.java	2018-07-25 12:21:59.000000000 -0400
+@@ -466,6 +466,16 @@
+         if (charsetName == null)
+             throw new IllegalArgumentException("Null charset name");
+ 
++        switch(charsetName) {
++        case "UTF-8":
++        	return java.nio.charset.StandardCharsets.UTF_8;
++        case "ISO-8859-1":
++        	return java.nio.charset.StandardCharsets.ISO_8859_1;
++        case "US-ASCII":
++        	return java.nio.charset.StandardCharsets.US_ASCII;
++        default:
++        	break;
++        }
+         Object[] a;
+         if ((a = cache1) != null && charsetName.equals(a[0]))
+             return (Charset)a[1];
+@@ -514,7 +524,8 @@
+      *          If the given <tt>charsetName</tt> is null
+      */
+     public static boolean isSupported(String charsetName) {
+-        return (lookup(charsetName) != null);
++        return (charsetName.equalsIgnoreCase("UTF-8") || charsetName.equalsIgnoreCase("ISO-8859-1")
++        		|| charsetName.equalsIgnoreCase("US-ASCII"));
+     }
+ 
+     /**
+@@ -613,13 +624,7 @@
      public static Charset defaultCharset() {
          if (defaultCharset == null) {
              synchronized (Charset.class) {
@@ -11,7 +38,7 @@
 -                    defaultCharset = cs;
 -                else
 -                    defaultCharset = forName("UTF-8");
-+		defaultCharset = new US_ASCII();
++            	defaultCharset = java.nio.charset.StandardCharsets.UTF_8;
              }
          }
          return defaultCharset;

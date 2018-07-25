@@ -140,13 +140,18 @@ Java_sun_misc_Unsafe_putDouble__Ljava_lang_Object_2JD(JNIEnv *env, jobject, jobj
 }
 
 jbyte
-Java_sun_misc_Unsafe_getByte__J(JNIEnv *env, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getByte__J");
+Java_sun_misc_Unsafe_getByte__J(JNIEnv *env, jobject unsafe, jlong addr) {
+  jbyte* ptr = (jbyte*)addr;
+  return *ptr;
 }
 
 void
-Java_sun_misc_Unsafe_putByte__JB(JNIEnv *env, jobject, jlong, jbyte) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putByte__JB");
+Java_sun_misc_Unsafe_putByte__JB(JNIEnv *env, jobject unsafe, jlong addr, jbyte val) {
+  jbyte* ptr = (jbyte*) addr;
+  if (ptr != NULL) {
+    *ptr = val;
+  }
+  return;
 }
 
 jshort
@@ -185,8 +190,12 @@ Java_sun_misc_Unsafe_getLong__J(JNIEnv *env, jobject, jlong) {
 }
 
 void
-Java_sun_misc_Unsafe_putLong__JJ(JNIEnv *env, jobject, jlong, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putLong__JJ");
+Java_sun_misc_Unsafe_putLong__JJ(JNIEnv *env, jobject unsafe , jlong addr, jlong val) {
+  jlong* ptr = (jlong*) addr;
+  if (ptr != NULL) {
+    *ptr = val;
+  }
+  return;
 }
 
 jfloat
@@ -220,13 +229,29 @@ Java_sun_misc_Unsafe_putAddress(JNIEnv *env, jobject, jlong, jlong) {
 }
 
 jlong
-Java_sun_misc_Unsafe_allocateMemory(JNIEnv *env, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_allocateMemory");
+Java_sun_misc_Unsafe_allocateMemory(JNIEnv *env, jobject unsafe, jlong size) {
+  if (size < 0) {
+    return 0; //TODO throw IllegalArgumentException instead!
+  }
+  void* ptr = malloc(size); //TODO check that I might need to align this?
+  if (ptr == NULL) {
+    return NULL; //TODO throw OutOfMemoryException
+  } else {
+    return (jlong) ptr;
+  }
 }
 
 jlong
-Java_sun_misc_Unsafe_reallocateMemory(JNIEnv *env, jobject, jlong, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_reallocateMemory");
+Java_sun_misc_Unsafe_reallocateMemory(JNIEnv *env, jobject unsafe, jlong ptr_old, jlong size) {
+  if (size < 0) {
+    return 0; //TODO throw IllegalArgumentException instead!
+  }
+  void* ptr = realloc((void*)ptr_old, size); //TODO check that I might need to align this?
+  if (ptr == NULL) {
+    return NULL; //TODO throw OutOfMemoryException
+  } else {
+    return (jlong) ptr;
+  }
 }
 
 void
@@ -240,8 +265,9 @@ Java_sun_misc_Unsafe_copyMemory(JNIEnv *env, jobject, jobject, jlong, jobject, j
 }
 
 void
-Java_sun_misc_Unsafe_freeMemory(JNIEnv *env, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_freeMemory");
+Java_sun_misc_Unsafe_freeMemory(JNIEnv *env, jobject unsafe, jlong ptr) {
+  free((void*)ptr);
+  return;
 }
 
 jlong
