@@ -1,0 +1,38 @@
+--- src.orig/java/nio/charset/ArrayDecoder.java	2018-07-23 13:58:08.000000000 -0400
++++ src/java/nio/charset/ArrayDecoder.java	2018-07-23 13:52:29.000000000 -0400
+@@ -0,0 +1,35 @@
++/*
++ * Copyright (c) 2009, Oracle and/or its affiliates. All rights reserved.
++ * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ *
++ */
++
++package java.nio.charset;
++
++/*
++ * FastPath byte[]->char[] decoder, REPLACE on malformed or
++ * unmappable input.
++ */
++
++public interface ArrayDecoder {
++    int decode(byte[] src, int off, int len, char[] dst);
++}

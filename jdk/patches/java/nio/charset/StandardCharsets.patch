@@ -1,0 +1,39 @@
+--- src.orig/java/nio/charset/StandardCharsets.java	2018-07-23 14:01:15.000000000 -0400
++++ src/java/nio/charset/StandardCharsets.java	2018-07-23 14:18:12.000000000 -0400
+@@ -41,26 +41,30 @@
+      * Seven-bit ASCII, a.k.a. ISO646-US, a.k.a. the Basic Latin block of the
+      * Unicode character set
+      */
+-    public static final Charset US_ASCII = Charset.forName("US-ASCII");
++    public static final Charset US_ASCII = new US_ASCII();
+     /**
+      * ISO Latin Alphabet No. 1, a.k.a. ISO-LATIN-1
+      */
+-    public static final Charset ISO_8859_1 = Charset.forName("ISO-8859-1");
++    public static final Charset ISO_8859_1 = null;
+     /**
+      * Eight-bit UCS Transformation Format
+      */
+-    public static final Charset UTF_8 = Charset.forName("UTF-8");
++    public static final Charset UTF_8 = new UTF_8();
++    static final String[] aliases_UTF_8 = new String[] {
++            "UTF8",
++            "unicode-1-1-utf-8",
++        };
+     /**
+      * Sixteen-bit UCS Transformation Format, big-endian byte order
+      */
+-    public static final Charset UTF_16BE = Charset.forName("UTF-16BE");
++    public static final Charset UTF_16BE = null;
+     /**
+      * Sixteen-bit UCS Transformation Format, little-endian byte order
+      */
+-    public static final Charset UTF_16LE = Charset.forName("UTF-16LE");
++    public static final Charset UTF_16LE = null;
+     /**
+      * Sixteen-bit UCS Transformation Format, byte order identified by an
+      * optional byte-order mark
+      */
+-    public static final Charset UTF_16 = Charset.forName("UTF-16");
++    public static final Charset UTF_16 = null;
+ }

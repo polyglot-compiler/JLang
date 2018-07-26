@@ -1,0 +1,17 @@
+--- src.orig/sun/nio/cs/FastCharsetProvider.java	2018-07-23 14:50:58.000000000 -0400
++++ src/sun/nio/cs/FastCharsetProvider.java	2018-07-23 15:03:04.000000000 -0400
+@@ -112,6 +112,14 @@
+             cs = new US_ASCII();
+             cache.put(csn, cs);
+             return cs;
++        } else if (cln.equals("UTF_8")) {
++        	cs = new UTF_8();
++        	cache.put(csn, cs);
++            return cs;
++        } else if (cln.equals("ISO_8859_1")) {
++        	cs = new ISO_8859_1();
++        	cache.put(csn, cs);
++            return cs;
+         }
+ 
+         // Instantiate the charset and cache it
