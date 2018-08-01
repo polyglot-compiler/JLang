@@ -11,9 +11,11 @@ import polyglot.frontend.MissingDependencyException;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
+import polyglot.main.Options;
 import polyglot.types.ParsedClassType;
 import polyglot.util.InternalCompilerError;
 import polyglot.visit.NodeVisitor;
+import polyllvm.util.DesugarBarrier;
 import polyllvm.util.PolyLLVMDesugared;
 
 /**
@@ -23,6 +25,12 @@ public class PolyLLVMScheduler extends JL7Scheduler {
 
     public PolyLLVMScheduler(JLExtensionInfo extInfo) {
         super(extInfo);
+    }
+
+    @Override
+    protected int maxRunCount() {
+    	PolyLLVMOptions options = (PolyLLVMOptions) Options.global;
+    	return (options.maxPasses > 0) ? options.maxPasses : super.maxRunCount();
     }
 
     @Override
@@ -70,17 +78,31 @@ public class PolyLLVMScheduler extends JL7Scheduler {
         Goal desugar = new PolyLLVMDesugared(job);
         try {
             desugar.addPrerequisiteGoal(AllSignaturesResolved(job), this);
+         //   desugar.addCorequisiteGoal(AllLLVMDesugared(), this);
         } catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
         }
         return internGoal(desugar);
     }
 
+    /** 
+     * Ensure that all desugar passes have completed.
+     * The DesugarBarrier will call LLVMDesugared(Job)
+     * for all jobs to generate its own prerequisites.
+     */
+    public Goal AllLLVMDesugared() {
+    	return internGoal(DesugarBarrier.create(this));
+    }
+
     @Override
     public Goal CodeGenerated(Job job) {
         Goal translate = new LLVMEmitted(job);
         try {
-            translate.addPrerequisiteGoal(LLVMDesugared(job), this);
+        	/* 
+        	 * This is necessary since code generation of one job may
+        	 * depend on the desugaring of another.
+        	 */
+            translate.addPrerequisiteGoal(AllLLVMDesugared(), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);

@@ -11,6 +11,7 @@ public class PolyLLVMOptions extends JL5Options {
     public String entryPointClass;
     public boolean entryPointEmitted;
     public boolean printDesugar;
+    public int maxPasses;
 
     public PolyLLVMOptions(PolyLLVMExtensionInfo extension) {
         super(extension);
@@ -49,6 +50,15 @@ public class PolyLLVMOptions extends JL5Options {
 
         flags.add(new OptFlag.Switch(
                 "-dump-desugared", "Print the desugared AST to stderr", true));
+        
+        flags.add(new OptFlag.IntFlag("-max-runs", "<number of total compiler runs>",
+        		"An upper bound on the number of total compiler runs"
+        		+ " which ~ 7 * num_input_files") {
+        	@Override
+        	public Arg<Integer> defaultArg() {
+        		return createDefault(-1);
+        	}
+        });
     }
 
     @Override
@@ -58,6 +68,9 @@ public class PolyLLVMOptions extends JL5Options {
         }
         else if (arg.flag().ids().contains("-dump-desugared")) {
             this.printDesugar = (Boolean) arg.value();
+        }
+        else if (arg.flag().ids().contains("-max-runs")) {
+        	this.maxPasses = (int) arg.value();
         }
         else super.handleArg(arg);
     }

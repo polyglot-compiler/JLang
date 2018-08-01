@@ -5,10 +5,13 @@ endif
 SHELL=/bin/bash
 
 SRC := src
+SRC2 := src2
 PATCHES := patches
 OUT := out
 CLASSES := $(OUT)/classes
-
+NUM_JAVA_FILES := $(shell find $(JDK)/$(SRC) -name "*.java" | wc -l)
+#Magic Multiplier for now. TODO calculate this a better way
+RUN_COUNT := $(shell echo "2 * $(NUM_JAVA_FILES)" | bc)
 # PolyLLVM flags when compiling the JDK.
 PLC_FLAGS := -assert -method-filter jdk-method-filter.txt -sourcepath $(SRC)
 
@@ -42,7 +45,9 @@ $(CLASSES)/cstamp: | $(SRC)
 # Use a Hello World program to compile only the most critical slice of the JDK.
 $(OUT)/llstamp: $(SRC)/patchstamp $(PLC_SRC)
 	@echo "Compiling JDK sources"
-	@$(PLC) $(PLC_FLAGS) -d $(OUT) -entry-point Main Main.java $(SRC)/sun/nio/cs/UTF_8.java
+	@echo $(NUM_JAVA_FILES)
+	@echo $(RUN_COUNT)
+	@$(PLC) $(PLC_FLAGS) -d $(OUT) -max-runs $(RUN_COUNT) -entry-point Main Main.java $(SRC)/sun/nio/cs/UTF_8.java $(SRC)/java/io/UnixFileSystem.java
 	@rm $(OUT)/Main.ll
 	@date > $@
 	@echo "Successfully compiled `find $(OUT) -name '*.ll' | wc -l | awk '{print $1}'` files"

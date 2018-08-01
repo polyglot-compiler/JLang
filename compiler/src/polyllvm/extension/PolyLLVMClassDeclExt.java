@@ -30,11 +30,6 @@ public class PolyLLVMClassDeclExt extends PolyLLVMExt {
         return super.leaveTranslateLLVM(v);
     }
 
-    private static int sizeOfClassObj(LLVMTranslator v, ClassType ct) {
-    	
-    	return 0;
-    }
-
     /**
      * Builds a function that runs static initializers, and
      * creates the java.lang.Class object representing this class.
