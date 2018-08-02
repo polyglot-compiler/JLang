@@ -117,14 +117,15 @@ GetJavaArrayDataForRegion(jarray arr, jsize start, jsize len) {
             || !JavaArrayBoundsCheck(arr, start + len - 1))
         return nullptr;
     // Assumes no copy.
-    return GetJavaArrayData<T>(arr, /*isCopy*/ nullptr);
+    return GetJavaArrayData<T>(arr, /*isCopy*/ nullptr) + start;
+
 }
 
 template <typename T>
 static void
 GetJavaArrayRegion(jarray arr, jsize start, jsize len, T* buf) {
     if (auto data = GetJavaArrayDataForRegion<T>(arr, start, len)) {
-        std::copy(data + start, data + start + len, buf);
+        std::copy(data, data + len, buf);
     }
 }
 
@@ -132,7 +133,7 @@ template <typename T>
 static void
 SetJavaArrayRegion(jarray arr, jsize start, jsize len, const T* buf) {
     if (auto data = GetJavaArrayDataForRegion<T>(arr, start, len)) {
-        std::copy(buf, buf + len, data + start);
+        std::copy(buf, buf + len, data);
     }
 }
 

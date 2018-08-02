@@ -911,7 +911,11 @@ JVM_Read(jint fd, char *buf, jint nbytes) {
 
 jint
 JVM_Write(jint fd, char *buf, jint nbytes) {
-    JvmUnimplemented("JVM_Write");
+  jint result = -1;
+  while (result == -1) {
+    result = write(fd, buf, nbytes);
+  }
+  return result;
 }
 
 jint

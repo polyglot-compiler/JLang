@@ -119,7 +119,6 @@ jobject jni_AllocObject(JNIEnv *env, jclass clazz) {
     JniUnimplemented("AllocObject");
 }
 
-  //TODO let's make objects!
 jobject jni_NewObject(JNIEnv *env, jclass clazz, jmethodID id, ...) {
   va_list args; va_start(args, id);
   jobject res = CreateJavaObject(clazz);

@@ -1,0 +1,10 @@
+--- src.orig/java/io/FileDescriptor.java	2018-08-02 12:23:56.000000000 -0400
++++ src/java/io/FileDescriptor.java	2018-08-02 13:32:41.000000000 -0400
+@@ -165,6 +165,7 @@
+     private static FileDescriptor standardStream(int fd) {
+         FileDescriptor desc = new FileDescriptor();
+         desc.handle = set(fd);
++	desc.fd = fd;
+         return desc;
+     }
+ 
