@@ -39,6 +39,7 @@ jstring CreateJavaString(jcharArray chars) {
     return Polyglot_polyllvm_runtime_Factory_String___3C(chars);
 }
 
+
 jobject CreateJavaObject(jclass clazz) {
   auto info = GetJavaClassInfo(clazz);
   //TODO set exception (class is interface or abstract)

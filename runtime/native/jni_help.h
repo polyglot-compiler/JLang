@@ -38,6 +38,14 @@ extern "C" {
 }
 
 // Begin helper methods.
+static
+jstring CreateJavaString(const jchar *chars, jsize len) {
+  jcharArray charArray = CreateJavaCharArray(len);
+  JArrayRep *array = reinterpret_cast<JArrayRep*>(charArray);
+  void* data = array->Data();
+  memcpy(data, chars, sizeof(jchar) * len);
+  return CreateJavaString(charArray);
+}
 
 template <typename T>
 static T*

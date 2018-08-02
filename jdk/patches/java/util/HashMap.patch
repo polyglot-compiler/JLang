@@ -1,0 +1,10 @@
+--- src.orig/java/util/HashMap.java	2018-07-30 17:10:30.000000000 -0400
++++ src/java/util/HashMap.java	2018-07-30 17:29:24.000000000 -0400
+@@ -322,6 +322,7 @@
+ 
+     // internal utilities
+ 
++    void alphaMethod() { };
+     /**
+      * Initialization hook for subclasses. This method is called
+      * in all constructors and pseudo-constructors (clone, readObject)

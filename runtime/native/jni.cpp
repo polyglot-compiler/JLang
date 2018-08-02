@@ -17,7 +17,12 @@ jclass jni_DefineClass(JNIEnv *env, const char *name, jobject loader, const jbyt
 jclass jni_FindClass(JNIEnv *env, const char *name) {
   //TODO this should do a classpath (java.class.path) search for compiled files
   if (name == NULL) return NULL;
-  return GetJavaClassFromPathName(name);
+  jclass clazz = GetJavaClassFromPathName(name);
+  if (clazz == NULL) {
+    return LoadJavaClassFromLib(name);
+  } else {
+    return clazz;
+  }
 }
 
 jmethodID jni_FromReflectedMethod(JNIEnv *env, jobject method) {
@@ -124,11 +129,15 @@ jobject jni_NewObject(JNIEnv *env, jclass clazz, jmethodID id, ...) {
 }
 
 jobject jni_NewObjectV(JNIEnv *env, jclass clazz, jmethodID id, va_list args) {
-  return CallJavaStaticMethod<jobject>(clazz, id, args);
+  jobject res = CreateJavaObject(clazz);
+  CallJavaConstructor(res, id, args);
+  return res;
 }
 
 jobject jni_NewObjectA(JNIEnv *env, jclass clazz, jmethodID id, const jvalue* args) {
-  return CallJavaNonvirtualMethod<jobject>(id, args);
+  jobject res = CreateJavaObject(clazz);
+  CallJavaNonvirtualMethod<jobject>(res, id, args);
+  return res;
 }
 
 jclass jni_GetObjectClass(JNIEnv *env, jobject obj) {
@@ -352,7 +361,7 @@ void jni_SetStaticDoubleField  (ARGS(jdouble))  { IMPL(jdouble); }
 #undef ARGS
 
 jstring jni_NewString(JNIEnv *env, const jchar *unicode, jsize len) {
-    JniUnimplemented("NewString");
+  return CreateJavaString(unicode, len);
 }
 
 jsize jni_GetStringLength(JNIEnv *env, jstring str) {
@@ -516,11 +525,19 @@ jint jni_GetJavaVM(JNIEnv *env, JavaVM **vm) {
 }
 
 void jni_GetStringRegion(JNIEnv *env, jstring str, jsize start, jsize len, jchar *buf) {
-    JniUnimplemented("GetStringRegion");
+  //TODO error handling on case: if (start < 0 || len <0 || start + len > s_len) {
+  //and throw StringIndexOutOfBoundsException
+  JArrayRep* str_array = Unwrap(str)->Chars();
+  int str_len = str_array->Length();
+  int elemsize = str_array->ElemSize();
+  assert(elemsize == sizeof(jchar));
+  jchar* data = reinterpret_cast<jchar*>(str_array->Data());
+  memcpy(buf, &(data[start]), sizeof(jchar) * len);
 }
 
 void jni_GetStringUTFRegion(JNIEnv *env, jstring str, jsize start, jsize len, char *buf) {
   //TODO error handling on case: if (start < 0 || len < 0 || start + len > s_len) {
+  //and throw StringIndexOutOfBoundsException
   if (len > 0) {
     JArrayRep* str_array = Unwrap(str)->Chars();
     int str_len = str_array->Length();
