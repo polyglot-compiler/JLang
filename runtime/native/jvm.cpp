@@ -98,8 +98,44 @@ JVM_ArrayCopy(
     memmove(dst_data + (dst_pos * elemsize), src_data + (src_pos * elemsize), elemsize * length);
 }
 
+#define PUTPROP(props, key, val) \
+  if (1) { \
+    jstring jkey = env->NewStringUTF(key); \
+    jstring jval = env->NewStringUTF(val); \
+    jobject r = env->CallObjectMethod(props, putID, jkey, jval); \
+    if (env->ExceptionOccurred()) return NULL; \
+    env->DeleteLocalRef(jkey); \
+    env->DeleteLocalRef(jval); \
+    env->DeleteLocalRef(r); \
+  }   else ((void) 0)
+
+
+// '/jre/lib'
+#define JRE_LIB_LEN 8
+#define JRE_LIB "/jre/lib"
 jobject
 JVM_InitProperties(JNIEnv *env, jobject p) {
+  //TODO add following system properties to p
+  //  These are VM specific
+  //  "java.vm.specification.name", "java.vm.version", "java.vm.name", "java.vm.info"
+
+  // The following are OS specific, TODO is fill in the rest and support multiple OS versions
+  // ""java.ext.dirs", "java.endorsed.dirs", "sun.boot.library.path", "java.library.path", "java.home", "sun.boot.class.path"
+  jmethodID putID = env->GetMethodID(env->GetObjectClass(p), "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
+  char* java_home = getenv("JAVA_HOME"); //get java.home from JAVA_HOME environment variable
+  if (java_home == NULL || java_home[0] == 0) {
+    fprintf(stderr, "Could not find the JAVA_HOME variable in the environment.\n"
+	    "This must be set to the home directory of your JRE.\n");
+    abort();
+  }
+  PUTPROP(p, "java.home", java_home);
+
+  int dll_path_len = strlen(java_home) + JRE_LIB_LEN;
+  char dll_path[dll_path_len];
+  strcpy(dll_path, java_home);
+  strcat(dll_path, JRE_LIB);
+  PUTPROP(p, "sun.boot.library.path", dll_path);
+
   return p;
 
 }
