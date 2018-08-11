@@ -6,4 +6,10 @@ extern "C" {
     jstring jkey = env->NewStringUTF("testNativeCall");
     return jkey;
   }
+
+  JNIEXPORT jstring JNICALL
+  Java_NativeTest_00024NativeTestInner_getNativeInnerStringTest(JNIEnv *env, jobject ignored) {
+    jstring jkey = env->NewStringUTF("testInnerNativeCall");
+    return jkey;
+  }
 }

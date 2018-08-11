@@ -7,7 +7,8 @@ import polyllvm.visit.LLVMTranslator;
 
 /** Mangles Java methods and variables for use in LLVM IR. */
 public class PolyLLVMMangler {
-    private final LLVMTranslator v;
+    private static final int CODE_POINT_PADDED_LENGTH = 4;
+	private final LLVMTranslator v;
 
     public PolyLLVMMangler(LLVMTranslator v) {
         this.v = v;
@@ -34,6 +35,7 @@ public class PolyLLVMMangler {
     private static final String LOAD_CLASS_STR = "load_class";
 
     // From the JNI API.
+	private static final String CODE_POINT_ESCAPE = "_0";
     private static final String UNDERSCORE_ESCAPE = "_1";
     private static final String SEMICOLON_ESCAPE = "_2";
     private static final String BRACKET_ESCAPE = "_3";
@@ -65,12 +67,34 @@ public class PolyLLVMMangler {
         }
     }
 
+    private boolean isValidCFuncChar(char c) {
+    	return Character.isDigit(c) || Character.isLetter(c) || c == '_';
+    }
+
     private String escapeSignature(String signature) {
-        return signature
+        String sig = signature
                 .replace("_", UNDERSCORE_ESCAPE)
                 .replace("/", "_")
+                .replace(".", "_") //hacky -> part of Polyllvm not Java spec. TODO is refactor code to use different escapes
                 .replace(";", SEMICOLON_ESCAPE)
                 .replace("[", BRACKET_ESCAPE);
+        StringBuffer result = new StringBuffer(sig.length());
+        for (int i = 0; i < sig.length(); i++) {
+        	char c = sig.charAt(i);
+        	if (isValidCFuncChar(c)) {
+        		result.append(c);
+        	} else {
+        		result.append(CODE_POINT_ESCAPE);
+        		String codePoint = Integer.toHexString(sig.codePointAt(i)).toLowerCase();
+        		int zeroesToPrepend = CODE_POINT_PADDED_LENGTH - codePoint.length() ;
+        		while (zeroesToPrepend > 0) {
+        			result.append("0");
+        			zeroesToPrepend -= 1;
+        		}
+				result.append(codePoint);
+        	}
+        }
+        return result.toString();
     }
 
     /**
@@ -129,15 +153,18 @@ public class PolyLLVMMangler {
         return name.replace("_", UNDERSCORE_ESCAPE);
     }
 
-    private String qualifiedName(ReferenceType t) {
+    private String qualifiedName(ReferenceType t, boolean mangleEscapes) {
         ClassType erasure = v.utils.erasureLL(t);
         ClassType base = (ClassType) erasure.declaration();
-        return base.fullName().replace('.', '_');
+        String baseName = userVisibleClassName(base);
+        return (mangleEscapes) ?
+        		escapeSignature(baseName) :
+        			baseName.replace('.', '_');
     }
 
-    private String procSuffix(ProcedureInstance pi, String name, boolean abbreviated) {
+    private String procSuffix(ProcedureInstance pi, String name, boolean abbreviated, boolean mangleUnicode) {
         StringBuilder sb = new StringBuilder();
-        sb.append(qualifiedName(pi.container()));
+        sb.append(qualifiedName(pi.container(), mangleUnicode));
         sb.append('_');
         sb.append(escapedName(name));
         if (!abbreviated) {
@@ -150,14 +177,14 @@ public class PolyLLVMMangler {
         return sb.toString();
     }
 
-    private String procSuffix(ProcedureInstance pi, boolean abbreviated) {
+    private String procSuffix(ProcedureInstance pi, boolean abbreviated, boolean mangleUnicode) {
         if (pi instanceof MethodInstance) {
             MethodInstance mi = (MethodInstance) pi;
-            return procSuffix(mi.orig(), mi.name(), abbreviated);
+            return procSuffix(mi.orig(), mi.name(), abbreviated, mangleUnicode);
         }
         else if (pi instanceof ConstructorInstance) {
             ConstructorInstance ci = (ConstructorInstance) pi;
-            return procSuffix(ci.orig(), ci.container().toClass().name(), abbreviated);
+            return procSuffix(ci.orig(), ci.container().toClass().name(), abbreviated, mangleUnicode);
         }
         else {
             throw new InternalCompilerError("Unknown procedure type: " + pi.getClass());
@@ -169,15 +196,15 @@ public class PolyLLVMMangler {
     }
 
     public String proc(ProcedureInstance pi) {
-        return POLYGLOT_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ false);
+        return POLYGLOT_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ false, false);
     }
 
     public String shortNativeSymbol(ProcedureInstance pi) {
-        return JAVA_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ true);
+        return JAVA_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ true, true);
     }
 
     public String longNativeSymbol(ProcedureInstance pi) {
-        return JAVA_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ false);
+        return JAVA_PREFIX + "_" + procSuffix(pi, /*abbreviated*/ false, true);
     }
 
     public String staticField(FieldInstance fi) {
@@ -185,23 +212,23 @@ public class PolyLLVMMangler {
     }
 
     public String staticField(ReferenceType rt, String fieldName) {
-        return POLYGLOT_PREFIX + "_" + qualifiedName(rt) + "_" + escapedName(fieldName);
+        return POLYGLOT_PREFIX + "_" + qualifiedName(rt, false) + "_" + escapedName(fieldName);
     }
 
     public String idvGlobalId(ClassType intf, ReferenceType clazz) {
         return POLYGLOT_PREFIX +
-                "_" + qualifiedName(intf) +
-                "_" + qualifiedName(clazz) +
+                "_" + qualifiedName(intf, false) +
+                "_" + qualifiedName(clazz, false) +
                 "_" + IDV_STR;
     }
 
     public String cdvTyName(ReferenceType t) {
-        String mangled = qualifiedName(t);
+        String mangled = qualifiedName(t, false);
         return CDV_TYPE_STR + "." + mangled;
     }
 
     public String idvTyName(ClassType intf) {
-        String intfMangled = qualifiedName(intf);
+        String intfMangled = qualifiedName(intf, false);
         return IDV_TYPE_STR + "." + intfMangled;
     }
 
@@ -210,7 +237,7 @@ public class PolyLLVMMangler {
     }
 
     public String classTypeName(ClassType t) {
-        String className = qualifiedName(t);
+        String className = qualifiedName(t, false);
         String prefix = v.utils.erasureLL(t).flags().isInterface()
                 ? INTERFACE_TYPE_STR
                 : CLASS_TYPE_STR;
@@ -266,6 +293,6 @@ public class PolyLLVMMangler {
     }
 
     private String typePrefix(ReferenceType rt) {
-        return POLYGLOT_PREFIX + "_" + qualifiedName(rt);
+        return POLYGLOT_PREFIX + "_" + qualifiedName(rt, false);
     }
 }

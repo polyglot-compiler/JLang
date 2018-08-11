@@ -15,6 +15,15 @@ extern "C" {
 JNIEXPORT jstring JNICALL Java_NativeTest_getNativeStringTest
   (JNIEnv *, jclass);
 
+/*
+* Class:     NativeTest_NativeTestInner
+* Method:    getNativeInnerStringTest
+* Signature: ()Ljava/lang/String;
+*/
+JNIEXPORT jstring JNICALL Java_NativeTest_00024NativeTestInner_getNativeInnerStringTest
+(JNIEnv *, jobject);
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -45,8 +45,6 @@ $(CLASSES)/cstamp: | $(SRC)
 # Use a Hello World program to compile only the most critical slice of the JDK.
 $(OUT)/llstamp: $(SRC)/patchstamp $(PLC_SRC)
 	@echo "Compiling JDK sources"
-	@echo $(NUM_JAVA_FILES)
-	@echo $(RUN_COUNT)
 	@$(PLC) $(PLC_FLAGS) -d $(OUT) -max-runs $(RUN_COUNT) -entry-point Main Main.java $(SRC)/sun/nio/cs/UTF_8.java $(SRC)/java/io/UnixFileSystem.java
 	@rm $(OUT)/Main.ll
 	@date > $@
