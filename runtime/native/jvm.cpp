@@ -67,7 +67,8 @@ JVM_Clone(JNIEnv *env, jobject obj) {
 
 jstring
 JVM_InternString(JNIEnv *env, jstring str) {
-    JvmUnimplemented("JVM_InternString");
+  //TODO maybe implement this...maybe
+  return str;
 }
 
 jlong
@@ -467,7 +468,7 @@ JVM_GetCallerClass(JNIEnv *env, int n) {
 jclass
 JVM_FindPrimitiveClass(JNIEnv *env, const char *utf) {
   //TODO throw ClassNotFoundException if not primitive type
-  return GetPrimitiveClass(utf);
+  return GetJavaClassFromName(utf);
 }
 
 void
@@ -564,17 +565,18 @@ JVM_SetProtectionDomain(JNIEnv *env, jclass cls, jobject protection_domain) {
 
 jboolean
 JVM_IsArrayClass(JNIEnv *env, jclass cls) {
-    JvmUnimplemented("JVM_IsArrayClass");
+  return isArrayClass(cls);
 }
 
 jboolean
 JVM_IsPrimitiveClass(JNIEnv *env, jclass cls) {
-    JvmUnimplemented("JVM_IsPrimitiveClass");
+  return isPrimitiveClass(cls);
 }
 
 jclass
 JVM_GetComponentType(JNIEnv *env, jclass cls) {
-    JvmUnimplemented("JVM_GetComponentType");
+  //TODO actually check that cls is array class
+  return GetComponentClass(cls);
 }
 
 jint
@@ -926,8 +928,9 @@ JVM_GetLastErrorString(char *buf, int len) {
 }
 
 char*
-JVM_NativePath(char *) {
-    JvmUnimplemented("JVM_NativePath");
+JVM_NativePath(char *path) {
+  //OS dependent
+  return path;
 }
 
 jint

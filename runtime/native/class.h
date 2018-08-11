@@ -74,10 +74,6 @@ RegisterJavaClass(jclass cls, const JavaClassInfo* data);
 
 } // extern "C"
 
-//Assumes non-null valid C-string for name
-const jclass
-GetPrimitiveClass(const char *name);
-
 const JavaClassInfo*
 GetJavaClassInfo(jclass cls);
 
@@ -105,3 +101,9 @@ GetJavaStaticMethodInfo(jclass cls, const char* name, const char* sig);
 
 jclass
 LoadJavaClassFromLib(const char* name);
+
+bool isArrayClass(jclass cls);
+
+bool isPrimitiveClass(jclass cls);
+
+jclass GetComponentClass(jclass cls);

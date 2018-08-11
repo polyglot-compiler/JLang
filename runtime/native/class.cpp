@@ -17,7 +17,42 @@
 #define MEMCPY(a,b,c) memcpy((void *) a, (void *) b, c)
 static constexpr bool kDebug = false;
 
-static JClassRep* intKlass = (JClassRep*)malloc(sizeof(JClassRep));
+#define PRIM_CLASS(prim, klass) prim##klass
+#define PRIM_CLASS_DEF(prim) static JClassRep* PRIM_CLASS(prim, Klass) \
+  = (JClassRep*)malloc(sizeof(JClassRep));
+
+PRIM_CLASS_DEF(int)
+PRIM_CLASS_DEF(short)
+PRIM_CLASS_DEF(byte)
+PRIM_CLASS_DEF(long)
+PRIM_CLASS_DEF(float)
+PRIM_CLASS_DEF(double)
+PRIM_CLASS_DEF(char)
+PRIM_CLASS_DEF(boolean)
+
+#define PRIM_NAME_CHECK(name, prim)		\
+  if (strcmp(name, prim) == 0) {
+
+#define PRIM_NAME_TO_CLASS(name, cname, prim)		\
+  PRIM_NAME_CHECK(name, cname)				\
+  return PRIM_CLASS(prim, Klass)->Wrap();
+
+#define PRIM_IS_KLASS(cls, prim) \
+  if (Unwrap(cls) == PRIM_CLASS(prim, Klass)) {	\
+    return true;
+
+#define PRIM_REGISTER(prim)			\
+  if(1) { \
+    JavaClassInfo* newInfo = (JavaClassInfo*)malloc(sizeof(JavaClassInfo)); \
+    int nameLen = strlen(#prim) + 1;					\
+    char* newName = (char*) malloc(nameLen);				\
+    memcpy(newName, #prim, nameLen);					\
+    newInfo->name = newName;						\
+    RegisterJavaClass(PRIM_CLASS(prim, Klass)->Wrap(), newInfo);	\
+  } else ((void) 0)
+
+
+static bool primKlassInit = false;
 jclass initArrayKlass();
 jclass globalArrayKlass = NULL;
 
@@ -88,6 +123,21 @@ bool isArrayClassName(const char* name) {
   return name[0] == '[';
 }
 
+bool isArrayClass(jclass cls) {
+  auto cinfo = GetJavaClassInfo(cls);
+  if (cinfo == NULL) {
+    return JNI_FALSE;
+  } else {
+    return isArrayClassName(cinfo->name);
+  }
+}
+
+//This assumes char* is non-null, C-string with len >0
+const char*
+getComponentName(const char* name) {
+  return &(name[1]);
+}
+
 //This assumes char* is non-null, C-string with len > 0
 //It also assumes that it has not been initialized
 const jclass initArrayClass(const char* name) {
@@ -106,20 +156,57 @@ const jclass initArrayClass(const char* name) {
   return newKlazz;
 }
 
-const JavaClassInfo*
-GetJavaClassInfo(jclass cls) {
-  try {
-    return classes.at(cls);
-  } catch (const std::out_of_range& oor) {
-    return NULL;
+const void
+RegisterPrimitiveClasses() {
+  PRIM_REGISTER(int);
+  PRIM_REGISTER(byte);
+  PRIM_REGISTER(short);
+  PRIM_REGISTER(long);
+  PRIM_REGISTER(float);
+  PRIM_REGISTER(double);
+  PRIM_REGISTER(char);
+  PRIM_REGISTER(boolean);
+}
+
+//This assumes char* is non-null, C-string
+jclass
+primitiveComponentNameToClass(const char* name) {
+  PRIM_NAME_TO_CLASS(name, "I", int)
+  } else PRIM_NAME_TO_CLASS(name, "B", byte)
+  } else PRIM_NAME_TO_CLASS(name, "S", short)
+  } else PRIM_NAME_TO_CLASS(name, "J", long)
+  } else PRIM_NAME_TO_CLASS(name, "F", float)
+  } else PRIM_NAME_TO_CLASS(name, "D", double)
+  } else PRIM_NAME_TO_CLASS(name, "C", char)
+  } else PRIM_NAME_TO_CLASS(name, "Z", boolean)
+  } else {
+      return NULL;
   }
 }
 
-const jclass
-GetPrimitiveClass(const char* name) {
-  if (strcmp(name, "int") == 0) {
-    return intKlass->Wrap();
+bool isPrimitiveClass(jclass cls) {
+  PRIM_IS_KLASS(cls, int)
+  } else PRIM_IS_KLASS(cls, byte)
+  } else PRIM_IS_KLASS(cls, short)
+  } else PRIM_IS_KLASS(cls, long)
+  } else PRIM_IS_KLASS(cls, float)
+  } else PRIM_IS_KLASS(cls, double)
+  } else PRIM_IS_KLASS(cls, char)
+  } else PRIM_IS_KLASS(cls, boolean)
   } else {
+    return false;
+  }
+}
+
+const JavaClassInfo*
+GetJavaClassInfo(jclass cls) {
+  if (!primKlassInit) {
+    RegisterPrimitiveClasses();
+    primKlassInit = true;
+  }
+  try {
+    return classes.at(cls);
+  } catch (const std::out_of_range& oor) {
     return NULL;
   }
 }
@@ -141,6 +228,10 @@ GetJavaClassFromPathName(const char* name) {
 
 const jclass
 GetJavaClassFromName(const char* name) {
+  if (!primKlassInit) {
+    RegisterPrimitiveClasses();
+    primKlassInit = true;
+  }
   try {
     return cnames.at(std::string(name));
   } catch (const std::out_of_range& oor) {
@@ -150,6 +241,23 @@ GetJavaClassFromName(const char* name) {
       return NULL;
     }
   }
+}
+
+jclass
+GetComponentClass(jclass cls) {
+  if (isArrayClass(cls)) {
+    const JavaClassInfo* info = GetJavaClassInfo(cls);
+    if (info != NULL) {
+      const char* className = getComponentName(info->name);
+      jclass primComponent = primitiveComponentNameToClass(className);
+      if (primComponent == NULL) {
+	return GetJavaClassFromName(className);
+      } else {
+	return primComponent;
+      }
+    }
+  }
+  return NULL;
 }
 
 const JavaStaticFieldInfo*
