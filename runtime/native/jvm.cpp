@@ -4,12 +4,14 @@
 #include <chrono>
 #include <sys/time.h>
 #include <unistd.h>
+#include <dlfcn.h>
 
 #include "stack_trace.h"
 #include "class.h"
 #include "exception.h"
 #include "jni.h"
 #include "rep.h"
+#include "signals.h"
 
 #include "jvm.h"
 
@@ -33,10 +35,12 @@ static void JvmIgnore(const char* name) {
 }
 
 extern "C" {
-
+  //we copied this number from open JDK -> not sure the implications
+#define JVM_INTERFACE_VERSION 4
+ 
 jint
 JVM_GetInterfaceVersion(void) {
-    JvmUnimplemented("JVM_GetInterfaceVersion");
+  return JVM_INTERFACE_VERSION;
 }
 
 jint
@@ -196,24 +200,33 @@ JVM_ActiveProcessorCount(void) {
     JvmUnimplemented("JVM_ActiveProcessorCount");
 }
 
+//TODO use our native lib $ from native.cpp
 void*
 JVM_LoadLibrary(const char *name) {
-    JvmUnimplemented("JVM_LoadLibrary");
+
+  void * result= ::dlopen(name, RTLD_LAZY);
+  if (result != NULL) {
+    return result;
+  } else {
+    //TODO, report error info from system
+    return NULL;
+  }
 }
 
 void
 JVM_UnloadLibrary(void * handle) {
-    JvmUnimplemented("JVM_UnloadLibrary");
+  ::dlclose(handle); //TODO other error handling required here?
 }
 
 void*
 JVM_FindLibraryEntry(void *handle, const char *name) {
-    JvmUnimplemented("JVM_FindLibraryEntry");
+  return dlsym(handle, name);
 }
 
 jboolean
 JVM_IsSupportedJNIVersion(jint version) {
-    JvmUnimplemented("JVM_IsSupportedJNIVersion");
+  //TODO figure out real answer
+  return JNI_TRUE;
 }
 
 jboolean
@@ -741,17 +754,19 @@ JVM_GetStackAccessControlContext(JNIEnv *env, jclass cls) {
 
 void*
 JVM_RegisterSignal(jint sig, void *handler) {
-    JvmUnimplemented("JVM_RegisterSignal");
+  //TODO really implement in signals.h
+  return handler;
 }
 
 jboolean
 JVM_RaiseSignal(jint sig) {
-    JvmUnimplemented("JVM_RaiseSignal");
+  //TODO really implement in signals.h
+  return JNI_TRUE;
 }
 
 jint
 JVM_FindSignal(const char *name) {
-    JvmUnimplemented("JVM_FindSignal");
+  return FindSignal(name);
 }
 
 jboolean

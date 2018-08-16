@@ -268,8 +268,8 @@ public class LLVMTranslator extends NodeVisitor {
      */
     public List<MethodInstance> cdvMethods(ReferenceType rt) {
 
-       // if (cdvMethodsCache.containsKey(rt))
-     //       return cdvMethodsCache.get(rt);
+    	if (cdvMethodsCache.containsKey(rt))
+    		return cdvMethodsCache.get(rt);
 
         // Start with all methods from the supertype.
         List<MethodInstance> supMethods = rt.superType() != null

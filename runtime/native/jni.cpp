@@ -520,7 +520,8 @@ jint jni_MonitorExit(JNIEnv *env, jobject obj) {
 }
 
 jint jni_GetJavaVM(JNIEnv *env, JavaVM **vm) {
-    JniUnimplemented("GetJavaVM");
+  *vm = NULL;
+  return 0; //TODO hopefully no NPEs :)
 }
 
 void jni_GetStringRegion(JNIEnv *env, jstring str, jsize start, jsize len, jchar *buf) {

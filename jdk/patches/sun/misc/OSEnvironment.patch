@@ -1,0 +1,11 @@
+--- src.orig/sun/misc/OSEnvironment.java	2018-08-11 16:32:44.000000000 +0200
++++ src/sun/misc/OSEnvironment.java	2018-08-11 18:13:56.000000000 +0200
+@@ -36,7 +36,7 @@
+      * At this time only the process-wide error mode needs to be set.
+      */
+     public static void initialize() {
+-        Win32ErrorMode.initialize();
++        //no-op on Linux + Solaris
+     }
+ 
+ }
