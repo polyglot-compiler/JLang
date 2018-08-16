@@ -78,7 +78,6 @@ public class PolyLLVMScheduler extends JL7Scheduler {
         Goal desugar = new PolyLLVMDesugared(job);
         try {
             desugar.addPrerequisiteGoal(AllSignaturesResolved(job), this);
-         //   desugar.addCorequisiteGoal(AllLLVMDesugared(), this);
         } catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
         }
