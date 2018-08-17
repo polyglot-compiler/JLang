@@ -17,7 +17,7 @@ RUNTIME := $(BASE_DIR)/runtime
 JDK ?= jdk-lite
 JDK := $(BASE_DIR)/$(JDK)
 JDK_CLS := $(JDK)/out/classes
-
+JDK7 := /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home/
 SRC := $(shell find * -name "*.java")
 
 CLASSES := $(SRC:.java=.class)
@@ -77,7 +77,7 @@ $(LL): $(SRC)
 
 %.output: %.binary phony
 	@echo "Generating output for $*"
-	@./$< | tee $@
+	@JAVA_HOME=$(JDK7) bash -c './$<' | tee $@
 
 clean: phony
 	@echo "Removing generated files"

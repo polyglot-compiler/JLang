@@ -236,7 +236,7 @@ JVM_IsNaN(jdouble d) {
 
 void
 JVM_FillInStackTrace(JNIEnv *env, jobject throwable) {
-    JvmIgnore("JVM_FillInStackTrace");
+  //    JvmIgnore("JVM_FillInStackTrace");
 }
 
 void
@@ -474,7 +474,7 @@ JVM_NewMultiArray(JNIEnv *env, jclass eltClass, jintArray dim) {
 
 jclass
 JVM_GetCallerClass(JNIEnv *env, int n) {
-    JvmIgnore("JVM_GetCallerClass");
+  //    JvmIgnore("JVM_GetCallerClass");
     return nullptr;
 }
 
@@ -1166,7 +1166,7 @@ JVM_GetThreadStateNames(JNIEnv* env, jint javaThreadState, jintArray values) {
 
 void
 JVM_GetVersionInfo(JNIEnv* env, jvm_version_info* info, size_t info_size) {
-    JvmIgnore("JVM_GetVersionInfo");
+  //    JvmIgnore("JVM_GetVersionInfo");
 }
 
 } // extern "C"

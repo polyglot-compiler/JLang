@@ -20,6 +20,7 @@ import java.util.List;
 public class DesugarInstanceInitializers extends DesugarVisitor {
     private static final int OUTER_CLASS_FORMAL_IDX = 0;
 	private static final String ENCLOSING_FORMAL_NAME = "enclosingFormal$";
+	private static final String SELF_FORMAL_NAME = "selfFormal$";
 	private static final String INSTANCE_INIT_FUNC = "init$instance";
 
     public DesugarInstanceInitializers(Job job, PolyLLVMTypeSystem ts, PolyLLVMNodeFactory nf) {
@@ -39,6 +40,7 @@ public class DesugarInstanceInitializers extends DesugarVisitor {
         Formal enclosingClassFormal = DesugarInnerClasses.hasEnclosingParameter(ct) ?
         		tnf.Formal(ct.position(), ENCLOSING_FORMAL_NAME, ct.outer(), Flags.FINAL) :
         		null;
+        Formal selfClassFormal = tnf.Formal(ct.position(), SELF_FORMAL_NAME, ct, Flags.NONE);
 
         for (ClassMember member : cb.members()) {
 
@@ -48,7 +50,7 @@ public class DesugarInstanceInitializers extends DesugarVisitor {
                 Position pos = fd.position();
                 if (fd.flags().isStatic() || fd.init() == null)
                     continue;
-                Special receiver = tnf.UnqualifiedThis(pos, ct);
+                Receiver receiver = tnf.Local(pos, selfClassFormal);
                 Field field = tnf.Field(pos, receiver, fd.name());
                 Expr rhs = (fd.name().equals(DeclareEnclosingInstances.ENCLOSING_STR))
                 		? tnf.Local(pos, enclosingClassFormal)
@@ -69,14 +71,18 @@ public class DesugarInstanceInitializers extends DesugarVisitor {
         if (initCode.isEmpty())
             return super.leaveClassBody(ct, cb); // Optimization.
 
+        
+        List<Formal> initFormals = new LinkedList<>();
+        initFormals.add(selfClassFormal);
+        if (DesugarInnerClasses.hasEnclosingParameter(ct)) {
+        	initFormals.add(enclosingClassFormal);
+        }
+
         // Declare init method.
 		MethodDecl initMethod = tnf.MethodDecl(
                 ct.position(), ct,
-                Flags.NONE.Private().Final(), ts.Void(), INSTANCE_INIT_FUNC,
-                DesugarInnerClasses.hasEnclosingParameter(ct) ?
-                		Collections.singletonList(
-                				enclosingClassFormal)
-                		: Collections.emptyList(),
+                Flags.NONE.Private().Final().Static(), ts.Void(), INSTANCE_INIT_FUNC,
+                initFormals,
                 nf.Block(ct.position(), initCode));
         cb = cb.addMember(initMethod);
 
@@ -99,11 +105,13 @@ public class DesugarInstanceInitializers extends DesugarVisitor {
 
             // Call init function
             ;
+            Expr selfObj = tnf.UnqualifiedThis(ct.position(), ct);
             Expr[] args = (DesugarInnerClasses.hasEnclosingParameter(ct)) ?
             		new Expr[] {
+            				selfObj, 
             				tnf.Local(ct.position(), ctor.formals().get(OUTER_CLASS_FORMAL_IDX))
             				} :
-            			new Expr[0];
+            			new Expr[] { selfObj };
             Call callInitFunc = tnf.Call(
                     ct.position(),
                     tnf.UnqualifiedThis(ct.position(), ct),

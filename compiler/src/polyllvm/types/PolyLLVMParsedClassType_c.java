@@ -1,16 +1,20 @@
 package polyllvm.types;
 
+import polyglot.ext.jl5.types.JL5MethodInstance;
 import polyglot.ext.jl5.types.JL5ParsedClassType_c;
 import polyglot.frontend.Source;
 import polyglot.types.ClassType;
 import polyglot.types.LazyClassInitializer;
+import polyglot.types.MethodInstance;
 import polyglot.types.TypeSystem;
 import polyllvm.visit.NameAnonClasses;
 
 public class PolyLLVMParsedClassType_c extends JL5ParsedClassType_c {
 
-    public PolyLLVMParsedClassType_c(TypeSystem ts, LazyClassInitializer init, Source fromSource) {
+	PolyLLVMTypeSystem ts;
+    public PolyLLVMParsedClassType_c(PolyLLVMTypeSystem ts, LazyClassInitializer init, Source fromSource) {
         super(ts, init, fromSource);
+        this.ts = ts;
     }
 
     @Override
@@ -33,5 +37,26 @@ public class PolyLLVMParsedClassType_c extends JL5ParsedClassType_c {
         } else {
             return name;
         }
+    }
+
+    public boolean isNewMethod(MethodInstance mi) {
+		for (MethodInstance ct_mi : this.methods) {
+			if (ts.areOverrideEquivalent((JL5MethodInstance) mi, (JL5MethodInstance) ct_mi)) {
+				if (ts.isSubtypeErased(mi.returnType(),  ct_mi.returnType())) {
+					this.methods.remove(ct_mi);
+					return true;
+				} else {
+					return false;
+				}
+			}
+		}
+		return true;
+    }
+
+    @Override
+    public void addMethod(MethodInstance mi) {
+    	if (mi != null) {
+    		super.addMethod(mi);
+    	}
     }
 }

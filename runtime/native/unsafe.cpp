@@ -36,9 +36,9 @@ static jboolean JavaCompareAndSwap(jobject obj, jlong offset, T e, T x) {
 }
 
 static void WarnUnsafeUnimplemented(const char* name) {
-    fprintf(stderr,
-        "WARNING: sun.misc.Unsafe method %s is unimplemented, "
-        "but will not abort.\n", name);
+  //    fprintf(stderr,
+  //    "WARNING: sun.misc.Unsafe method %s is unimplemented, "
+  //    "but will not abort.\n", name);
 }
 
 extern "C" {
