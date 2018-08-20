@@ -21,4 +21,4 @@ jobjectArray  CreateJavaObjectArray (jint len);
 jstring CreateJavaString(jcharArray chars);
 // Objects.
 jobject CreateJavaObject(jclass clazz);
-
+jobject CloneJavaObject(jobject obj);

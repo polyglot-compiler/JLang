@@ -66,7 +66,7 @@ JVM_MonitorNotifyAll(JNIEnv *env, jobject obj) {
 
 jobject
 JVM_Clone(JNIEnv *env, jobject obj) {
-    JvmUnimplemented("JVM_Clone");
+  return CloneJavaObject(obj);
 }
 
 jstring
@@ -781,7 +781,7 @@ JVM_AssertionStatusDirectives(JNIEnv *env, jclass unused) {
 
 jboolean
 JVM_SupportsCX8(void) {
-    JvmUnimplemented("JVM_SupportsCX8");
+  return JNI_FALSE;
 }
 
 const char*

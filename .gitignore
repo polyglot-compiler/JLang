@@ -13,4 +13,5 @@
 .settings/
 .cproject
 .project
+.classpath
 *~

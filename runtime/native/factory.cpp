@@ -5,7 +5,7 @@
 #include "rep.h"
 #include "gc.h"
 
-
+#define ARRAY_CLS "polyllvm.runtime.Array"
 // The name must match that used in polyllvm.runtime.Factory,
 // and the mangling and calling conventions must match those used by PolyLLVM.
 extern "C" {
@@ -48,4 +48,24 @@ jobject CreateJavaObject(jclass clazz) {
   if (new_obj == NULL) { return NULL; }
   new_obj->SetCdv(reinterpret_cast<DispatchVector*>(info->cdv));
   return new_obj->Wrap();
+}
+
+jobject CloneJavaObject(jobject obj) {
+  //TODO set exception if class is not cloneable
+  auto objRep = Unwrap(obj);
+  auto cdv = objRep->Cdv();
+  auto cls = cdv->Class()->Wrap();
+  auto info = GetJavaClassInfo(cls);
+  int size = 0;
+  jobject new_obj;
+  if (strcmp(info->name, ARRAY_CLS) == 0 || isArrayClass(cls)) {
+    JArrayRep* array = Unwrap(reinterpret_cast<jarray>(obj));
+    size = info->obj_size + (array->Length() * array->ElemSize());
+    new_obj = (jobject) GC_MALLOC(size);
+  } else {
+    new_obj = CreateJavaObject(cls);
+    size = info->obj_size;
+  }
+  memcpy(new_obj, obj, size);
+  return new_obj;
 }
