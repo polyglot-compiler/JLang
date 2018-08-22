@@ -305,9 +305,11 @@ Java_sun_misc_Unsafe_arrayBaseOffset(
 }
 
 jint
-Java_sun_misc_Unsafe_arrayIndexScale(JNIEnv *env, jobject, jclass) {
-    WarnUnsafeUnimplemented("Java_sun_misc_Unsafe_arrayIndexScale");
-    return 0;
+Java_sun_misc_Unsafe_arrayIndexScale(JNIEnv *env, jobject, jclass cls) {
+  //TODO confirm that cls is an array classxs
+  JArrayRep* arrCls = reinterpret_cast<JArrayRep*>(cls);
+  jsize elemBytes = arrCls->ElemSize();
+  return elemBytes;
 }
 
 jint
