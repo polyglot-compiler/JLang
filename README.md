@@ -5,7 +5,7 @@ JLang adds an LLVM back end to the [Polyglot](https://www.cs.cornell.edu/project
 
 Since Polyglot already translates extended Java code into vanilla Java ASTs, JLang should be interoperable with other Polyglot extensions by default. However, JLang aims to be extensible itself, so that one can write optimized LLVM translations for language extensions when needed.
 
-A user manual and developer guide can be found on the [JLang website](http://dz333.github.io/JLang/).
+A user manual and developer guide can be found on the [JLang website](https://dz333.github.io/JLang/).
 
 
 Contributing
