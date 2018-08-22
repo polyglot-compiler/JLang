@@ -44,5 +44,5 @@ for d in $directories; do
 done
 
 
-$DIR/polyllvmc -d "$outdir" $files && \
+$DIR/jlangc -d "$outdir" $files && \
 clang++ -Wno-override-module -L/usr/local/lib/ -lgc -O1 -o "$out" $clangflags "$RUNTIME"/runtime.o `find "$outdir" -name *.ll`

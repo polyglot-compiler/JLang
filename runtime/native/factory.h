@@ -1,7 +1,7 @@
 // Provides methods to construct common Java objects
 // needed by native code. These factory methods directly
 // dispatch to symbols compiled from Java code in
-// polyllvm.runtime.Factory.
+// jlang.runtime.Factory.
 #pragma once
 
 #include "jni.h"

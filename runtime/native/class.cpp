@@ -64,8 +64,8 @@ static std::unordered_map<std::string, const jclass> cnames;
 
 extern "C" {
 
-extern void Polyglot_polyllvm_runtime_ObjectArray_load_class();
-extern jclass Polyglot_polyllvm_runtime_ObjectArray_class;
+extern void Polyglot_jlang_runtime_ObjectArray_load_class();
+extern jclass Polyglot_jlang_runtime_ObjectArray_class;
 
 
 void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
@@ -114,8 +114,8 @@ void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
 
 //Force this class load function to be called at initialization
 jclass initArrayKlass() {
-  Polyglot_polyllvm_runtime_ObjectArray_load_class();
-  return Polyglot_polyllvm_runtime_ObjectArray_class;
+  Polyglot_jlang_runtime_ObjectArray_load_class();
+  return Polyglot_jlang_runtime_ObjectArray_class;
 }        
 
 //This assumes char* is non-null, C-string with len > 0

@@ -64,12 +64,12 @@ $(SOL): $(SRC)
 
 $(LL): $(SRC)
 	@echo "Compiling $(words $?) Java file(s) down to LLVM IR"
-	@$(BASE_DIR)/bin/polyllvmc -cp $(JDK_CLS) -assert $?
+	@$(BASE_DIR)/bin/jlangc -cp $(JDK_CLS) -assert $?
 	@touch $(LL)
 
 %.ll: %.java
 	@echo "Compiling file to LLVM IR"
-	@$(BASE_DIR)/bin/polyllvmc -cp $(JDK_CLS) -assert $?
+	@$(BASE_DIR)/bin/jlangc -cp $(JDK_CLS) -assert $?
 
 %.binary: %.ll
 	@echo "Creating binary for $<"

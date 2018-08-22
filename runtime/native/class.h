@@ -1,5 +1,5 @@
 // Provides reflection-like support, especially for use by JNI.
-// PolyLLVM emits static information for each class, and registers
+// JLang emits static information for each class, and registers
 // that information by calling RegisterJavaClass upon loading a class.
 // The other functions defined here provide access to
 // class information in an organized way.
@@ -19,7 +19,7 @@
 extern "C" {
 // These structs are generated statically for each class, and
 // exist for the lifetime of the program.
-// The layout must precisely mirror the layout defined in PolyLLVM.
+// The layout must precisely mirror the layout defined in JLang.
 
 // Concrete representation for the opaque type jfieldID.
 struct JavaFieldInfo {

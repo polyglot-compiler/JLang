@@ -7,15 +7,15 @@ java.util.RegularEnumSet#iterator(.*)
 java.util.JumboEnumSet#iterator(.*)
 
 
-// The methods below cause PolyLLVM to crash.
+// The methods below cause JLang to crash.
 
 // These methods call `new Condition()`, where Condition is an inner class
-// in another file. PolyLLVM crashes because it tries to provide
+// in another file. JLang crashes because it tries to provide
 // the enclosing instance as part of the constructor call, but the
 // constructor has not yet been update to accept the enclosing instance
 // (since it is defined in another file). This should be fixed by
 // updating class types with enclosing instances before they are needed,
-// not just when PolyLLVM gets around to desugaring their defining file.
+// not just when JLang gets around to desugaring their defining file.
 java.util.concurrent.locks.ReentrantLock.Sync#newCondition()
 java.util.concurrent.locks.ReentrantReadWriteLock.Sync#newCondition()
 
@@ -28,6 +28,6 @@ sun.nio.fs.WindowsChannelFactory.Flags#toFlags(.*)
 
 // These fields cause a stack overflow due to (very) deeply nested
 // string concatenation expressions. An alternative might be to increase the
-// JVM stack size when running PolyLLVM.
+// JVM stack size when running JLang.
 java.util.LocaleISOData#isoLanguageTable
 java.util.LocaleISOData#isoCountryTable

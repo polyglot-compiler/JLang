@@ -40,7 +40,7 @@ $(CLS_STAMP): $(JAVA_SRC)
 
 # Compile JDK Java code (.java --> .ll)
 $(JAVA_LL): $(JAVA_SRC) $(PLC_SRC)
-	@echo "Compiling $(words $(JAVA_SRC)) Java files with PolyLLVM (.java --> .ll)"
+	@echo "Compiling $(words $(JAVA_SRC)) Java files with JLang (.java --> .ll)"
 	@# We compile java.lang.Object separately, since otherwise
 	@# we get duplicate class errors from Polyglot. (TODO)
 	@$(PLC) -c -d $(OUT) $(DEBUG_FLAGS) $(filter %Object.java,$(JAVA_SRC)) > dump.txt

@@ -25,7 +25,7 @@
 -        }
 -     }
 -
-+    // Modified for PolyLLVM.
++    // Modified for JLang.
      /**
       * A randomizing value associated with this instance that is applied to
       * hash code of keys to make hash collisions harder to find.
@@ -41,7 +41,7 @@
          // set hashSeed
 -        UNSAFE.putIntVolatile(this, HASHSEED_OFFSET,
 -                sun.misc.Hashing.randomHashSeed(this));
-+        // Modified for PolyLLVM.
++        // Modified for JLang.
 +        this.hashSeed = sun.misc.Hashing.randomHashSeed(this);
 
          // Read the original length of the array and number of elements

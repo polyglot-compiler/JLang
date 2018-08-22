@@ -14,7 +14,7 @@
 #include "stack_trace.h"
 
 typedef uint8_t u_char;
-#define POLYGLOT_ARRAY_STORE Polyglot_polyllvm_runtime_Helper_arrayStore___3Ljava_lang_Object_2ILjava_lang_Object_2
+#define POLYGLOT_ARRAY_STORE Polyglot_jlang_runtime_Helper_arrayStore___3Ljava_lang_Object_2ILjava_lang_Object_2
 
 static jboolean mainThreadIsAlive = JNI_FALSE;
 static jobject mainThread = NULL;
@@ -208,7 +208,7 @@ ForwardJavaArgs(const char* sig, va_list args, jvalue* out) {
     }
 }
 
-// This type must precisely match the type used by PolyLLVM.
+// This type must precisely match the type used by JLang.
 template <typename T>
 using JniTrampolineType = T (*)(void*, const jvalue*);
 

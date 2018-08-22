@@ -12,7 +12,7 @@ CLASSES := $(OUT)/classes
 NUM_JAVA_FILES := $(shell find $(JDK)/$(SRC) -name "*.java" | wc -l)
 #Magic Multiplier for now. TODO calculate this a better way
 RUN_COUNT := $(shell echo "2 * $(NUM_JAVA_FILES)" | bc)
-# PolyLLVM flags when compiling the JDK.
+# JLANG flags when compiling the JDK.
 PLC_FLAGS := -assert -method-filter jdk-method-filter.txt -sourcepath $(SRC)
 
 all: $(LIBJDK)
@@ -27,7 +27,7 @@ $(SRC): | $(SRC).zip
 	@unzip -q -d $@ $(SRC).zip
 	@cp -r $(SRC) $(SRC).orig
 
-# Path JDK sources to work around PolyLLVM unimplemented features.
+# Path JDK sources to work around JLang unimplemented features.
 $(SRC)/patchstamp: | $(SRC)
 	@echo "Patching JDK source files"
 	@for f in `find $(PATCHES) -name "*.patch"`; do patch -p0 < "$$f"; done

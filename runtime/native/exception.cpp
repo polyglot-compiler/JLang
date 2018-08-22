@@ -55,7 +55,7 @@ namespace {
 
 extern "C" {
 
-void Polyglot_polyllvm_runtime_Exceptions_createClassNotFoundException__Ljava_lang_String_2 (jstring);
+void Polyglot_jlang_runtime_Exceptions_createClassNotFoundException__Ljava_lang_String_2 (jstring);
 
 // A distinct integer identifying our own exceptions.
 const uint64_t javaExceptionClass = 8101813523428701805ll;
@@ -494,5 +494,5 @@ _Unwind_Reason_Code __java_personality_v0(
 
 void throwClassNotFoundException(JNIEnv *env, const char* name) {
   jstring clazz = env->NewStringUTF(name);
-  Polyglot_polyllvm_runtime_Exceptions_createClassNotFoundException__Ljava_lang_String_2(clazz);
+  Polyglot_jlang_runtime_Exceptions_createClassNotFoundException__Ljava_lang_String_2(clazz);
 }

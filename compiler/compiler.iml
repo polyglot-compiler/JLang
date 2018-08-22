@@ -7,7 +7,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="polyllvm" level="project" />
+    <orderEntry type="library" name="jlang" level="project" />
     <orderEntry type="library" name="polyglot" level="project" />
     <orderEntry type="module" module-name="runtime" />
     <orderEntry type="module" module-name="polyglot" />

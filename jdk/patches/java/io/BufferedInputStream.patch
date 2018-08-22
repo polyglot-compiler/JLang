@@ -14,7 +14,7 @@
 -        AtomicReferenceFieldUpdater<BufferedInputStream, byte[]> bufUpdater =
 -        AtomicReferenceFieldUpdater.newUpdater
 -        (BufferedInputStream.class,  byte[].class, "buf");
-+    // Modified for PolyLLVM.
++    // Modified for JLang.
 
      /**
       * The index one greater than the index of the last valid byte in
@@ -30,7 +30,7 @@
 -                    // assert buf == null;
 -                    throw new IOException("Stream closed");
 -                }
-+                // Modified for PolyLLVM.
++                // Modified for JLang.
                  buffer = nbuf;
              }
          count = pos;
@@ -46,7 +46,7 @@
 -                return;
 -            }
 -            // Else retry in case a new buf was CASed in fill()
-+            // Modified for PolyLLVM.
++            // Modified for JLang.
 +            InputStream input = in;
 +            in = null;
 +            if (input != null)

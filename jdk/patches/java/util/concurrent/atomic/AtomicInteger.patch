@@ -8,7 +8,7 @@
 -        valueOffset = unsafe.objectFieldOffset
 -            (AtomicInteger.class.getDeclaredField("value"));
 -      } catch (Exception ex) { throw new Error(ex); }
-+        // Modified for PolyLLVM until we have reflection.
++        // Modified for JLang until we have reflection.
 +        valueOffset = 16;
      }
 

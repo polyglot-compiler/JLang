@@ -11,7 +11,7 @@
 -                (int) (System.nanoTime() >>> 5), // resolution is poor
 -                (int) (Runtime.getRuntime().freeMemory() >>> 4) // alloc min
 +                System.identityHashCode(instance)
-+                // Modified for PolyLLVM.
++                // Modified for JLang.
 +                // System.identityHashCode(Thread.currentThread()),
 +                // (int) Thread.currentThread().getId(),
 +                // (int) (System.currentTimeMillis() >>> 2), // resolution is poor

@@ -24,7 +24,7 @@ RegisterJavaNativeFunc(
 // needs to be searched for in the symbol table.
 //
 // The signature of this function must precisely match
-// the signature used in PolyLLVM.
+// the signature used in JLang.
 extern "C"
 void*
 GetJavaNativeFunc(

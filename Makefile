@@ -10,8 +10,8 @@ POLYGLOT := lib/polyglot/
 JAVACPP_PRESETS := lib/javacpp-presets/
 SUBMODULES := $(addsuffix .git,$(POLYGLOT) $(JAVACPP_PRESETS))
 
-# PolyLLVM.
-export PLC := $(realpath bin/polyllvmc)
+# JLang
+export PLC := $(realpath bin/jlangc)
 
 # Hack to allow dependency on PolyLLVM source.
 export PLC_SRC := $(realpath $(shell find compiler/src -name "*.java"))

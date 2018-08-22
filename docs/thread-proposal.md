@@ -14,7 +14,7 @@ Contents
 Introduction
 ------------
 
-Java provides library support for writing multi-threaded applications, mainly through the `Thread` class, and `Object` methods for synchronization. This proposal details implementing threading support in PolyLLVM using the `pthread` library.
+Java provides library support for writing multi-threaded applications, mainly through the `Thread` class, and `Object` methods for synchronization. This proposal details implementing threading support in JLang using the `pthread` library.
 
 Object Header
 -------------

@@ -1,6 +1,6 @@
-<project name="polyllvm" default="compile-all" basedir=".">
+<project name="jlang" default="compile-all" basedir=".">
     <description>
-      PolyLLVM build file
+      JLang build file
     </description>
 
 
@@ -9,10 +9,10 @@
        ****************************************  -->
 
     <!-- extension package name -->
-    <property name="package.dir" value="polyllvm"/>
+    <property name="package.dir" value="jlang"/>
 
     <!-- extension language name -->
-    <property name="name" value="polyllvm"/>
+    <property name="name" value="jlang"/>
 
     <!-- extension compiler script name -->
     <property name="compiler.name" value="${name}c"/>

@@ -1,6 +1,6 @@
 kramdown:
   input: GFM
   hard_wrap: false
-project: "polyllvm"
+project: "JLang"
 github:
-  url: https://github.com/gharrma/polyllvm
+  url: https://github.com/dz333/JLang

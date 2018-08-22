@@ -10,8 +10,8 @@
 
 extern "C" {
 
-void Polyglot_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jarray args);
-jarray Polyglot_polyllvm_runtime_Factory_ObjectArray__I(jint len);
+void Polyglot_jlang_runtime_MainWrapper_runMain___3Ljava_lang_String_2(jarray args);
+jarray Polyglot_jlang_runtime_Factory_ObjectArray__I(jint len);
 void Polyglot_java_lang_System_initializeSystemClass__();
 } // extern "C"
 
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 
     // Ignore the 0th argument, which is the name of the program.
     --argc, ++argv;
-    jarray args = Polyglot_polyllvm_runtime_Factory_ObjectArray__I(argc);
+    jarray args = Polyglot_jlang_runtime_Factory_ObjectArray__I(argc);
     jstring* args_data = reinterpret_cast<jstring*>(Unwrap(args)->Data());
     for (int i = 0; i < argc; ++i) {
         size_t len = strlen(argv[i]);
@@ -60,5 +60,5 @@ int main(int argc, char** argv) {
         args_data[i] = argStr;
     }
     Polyglot_java_lang_System_initializeSystemClass__();
-    Polyglot_polyllvm_runtime_MainWrapper_runMain___3Ljava_lang_String_2(args);
+    Polyglot_jlang_runtime_MainWrapper_runMain___3Ljava_lang_String_2(args);
 }
