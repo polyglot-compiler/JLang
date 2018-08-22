@@ -356,6 +356,7 @@ GetMainThread() {
   return mainThread;
 }
 
+//Copied from JDK implementation, TODO replace with our own impl
 //UTF8 helpers
 // Writes a jchar a utf8 and returns the end                                                                                                        
 static u_char* utf8_write(u_char* base, jchar ch) {
