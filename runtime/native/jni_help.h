@@ -237,14 +237,14 @@ CallJavaNonvirtualMethod(jobject obj, jmethodID id, const jvalue* args) {
     auto num_args = CountJavaArgs(m->sig);
 
     // Carefully include implicit receiver for non-static methods
-    const jvalue* final_args = args;
     if (!IS_STATIC_METHOD(m)) {
       auto forward_args = std::vector<jvalue>(num_args + 1);
       forward_args[0].l = obj;
       std::copy(args, args + num_args, forward_args.begin() + 1);
-      final_args = forward_args.data();
+      return CallJavaNonvirtualMethod<T>(id, forward_args.data());
+    } else {
+      return CallJavaNonvirtualMethod<T>(id, args);
     }
-    return CallJavaNonvirtualMethod<T>(id, final_args);
 }
 
 // Calls a Java instance method using the dispatch vector of [obj].
