@@ -3,7 +3,7 @@ title: "Developer Guide"
 layout: default
 ---
 
-This document is up to date as of May 2018.
+This document is up to date as of August 2018.
 
 Contents
 --------
@@ -80,7 +80,9 @@ unzip OpenJDK 7 source files, apply a small number of temporary patches that
 help work around unimplemented features in JLang, and then compile everything
 into `libjdk` as before. Here it will also put your local JDK 7 installation
 on the dynamically loaded search path of `libjdk`, so that JDK code has access
-to the native code that is part of OpenJDK 7.
+to the native code that is part of OpenJDK 7. *Note:* This linking doesn't work
+on all systems and the final binary compilation of executables must also link
+the OpenJDK 7 native code libraries.
 
 The makefile in `tests/isolated` will compile each unit test and create an
 executable by linking with `libjvm` from the runtime and `libjdk` from the
@@ -110,6 +112,8 @@ The unit tests in `tests/isolated` are thorough, and should be your primary
 resource for checking correctness after making changes to the compiler or
 runtime. I suggest setting up the `TestFunctional` class as a JUnit run
 configuration in IntelliJ or Eclipse, and running it before pushing any commit.
+
+These tests can be run from the top-level Makefile via the `make tests` command.
 
 The makefile in `tests/isolated` also makes it easy to run individual tests
 manually from the command line. You can run commands like `make Add.ll` to
@@ -154,6 +158,15 @@ There are more, and they are listed in `JLangDesugared`. Each pass has Javadoc d
 
 There is also the special `DesugarLocally` pass run at the end, which gives each Java AST node a chance to desugar itself locally into something simpler. For example, try-with-resource statements are desugared within `JLangTryWithResourcesExt` down to normal try-catch blocks as specified by the JLS.
 
+Barrier Pass
+------------
+
+There is a single barrier pass which forces all Desugar transformations to complete
+before any translation is executed. This is critical since Desguar transformations
+can add new fields and methods, which can generate an inconsistent state between various Job's
+representations of Class objects. With the barrier, the `max-runs` option for Polyglot must be set fairly high;
+this is expected since there will be `# of Desugar Passes` * `# of Compilation Units` outstanding runs simulatneously.
+The current `jdk/Makefile` already takes care of this and the `jdk-lite/Makefile` does not since the number of compiled classes is still fairly small.
 
 Translation Pass
 ----------------
@@ -316,7 +329,7 @@ Debugging Tips
 --------------
 
 If you have a JLang-compiled executable that crashes at runtime, the first
-thing to do is use `lldb`. With `lldb` you can find exactly where the program
+thing to do is use `lldb` or `gdb`. With `lldb` you can find exactly where the program
 crashes, and see the source code that corresponds to each stack frame.
 
 Once you find where the program is crashing, it's usually helpful to find
