@@ -7,4 +7,4 @@ all: $(OBJ)
 
 $(OBJ): %.o: %.ll $(OUT)/llstamp
 	@echo "Compiling $<"
-	@clang++ -Wno-override-module -fPIC -c -o $@ $<
+	@$(CLANG) -Wno-override-module -fPIC -c -o $@ $<

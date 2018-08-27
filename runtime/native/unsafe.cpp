@@ -44,7 +44,7 @@ static void WarnUnsafeUnimplemented(const char* name) {
 extern "C" {
 
 void
-Java_sun_misc_Unsafe_registerNatives(JNIEnv *env, jclass) {
+Java_sun_misc_Unsafe_registerNatives(JNIEnv *env, jclass obj) {
     // Since we define all the native methods here with the proper names,
     // there's no need to register them explicitly.
 }

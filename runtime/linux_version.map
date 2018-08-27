@@ -1,0 +1,21 @@
+SUNWprivate_1.1 {
+	global:
+		main;
+		jni*;
+		JVM*;
+		Polyglot*;
+		jio*;
+		Java_sun_misc_Unsafe*;
+		RegisterJavaClass; #TODO rename all of the functions called from JLang-compiled code to have same prefix
+		GetJavaNativeFunc; #Then we can just export PREFIX*
+		createUnwindException;
+		extractJavaExceptionObject;
+		InstanceOf;
+		throwUnwindException;
+		__getInterfaceMethod;
+		__createInterfaceTables;
+		__java_personality_v0;
+        local:
+	        *;
+};
+			

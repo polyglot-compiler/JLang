@@ -38,7 +38,10 @@ export RUNTIME := $(realpath runtime)
 export RUNTIME_CLASSES := $(RUNTIME)/out/classes
 
 # Clang.
+ifndef CLANG
 export CLANG := clang++
+endif
+
 export SHARED_LIB_FLAGS := -g -lgc -shared -rdynamic
 
 # JDK lib.
@@ -48,6 +51,9 @@ export LIBJDK_FLAGS = $(SHARED_LIB_FLAGS) -Wl,-rpath,$(RUNTIME)/out
 # Runtime lib.
 export LIBJVM = $(RUNTIME)/out/libjvm.$(SHARED_LIB_EXT)
 export LIBJVM_FLAGS = $(SHARED_LIB_FLAGS)
+
+# Test Dir.
+export TESTDIR := $(realpath tests/isolated)
 
 # Platform-specific overrides.
 sinclude defs.$(shell uname)
@@ -83,10 +89,15 @@ polyglot: | $(SUBMODULES)
 $(SUBMODULES):
 	git submodule update --init
 
+tests: compiler runtime jdk
+	@echo "--- Running Test Suite ---"
+	@$(MAKE) -s -C $(TESTDIR)
+	@echo
 clean:
 	@echo "Cleaning compiler, runtime, and jdk"
 	@ant -q -S clean
 	@$(MAKE) -s -C $(RUNTIME) clean
 	@$(MAKE) -s -C $(JDK) clean
+	@$(MAKE) -s -C $(TESTDIR) clean
 
 .PHONY: compiler runtime jdk-classes jdk

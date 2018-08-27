@@ -9,15 +9,17 @@
 
 # Uses absolute paths to llvm commands, because Java's ProcessBuilder will
 # otherwise not be able to find them.
+ifndef TOP_LEVEL_MAKEFILE_INVOKED
+JDK ?= jdk-lite
+JDK := $(BASE_DIR)/$(JDK)
+JDK_CLASSES := $(JDK)/out/classes
+JDK7 := /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home/
+endif
 
 BASE_DIR := ../..
 RUNTIME := $(BASE_DIR)/runtime
 
-# Use bare-bones JDK by default.
-JDK ?= jdk-lite
-JDK := $(BASE_DIR)/$(JDK)
-JDK_CLS := $(JDK)/out/classes
-JDK7 := /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home/
+
 SRC := $(shell find * -name "*.java")
 
 CLASSES := $(SRC:.java=.class)
@@ -26,11 +28,15 @@ LL := $(SRC:.java=.ll)
 BINARY := $(SRC:.java=.binary)
 OUTPUT := $(SRC:.java=.output)
 
+ifndef CLANG
 CLANG := clang++
+endif
+
 CLANG_FLAGS := \
 	-Wno-override-module -lgc -g \
 	-L$(RUNTIME)/out -ljvm \
 	-L$(JDK)/out -ljdk \
+	-Wl,-rpath,$(JDK7_LIB_PATH) \
 	-Wl,-rpath,$(JDK)/out -Wl,-rpath,$(RUNTIME)/out \
 	-rdynamic
 
@@ -64,12 +70,12 @@ $(SOL): $(SRC)
 
 $(LL): $(SRC)
 	@echo "Compiling $(words $?) Java file(s) down to LLVM IR"
-	@$(BASE_DIR)/bin/jlangc -cp $(JDK_CLS) -assert $?
+	@$(BASE_DIR)/bin/jlangc -cp $(JDK_CLASSES) -assert $?
 	@touch $(LL)
 
 %.ll: %.java
 	@echo "Compiling file to LLVM IR"
-	@$(BASE_DIR)/bin/jlangc -cp $(JDK_CLS) -assert $?
+	@$(BASE_DIR)/bin/jlangc -cp $(JDK_CLASSES) -assert $?
 
 %.binary: %.ll
 	@echo "Creating binary for $<"

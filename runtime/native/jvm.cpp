@@ -115,16 +115,22 @@ JVM_ArrayCopy(
   }   else ((void) 0)
 
 
-// '/jre/lib'
-#define JRE_LIB_LEN 8
+// '/jre/lib' for MAC
+// '/jre/lib/amd64' for Linux
+#ifdef __APPLE__
 #define JRE_LIB "/jre/lib"
+#define JRE_LIB_LEN 8
+#else
+#define JRE_LIB "/jre/lib/amd64"
+#define JRE_LIB_LEN 14
+#endif
 jobject
 JVM_InitProperties(JNIEnv *env, jobject p) {
   //TODO add following system properties to p
   //  These are VM specific
   //  "java.vm.specification.name", "java.vm.version", "java.vm.name", "java.vm.info"
 
-  // The following are OS specific, TODO is fill in the rest and support multiple OS versions
+  // The following are OS specific, TODO is fill in the rest and support multiple OS versions in a clener way
   // ""java.ext.dirs", "java.endorsed.dirs", "sun.boot.library.path", "java.library.path", "java.home", "sun.boot.class.path"
   jmethodID putID = env->GetMethodID(env->GetObjectClass(p), "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
   char* java_home = getenv("JAVA_HOME"); //get java.home from JAVA_HOME environment variable
@@ -629,7 +635,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
 
 jobjectArray
 JVM_GetClassDeclaredConstructors(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
-  //TODO ignore primitive and array types (return empty array for those)
+  //TODO actually implement this - the following doesn't work yet
   auto class_info = GetJavaClassInfo(ofClass);
   if (class_info == NULL) {
     return CreateJavaObjectArray(0);

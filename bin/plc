@@ -2,6 +2,10 @@
 
 DIR="$(dirname "$0")"
 RUNTIME=$DIR/../runtime
+if [ -z "$CLANG" ]
+then
+    CLANG=clang++
+fi
 
 out=a.out
 outdir=.
@@ -45,4 +49,4 @@ done
 
 
 $DIR/jlangc -d "$outdir" $files && \
-clang++ -Wno-override-module -L/usr/local/lib/ -lgc -O1 -o "$out" $clangflags "$RUNTIME"/runtime.o `find "$outdir" -name *.ll`
+$CLANG -Wno-override-module -L/usr/local/lib/ -lgc -O1 -o "$out" $clangflags "$RUNTIME"/runtime.o `find "$outdir" -name *.ll`

@@ -1,11 +1,5 @@
 #include "reflect.h"
 
-#include <stdio.h>
-#include "factory.h"
-#include "class.h"
-#define CTOR_CLASS_NAME "java.lang.reflect.Constructor"
-#define CTOR_CTOR Polyglot_java_lang_reflect_Constructor_Constructor__Ljava_lang_Class_2_3Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B
-
 extern "C" {
 
   void CTOR_CTOR(jclass, jobjectArray, jobjectArray, jint, jint, jstring, jbyteArray, jbyteArray);
@@ -21,10 +15,8 @@ extern "C" {
   }
 } // extern "C"
 
-static jobject
+jobject
 CreateConstructor(jclass declaring_clazz, const JavaClassInfo* clazz_info, JavaMethodInfo ctor_info) {
-  auto ctor_clazz = GetJavaClassFromName(CTOR_CLASS_NAME);
-  auto ctor_clazz_info = GetJavaClassInfo(ctor_clazz);
-  auto ctor_obj = CreateJavaObject(ctor_clazz);
+  //TODO actually implement
   return NULL;
 }

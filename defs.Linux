@@ -1,2 +1,3 @@
 export SHARED_LIB_EXT := so
 export JDK7_LIB_PATH := $(JDK7)/jre/lib/amd64
+export LIBJVM_FLAGS = $(SHARED_LIB_FLAGS) -Wl,--version-script=linux_version.map

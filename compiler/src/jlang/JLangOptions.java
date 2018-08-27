@@ -70,7 +70,7 @@ public class JLangOptions extends JL5Options {
             this.printDesugar = (Boolean) arg.value();
         }
         else if (arg.flag().ids().contains("-max-runs")) {
-        	this.maxPasses = (int) arg.value();
+        	this.maxPasses = (Integer) arg.value();
         }
         else super.handleArg(arg);
     }

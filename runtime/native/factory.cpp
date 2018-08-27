@@ -1,4 +1,5 @@
 #include "jni.h"
+#include <string.h>
 
 #include "factory.h"
 #include "class.h"

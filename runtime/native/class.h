@@ -9,7 +9,7 @@
 #pragma once
 
 #include "jni.h"
-
+#include <stdint.h>
 #include <utility>
 
 #define IS_STATIC_METHOD(minfo) ((minfo)->offset == -1)
