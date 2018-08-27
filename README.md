@@ -29,7 +29,7 @@ JLang has the following dependencies, which you will need to download and instal
 
 - [JDK 7](http://www.oracle.com/technetwork/java/javase/downloads/java-archive-downloads-javase7-521261.html) is required to compile programs with JLang, since we target Java 7. Be sure that the `JDK7` environment variable is defined and points to the JDK 7 home directory. When trying to run programs compiled with JLang you will need to set the `JAVA_HOME` environment variable to this value as well (see the test suite Makefile for an example of how to execute JLang-compiled binaries).
 
-- [LLVM](http://llvm.org) and [Clang](https://clang.llvm.org) are needed to build the runtime and create binaries from Java programs. JLang is tested with version 5.0.1, which you can download [here](http://releases.llvm.org/download.html#5.0.1). It may be possible to install through a package manager (e.g., `sudo apt install llvm && sudo apt install clang`). After installation be sure that `llc --version` (for example) and `clang++ --version` report consistent versions. You may have to alter your PATH to pick the right version, especially on a Mac for which a version of `Clang` comes bundled with the command line developer tools.
+- [LLVM](http://llvm.org) and [Clang](https://clang.llvm.org) are needed to build the runtime and create binaries from Java programs. JLang is tested with version 5.0.1, which you can download [here](http://releases.llvm.org/download.html#5.0.1). It may be possible to install through a package manager (e.g., `sudo apt install llvm && sudo apt install clang`). After installation be sure that `llc --version` (for example) and `clang++ --version` report consistent versions. You may have to alter your PATH to pick the right version, especially on a Mac for which a version of `Clang` comes bundled with the command line developer tools. If your clang binary is not named `clang++`, then you must define its name with the `CLANG` environment variable.
 
 - The [Boehm-Demers-Weiser garbage collector](http://www.hboehm.info/gc/) is also required for creating binaries. JLang is tested with version 7.6.4, which you can download [here](http://www.hboehm.info/gc/gc_source/) or install through a package manager (`brew install boehmgc`). A typical install from source looks like this: `./configure && make && make install`. Note that the garbage collector depends on [libatomic_ops](https://github.com/ivmai/libatomic_ops), which is often available through a package manager.
 
@@ -38,6 +38,8 @@ JLang has the following dependencies, which you will need to download and instal
 Note that [Polyglot](https://github.com/polyglot-compiler/polyglot/) is also required, but is tracked as a git submodule and will be built automatically.
 
 Finally, build JLang by running `make` at the top level of the repository. By default this will build only a "bare-bones" JDK, which is enough to run the [unit tests](tests/isolated). Note that JLang is usually tested on OS X; see issue #55 for updates on whether the build system supports Linux.
+
+To run the test-suite you can execute the `make tests` at the top level of the repository. In order to run specific tests, the test Makefile can also be run from the `tests/isolated` directory; however, some environment variables may not be appropriately set depending upon your operating system.
 
 If you want to run unit tests from IntelliJ, run the `TestAll` class, using the top level of the repository as the working directory.
 
@@ -58,16 +60,16 @@ High-level project structure
 - [lib](lib) contains Polyglot (the frontend for JLang); a fork of [JavaCPP Presets](https://github.com/bytedeco/javacpp-presets) to generate Java stubs from LLVM headers; and various supporting `.jar` files.
 
 
-Status (May 2018)
+Status (August 2018)
 -----------------
 
 All translations from Java to LLVM IR are complete, with the exception of the `synchronized` keyword (see below on concurrency support). This means that all Java 7 language features---expressions, control flow, exceptions, method dispatch, switch statements, try-with-resources, initializer blocks, implicit type conversions, etc.---are translated robustly and as specified by the [JLS](https://docs.oracle.com/javase/specs/jls/se7/html/index.html). All of our [unit tests](tests/isolated) pass.
 
 However, JLang is still a work in progress for two important reasons.
 
-(1) JDK support. The JDK includes thousands of classes that are critical to the Java ecosystem, such as `java.lang.Class`, `java.util.ArrayList`, `java.io.File`, and `java.net.Socket`. Thus it is important to be able to compile programs that rely on the JDK. So far we can fully support a hand-written "bare-bones" JDK that includes only the JDK classes that are necessary for unit tests (`java.lang.Object`, `java.lang.Class`, `java.lang.System`, etc.). This has allowed us to test the compiler before trying to compile the entire JDK. Support for the full JDK is close, but not finished. Please see [issue #54](https://github.com/dz333/JLang/issues/54) for more information.
+(1) Full JDK support & Reflection. The JDK includes thousands of classes that are critical to the Java ecosystem, such as `java.lang.Class`, `java.util.ArrayList`, `java.io.File`, and `java.net.Socket`. Thus it is important to be able to compile programs that rely on the JDK. So far we can fully support a hand-written "bare-bones" JDK that includes only the JDK classes that are necessary for unit tests (`java.lang.Object`, `java.lang.Class`, `java.lang.System`, etc.). We have also supported a large number of JVM features such that many operations in the JDK are supported. Many features are still missing, but most of them have analogues that are already implemented, which means that completing these features should be straightforward. The main feature we are missing is full Reflection support; most reflection methods beyond `Class.forName(String name)` are unimplemented. For more details see: [issue #18](https://github.com/dz333/JLang/issues/18).
 
-(2) Concurrency support. Support for multiple threads and synchronization has not been started, as JDK support took priority. JLang will ignore the Java `synchronized` keyword, and the [native runtime code](runtime/native) is generally not thread-safe. Please see [issue #5](https://github.com/dz333/JLang/issues/5) for more information.
+(2) Concurrency support. Support for multiple threads and synchronization has not been started, as JDK support took priority. JLang will ignore the Java `synchronized` keyword, and the [native runtime code](runtime/native) is generally not thread-safe. Please see [issue #1](https://github.com/dz333/JLang/issues/1) for more information.
 
 All other loose ends (minor bugs, build system issues, etc.) are tracked as GitHub issues as well. If you would like to contribute, please read through all of these tracked issues carefully!
 
