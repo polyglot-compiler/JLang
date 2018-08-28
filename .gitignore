@@ -15,3 +15,4 @@
 .project
 .classpath
 *~
+tests/isolated/check

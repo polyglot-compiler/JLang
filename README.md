@@ -5,7 +5,7 @@ JLang adds an LLVM back end to the [Polyglot](https://www.cs.cornell.edu/project
 
 Since Polyglot already translates extended Java code into vanilla Java ASTs, JLang should be interoperable with other Polyglot extensions by default. However, JLang aims to be extensible itself, so that one can write optimized LLVM translations for language extensions when needed.
 
-A user manual and developer guide can be found on the [JLang website](https://dz333.github.io/JLang/).
+A user manual and developer guide can be found on the [JLang website](https://polyglot-compiler.github.io/JLang/).
 
 
 Contributing
@@ -15,7 +15,7 @@ Before contributing, please do the following.
 
 (1) Read through the rest of this README.<br>
 (2) Read through all GitHub issues carefully, to get the most up-to-date picture of the current state of the project.<br>
-(3) Read through the [developer guide](http://dz333.github.io/JLang/developer-guide.html) on the website, to get technical details on the most critical subcomponents of JLang.<br>
+(3) Read through the [developer guide](http://polyglot-compiler.github.io/JLang/developer-guide.html) on the website, to get technical details on the most critical subcomponents of JLang.<br>
 (4) If you need to work on compiler translations, get familiar with [LLVM IR](https://llvm.org/docs/LangRef.html).<br>
 (5) If you need to work on native runtime code, get familiar with [JNI](https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/design.html).
 
@@ -55,7 +55,7 @@ High-level project structure
 
 - [jdk](jdk) provides a way to compile and link OpenJDK 7 with JLang, and [jdk-lite](jdk-lite) provides a "bare-bones" JDK implementation used for unit testing.
 
-- [docs](docs) contains documentation for the various subcomponents of JLang, in the form of Markdown files. These files also provide the content for the [JLang website](http://dz333.github.io/jlang/).
+- [docs](docs) contains documentation for the various subcomponents of JLang, in the form of Markdown files. These files also provide the content for the [JLang website](http://polyglot-compiler.github.io/jlang/).
 
 - [lib](lib) contains Polyglot (the frontend for JLang); a fork of [JavaCPP Presets](https://github.com/bytedeco/javacpp-presets) to generate Java stubs from LLVM headers; and various supporting `.jar` files.
 
@@ -67,9 +67,9 @@ All translations from Java to LLVM IR are complete, with the exception of the `s
 
 However, JLang is still a work in progress for two important reasons.
 
-(1) Full JDK support & Reflection. The JDK includes thousands of classes that are critical to the Java ecosystem, such as `java.lang.Class`, `java.util.ArrayList`, `java.io.File`, and `java.net.Socket`. Thus it is important to be able to compile programs that rely on the JDK. So far we can fully support a hand-written "bare-bones" JDK that includes only the JDK classes that are necessary for unit tests (`java.lang.Object`, `java.lang.Class`, `java.lang.System`, etc.). We have also supported a large number of JVM features such that many operations in the JDK are supported. Many features are still missing, but most of them have analogues that are already implemented, which means that completing these features should be straightforward. The main feature we are missing is full Reflection support; most reflection methods beyond `Class.forName(String name)` are unimplemented. For more details see: [issue #18](https://github.com/dz333/JLang/issues/18).
+(1) Full JDK support & Reflection. The JDK includes thousands of classes that are critical to the Java ecosystem, such as `java.lang.Class`, `java.util.ArrayList`, `java.io.File`, and `java.net.Socket`. Thus it is important to be able to compile programs that rely on the JDK. So far we can fully support a hand-written "bare-bones" JDK that includes only the JDK classes that are necessary for unit tests (`java.lang.Object`, `java.lang.Class`, `java.lang.System`, etc.). We have also supported a large number of JVM features such that many operations in the JDK are supported. Many features are still missing, but most of them have analogues that are already implemented, which means that completing these features should be straightforward. The main feature we are missing is full Reflection support; most reflection methods beyond `Class.forName(String name)` are unimplemented. For more details see: [issue #18](https://github.com/polyglot-compiler/JLang/issues/18).
 
-(2) Concurrency support. Support for multiple threads and synchronization has not been started, as JDK support took priority. JLang will ignore the Java `synchronized` keyword, and the [native runtime code](runtime/native) is generally not thread-safe. Please see [issue #1](https://github.com/dz333/JLang/issues/1) for more information.
+(2) Concurrency support. Support for multiple threads and synchronization has not been started, as JDK support took priority. JLang will ignore the Java `synchronized` keyword, and the [native runtime code](runtime/native) is generally not thread-safe. Please see [issue #1](https://github.com/polyglot-compiler/JLang/issues/1) for more information.
 
 All other loose ends (minor bugs, build system issues, etc.) are tracked as GitHub issues as well. If you would like to contribute, please read through all of these tracked issues carefully!
 

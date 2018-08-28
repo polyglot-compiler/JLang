@@ -25,11 +25,11 @@ JLang currently supports all Java 7 language features, except concurrency and fu
 
 All unit tests currently pass with OpenJDK 7, except for `HashtableTest.java`, which relies on unimplemented reflection features.
 
-See the [README](https://github.com/dz333/JLang) in the repository for the most up-to-date status.
+See the [README](https://github.com/polyglot-compiler/JLang) in the repository for the most up-to-date status.
 
 
 Contributing
 ------------
 If you would like to contribute to JLang, please contact us at *{{ site.contact }}* to gain contribution rights.
 
-If you have contribution rights already, you should clone the repo and create a new branch whose name is related to the [issue](https://github.com/dz333/JLang/issues) that you would like to address. You can submit a pull-request in order to have your changes merged into the master branch.
+If you have contribution rights already, you should clone the repo and create a new branch whose name is related to the [issue](https://github.com/polyglot-compiler/JLang/issues) that you would like to address. You can submit a pull-request in order to have your changes merged into the master branch.

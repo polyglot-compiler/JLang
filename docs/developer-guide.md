@@ -140,7 +140,7 @@ which is tracked as a git submodule. Cloning with `--depth 1` is recommended. To
 build, `cd` into the `llvm` subdirectory and run `mvn install`. This will
 produce the needed `.jar` files in the `llvm/target` directory. For convenience
 we provide up-to-date `.jar` files in the JLang repository
-[directly](https://github.com/dz333/JLang/tree/master/lib),
+[directly](https://github.com/polyglot-compiler/JLang/tree/master/lib),
 for OS X and Linux.
 
 

@@ -16,7 +16,7 @@ Installation
 
 Note: JLang is not tested on Windows.
 
-Clone the [repo](https://github.com/dz333/JLang) and build using the "Quick start guide" section of the [README](https://github.com/dz333/JLang/blob/master/README.md).
+Clone the [repo](https://github.com/polyglot-compiler/JLang) and build using the "Quick start guide" section of the [README](https://github.com/polyglot-compiler/JLang/blob/master/README.md).
 
 Don't forget to set your `JDK7` and `CLANG` environment variables before building!
 
