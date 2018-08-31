@@ -62,16 +62,7 @@ all: setup compiler runtime jdk
 
 setup:
 	@echo "--- Checking setup ---"
-	test -r $(JDK7)/bin/javac \
-            # test if JDK7 setting is correct
-	git lfs 2>&1 >/dev/null \
-            # test if git lfs is installed
-	test `llc -version | egrep LLVM.version \
-            | awk '{print $$3}' | awk -F. '{print $$1}'` -ge 5 \
-            # got LLVM 5.0 or later?
-	test  "`llc -version | egrep LLVM.version | awk '{print $$3}'`" = \
-              "`clang --version | egrep clang.version | awk '{print $$3}'`" \
-            # clang and llc agree on version?
+	sh check-setup.sh
 
 # Compiler.
 compiler: polyglot
