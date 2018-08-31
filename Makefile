@@ -58,7 +58,20 @@ export TESTDIR := $(realpath tests/isolated)
 # Platform-specific overrides.
 sinclude defs.$(shell uname)
 
-all: compiler runtime jdk
+all: setup compiler runtime jdk
+
+setup:
+	@echo "--- Checking setup ---"
+	test -r $(JDK7)/bin/javac \
+            # test if JDK7 setting is correct
+	git lfs 2>&1 >/dev/null \
+            # test if git lfs is installed
+	test `llc -version | egrep LLVM.version \
+            | awk '{print $$3}' | awk -F. '{print $$1}'` -ge 5 \
+            # got LLVM 5.0 or later?
+	test  "`llc -version | egrep LLVM.version | awk '{print $$3}'`" = \
+              "`clang --version | egrep clang.version | awk '{print $$3}'`" \
+            # clang and llc agree on version?
 
 # Compiler.
 compiler: polyglot
@@ -89,7 +102,7 @@ polyglot: | $(SUBMODULES)
 $(SUBMODULES):
 	git submodule update --init
 
-tests: compiler runtime jdk
+tests: setup compiler runtime jdk
 	@echo "--- Running Test Suite ---"
 	@$(MAKE) -s -C $(TESTDIR)
 	@echo
