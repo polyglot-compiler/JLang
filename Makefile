@@ -62,7 +62,7 @@ all: setup compiler runtime jdk
 
 setup:
 	@echo "--- Checking setup ---"
-	sh check-setup.sh
+	@sh check-setup.sh
 
 # Compiler.
 compiler: polyglot

@@ -14,7 +14,7 @@ else
   exit 1
 fi
 
-if git lfs 2>&1 >/dev/null
+if git lfs install 2>&1 >/dev/null
 then
   echo "+ git lfs installed"
 else
