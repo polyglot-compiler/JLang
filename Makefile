@@ -58,7 +58,11 @@ export TESTDIR := $(realpath tests/isolated)
 # Platform-specific overrides.
 sinclude defs.$(shell uname)
 
-all: compiler runtime jdk
+all: setup compiler runtime jdk
+
+setup:
+	@echo "--- Checking setup ---"
+	@sh check-setup.sh
 
 # Compiler.
 compiler: polyglot
@@ -89,7 +93,7 @@ polyglot: | $(SUBMODULES)
 $(SUBMODULES):
 	git submodule update --init
 
-tests: compiler runtime jdk
+tests: setup compiler runtime jdk
 	@echo "--- Running Test Suite ---"
 	@$(MAKE) -s -C $(TESTDIR)
 	@echo
