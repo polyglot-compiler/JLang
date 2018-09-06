@@ -1,3 +1,5 @@
+//Copyright (C) 2017 Cornell University
+
 package jlang.structures;
 
 import org.bytedeco.javacpp.LLVM.LLVMTypeRef;

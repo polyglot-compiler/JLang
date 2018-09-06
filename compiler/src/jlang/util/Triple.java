@@ -1,3 +1,5 @@
+//Copyright (C) 2017 Cornell University
+
 /*******************************************************************************
  * This file is part of the Polyglot extensible compiler framework.
  *

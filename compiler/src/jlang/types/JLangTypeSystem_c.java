@@ -1,3 +1,5 @@
+//Copyright (C) 2017 Cornell University
+
 package jlang.types;
 
 import static jlang.util.Constants.RUNTIME_ARRAY;

@@ -38,10 +38,14 @@ export RUNTIME := $(realpath runtime)
 export RUNTIME_CLASSES := $(RUNTIME)/out/classes
 
 # Clang.
-ifndef CLANG
-export CLANG := clang++
+ifndef CLANG_VERSION
+export CLANG_VERSION := 
+else
+export CLANG_VERSION := -$(CLANG_VERSION)
 endif
 
+export CLANG := clang++$(CLANG_VERSION)
+export LLC := llc$(CLANG_VERSION)
 export SHARED_LIB_FLAGS := -g -lgc -shared -rdynamic
 
 # JDK lib.
@@ -62,7 +66,7 @@ all: setup compiler runtime jdk
 
 setup:
 	@echo "--- Checking setup ---"
-	@sh check-setup.sh
+	@./check-setup.sh
 
 # Compiler.
 compiler: polyglot

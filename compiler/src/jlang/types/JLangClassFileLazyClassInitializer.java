@@ -1,3 +1,5 @@
+//Copyright (C) 2017 Cornell University
+
 package jlang.types;
 
 import polyglot.ext.jl5.types.reflect.JL5ClassFileLazyClassInitializer;

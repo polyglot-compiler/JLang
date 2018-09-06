@@ -1,3 +1,5 @@
+//Copyright (C) 2017 Cornell University
+
 package jlang.visit;
 
 import polyglot.ast.ClassBody;
