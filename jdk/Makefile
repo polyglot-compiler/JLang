@@ -30,7 +30,15 @@ $(SRC): | $(SRC).zip
 # Path JDK sources to work around JLang unimplemented features.
 $(SRC)/patchstamp: | $(SRC)
 	@echo "Patching JDK source files"
-	@for f in `find $(PATCHES) -name "*.patch"`; do patch -p0 < "$$f"; done
+	@for f in `find $(PATCHES) -name "*.patch"`; do \
+			patch -p0 < "$$f"; \
+			NEW_FILE=$(SRC)$$(echo "$${f#patches}" | sed "s/patch/java/g"); \
+			echo "$$NEW_FILE"; \
+			sed "s/XXDATEXX/$$(date +%Y-%m-%d)/g" modification_notice.txt > tmp.txt; \
+			cat "$$NEW_FILE" >> tmp.txt; \
+			cat tmp.txt > "$$NEW_FILE"; \
+		done
+	@rm -f tmp.txt;
 	@date > $@
 
 $(CLASSES)/cstamp: | $(SRC)
