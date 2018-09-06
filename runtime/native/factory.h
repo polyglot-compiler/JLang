@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 // Provides methods to construct common Java objects
 // needed by native code. These factory methods directly
 // dispatch to symbols compiled from Java code in

@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 #include "jni_help.h"
 
 // Begin official API.

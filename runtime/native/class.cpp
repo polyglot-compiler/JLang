@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 // This file defines important data structures associated with
 // Java class objects. These data structures are used to support
 // JVM/JNI functionality, such as reflection.

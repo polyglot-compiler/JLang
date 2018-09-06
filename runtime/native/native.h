@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 // This file supports dynamically looking up Java native method pointers.
 // We cannot link to native methods ahead-of-time, because native methods
 // are often registered with the VM dynamically at runtime.

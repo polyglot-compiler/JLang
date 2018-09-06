@@ -1,4 +1,4 @@
-//Copyright (C) 2017 Cornell University
+//Copyright (C) 2018 Cornell University
 
 package jlang.structures;
 

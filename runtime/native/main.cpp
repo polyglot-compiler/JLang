@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>

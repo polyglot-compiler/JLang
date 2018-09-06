@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 #ifndef __JNI_H__
 #define __JNI_H__
 

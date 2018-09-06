@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 package java.util;
 
 public interface Collection<E> extends Iterable<E> {

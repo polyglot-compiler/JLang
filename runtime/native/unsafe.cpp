@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 // This file implements the native methods in sun.misc.Unsafe.
 //
 // Normally we are able to reuse Java native method implementations from the
