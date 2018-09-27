@@ -25,6 +25,9 @@ extern "C" {
 struct JavaFieldInfo {
     char* name;
     int32_t offset;
+    int32_t modifiers;
+    jclass* type_ptr;
+    char* sig;
 };
 //This is also a representation for the jfieldID type, but
 //represented differently since static fields are implemented as global pointers.
@@ -32,6 +35,8 @@ struct JavaStaticFieldInfo {
     char* name;
     char* sig;
     void* ptr;
+    int32_t modifiers;
+    jclass* type_ptr;
 };
 
 // Concrete representation for the opaque type jmethodID.
