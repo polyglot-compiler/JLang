@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 // Provides reflection-like support, especially for use by JNI.
 // JLang emits static information for each class, and registers
 // that information by calling RegisterJavaClass upon loading a class.

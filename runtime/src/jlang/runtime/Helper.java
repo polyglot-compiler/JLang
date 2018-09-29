@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 package jlang.runtime;
 
 // Helper functions that implement Java semantics so that the compiler

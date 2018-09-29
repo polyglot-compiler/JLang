@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 //
 // This file includes class declarations that represent the layout of
 // Java objects, dispatch vectors, arrays, and more.

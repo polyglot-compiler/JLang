@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 package jlang.util;
 
 import org.bytedeco.javacpp.BytePointer;

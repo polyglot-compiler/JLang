@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 #include "jni_help.h"
 
 // Begin official API.
@@ -519,11 +521,8 @@ jint jni_MonitorExit(JNIEnv *env, jobject obj) {
     JniUnimplemented("MonitorExit");
 }
 
-jint jni_GetJavaVM(JNIEnv *env, JavaVM **vm) {
-  *vm = NULL;
-  return 0; //TODO hopefully no NPEs :)
-}
-
+jint jni_GetJavaVM(JNIEnv *env, JavaVM **vm);
+  
 void jni_GetStringRegion(JNIEnv *env, jstring str, jsize start, jsize len, jchar *buf) {
   //TODO error handling on case: if (start < 0 || len <0 || start + len > s_len) {
   //and throw StringIndexOutOfBoundsException
@@ -892,7 +891,8 @@ jint jni_DetachCurrentThread(JavaVM *vm) {
 }
 
 jint jni_GetEnv(JavaVM *vm, void **penv, jint version) {
-    JniUnimplemented("GetEnv");
+  *penv = (void*) &jni_JNIEnv;
+  return 0; //TODO handle errors / version checking
 }
 
 jint jni_AttachCurrentThreadAsDaemon(JavaVM *vm, void **penv, void *args) {
@@ -912,5 +912,11 @@ const struct JNIInvokeInterface_ jni_InvokeInterface = {
 };
 
 extern const JavaVM jni_MainJavaVM = {&jni_InvokeInterface};
+
+jint jni_GetJavaVM(JNIEnv *env, JavaVM **vm) {
+  *vm = const_cast<JavaVM*>(&jni_MainJavaVM);
+  return 0; //TODO handle errors and multi threading
+}
+
 
 } // extern "C"

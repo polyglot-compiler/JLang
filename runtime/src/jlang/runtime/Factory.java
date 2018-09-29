@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 package jlang.runtime;
 
 // Helps native code construct common Java objects.

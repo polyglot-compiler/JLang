@@ -9,15 +9,15 @@
 
 # Uses absolute paths to llvm commands, because Java's ProcessBuilder will
 # otherwise not be able to find them.
+BASE_DIR := ../..
+RUNTIME := $(BASE_DIR)/runtime
+
 ifndef TOP_LEVEL_MAKEFILE_INVOKED
 JDK ?= jdk-lite
 JDK := $(BASE_DIR)/$(JDK)
 JDK_CLASSES := $(JDK)/out/classes
-JDK7 := /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home/
+JDK7 ?= /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home/
 endif
-
-BASE_DIR := ../..
-RUNTIME := $(BASE_DIR)/runtime
 
 
 SRC := $(shell find * -name "*.java")
@@ -84,6 +84,9 @@ $(LL): $(SRC)
 %.output: %.binary phony
 	@echo "Generating output for $*"
 	@JAVA_HOME=$(JDK7) bash -c './$<' | tee $@
+
+%.debug: %.binary phony
+	@JAVA_HOME=$(JDK7) bash -c 'gdb $<'
 
 clean: phony
 	@echo "Removing generated files"

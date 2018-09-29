@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 package jlang.types;
 
 import polyglot.ext.jl5.types.JL5LocalInstance;

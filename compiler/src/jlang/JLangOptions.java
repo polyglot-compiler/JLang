@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 package jlang;
 
 import polyglot.ext.jl5.JL5Options;

@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 #ifndef __JVM_SIGNAL_DEF__
 #define __JVM_SIGNAL_DEF__
 

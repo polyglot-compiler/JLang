@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 #include <inttypes.h>
 #include <string.h>
 #include <cstdlib>
