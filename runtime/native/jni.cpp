@@ -44,7 +44,9 @@ jclass jni_GetSuperclass(JNIEnv *env, jclass sub) {
 }
 
 jboolean jni_IsAssignableFrom(JNIEnv *env, jclass sub, jclass sup) {
-    JniUnimplemented("IsAssignableFrom");
+    // TODO return sub <? sup
+    return JNI_TRUE;
+    // JniUnimplemented("IsAssignableFrom");
 }
 
 jobject jni_ToReflectedField(JNIEnv *env, jclass cls, jfieldID id, jboolean isStatic) {

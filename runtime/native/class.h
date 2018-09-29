@@ -114,3 +114,5 @@ bool isArrayClass(jclass cls);
 bool isPrimitiveClass(jclass cls);
 
 jclass GetComponentClass(jclass cls);
+
+extern jclass Polyglot_native_int;

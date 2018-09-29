@@ -61,8 +61,14 @@ Java_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI(JNIEnv *env, jobject, jobject
     UnsafeUnimplemented("Java_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI");
 }
 
+extern "C" {
+    jobject Polyglot_jlang_runtime_Factory_autoBoxInt__I (jint);
+}
+
 jobject
-Java_sun_misc_Unsafe_getObject(JNIEnv *env, jobject, jobject, jlong) {
+Java_sun_misc_Unsafe_getObject(JNIEnv *env, jobject unsafeObj, jobject o, jlong offset) {
+    // TODO autobox primative types (need to inspect object field)
+    // return Polyglot_jlang_runtime_Factory_autoBoxInt__I((intptr_t) (((void**) o)[offset+2]));
     UnsafeUnimplemented("Java_sun_misc_Unsafe_getObject");
 }
 
@@ -278,8 +284,18 @@ Java_sun_misc_Unsafe_staticFieldOffset(JNIEnv *env, jobject, jobject) {
 }
 
 jlong
-Java_sun_misc_Unsafe_objectFieldOffset(JNIEnv *env, jobject, jobject) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_objectFieldOffset");
+Java_sun_misc_Unsafe_objectFieldOffset(JNIEnv *env, jobject unsafeObj, jobject fieldObj) {
+    // dw475 TODO check back
+    // const JavaClassInfo* info = GetJavaClassInfo(Unwrap(fieldObj)->Cdv()->Class());
+    // long offset = 0;
+    // for (int i = 0; i < info->num_fields; i++) {
+    //     if (strcmp(info->fields[i].name, "slot") == 0) {
+    //         offset = *((jint *)(((char *) fieldObj)+info->fields[i].offset));
+    //         break;
+    //     }
+    // }
+    // return offset;
+    return *((jlong*)(((char*) fieldObj)+48));
 }
 
 jobject

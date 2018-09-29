@@ -447,7 +447,7 @@ JVM_LoadClass0(JNIEnv *env, jobject obj, jclass currClass, jstring currClassName
 
 jint
 JVM_GetArrayLength(JNIEnv *env, jobject arr) {
-    JvmUnimplemented("JVM_GetArrayLength");
+    return reinterpret_cast<JArrayRep*>(arr)->Length();
 }
 
 jobject
@@ -462,7 +462,9 @@ JVM_GetPrimitiveArrayElement(JNIEnv *env, jobject arr, jint index, jint wCode) {
 
 void
 JVM_SetArrayElement(JNIEnv *env, jobject arr, jint index, jobject val) {
-    JvmUnimplemented("JVM_SetArrayElement");
+    // only non-primative objects
+    assert(reinterpret_cast<JArrayRep*>(arr)->ElemSize() == sizeof(void*));
+    ((void**) reinterpret_cast<JArrayRep*>(arr)->Data())[index] = val;
 }
 
 void
@@ -625,14 +627,143 @@ JVM_GetClassAnnotations(JNIEnv *env, jclass cls) {
     JvmUnimplemented("JVM_GetClassAnnotations");
 }
 
+extern "C" {
+    void Polyglot_java_lang_reflect_Field_Field__Ljava_lang_Class_2Ljava_lang_String_2Ljava_lang_Class_2IILjava_lang_String_2_3B (jobject, jclass, jstring, jclass, jint, jint, jstring, jbyteArray);
+    void Polyglot_java_lang_reflect_Method_Method__Ljava_lang_Class_2Ljava_lang_String_2_3Ljava_lang_Class_2Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B_3B (jobject, jclass, jstring, jobjectArray, jclass, jobjectArray, jint, jint, jstring, jbyteArray, jbyteArray, jbyteArray);
+}
+
 jobjectArray
 JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
-    JvmUnimplemented("JVM_GetClassDeclaredMethods");
+    const JavaClassInfo* info = GetJavaClassInfo(ofClass);
+    if (info) {
+        // if primative class (int, boolean), return empty array
+        if (JVM_IsPrimitiveClass(env, ofClass)) {
+            return CreateJavaObjectArray(0);
+        }
+
+        jclass MethodClass = env->FindClass("java.lang.reflect.Method");
+
+        // TODO take into account publiconly argument
+
+        jobjectArray ret = CreateJavaObjectArray(info->num_methods);
+
+        JavaMethodInfo* methods = info->methods;
+
+        for (int i = 0; i < info->num_methods; i++) {
+            // create new field object
+            jobject newMethod = CreateJavaObject(MethodClass);
+            jstring nameString = env->NewStringUTF(methods[i].name);
+            // TODO need to get the proper values
+            // call the method constructor
+            Polyglot_java_lang_reflect_Method_Method__Ljava_lang_Class_2Ljava_lang_String_2_3Ljava_lang_Class_2Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B_3B(newMethod, NULL, nameString, NULL, NULL, NULL, 0, 0, NULL, NULL, NULL, NULL);
+            // add it to the array
+            JVM_SetArrayElement(env, ret, i, newMethod);
+        }
+
+        return ret;
+    }
+    return NULL;
 }
 
 jobjectArray
 JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
-    JvmUnimplemented("JVM_GetClassDeclaredFields");
+    const JavaClassInfo* info = GetJavaClassInfo(ofClass);
+    if (info) {
+        // if primative class (int, boolean), return empty array
+        if (JVM_IsPrimitiveClass(env, ofClass)) {
+            return CreateJavaObjectArray(0);
+        }
+
+        jclass FieldsClass = env->FindClass("java.lang.reflect.Field");
+        // jclass ClassClass = env->FindClass("java.lang.Class");
+        // const JavaClassInfo* classInfo = GetJavaClassInfo(ClassClass);
+        // printf("class size: %d\n", classInfo->obj_size);
+
+        // dw475 TODO take into account publiconly argument
+        // dw475 TODO take super fields into account
+
+        // non-static and static fields
+        jobjectArray ret = CreateJavaObjectArray(info->num_fields + info->num_static_fields);
+
+        JavaFieldInfo* fields = info->fields;
+        JavaStaticFieldInfo* staticFields = info->static_fields;
+
+        for (int i = 0; i < info->num_fields+info->num_static_fields; i++) {
+            // create new field object
+            jobject newField = CreateJavaObject(FieldsClass);
+
+            // // using a Field Struct
+            // Object Layout:
+            // dv
+            // sync vars
+            // Super fields
+            // declared fields
+            // struct FieldStruct {
+            //     void* _dv;
+            //     void* _synch_vars;
+            //     void* UNK1;
+            //     void* UNK2;
+            //     jclass clazz;
+            //     jint slot;
+            //     jstring name;
+            //     jclass type;
+            //     jint modifiers;
+            //     jstring signature;
+            //     jbyteArray annotations;
+            //     void* fieldAccessor;
+            //     void* overrideFieldAccessor;
+            //     void* root;
+            // };
+            // struct FieldStruct* newFieldStruct = reinterpret_cast<struct FieldStruct*>(newField);
+            // jclass* typeClass = NULL;
+            // if (i < info->num_fields) {
+            //     newFieldStruct->name = env->NewStringUTF(fields[i].name);
+            //     newFieldStruct->modifiers = fields[i].modifiers;
+            //     typeClass = fields[i].type_ptr;
+            //     newFieldStruct->signature = env->NewStringUTF(fields[i].sig);
+            //     newFieldStruct->slot = fields[i].offset;
+            // } else {
+            //     int sidx = i-info->num_fields;
+            //     newFieldStruct->name = env->NewStringUTF(staticFields[sidx].name);
+            //     newFieldStruct->modifiers = staticFields[sidx].modifiers;
+            //     typeClass = staticFields[sidx].type_ptr;
+            //     newFieldStruct->signature = env->NewStringUTF(staticFields[sidx].sig);
+            //     newFieldStruct->slot = staticFields[sidx].offset;
+            // }
+            // // newFieldStruct->type = typeClass == NULL ? NULL : *typeClass;
+            // newFieldStruct->type = FakeIntClass;
+
+            // calling java func
+            char* name = NULL;
+            int modifiers = 0;
+            jclass* typeClass = NULL;
+            char* signature = NULL;
+            int slot = 0;
+            if (i < info->num_fields) {
+                name = fields[i].name;
+                modifiers = fields[i].modifiers;
+                typeClass = fields[i].type_ptr;
+                signature = fields[i].sig;
+                slot = fields[i].offset;
+            } else {
+                int sidx = i-info->num_fields;
+                name = staticFields[sidx].name;
+                modifiers = staticFields[sidx].modifiers;
+                typeClass = staticFields[sidx].type_ptr;
+                signature = staticFields[sidx].sig;
+                slot = i;
+            }
+            jstring nameString = env->NewStringUTF(name);
+            jstring sigString = env->NewStringUTF(signature);
+            // call the fields constructor
+            Polyglot_java_lang_reflect_Field_Field__Ljava_lang_Class_2Ljava_lang_String_2Ljava_lang_Class_2IILjava_lang_String_2_3B(newField, ofClass, nameString, typeClass == NULL ? NULL : *typeClass, modifiers, slot, sigString, NULL);
+            // add it to the array
+            JVM_SetArrayElement(env, ret, i, newField);
+        }
+
+        return ret;
+    }
+    return NULL;
 }
 
 jobjectArray
@@ -648,7 +779,10 @@ JVM_GetClassDeclaredConstructors(JNIEnv *env, jclass ofClass, jboolean publicOnl
 
 jint
 JVM_GetClassAccessFlags(JNIEnv *env, jclass cls) {
-    JvmUnimplemented("JVM_GetClassAccessFlags");
+    // TODO actually implement
+    // public
+    return 0x1;
+    // JvmUnimplemented("JVM_GetClassAccessFlags");
 }
 
 jobject

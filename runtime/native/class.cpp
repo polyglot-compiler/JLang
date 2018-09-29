@@ -21,7 +21,7 @@ static constexpr bool kDebug = false;
 
 #define PRIM_CLASS(prim, klass) prim##klass
 #define PRIM_CLASS_DEF(prim) static JClassRep* PRIM_CLASS(prim, Klass) \
-  = (JClassRep*)malloc(sizeof(JClassRep));
+ = (JClassRep*)malloc(sizeof(JClassRep)*2);
 
 PRIM_CLASS_DEF(int)
 PRIM_CLASS_DEF(short)
@@ -50,6 +50,11 @@ PRIM_CLASS_DEF(boolean)
     char* newName = (char*) malloc(nameLen);				\
     memcpy(newName, #prim, nameLen);					\
     newInfo->name = newName;						\
+    newInfo->isIntf = 0;              \
+    newInfo->num_intfs = 0;              \
+    newInfo->num_fields = 0;              \
+    newInfo->num_static_fields = 0;              \
+    newInfo->num_methods = 0;              \
     RegisterJavaClass(PRIM_CLASS(prim, Klass)->Wrap(), newInfo);	\
   } else ((void) 0)
 
@@ -57,6 +62,8 @@ PRIM_CLASS_DEF(boolean)
 static bool primKlassInit = false;
 jclass initArrayKlass();
 jclass globalArrayKlass = NULL;
+
+jclass Polyglot_native_int = reinterpret_cast<jclass>((JClassRep*)malloc(sizeof(JClassRep)*2));
 
 // For simplicity we store class information in a map.
 // If we find this to be too slow, we could allocate extra memory for
@@ -160,13 +167,34 @@ const jclass initArrayClass(const char* name) {
 
 const void
 RegisterPrimitiveClasses() {
+  if (globalArrayKlass == NULL) {
+    globalArrayKlass = initArrayKlass();
+  }
+
+  memcpy(PRIM_CLASS(int, Klass), globalArrayKlass, sizeof(JClassRep));
+  Polyglot_native_int = reinterpret_cast<jclass>(PRIM_CLASS(int, Klass));
   PRIM_REGISTER(int);
+
+  memcpy(PRIM_CLASS(byte, Klass), globalArrayKlass, sizeof(JClassRep));
   PRIM_REGISTER(byte);
+
+  // dw475 TODO why does this cause int.class to be empty
+  memcpy(PRIM_CLASS(short, Klass), globalArrayKlass, sizeof(JClassRep));
   PRIM_REGISTER(short);
+  
+  memcpy(PRIM_CLASS(long, Klass), globalArrayKlass, sizeof(JClassRep));
   PRIM_REGISTER(long);
+
+  memcpy(PRIM_CLASS(float, Klass), globalArrayKlass, sizeof(JClassRep));
   PRIM_REGISTER(float);
+
+  memcpy(PRIM_CLASS(double, Klass), globalArrayKlass, sizeof(JClassRep));
   PRIM_REGISTER(double);
+
+  memcpy(PRIM_CLASS(char, Klass), globalArrayKlass, sizeof(JClassRep));
   PRIM_REGISTER(char);
+
+  memcpy(PRIM_CLASS(boolean, Klass), globalArrayKlass, sizeof(JClassRep));
   PRIM_REGISTER(boolean);
 }
 
