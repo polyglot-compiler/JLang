@@ -779,7 +779,7 @@ JVM_GetClassDeclaredConstructors(JNIEnv *env, jclass ofClass, jboolean publicOnl
 
 jint
 JVM_GetClassAccessFlags(JNIEnv *env, jclass cls) {
-    // TODO actually implement
+    // dw475 TODO actually implement
     // public
     return 0x1;
     // JvmUnimplemented("JVM_GetClassAccessFlags");

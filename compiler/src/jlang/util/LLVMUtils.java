@@ -395,7 +395,6 @@ public class LLVMUtils {
 
     public LLVMValueRef getClassObjectGlobal(ClassType ct) {
         String mangled = v.mangler.classObj(ct);
-        System.out.println(mangled);
         LLVMTypeRef elemType = v.utils.toLL(v.ts.Class());
         return v.utils.getGlobal(mangled, elemType);
     }
