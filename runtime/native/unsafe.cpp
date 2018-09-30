@@ -12,6 +12,8 @@
 #include "rep.h"
 #include "stack_trace.h"
 #include "unsafe.h"
+#include "class.h"
+#include <string.h>
 
 // GCC built-in compare-and-swap.
 #define CAS(ptr, e, x) __sync_val_compare_and_swap(ptr, e, x)
@@ -52,8 +54,9 @@ Java_sun_misc_Unsafe_registerNatives(JNIEnv *env, jclass obj) {
 }
 
 jint
-Java_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J(JNIEnv *env, jobject, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J");
+Java_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeObj, jobject o, jlong offset) {
+    return *((jint*)(((char*) o) + offset));
+    // UnsafeUnimplemented("Java_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J");
 }
 
 void
@@ -69,7 +72,8 @@ jobject
 Java_sun_misc_Unsafe_getObject(JNIEnv *env, jobject unsafeObj, jobject o, jlong offset) {
     // TODO autobox primative types (need to inspect object field)
     // return Polyglot_jlang_runtime_Factory_autoBoxInt__I((intptr_t) (((void**) o)[offset+2]));
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getObject");
+    return *((jobject*)(((char*) o) + offset));
+    // UnsafeUnimplemented("Java_sun_misc_Unsafe_getObject");
 }
 
 void
@@ -283,19 +287,25 @@ Java_sun_misc_Unsafe_staticFieldOffset(JNIEnv *env, jobject, jobject) {
     UnsafeUnimplemented("Java_sun_misc_Unsafe_staticFieldOffset");
 }
 
+unsigned int fieldSlotOffset = -1;
 jlong
 Java_sun_misc_Unsafe_objectFieldOffset(JNIEnv *env, jobject unsafeObj, jobject fieldObj) {
     // dw475 TODO check back
-    // const JavaClassInfo* info = GetJavaClassInfo(Unwrap(fieldObj)->Cdv()->Class());
-    // long offset = 0;
-    // for (int i = 0; i < info->num_fields; i++) {
-    //     if (strcmp(info->fields[i].name, "slot") == 0) {
-    //         offset = *((jint *)(((char *) fieldObj)+info->fields[i].offset));
-    //         break;
-    //     }
-    // }
-    // return offset;
-    return *((jlong*)(((char*) fieldObj)+48));
+    long offset = 0;
+    if (fieldSlotOffset == -1) {
+        const JavaClassInfo* info = GetJavaClassInfo(Unwrap(fieldObj)->Cdv()->Class()->Wrap());
+        for (int i = 0; i < info->num_fields; i++) {
+            if (strcmp(info->fields[i].name, "slot") == 0) {
+                offset = *((jint *)(((char *) fieldObj)+info->fields[i].offset));
+                break;
+            }
+        }
+    } else {
+        offset = *((jint *)(((char *) fieldObj)+fieldSlotOffset));
+    }
+    return offset;
+
+    // return *((jlong*)(((char*) fieldObj)+48));
 }
 
 jobject

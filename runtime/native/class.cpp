@@ -19,9 +19,10 @@
 #define MEMCPY(a,b,c) memcpy((void *) a, (void *) b, c)
 static constexpr bool kDebug = false;
 
+#define CLASS_SIZE 168
 #define PRIM_CLASS(prim, klass) prim##klass
 #define PRIM_CLASS_DEF(prim) static JClassRep* PRIM_CLASS(prim, Klass) \
- = (JClassRep*)malloc(sizeof(JClassRep)*2);
+ = (JClassRep*)malloc(CLASS_SIZE);
 
 PRIM_CLASS_DEF(int)
 PRIM_CLASS_DEF(short)
@@ -55,6 +56,9 @@ PRIM_CLASS_DEF(boolean)
     newInfo->num_fields = 0;              \
     newInfo->num_static_fields = 0;              \
     newInfo->num_methods = 0;              \
+    newInfo->obj_size = CLASS_SIZE;       \
+    newInfo->super_ptr = NULL;            \
+    newInfo->cdv = NULL;                  \
     RegisterJavaClass(PRIM_CLASS(prim, Klass)->Wrap(), newInfo);	\
   } else ((void) 0)
 
@@ -63,7 +67,7 @@ static bool primKlassInit = false;
 jclass initArrayKlass();
 jclass globalArrayKlass = NULL;
 
-jclass Polyglot_native_int = reinterpret_cast<jclass>((JClassRep*)malloc(sizeof(JClassRep)*2));
+jclass Polyglot_native_int = reinterpret_cast<jclass>((JClassRep*)malloc(CLASS_SIZE));
 
 // For simplicity we store class information in a map.
 // If we find this to be too slow, we could allocate extra memory for

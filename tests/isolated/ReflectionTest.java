@@ -2,9 +2,17 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Field; 
 
 public class ReflectionTest {
-    private int a;
-    private String c;
+    public String c;
+    public int a;
     // static int b;
+
+    static class ReflectionTestE extends ReflectionTest {
+        public int gg;
+
+        public ReflectionTestE() {
+            super(641,42);
+        }
+    }
 
     public static void main(String[] args) throws Exception {
         f(1);
@@ -12,6 +20,7 @@ public class ReflectionTest {
 
     ReflectionTest(int i, int j) {
         a = i;
+        c = "A string";
     }
 
     public int ll() {
@@ -35,11 +44,17 @@ public class ReflectionTest {
             System.out.println(fld.getName());
             System.out.println(fld.getModifiers());
             System.out.println(fld.getType());
-            // System.out.println(fld.get(aaa));
-            // System.out.println(fld.getGenericType());
+            System.out.println(fld.get(aaa));
+            System.out.println(fld.getGenericType());
         }
 
-        Method[] m = cls.getDeclaredMethods();
+        ReflectionTestE re = new ReflectionTestE();
+        Class clse = re.getClass();
+        Field[] fe = clse.getDeclaredFields();
+        System.out.println(fe.length);
+        System.out.println(clse.getSuperclass());
+
+        // Method[] m = cls.getDeclaredMethods();
         // System.out.println(m.length);
         // for (Method mtd : m) {
         //     System.out.println(mtd.getName());

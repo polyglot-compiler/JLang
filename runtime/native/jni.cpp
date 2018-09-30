@@ -40,7 +40,8 @@ jobject jni_ToReflectedMethod(JNIEnv *env, jclass cls, jmethodID id, jboolean is
 }
 
 jclass jni_GetSuperclass(JNIEnv *env, jclass sub) {
-    JniUnimplemented("GetSuperclass");
+    return reinterpret_cast<jclass>(Unwrap(sub)->Super());
+    // JniUnimplemented("GetSuperclass");
 }
 
 jboolean jni_IsAssignableFrom(JNIEnv *env, jclass sub, jclass sup) {
