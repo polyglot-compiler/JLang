@@ -50,6 +50,7 @@ struct JavaMethodInfo {
     void* trampoline; // Trampoline for casting the fnPtr to the correct type.
     void* intf_id;    // For interface methods, the interface id.
     int32_t intf_id_hash; // A precomputed hash of the intf_id.
+    int32_t modifiers;
 };
 
 struct JavaClassInfo {
@@ -116,3 +117,10 @@ bool isPrimitiveClass(jclass cls);
 jclass GetComponentClass(jclass cls);
 
 extern jclass Polyglot_native_int;
+extern jclass Polyglot_native_byte;
+extern jclass Polyglot_native_short;
+extern jclass Polyglot_native_long;
+extern jclass Polyglot_native_float;
+extern jclass Polyglot_native_double;
+extern jclass Polyglot_native_char;
+extern jclass Polyglot_native_boolean;

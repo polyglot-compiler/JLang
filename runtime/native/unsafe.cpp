@@ -55,7 +55,13 @@ Java_sun_misc_Unsafe_registerNatives(JNIEnv *env, jclass obj) {
 
 jint
 Java_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeObj, jobject o, jlong offset) {
-    return *((jint*)(((char*) o) + offset));
+    const JavaClassInfo* info = GetJavaClassInfo(Unwrap(o)->Cdv()->Class()->Wrap());
+    if (offset >= 0) {
+        return *((jint*)(((char*) o) + info->fields[offset].offset));
+    } else {
+        return *((jint*)(info->static_fields[-offset-1].ptr));
+    }
+    // return *((jint*)(((char*) o) + offset));
     // UnsafeUnimplemented("Java_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J");
 }
 
@@ -70,9 +76,16 @@ extern "C" {
 
 jobject
 Java_sun_misc_Unsafe_getObject(JNIEnv *env, jobject unsafeObj, jobject o, jlong offset) {
+    // printf("obj: %p\n", o);
     // TODO autobox primative types (need to inspect object field)
     // return Polyglot_jlang_runtime_Factory_autoBoxInt__I((intptr_t) (((void**) o)[offset+2]));
-    return *((jobject*)(((char*) o) + offset));
+    const JavaClassInfo* info = GetJavaClassInfo(Unwrap(o)->Cdv()->Class()->Wrap());
+    if (offset >= 0) {
+        return *((jobject*)(((char*) o) + info->fields[offset].offset));
+    } else {
+        return *((jobject*)(info->static_fields[-offset-1].ptr));
+    }
+    // return *((jobject*)(((char*) o) + offset));
     // UnsafeUnimplemented("Java_sun_misc_Unsafe_getObject");
 }
 
@@ -296,13 +309,14 @@ Java_sun_misc_Unsafe_objectFieldOffset(JNIEnv *env, jobject unsafeObj, jobject f
         const JavaClassInfo* info = GetJavaClassInfo(Unwrap(fieldObj)->Cdv()->Class()->Wrap());
         for (int i = 0; i < info->num_fields; i++) {
             if (strcmp(info->fields[i].name, "slot") == 0) {
-                offset = *((jint *)(((char *) fieldObj)+info->fields[i].offset));
+                fieldSlotOffset = info->fields[i].offset;
+                // offset = *((jint *)(((char *) fieldObj)+info->fields[i].offset));
                 break;
             }
         }
-    } else {
-        offset = *((jint *)(((char *) fieldObj)+fieldSlotOffset));
     }
+    offset = *((jlong *)(((char *) fieldObj)+fieldSlotOffset));
+    // printf("offset: %ld\n", offset);
     return offset;
 
     // return *((jlong*)(((char*) fieldObj)+48));
@@ -319,8 +333,10 @@ Java_sun_misc_Unsafe_shouldBeInitialized(JNIEnv *env, jobject, jclass) {
 }
 
 void
-Java_sun_misc_Unsafe_ensureClassInitialized(JNIEnv *env, jobject, jclass) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_ensureClassInitialized");
+Java_sun_misc_Unsafe_ensureClassInitialized(JNIEnv *env, jobject unsafeObj, jclass cls) {
+    // dw475 TODO make sure this is correct
+    printf("Class at: %p\n", GetJavaClassInfo(cls));
+    // UnsafeUnimplemented("Java_sun_misc_Unsafe_ensureClassInitialized");
 }
 
 jint

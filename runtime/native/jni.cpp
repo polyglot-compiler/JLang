@@ -1,6 +1,7 @@
 //Copyright (C) 2018 Cornell University
 
 #include "jni_help.h"
+#include "class.h"
 
 // Begin official API.
 
@@ -40,7 +41,11 @@ jobject jni_ToReflectedMethod(JNIEnv *env, jclass cls, jmethodID id, jboolean is
 }
 
 jclass jni_GetSuperclass(JNIEnv *env, jclass sub) {
-    return reinterpret_cast<jclass>(Unwrap(sub)->Super());
+    const JavaClassInfo* info = GetJavaClassInfo(sub);
+    if (info->super_ptr == NULL) {
+        return NULL;
+    }
+    return *(info->super_ptr);
     // JniUnimplemented("GetSuperclass");
 }
 

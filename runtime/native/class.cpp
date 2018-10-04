@@ -67,7 +67,14 @@ static bool primKlassInit = false;
 jclass initArrayKlass();
 jclass globalArrayKlass = NULL;
 
-jclass Polyglot_native_int = reinterpret_cast<jclass>((JClassRep*)malloc(CLASS_SIZE));
+jclass Polyglot_native_int;
+jclass Polyglot_native_byte;
+jclass Polyglot_native_short;
+jclass Polyglot_native_long;
+jclass Polyglot_native_float;
+jclass Polyglot_native_double;
+jclass Polyglot_native_char;
+jclass Polyglot_native_boolean;
 
 // For simplicity we store class information in a map.
 // If we find this to be too slow, we could allocate extra memory for
@@ -180,25 +187,31 @@ RegisterPrimitiveClasses() {
   PRIM_REGISTER(int);
 
   memcpy(PRIM_CLASS(byte, Klass), globalArrayKlass, sizeof(JClassRep));
+  Polyglot_native_byte = reinterpret_cast<jclass>(PRIM_CLASS(byte, Klass));
   PRIM_REGISTER(byte);
 
-  // dw475 TODO why does this cause int.class to be empty
   memcpy(PRIM_CLASS(short, Klass), globalArrayKlass, sizeof(JClassRep));
+  Polyglot_native_short = reinterpret_cast<jclass>(PRIM_CLASS(short, Klass));
   PRIM_REGISTER(short);
   
   memcpy(PRIM_CLASS(long, Klass), globalArrayKlass, sizeof(JClassRep));
+  Polyglot_native_long = reinterpret_cast<jclass>(PRIM_CLASS(long, Klass));
   PRIM_REGISTER(long);
 
   memcpy(PRIM_CLASS(float, Klass), globalArrayKlass, sizeof(JClassRep));
+  Polyglot_native_float = reinterpret_cast<jclass>(PRIM_CLASS(float, Klass));
   PRIM_REGISTER(float);
 
   memcpy(PRIM_CLASS(double, Klass), globalArrayKlass, sizeof(JClassRep));
+  Polyglot_native_double = reinterpret_cast<jclass>(PRIM_CLASS(double, Klass));
   PRIM_REGISTER(double);
 
   memcpy(PRIM_CLASS(char, Klass), globalArrayKlass, sizeof(JClassRep));
+  Polyglot_native_char = reinterpret_cast<jclass>(PRIM_CLASS(char, Klass));
   PRIM_REGISTER(char);
 
   memcpy(PRIM_CLASS(boolean, Klass), globalArrayKlass, sizeof(JClassRep));
+  Polyglot_native_boolean = reinterpret_cast<jclass>(PRIM_CLASS(boolean, Klass));
   PRIM_REGISTER(boolean);
 }
 

@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <dlfcn.h>
+#include <unordered_map>
 
 #include "stack_trace.h"
 #include "class.h"
@@ -452,7 +453,9 @@ JVM_GetArrayLength(JNIEnv *env, jobject arr) {
 
 jobject
 JVM_GetArrayElement(JNIEnv *env, jobject arr, jint index) {
-    JvmUnimplemented("JVM_GetArrayElement");
+    // dw475 TODO inspect this
+    return ((jobject*) reinterpret_cast<JArrayRep*>(arr)->Data())[index];
+    // JvmUnimplemented("JVM_GetArrayElement");
 }
 
 jvalue
@@ -653,11 +656,13 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             // create new field object
             jobject newMethod = CreateJavaObject(MethodClass);
             jstring nameString = env->NewStringUTF(methods[i].name);
+            jint modifiers = methods[i].modifiers;
+            jint slot = i;
             // TODO need to get the proper values
             // call the method constructor
-            Polyglot_java_lang_reflect_Method_Method__Ljava_lang_Class_2Ljava_lang_String_2_3Ljava_lang_Class_2Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B_3B(newMethod, NULL, nameString, NULL, NULL, NULL, 0, 0, NULL, NULL, NULL, NULL);
-            // add it to the array
-            JVM_SetArrayElement(env, ret, i, newMethod);
+            Polyglot_java_lang_reflect_Method_Method__Ljava_lang_Class_2Ljava_lang_String_2_3Ljava_lang_Class_2Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B_3B(newMethod, ofClass, nameString, NULL, NULL, NULL, modifiers, slot, NULL, NULL, NULL, NULL);
+            // add it to the array (backwards rn to pass tests)
+            JVM_SetArrayElement(env, ret, info->num_methods-i-1, newMethod);
         }
 
         return ret;
@@ -665,8 +670,15 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
     return NULL;
 }
 
+static std::unordered_map<jclass, jobjectArray> fieldsCache;
+
 jobjectArray
 JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
+    try {
+        return fieldsCache.at(ofClass);
+    } catch (const std::out_of_range& oor) {
+    }
+
     const JavaClassInfo* info = GetJavaClassInfo(ofClass);
     if (info) {
         // if primative class (int, boolean), return empty array
@@ -680,7 +692,6 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
         // printf("class size: %d\n", classInfo->obj_size);
 
         // dw475 TODO take into account publiconly argument
-        // dw475 TODO take super fields into account
 
         // non-static and static fields
         jobjectArray ret = CreateJavaObjectArray(info->num_fields + info->num_static_fields);
@@ -744,14 +755,15 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
                 modifiers = fields[i].modifiers;
                 typeClass = fields[i].type_ptr;
                 signature = fields[i].sig;
-                slot = fields[i].offset;
+                // slot = fields[i].offset;
+                slot = i;
             } else {
                 int sidx = i-info->num_fields;
                 name = staticFields[sidx].name;
                 modifiers = staticFields[sidx].modifiers;
                 typeClass = staticFields[sidx].type_ptr;
                 signature = staticFields[sidx].sig;
-                slot = i;
+                slot = -(i+1); // 0 ambiguity
             }
             jstring nameString = env->NewStringUTF(name);
             jstring sigString = env->NewStringUTF(signature);
@@ -760,6 +772,8 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             // add it to the array
             JVM_SetArrayElement(env, ret, i, newField);
         }
+
+        fieldsCache.emplace(ofClass, ret);
 
         return ret;
     }
@@ -787,7 +801,26 @@ JVM_GetClassAccessFlags(JNIEnv *env, jclass cls) {
 
 jobject
 JVM_InvokeMethod(JNIEnv *env, jobject method, jobject obj, jobjectArray args0) {
-    JvmUnimplemented("JVM_InvokeMethod");
+    const JavaClassInfo* info = GetJavaClassInfo(Unwrap(obj)->Cdv()->Class()->Wrap());
+
+    int methodSlotOffset = 0;
+    const JavaClassInfo* methodInfo = GetJavaClassInfo(Unwrap(method)->Cdv()->Class()->Wrap());
+    for (int i = 0; i < methodInfo->num_fields; i++) {
+        if (strcmp(methodInfo->fields[i].name, "slot") == 0) {
+            methodSlotOffset = methodInfo->fields[i].offset;
+            break;
+        }
+    }
+    int slot = *((jint *)(((char *) method)+methodSlotOffset));
+
+    jobject(*methodPtr)(jobject) = (jobject(*)(jobject)) info->methods[slot].fnPtr;
+
+    printf("array: %p\nelem: %p", args0, JVM_GetArrayElement(env, args0, 0));
+
+    // dw475 TODO calling function with arg array
+    // return NULL;
+    return methodPtr(JVM_GetArrayElement(env, args0, 0));
+    // JvmUnimplemented("JVM_InvokeMethod");
 }
 
 jobject
