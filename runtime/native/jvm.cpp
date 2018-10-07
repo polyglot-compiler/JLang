@@ -37,6 +37,97 @@ static void JvmIgnore(const char* name) {
     fflush(stderr);
 }
 
+struct HashableShortArray {
+    int len;
+    unsigned short* chars;
+
+    bool operator==(const HashableShortArray &other) const {
+        if(len == other.len) {
+            for (int i = 0; i < len; i++) {
+                if (chars[i] != other.chars[i]) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
+  }
+};
+
+namespace std {
+
+  template <>
+  struct hash<HashableShortArray>
+  {
+    std::size_t operator()(const HashableShortArray k) const
+    {
+        std::size_t hash = 7;
+        for (int i = 0; i < k.len; i++) {
+            hash = hash*31 + k.chars[i];
+        }
+        return hash;
+    }
+  };
+
+}
+
+std::unordered_map<HashableShortArray, jstring> InternedStrings;
+
+// struct InternTrie {
+//     std::unordered_map<unsigned short, struct InternTrie*>* nexts;
+//     std::unordered_map<unsigned short, jstring>* leaves;
+// };
+// static struct InternTrie internedStrings = {
+//     new std::unordered_map<unsigned short, struct InternTrie*>(),
+//     new std::unordered_map<unsigned short, jstring>(),
+// };
+
+// jstring internJString(jstring str) {
+//     unsigned short* chars = (unsigned short*) Unwrap(str)->Chars()->Data();
+//     struct InternTrie* trie = &internedStrings;
+//     int i;
+//     int l = Unwrap(str)->Chars()->Length();
+//     for(i = 0; i < l; i++) {
+//         if (i != l-1) {
+//             auto search = trie->nexts->find(*chars);
+//             if (search != trie->nexts->end()) {
+//                 trie = search->second;
+//             } else {
+//                 struct InternTrie* nextTrie = new InternTrie();
+//                 nextTrie->nexts = new std::unordered_map<unsigned short, struct InternTrie*>();
+//                 nextTrie->leaves = new std::unordered_map<unsigned short, jstring>();
+//                 trie->nexts->insert({*chars, nextTrie});
+//                 trie = nextTrie;
+//             }
+//         } else {
+//             auto search = trie->leaves->find(*chars);
+//             if (search != trie->leaves->end()) {
+//                 return search->second;
+//             } else {
+//                 trie->leaves->insert({*chars, str});
+//             }
+//         }
+        
+//         chars++;
+//     }
+//     return str;
+// }
+
+jstring internJString(jstring str) {
+    HashableShortArray* h = (HashableShortArray*)malloc(sizeof(HashableShortArray));
+    h->len = (int) Unwrap(str)->Chars()->Length();
+    h->chars = (unsigned short*) Unwrap(str)->Chars()->Data();
+    auto search = InternedStrings.find(*h);
+    if (search != InternedStrings.end()) {
+        free(h);
+        return search->second;
+    } else {
+        InternedStrings.insert({*h, str});
+        return str;
+    }
+}
+
 extern "C" {
   //we copied this number from open JDK -> not sure the implications
 #define JVM_INTERFACE_VERSION 4
@@ -75,7 +166,9 @@ JVM_Clone(JNIEnv *env, jobject obj) {
 jstring
 JVM_InternString(JNIEnv *env, jstring str) {
   //TODO maybe implement this...maybe
-  return str;
+//   printf("string array elem size: %d\n", Unwrap(str)->Chars()->ElemSize());
+    return internJString(str);
+//   return str;
 }
 
 jlong
@@ -672,6 +765,14 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
 
 static std::unordered_map<jclass, jobjectArray> fieldsCache;
 
+static jobjectArray _EmptyObjectArray = NULL;
+jobjectArray getEmptyObjectArray() {
+    if (_EmptyObjectArray == NULL) {
+        _EmptyObjectArray = CreateJavaObjectArray(0);
+    }
+    return _EmptyObjectArray;
+}
+
 jobjectArray
 JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
     try {
@@ -683,7 +784,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
     if (info) {
         // if primative class (int, boolean), return empty array
         if (JVM_IsPrimitiveClass(env, ofClass)) {
-            return CreateJavaObjectArray(0);
+            return getEmptyObjectArray();
         }
 
         jclass FieldsClass = env->FindClass("java.lang.reflect.Field");
@@ -703,7 +804,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             // create new field object
             jobject newField = CreateJavaObject(FieldsClass);
 
-            // // using a Field Struct
+            // This is what the equivalent code to below looks like using a Field Struct:
             // Object Layout:
             // dv
             // sync vars
@@ -741,8 +842,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             //     newFieldStruct->signature = env->NewStringUTF(staticFields[sidx].sig);
             //     newFieldStruct->slot = staticFields[sidx].offset;
             // }
-            // // newFieldStruct->type = typeClass == NULL ? NULL : *typeClass;
-            // newFieldStruct->type = FakeIntClass;
+            // newFieldStruct->type = typeClass == NULL ? NULL : *typeClass;
 
             // calling java func
             char* name = NULL;
@@ -765,7 +865,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
                 signature = staticFields[sidx].sig;
                 slot = -(i+1); // 0 ambiguity
             }
-            jstring nameString = env->NewStringUTF(name);
+            jstring nameString = internJString(env->NewStringUTF(name));
             jstring sigString = env->NewStringUTF(signature);
             // call the fields constructor
             Polyglot_java_lang_reflect_Field_Field__Ljava_lang_Class_2Ljava_lang_String_2Ljava_lang_Class_2IILjava_lang_String_2_3B(newField, ofClass, nameString, typeClass == NULL ? NULL : *typeClass, modifiers, slot, sigString, NULL);
@@ -813,14 +913,9 @@ JVM_InvokeMethod(JNIEnv *env, jobject method, jobject obj, jobjectArray args0) {
     }
     int slot = *((jint *)(((char *) method)+methodSlotOffset));
 
-    jobject(*methodPtr)(jobject) = (jobject(*)(jobject)) info->methods[slot].fnPtr;
+    jmethodID mtdId = reinterpret_cast<jmethodID>(&(info->methods[slot]));
 
-    printf("array: %p\nelem: %p", args0, JVM_GetArrayElement(env, args0, 0));
-
-    // dw475 TODO calling function with arg array
-    // return NULL;
-    return methodPtr(JVM_GetArrayElement(env, args0, 0));
-    // JvmUnimplemented("JVM_InvokeMethod");
+    return CallJavaInstanceMethod<jobject>(obj, mtdId, (const jvalue*) reinterpret_cast<JArrayRep*>(args0)->Data());
 }
 
 jobject

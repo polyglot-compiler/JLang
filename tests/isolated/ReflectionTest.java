@@ -1,11 +1,12 @@
 import java.lang.reflect.Method; 
 import java.lang.reflect.Field; 
-// import java.util.concurrent.atomic.AtomicLong; 
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.Random;
 
 public class ReflectionTest {
     public String c;
     public int a;
-    // static Integer b;
+    static Integer b;
 
     static class ReflectionTestE extends ReflectionTest {
         public int gg;
@@ -42,12 +43,18 @@ public class ReflectionTest {
         System.out.println(int.class);
         System.out.println(int.class.getSuperclass());
         System.out.println(long.class);
-        System.out.println(cls.getDeclaredField("a"));
+        System.out.println(AtomicLong.class.getDeclaredField("value"));
+        System.out.println(Random.class.getDeclaredField("seed"));
+        System.out.println("hello" == "hello");
+        // this should succeed
+        // System.out.println("hello" == "hel"+"lo");
+        System.out.println("hello".intern() == ("hel"+"lo").intern());
         for (Field fld : f) {
             System.out.println(fld.getName());
             System.out.println(fld.getModifiers());
             System.out.println(fld.getType());
-            System.out.println(fld.get(aaa));
+            if (fld.getModifiers() != 8)
+                System.out.println(fld.get(aaa));
             System.out.println(fld.getGenericType());
         }
 

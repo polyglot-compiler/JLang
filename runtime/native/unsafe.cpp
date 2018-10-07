@@ -296,7 +296,7 @@ Java_sun_misc_Unsafe_freeMemory(JNIEnv *env, jobject unsafe, jlong ptr) {
 }
 
 jlong
-Java_sun_misc_Unsafe_staticFieldOffset(JNIEnv *env, jobject, jobject) {
+Java_sun_misc_Unsafe_staticFieldOffset(JNIEnv *env, jobject unsafeObj, jobject fieldObj) {
     UnsafeUnimplemented("Java_sun_misc_Unsafe_staticFieldOffset");
 }
 
@@ -325,6 +325,7 @@ Java_sun_misc_Unsafe_objectFieldOffset(JNIEnv *env, jobject unsafeObj, jobject f
 jobject
 Java_sun_misc_Unsafe_staticFieldBase(JNIEnv *env, jobject, jobject) {
     UnsafeUnimplemented("Java_sun_misc_Unsafe_staticFieldBase");
+    // return NULL;
 }
 
 jboolean
