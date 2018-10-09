@@ -46,7 +46,7 @@ public class ReflectionTest {
         System.out.println(AtomicLong.class.getDeclaredField("value"));
         System.out.println(Random.class.getDeclaredField("seed"));
         System.out.println("hello" == "hello");
-        // this should succeed
+        // this should succeed once we add compile time string interning
         // System.out.println("hello" == "hel"+"lo");
         System.out.println("hello".intern() == ("hel"+"lo").intern());
         for (Field fld : f) {

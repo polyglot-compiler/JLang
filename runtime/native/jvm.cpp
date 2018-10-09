@@ -289,7 +289,10 @@ JVM_TotalMemory(void) {
 
 jlong
 JVM_FreeMemory(void) {
-    JvmUnimplemented("JVM_FreeMemory");
+    // JvmUnimplemented("JVM_FreeMemory");
+    // dw475 TODO come back to this
+    // always return 1mb for now
+    return 0x100000;
 }
 
 jlong
