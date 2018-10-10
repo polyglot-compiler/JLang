@@ -74,46 +74,6 @@ namespace std {
 
 std::unordered_map<HashableShortArray, jstring> InternedStrings;
 
-// struct InternTrie {
-//     std::unordered_map<unsigned short, struct InternTrie*>* nexts;
-//     std::unordered_map<unsigned short, jstring>* leaves;
-// };
-// static struct InternTrie internedStrings = {
-//     new std::unordered_map<unsigned short, struct InternTrie*>(),
-//     new std::unordered_map<unsigned short, jstring>(),
-// };
-
-// jstring internJString(jstring str) {
-//     unsigned short* chars = (unsigned short*) Unwrap(str)->Chars()->Data();
-//     struct InternTrie* trie = &internedStrings;
-//     int i;
-//     int l = Unwrap(str)->Chars()->Length();
-//     for(i = 0; i < l; i++) {
-//         if (i != l-1) {
-//             auto search = trie->nexts->find(*chars);
-//             if (search != trie->nexts->end()) {
-//                 trie = search->second;
-//             } else {
-//                 struct InternTrie* nextTrie = new InternTrie();
-//                 nextTrie->nexts = new std::unordered_map<unsigned short, struct InternTrie*>();
-//                 nextTrie->leaves = new std::unordered_map<unsigned short, jstring>();
-//                 trie->nexts->insert({*chars, nextTrie});
-//                 trie = nextTrie;
-//             }
-//         } else {
-//             auto search = trie->leaves->find(*chars);
-//             if (search != trie->leaves->end()) {
-//                 return search->second;
-//             } else {
-//                 trie->leaves->insert({*chars, str});
-//             }
-//         }
-        
-//         chars++;
-//     }
-//     return str;
-// }
-
 jstring internJString(jstring str) {
     HashableShortArray* h = (HashableShortArray*)malloc(sizeof(HashableShortArray));
     h->len = (int) Unwrap(str)->Chars()->Length();
@@ -289,7 +249,6 @@ JVM_TotalMemory(void) {
 
 jlong
 JVM_FreeMemory(void) {
-    // JvmUnimplemented("JVM_FreeMemory");
     // dw475 TODO come back to this
     // always return 1mb for now
     return 0x100000;
@@ -551,7 +510,6 @@ jobject
 JVM_GetArrayElement(JNIEnv *env, jobject arr, jint index) {
     // dw475 TODO inspect this
     return ((jobject*) reinterpret_cast<JArrayRep*>(arr)->Data())[index];
-    // JvmUnimplemented("JVM_GetArrayElement");
 }
 
 jvalue
@@ -726,9 +684,12 @@ JVM_GetClassAnnotations(JNIEnv *env, jclass cls) {
     JvmUnimplemented("JVM_GetClassAnnotations");
 }
 
+#define FIELD_INIT Polyglot_java_lang_reflect_Field_Field__Ljava_lang_Class_2Ljava_lang_String_2Ljava_lang_Class_2IILjava_lang_String_2_3B
+#define METHOD_INIT Polyglot_java_lang_reflect_Method_Method__Ljava_lang_Class_2Ljava_lang_String_2_3Ljava_lang_Class_2Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B_3B
+
 extern "C" {
-    void Polyglot_java_lang_reflect_Field_Field__Ljava_lang_Class_2Ljava_lang_String_2Ljava_lang_Class_2IILjava_lang_String_2_3B (jobject, jclass, jstring, jclass, jint, jint, jstring, jbyteArray);
-    void Polyglot_java_lang_reflect_Method_Method__Ljava_lang_Class_2Ljava_lang_String_2_3Ljava_lang_Class_2Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B_3B (jobject, jclass, jstring, jobjectArray, jclass, jobjectArray, jint, jint, jstring, jbyteArray, jbyteArray, jbyteArray);
+    void FIELD_INIT (jobject, jclass, jstring, jclass, jint, jint, jstring, jbyteArray);
+    void METHOD_INIT (jobject, jclass, jstring, jobjectArray, jclass, jobjectArray, jint, jint, jstring, jbyteArray, jbyteArray, jbyteArray);
 }
 
 jobjectArray
@@ -756,7 +717,7 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             jint slot = i;
             // TODO need to get the proper values
             // call the method constructor
-            Polyglot_java_lang_reflect_Method_Method__Ljava_lang_Class_2Ljava_lang_String_2_3Ljava_lang_Class_2Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B_3B(newMethod, ofClass, nameString, NULL, NULL, NULL, modifiers, slot, NULL, NULL, NULL, NULL);
+            METHOD_INIT(newMethod, ofClass, nameString, NULL, NULL, NULL, modifiers, slot, NULL, NULL, NULL, NULL);
             // add it to the array (backwards rn to pass tests)
             JVM_SetArrayElement(env, ret, info->num_methods-i-1, newMethod);
         }
@@ -791,9 +752,6 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
         }
 
         jclass FieldsClass = env->FindClass("java.lang.reflect.Field");
-        // jclass ClassClass = env->FindClass("java.lang.Class");
-        // const JavaClassInfo* classInfo = GetJavaClassInfo(ClassClass);
-        // printf("class size: %d\n", classInfo->obj_size);
 
         // dw475 TODO take into account publiconly argument
 
@@ -807,47 +765,6 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             // create new field object
             jobject newField = CreateJavaObject(FieldsClass);
 
-            // This is what the equivalent code to below looks like using a Field Struct:
-            // Object Layout:
-            // dv
-            // sync vars
-            // Super fields
-            // declared fields
-            // struct FieldStruct {
-            //     void* _dv;
-            //     void* _synch_vars;
-            //     void* UNK1;
-            //     void* UNK2;
-            //     jclass clazz;
-            //     jint slot;
-            //     jstring name;
-            //     jclass type;
-            //     jint modifiers;
-            //     jstring signature;
-            //     jbyteArray annotations;
-            //     void* fieldAccessor;
-            //     void* overrideFieldAccessor;
-            //     void* root;
-            // };
-            // struct FieldStruct* newFieldStruct = reinterpret_cast<struct FieldStruct*>(newField);
-            // jclass* typeClass = NULL;
-            // if (i < info->num_fields) {
-            //     newFieldStruct->name = env->NewStringUTF(fields[i].name);
-            //     newFieldStruct->modifiers = fields[i].modifiers;
-            //     typeClass = fields[i].type_ptr;
-            //     newFieldStruct->signature = env->NewStringUTF(fields[i].sig);
-            //     newFieldStruct->slot = fields[i].offset;
-            // } else {
-            //     int sidx = i-info->num_fields;
-            //     newFieldStruct->name = env->NewStringUTF(staticFields[sidx].name);
-            //     newFieldStruct->modifiers = staticFields[sidx].modifiers;
-            //     typeClass = staticFields[sidx].type_ptr;
-            //     newFieldStruct->signature = env->NewStringUTF(staticFields[sidx].sig);
-            //     newFieldStruct->slot = staticFields[sidx].offset;
-            // }
-            // newFieldStruct->type = typeClass == NULL ? NULL : *typeClass;
-
-            // calling java func
             char* name = NULL;
             int modifiers = 0;
             jclass* typeClass = NULL;
@@ -871,7 +788,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             jstring nameString = internJString(env->NewStringUTF(name));
             jstring sigString = env->NewStringUTF(signature);
             // call the fields constructor
-            Polyglot_java_lang_reflect_Field_Field__Ljava_lang_Class_2Ljava_lang_String_2Ljava_lang_Class_2IILjava_lang_String_2_3B(newField, ofClass, nameString, typeClass == NULL ? NULL : *typeClass, modifiers, slot, sigString, NULL);
+            FIELD_INIT(newField, ofClass, nameString, typeClass == NULL ? NULL : *typeClass, modifiers, slot, sigString, NULL);
             // add it to the array
             JVM_SetArrayElement(env, ret, i, newField);
         }
