@@ -41,7 +41,7 @@ $(SRC)/patchstamp: | $(SRC)
 	@rm -f tmp.txt;
 	@date > $@
 
-$(CLASSES)/cstamp: | $(SRC)
+$(CLASSES)/cstamp: $(SRC)/patchstamp $(SRC)
 	@echo "Creating JDK class files"
 	@mkdir -p $(CLASSES)
 	@find $(SRC) -name "*.java" > all.txt
