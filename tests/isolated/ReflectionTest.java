@@ -8,6 +8,14 @@ public class ReflectionTest {
     public int a;
     static Integer b;
 
+    static class GenericReflectionTest<T> {
+        T[] arr;
+
+        public T get(){
+            return arr[0];
+        }
+    }
+
     static class ReflectionTestE extends ReflectionTest {
         public int gg;
 
