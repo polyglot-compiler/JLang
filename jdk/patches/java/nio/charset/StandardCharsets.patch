@@ -1,6 +1,12 @@
---- src.orig/java/nio/charset/StandardCharsets.java	2018-07-23 14:01:15.000000000 -0400
-+++ src/java/nio/charset/StandardCharsets.java	2018-07-23 14:18:12.000000000 -0400
-@@ -41,26 +41,30 @@
+--- src.orig/java/nio/charset/StandardCharsets.java	2018-10-11 16:26:48.859620877 -0400
++++ src/java/nio/charset/StandardCharsets.java	2018-10-11 16:32:21.167615891 -0400
+@@ -1,3 +1,5 @@
++// This file's original contents have been modified
++// by a JLang patch on 2018-10-11 (the date this source code was compiled)
+ /*
+  * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
+@@ -41,26 +43,49 @@
       * Seven-bit ASCII, a.k.a. ISO646-US, a.k.a. the Basic Latin block of the
       * Unicode character set
       */
@@ -20,6 +26,25 @@
 +            "UTF8",
 +            "unicode-1-1-utf-8",
 +        };
++
++        static final String[] aliases_ISO_8859_1 = new String[] {
++        "iso-ir-100",
++        "ISO_8859-1",
++        "latin1",
++        "l1",
++        "IBM819",
++        "cp819",
++        "csISOLatin1",
++        "819",
++        "IBM-819",
++        "ISO8859_1",
++        "ISO_8859-1:1987",
++        "ISO_8859_1",
++        "8859_1",
++        "ISO8859-1",
++    };
++
++
      /**
       * Sixteen-bit UCS Transformation Format, big-endian byte order
       */
