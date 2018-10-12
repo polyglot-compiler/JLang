@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import jlang.ast.JLangExt;
 import jlang.visit.LLVMTranslator;
 
+import static jlang.util.Constants.INTERN_STRING_FUNC;
 import static org.bytedeco.javacpp.LLVM.*;
 
 public class JLangStringLitExt extends JLangExt {
@@ -57,6 +58,11 @@ public class JLangStringLitExt extends JLangExt {
         LLVMValueRef stringVar = v.utils.getGlobal(stringVarName, LLVMTypeOf(string));
         LLVMSetLinkage(stringVar, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringVar, string);
+
+        LLVMTypeRef internStringFuncType = v.utils.functionType(v.utils.voidType(), LLVMTypeOf(stringVar));
+        LLVMValueRef internString = v.utils.getFunction(INTERN_STRING_FUNC, internStringFuncType);
+        v.utils.buildProcCall(internString, stringVar);
+
 
         v.addTranslation(n,LLVMConstBitCast(stringVar, v.utils.toLL(n.type())));
         return super.leaveTranslateLLVM(v);

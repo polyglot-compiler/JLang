@@ -12,6 +12,7 @@
 #include <dlfcn.h>
 #include <stdio.h>
 #include "jni.h"
+#include "jvm.h"
 #include "class.h"
 #include "rep.h"
 
@@ -86,7 +87,12 @@ extern "C" {
 
 extern void Polyglot_jlang_runtime_ObjectArray_load_class();
 extern jclass Polyglot_jlang_runtime_ObjectArray_class;
+extern void Polyglot_jlang_runtime_Factory_printString__Ljava_lang_String_2 (jstring);
 
+void InternStringLit(jstring str) {
+  // Polyglot_jlang_runtime_Factory_printString__Ljava_lang_String_2(str);
+  *str = *internJString(str);
+}
 
 void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
 

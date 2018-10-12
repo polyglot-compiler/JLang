@@ -80,6 +80,8 @@ struct JavaClassInfo {
 void
 RegisterJavaClass(jclass cls, const JavaClassInfo* data);
 
+void InternStringLit(jstring str);
+
 } // extern "C"
 
 const JavaClassInfo*

@@ -24,4 +24,8 @@ class Factory {
         return new Integer(i);
     }
 
+    static void printString(String s) {
+        System.out.println(s);
+    }
+
 }
