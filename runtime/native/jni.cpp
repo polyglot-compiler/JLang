@@ -534,7 +534,7 @@ void jni_GetStringRegion(JNIEnv *env, jstring str, jsize start, jsize len, jchar
   //TODO error handling on case: if (start < 0 || len <0 || start + len > s_len) {
   //and throw StringIndexOutOfBoundsException
   JArrayRep* str_array = Unwrap(str)->Chars();
-  int str_len = str_array->Length();
+  // int str_len = str_array->Length();
   int elemsize = str_array->ElemSize();
   assert(elemsize == sizeof(jchar));
   jchar* data = reinterpret_cast<jchar*>(str_array->Data());
@@ -546,7 +546,7 @@ void jni_GetStringUTFRegion(JNIEnv *env, jstring str, jsize start, jsize len, ch
   //and throw StringIndexOutOfBoundsException
   if (len > 0) {
     JArrayRep* str_array = Unwrap(str)->Chars();
-    int str_len = str_array->Length();
+    // int str_len = str_array->Length();
     int elemsize = str_array->ElemSize();
     char* str_data = (char*) str_array->Data();
     as_utf8((jchar*)(str_data + (elemsize * start)), len, (u_char*)buf);
