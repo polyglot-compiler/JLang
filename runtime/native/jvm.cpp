@@ -18,6 +18,8 @@
 
 #include "jvm.h"
 
+#include "polyglot_runtime.h"
+
 [[noreturn]] static void JvmUnimplemented(const char* name) {
     fprintf(stderr,
         "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
@@ -684,14 +686,6 @@ JVM_GetClassAnnotations(JNIEnv *env, jclass cls) {
     JvmUnimplemented("JVM_GetClassAnnotations");
 }
 
-#define FIELD_INIT Polyglot_java_lang_reflect_Field_Field__Ljava_lang_Class_2Ljava_lang_String_2Ljava_lang_Class_2IILjava_lang_String_2_3B
-#define METHOD_INIT Polyglot_java_lang_reflect_Method_Method__Ljava_lang_Class_2Ljava_lang_String_2_3Ljava_lang_Class_2Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B_3B
-
-extern "C" {
-    void FIELD_INIT (jobject, jclass, jstring, jclass, jint, jint, jstring, jbyteArray);
-    void METHOD_INIT (jobject, jclass, jstring, jobjectArray, jclass, jobjectArray, jint, jint, jstring, jbyteArray, jbyteArray, jbyteArray);
-}
-
 jobjectArray
 JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
     const JavaClassInfo* info = GetJavaClassInfo(ofClass);
@@ -717,7 +711,7 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             jint slot = i;
             // TODO need to get the proper values
             // call the method constructor
-            METHOD_INIT(newMethod, ofClass, nameString, NULL, NULL, NULL, modifiers, slot, NULL, NULL, NULL, NULL);
+            METHOD_INIT_FUNC(newMethod, ofClass, nameString, NULL, NULL, NULL, modifiers, slot, NULL, NULL, NULL, NULL);
             // add it to the array (backwards rn to pass tests)
             JVM_SetArrayElement(env, ret, info->num_methods-i-1, newMethod);
         }
@@ -788,7 +782,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             jstring nameString = internJString(env->NewStringUTF(name));
             jstring sigString = env->NewStringUTF(signature);
             // call the fields constructor
-            FIELD_INIT(newField, ofClass, nameString, typeClass == NULL ? NULL : *typeClass, modifiers, slot, sigString, NULL);
+            FIELD_INIT_FUNC(newField, ofClass, nameString, typeClass == NULL ? NULL : *typeClass, modifiers, slot, sigString, NULL);
             // add it to the array
             JVM_SetArrayElement(env, ret, i, newField);
         }

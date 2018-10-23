@@ -15,11 +15,12 @@
 #include "jvm.h"
 #include "class.h"
 #include "rep.h"
-
+#include "polyglot_runtime.h"
 
 #define MEMCPY(a,b,c) memcpy((void *) a, (void *) b, c)
 static constexpr bool kDebug = false;
 
+// dw475 TODO get from Class Class info
 #define CLASS_SIZE 168
 #define PRIM_CLASS(prim, klass) prim##klass
 #define PRIM_CLASS_DEF(prim) static JClassRep* PRIM_CLASS(prim, Klass) \
@@ -45,6 +46,7 @@ PRIM_CLASS_DEF(boolean)
   if (Unwrap(cls) == PRIM_CLASS(prim, Klass)) {	\
     return true;
 
+// dw475 TODO correctly set some fields
 #define PRIM_REGISTER(prim)			\
   if(1) { \
     JavaClassInfo* newInfo = (JavaClassInfo*)malloc(sizeof(JavaClassInfo)); \
@@ -65,9 +67,11 @@ PRIM_CLASS_DEF(boolean)
 
 
 static bool primKlassInit = false;
-jclass initArrayKlass();
-jclass globalArrayKlass = NULL;
+jclass getArrayKlass();
+// underscore becuase should never be used directly
+jclass _globalArrayKlass = NULL;
 
+// Define class references for JLang compiler
 jclass Polyglot_native_int;
 jclass Polyglot_native_byte;
 jclass Polyglot_native_short;
@@ -85,15 +89,16 @@ static std::unordered_map<std::string, const jclass> cnames;
 
 extern "C" {
 
-extern void Polyglot_jlang_runtime_ObjectArray_load_class();
-extern jclass Polyglot_jlang_runtime_ObjectArray_class;
-extern void Polyglot_jlang_runtime_Factory_printString__Ljava_lang_String_2 (jstring);
-
+// invoked by JLang compiler to intern string literals when they are loaded
 void InternStringLit(jstring str) {
-  // Polyglot_jlang_runtime_Factory_printString__Ljava_lang_String_2(str);
+  // dw475 TODO may not be necessary because compiled string literals likely point to same object
   *str = *internJString(str);
 }
 
+/**
+ * Register a java class where cls points to the class object and
+ * info points to the info object for that class
+ */
 void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
 
     if (kDebug) {
@@ -138,17 +143,34 @@ void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
 
 } // extern "C"
 
-//Force this class load function to be called at initialization
-jclass initArrayKlass() {
-  Polyglot_jlang_runtime_ObjectArray_load_class();
-  return Polyglot_jlang_runtime_ObjectArray_class;
-}        
+/**
+ * Returns the global array class
+ */
+jclass getArrayKlass() {
+  if (_globalArrayKlass == NULL) {
+    // Force this class load function to be called at initialization
+    Polyglot_jlang_runtime_ObjectArray_load_class();
+    _globalArrayKlass = Polyglot_jlang_runtime_ObjectArray_class;
+  }
+  return _globalArrayKlass;
+}
 
-//This assumes char* is non-null, C-string with len > 0
+/**
+ * Returns true if the class name in signature format is
+ * an array class name.
+ * This assumes char* is non-null, C-string with len > 0.
+ * Examples:
+ *  "I" returns false
+ *  "[I" returns true
+ *  "Ljava/lang/String;" returns false
+ */
 bool isArrayClassName(const char* name) {
   return name[0] == '[';
 }
 
+/**
+ * Returns true if cls is an array class
+ */
 bool isArrayClass(jclass cls) {
   auto cinfo = GetJavaClassInfo(cls);
   if (cinfo == NULL) {
@@ -159,17 +181,19 @@ bool isArrayClass(jclass cls) {
 }
 
 //This assumes char* is non-null, C-string with len >0
-const char*
-getComponentName(const char* name) {
+const char* getComponentName(const char* name) {
   return &(name[1]);
 }
 
-//This assumes char* is non-null, C-string with len > 0
-//It also assumes that it has not been initialized
+/**
+ * Initialize an array class with the given name (should be
+ * a type signature).
+ * This assumes char* is non-null, C-string with len > 0.
+ * It also assumes that it has not been initialized.
+ * Returns the newly created array class
+ */
 const jclass initArrayClass(const char* name) {
-  if (globalArrayKlass == NULL) {
-    globalArrayKlass = initArrayKlass();
-  }
+  jclass globalArrayKlass = getArrayKlass();
   jclass newKlazz = (jclass)malloc(sizeof(JClassRep));
   memcpy(newKlazz, globalArrayKlass, sizeof(JClassRep));
   JavaClassInfo* newInfo = (JavaClassInfo*)malloc(sizeof(JavaClassInfo));
@@ -182,11 +206,17 @@ const jclass initArrayClass(const char* name) {
   return newKlazz;
 }
 
-const void
-RegisterPrimitiveClasses() {
-  if (globalArrayKlass == NULL) {
-    globalArrayKlass = initArrayKlass();
-  }
+/**
+ * Register the primative classes
+ */
+const void RegisterPrimitiveClasses() {
+  jclass globalArrayKlass = getArrayKlass();
+
+  // jclass ClassClass = jni_FindClass(NULL, "java.lang.Class");
+  // jclass ClassClass = GetJavaClassFromName("java.lang.Class");
+  // printf("Class: %p", ClassClass);
+  // const JavaClassInfo* cinfo = GetJavaClassInfo(ClassClass);
+  // printf("Class size: %d", cinfo->obj_size);
 
   memcpy(PRIM_CLASS(int, Klass), globalArrayKlass, sizeof(JClassRep));
   Polyglot_native_int = reinterpret_cast<jclass>(PRIM_CLASS(int, Klass));

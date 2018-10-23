@@ -63,6 +63,7 @@ public class ReflectionTest {
             System.out.println(fld.getName());
             System.out.println(fld.getModifiers());
             System.out.println(fld.getType());
+            System.out.println(fld.getType());
             if (fld.getModifiers() != 8)
                 System.out.println(fld.get(aaa));
             System.out.println(fld.getGenericType());
