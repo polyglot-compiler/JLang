@@ -51,6 +51,7 @@ struct JavaMethodInfo {
     void* intf_id;    // For interface methods, the interface id.
     int32_t intf_id_hash; // A precomputed hash of the intf_id.
     int32_t modifiers;
+    jclass* returnType;
 };
 
 struct JavaClassInfo {
@@ -126,3 +127,4 @@ extern jclass Polyglot_native_float;
 extern jclass Polyglot_native_double;
 extern jclass Polyglot_native_char;
 extern jclass Polyglot_native_boolean;
+extern jclass Polyglot_native_void;

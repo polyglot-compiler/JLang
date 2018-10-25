@@ -15,16 +15,13 @@
 #include "jvm.h"
 #include "class.h"
 #include "rep.h"
-#include "polyglot_runtime.h"
+#include "object_array.h"
 
 #define MEMCPY(a,b,c) memcpy((void *) a, (void *) b, c)
 static constexpr bool kDebug = false;
 
-// dw475 TODO get from Class Class info
-#define CLASS_SIZE 168
 #define PRIM_CLASS(prim, klass) prim##klass
-#define PRIM_CLASS_DEF(prim) static JClassRep* PRIM_CLASS(prim, Klass) \
- = (JClassRep*)malloc(CLASS_SIZE);
+#define PRIM_CLASS_DEF(prim) static JClassRep* PRIM_CLASS(prim, Klass);
 
 PRIM_CLASS_DEF(int)
 PRIM_CLASS_DEF(short)
@@ -34,6 +31,7 @@ PRIM_CLASS_DEF(float)
 PRIM_CLASS_DEF(double)
 PRIM_CLASS_DEF(char)
 PRIM_CLASS_DEF(boolean)
+PRIM_CLASS_DEF(void)
 
 #define PRIM_NAME_CHECK(name, prim)		\
   if (strcmp(name, prim) == 0) {
@@ -59,17 +57,21 @@ PRIM_CLASS_DEF(boolean)
     newInfo->num_fields = 0;              \
     newInfo->num_static_fields = 0;              \
     newInfo->num_methods = 0;              \
-    newInfo->obj_size = CLASS_SIZE;       \
+    newInfo->obj_size = classSize;       \
     newInfo->super_ptr = NULL;            \
     newInfo->cdv = NULL;                  \
     RegisterJavaClass(PRIM_CLASS(prim, Klass)->Wrap(), newInfo);	\
   } else ((void) 0)
 
+// just copy over DV
+// dw475 TODO should copy over sync vars
+#define REGISTER_PRIM_CLASS(prim) \
+  PRIM_CLASS(prim, Klass) = (JClassRep*)malloc(classSize); \
+  memcpy(PRIM_CLASS(prim, Klass), globalArrayKlass, sizeof(JClassRep)); \
+  Polyglot_native_##prim = reinterpret_cast<jclass>(PRIM_CLASS(prim, Klass)); \
+  PRIM_REGISTER(prim);
 
 static bool primKlassInit = false;
-jclass getArrayKlass();
-// underscore becuase should never be used directly
-jclass _globalArrayKlass = NULL;
 
 // Define class references for JLang compiler
 jclass Polyglot_native_int;
@@ -80,6 +82,7 @@ jclass Polyglot_native_float;
 jclass Polyglot_native_double;
 jclass Polyglot_native_char;
 jclass Polyglot_native_boolean;
+jclass Polyglot_native_void;
 
 // For simplicity we store class information in a map.
 // If we find this to be too slow, we could allocate extra memory for
@@ -144,18 +147,6 @@ void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
 } // extern "C"
 
 /**
- * Returns the global array class
- */
-jclass getArrayKlass() {
-  if (_globalArrayKlass == NULL) {
-    // Force this class load function to be called at initialization
-    Polyglot_jlang_runtime_ObjectArray_load_class();
-    _globalArrayKlass = Polyglot_jlang_runtime_ObjectArray_class;
-  }
-  return _globalArrayKlass;
-}
-
-/**
  * Returns true if the class name in signature format is
  * an array class name.
  * This assumes char* is non-null, C-string with len > 0.
@@ -180,7 +171,11 @@ bool isArrayClass(jclass cls) {
   }
 }
 
-//This assumes char* is non-null, C-string with len >0
+/**
+ * Returns the name of the component of the given name.
+ * For example, if name is [[[I, this will return [[I.
+ * This assumes char* is non-null, C-string with len >0
+ */
 const char* getComponentName(const char* name) {
   return &(name[1]);
 }
@@ -206,54 +201,51 @@ const jclass initArrayClass(const char* name) {
   return newKlazz;
 }
 
+bool lockPrimRegister = false;
+
 /**
  * Register the primative classes
  */
 const void RegisterPrimitiveClasses() {
+  if (lockPrimRegister) return;
+
   jclass globalArrayKlass = getArrayKlass();
 
-  // jclass ClassClass = jni_FindClass(NULL, "java.lang.Class");
-  // jclass ClassClass = GetJavaClassFromName("java.lang.Class");
-  // printf("Class: %p", ClassClass);
-  // const JavaClassInfo* cinfo = GetJavaClassInfo(ClassClass);
-  // printf("Class size: %d", cinfo->obj_size);
+  jclass ClassClass = NULL;
+  try {
+    ClassClass = cnames.at(std::string("java.lang.Class"));
+  } catch (const std::out_of_range& oor) {
+    lockPrimRegister = true;
+    ClassClass = LoadJavaClassFromLib("java.lang.Class");
+    lockPrimRegister = false;
+  }
+  const JavaClassInfo* cinfo = GetJavaClassInfo(ClassClass);
+  const int classSize = cinfo->obj_size;
 
-  memcpy(PRIM_CLASS(int, Klass), globalArrayKlass, sizeof(JClassRep));
-  Polyglot_native_int = reinterpret_cast<jclass>(PRIM_CLASS(int, Klass));
-  PRIM_REGISTER(int);
+  REGISTER_PRIM_CLASS(int)
 
-  memcpy(PRIM_CLASS(byte, Klass), globalArrayKlass, sizeof(JClassRep));
-  Polyglot_native_byte = reinterpret_cast<jclass>(PRIM_CLASS(byte, Klass));
-  PRIM_REGISTER(byte);
+  REGISTER_PRIM_CLASS(byte)
 
-  memcpy(PRIM_CLASS(short, Klass), globalArrayKlass, sizeof(JClassRep));
-  Polyglot_native_short = reinterpret_cast<jclass>(PRIM_CLASS(short, Klass));
-  PRIM_REGISTER(short);
+  REGISTER_PRIM_CLASS(short)
+
+  REGISTER_PRIM_CLASS(long)
   
-  memcpy(PRIM_CLASS(long, Klass), globalArrayKlass, sizeof(JClassRep));
-  Polyglot_native_long = reinterpret_cast<jclass>(PRIM_CLASS(long, Klass));
-  PRIM_REGISTER(long);
+  REGISTER_PRIM_CLASS(float)
 
-  memcpy(PRIM_CLASS(float, Klass), globalArrayKlass, sizeof(JClassRep));
-  Polyglot_native_float = reinterpret_cast<jclass>(PRIM_CLASS(float, Klass));
-  PRIM_REGISTER(float);
+  REGISTER_PRIM_CLASS(double)
 
-  memcpy(PRIM_CLASS(double, Klass), globalArrayKlass, sizeof(JClassRep));
-  Polyglot_native_double = reinterpret_cast<jclass>(PRIM_CLASS(double, Klass));
-  PRIM_REGISTER(double);
+  REGISTER_PRIM_CLASS(char)
 
-  memcpy(PRIM_CLASS(char, Klass), globalArrayKlass, sizeof(JClassRep));
-  Polyglot_native_char = reinterpret_cast<jclass>(PRIM_CLASS(char, Klass));
-  PRIM_REGISTER(char);
+  REGISTER_PRIM_CLASS(boolean)
 
-  memcpy(PRIM_CLASS(boolean, Klass), globalArrayKlass, sizeof(JClassRep));
-  Polyglot_native_boolean = reinterpret_cast<jclass>(PRIM_CLASS(boolean, Klass));
-  PRIM_REGISTER(boolean);
+  REGISTER_PRIM_CLASS(void)
 }
 
-//This assumes char* is non-null, C-string
-jclass
-primitiveComponentNameToClass(const char* name) {
+/**
+ * Returns the primative class object for the given name
+ * This assumes char* is non-null, C-string
+ */
+jclass primitiveComponentNameToClass(const char* name) {
   PRIM_NAME_TO_CLASS(name, "I", int)
   } else PRIM_NAME_TO_CLASS(name, "B", byte)
   } else PRIM_NAME_TO_CLASS(name, "S", short)
@@ -267,6 +259,10 @@ primitiveComponentNameToClass(const char* name) {
   }
 }
 
+/**
+ * Returns true of the given class object points to a
+ * primative class object
+ */
 bool isPrimitiveClass(jclass cls) {
   PRIM_IS_KLASS(cls, int)
   } else PRIM_IS_KLASS(cls, byte)
@@ -281,8 +277,10 @@ bool isPrimitiveClass(jclass cls) {
   }
 }
 
-const JavaClassInfo*
-GetJavaClassInfo(jclass cls) {
+/**
+ * Returns the class info object for the given java class object
+ */
+const JavaClassInfo* GetJavaClassInfo(jclass cls) {
   if (!primKlassInit) {
     RegisterPrimitiveClasses();
     primKlassInit = true;
@@ -294,8 +292,12 @@ GetJavaClassInfo(jclass cls) {
   }
 }
 
-const jclass
-GetJavaClassFromPathName(const char* name) {
+/**
+ * Returns the java class object for the given path
+ * relative to the class path if the class has been loaded.
+ * Example: java/lang/Class returns the Class class object.
+ */
+const jclass GetJavaClassFromPathName(const char* name) {
   int name_len = strlen(name);
   char path_name[name_len + 1];
   for (int i = 0; i <= name_len; i++) {
@@ -308,9 +310,13 @@ GetJavaClassFromPathName(const char* name) {
   return GetJavaClassFromName(path_name);
 }
 
-
-const jclass
-GetJavaClassFromName(const char* name) {
+/**
+ * Returns the java class object for the given class name.
+ * If the class has not been loaded yet and is not an array
+ * class, this function will return null.
+ * Example: java.lang.Class returns the Class class object
+ */
+const jclass GetJavaClassFromName(const char* name) {
   if (!primKlassInit) {
     RegisterPrimitiveClasses();
     primKlassInit = true;
@@ -326,8 +332,12 @@ GetJavaClassFromName(const char* name) {
   }
 }
 
-jclass
-GetComponentClass(jclass cls) {
+/**
+ * Returns the class inside the given array class's array.
+ * If the given class is not an array class, this function
+ * returns null.
+ */
+jclass GetComponentClass(jclass cls) {
   if (isArrayClass(cls)) {
     const JavaClassInfo* info = GetJavaClassInfo(cls);
     if (info != NULL) {
@@ -343,8 +353,10 @@ GetComponentClass(jclass cls) {
   return NULL;
 }
 
-const JavaStaticFieldInfo*
-GetJavaStaticFieldInfo(jclass cls, const char* name, const char* sig) {
+/**
+ * Return the field information for the given class's static field
+ */
+const JavaStaticFieldInfo* GetJavaStaticFieldInfo(jclass cls, const char* name, const char* sig) {
     auto* clazz = classes.at(cls);
     auto* fields = clazz->static_fields;
     for (int32_t i = 0, e = clazz->num_static_fields; i < e; ++i) {
@@ -361,8 +373,10 @@ GetJavaStaticFieldInfo(jclass cls, const char* name, const char* sig) {
     abort();
 }
 
-const JavaFieldInfo*
-GetJavaFieldInfo(jclass cls, const char* name) {
+/**
+ * Return the field information for the given class's field
+ */
+const JavaFieldInfo* GetJavaFieldInfo(jclass cls, const char* name) {
     auto* clazz = classes.at(cls);
     auto* fields = clazz->fields;
     for (int32_t i = 0, e = clazz->num_fields; i < e; ++i) {
@@ -419,8 +433,12 @@ GetJavaStaticMethodInfo(jclass cls, const char* name, const char* sig) {
 
 typedef jclass (*class_loader)();
 
-jclass
-LoadJavaClassFromLib(const char* name) {
+/**
+ * Load a class with the given name into the executable.
+ * The class name can be in the format java/lang/Class or
+ * java.lang.Class
+ */
+jclass LoadJavaClassFromLib(const char* name) {
  int name_len = strlen(name);
  int new_len = name_len  + LOADER_NAME_CHARS + 1;
  char class_load_name[new_len];
