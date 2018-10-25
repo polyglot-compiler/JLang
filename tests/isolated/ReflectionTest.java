@@ -6,7 +6,18 @@ import java.util.Random;
 public class ReflectionTest {
     public String c;
     public int a;
+    public boolean bb;
+    public Boolean bbb;
     static Integer b;
+    static String s = "AAAA";
+
+    static class GenericReflectionTest<T> {
+        T[] arr;
+
+        public T get(){
+            return arr[0];
+        }
+    }
 
     static class ReflectionTestE extends ReflectionTest {
         public int gg;
@@ -43,15 +54,17 @@ public class ReflectionTest {
         System.out.println(int.class);
         System.out.println(int.class.getSuperclass());
         System.out.println(long.class);
+        System.out.println(ReflectionTest.s);
         System.out.println(AtomicLong.class.getDeclaredField("value"));
         System.out.println(Random.class.getDeclaredField("seed"));
         System.out.println("hello" == "hello");
         // this should succeed once we add compile time string interning
-        // System.out.println("hello" == "hel"+"lo");
-        System.out.println("hello".intern() == ("hel"+"lo").intern());
+        System.out.println("hello" == "hel"+"lo");
+        System.out.println("hello" == ("hel"+"lo").intern());
         for (Field fld : f) {
             System.out.println(fld.getName());
             System.out.println(fld.getModifiers());
+            System.out.println(fld.getType());
             System.out.println(fld.getType());
             if (fld.getModifiers() != 8)
                 System.out.println(fld.get(aaa));

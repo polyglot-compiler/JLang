@@ -2,6 +2,7 @@
 
 #include "jni_help.h"
 #include "class.h"
+#include "reflect.h"
 
 // Begin official API.
 
@@ -49,9 +50,16 @@ jclass jni_GetSuperclass(JNIEnv *env, jclass sub) {
     // JniUnimplemented("GetSuperclass");
 }
 
-jboolean jni_IsAssignableFrom(JNIEnv *env, jclass sub, jclass sup) {
+jboolean jni_IsAssignableFrom(JNIEnv *env, jclass sup, jclass sub) {
     // dw475 TODO return sub <? sup
+    // return JNI_TRUE;
+    if (sub == NULL) {
+        // return JNI_FALSE;
+        // throw null pointer
+    }
+    // there exists a superclass or superinterface of sub = sup
     return JNI_TRUE;
+    JniUnimplemented("jni_IsAssignableFrom");
 }
 
 jobject jni_ToReflectedField(JNIEnv *env, jclass cls, jfieldID id, jboolean isStatic) {
@@ -157,7 +165,8 @@ jclass jni_GetObjectClass(JNIEnv *env, jobject obj) {
 }
 
 jboolean jni_IsInstanceOf(JNIEnv *env, jobject obj, jclass clazz) {
-    JniUnimplemented("IsInstanceOf");
+    return InstanceOf(obj, clazz);
+    // JniUnimplemented("IsInstanceOf");
 }
 
 jmethodID jni_GetMethodID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
@@ -534,7 +543,7 @@ void jni_GetStringRegion(JNIEnv *env, jstring str, jsize start, jsize len, jchar
   //TODO error handling on case: if (start < 0 || len <0 || start + len > s_len) {
   //and throw StringIndexOutOfBoundsException
   JArrayRep* str_array = Unwrap(str)->Chars();
-  int str_len = str_array->Length();
+  // int str_len = str_array->Length();
   int elemsize = str_array->ElemSize();
   assert(elemsize == sizeof(jchar));
   jchar* data = reinterpret_cast<jchar*>(str_array->Data());
@@ -546,7 +555,7 @@ void jni_GetStringUTFRegion(JNIEnv *env, jstring str, jsize start, jsize len, ch
   //and throw StringIndexOutOfBoundsException
   if (len > 0) {
     JArrayRep* str_array = Unwrap(str)->Chars();
-    int str_len = str_array->Length();
+    // int str_len = str_array->Length();
     int elemsize = str_array->ElemSize();
     char* str_data = (char*) str_array->Data();
     as_utf8((jchar*)(str_data + (elemsize * start)), len, (u_char*)buf);

@@ -18,6 +18,8 @@
 
 #include "jvm.h"
 
+#include "helper.h"
+
 [[noreturn]] static void JvmUnimplemented(const char* name) {
     fprintf(stderr,
         "- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
@@ -509,7 +511,8 @@ JVM_GetArrayLength(JNIEnv *env, jobject arr) {
 jobject
 JVM_GetArrayElement(JNIEnv *env, jobject arr, jint index) {
     // dw475 TODO inspect this
-    return ((jobject*) reinterpret_cast<JArrayRep*>(arr)->Data())[index];
+    // return ((jobject*) reinterpret_cast<JArrayRep*>(arr)->Data())[index];
+    return Polyglot_jlang_runtime_Helper_arrayLoad___3Ljava_lang_Object_2I(arr, index);
 }
 
 jvalue
@@ -684,13 +687,11 @@ JVM_GetClassAnnotations(JNIEnv *env, jclass cls) {
     JvmUnimplemented("JVM_GetClassAnnotations");
 }
 
-#define FIELD_INIT Polyglot_java_lang_reflect_Field_Field__Ljava_lang_Class_2Ljava_lang_String_2Ljava_lang_Class_2IILjava_lang_String_2_3B
-#define METHOD_INIT Polyglot_java_lang_reflect_Method_Method__Ljava_lang_Class_2Ljava_lang_String_2_3Ljava_lang_Class_2Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B_3B
+#define FIELD_INIT_FUNC Polyglot_java_lang_reflect_Field_Field__Ljava_lang_Class_2Ljava_lang_String_2Ljava_lang_Class_2IILjava_lang_String_2_3B
+#define METHOD_INIT_FUNC Polyglot_java_lang_reflect_Method_Method__Ljava_lang_Class_2Ljava_lang_String_2_3Ljava_lang_Class_2Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B_3B
 
-extern "C" {
-    void FIELD_INIT (jobject, jclass, jstring, jclass, jint, jint, jstring, jbyteArray);
-    void METHOD_INIT (jobject, jclass, jstring, jobjectArray, jclass, jobjectArray, jint, jint, jstring, jbyteArray, jbyteArray, jbyteArray);
-}
+void FIELD_INIT_FUNC (jobject, jclass, jstring, jclass, jint, jint, jstring, jbyteArray);
+void METHOD_INIT_FUNC (jobject, jclass, jstring, jobjectArray, jclass, jobjectArray, jint, jint, jstring, jbyteArray, jbyteArray, jbyteArray);
 
 jobjectArray
 JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
@@ -715,9 +716,12 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             jstring nameString = env->NewStringUTF(methods[i].name);
             jint modifiers = methods[i].modifiers;
             jint slot = i;
+            jobjectArray paramTypes = NULL;
+            jclass returnType = NULL;
+            jstring signature = env->NewStringUTF(methods[i].sig);
             // TODO need to get the proper values
             // call the method constructor
-            METHOD_INIT(newMethod, ofClass, nameString, NULL, NULL, NULL, modifiers, slot, NULL, NULL, NULL, NULL);
+            METHOD_INIT_FUNC(newMethod, ofClass, nameString, paramTypes, returnType, NULL, modifiers, slot, signature, NULL, NULL, NULL);
             // add it to the array (backwards rn to pass tests)
             JVM_SetArrayElement(env, ret, info->num_methods-i-1, newMethod);
         }
@@ -774,6 +778,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
                 name = fields[i].name;
                 modifiers = fields[i].modifiers;
                 typeClass = fields[i].type_ptr;
+                // printf("Type class for %s: %p %p\n", name, typeClass, *typeClass);
                 signature = fields[i].sig;
                 // slot = fields[i].offset;
                 slot = i;
@@ -783,12 +788,12 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
                 modifiers = staticFields[sidx].modifiers;
                 typeClass = staticFields[sidx].type_ptr;
                 signature = staticFields[sidx].sig;
-                slot = -(i+1); // 0 ambiguity
+                slot = -(sidx+1); // 0 ambiguity
             }
             jstring nameString = internJString(env->NewStringUTF(name));
             jstring sigString = env->NewStringUTF(signature);
             // call the fields constructor
-            FIELD_INIT(newField, ofClass, nameString, typeClass == NULL ? NULL : *typeClass, modifiers, slot, sigString, NULL);
+            FIELD_INIT_FUNC(newField, ofClass, nameString, typeClass == NULL ? NULL : *typeClass, modifiers, slot, sigString, NULL);
             // add it to the array
             JVM_SetArrayElement(env, ret, i, newField);
         }
@@ -813,7 +818,7 @@ JVM_GetClassDeclaredConstructors(JNIEnv *env, jclass ofClass, jboolean publicOnl
 
 jint
 JVM_GetClassAccessFlags(JNIEnv *env, jclass cls) {
-    // dw475 TODO actually implement
+    // dw475 TODO actually implement by adding getModifiers to class
     // public
     return 0x1;
     // JvmUnimplemented("JVM_GetClassAccessFlags");

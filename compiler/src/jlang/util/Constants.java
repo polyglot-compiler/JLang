@@ -25,6 +25,7 @@ public class Constants {
     public static final int CTOR_METHOD_INFO_OFFSET = -2;
     public static final int STATIC_METHOD_INFO_OFFSET = -1;
     public static final String REGISTER_CLASS_FUNC = "RegisterJavaClass";
+    public static final String INTERN_STRING_FUNC = "InternStringLit";
     public static final String GET_NATIVE_FUNC = "GetJavaNativeFunc";
     public static final String PERSONALITY_FUNC = "__java_personality_v0";
     public static final String CREATE_EXCEPTION = "createUnwindException";

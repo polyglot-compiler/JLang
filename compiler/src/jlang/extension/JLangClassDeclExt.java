@@ -33,6 +33,16 @@ public class JLangClassDeclExt extends JLangExt {
         return super.leaveTranslateLLVM(v);
     }
 
+    private static LLVMValueRef getTypePointer(LLVMTranslator v, Type t) {
+        Type erasedType = v.utils.erasureLL(t);
+        if (erasedType.isPrimitive()) {
+            LLVMValueRef primPtr = v.utils.getGlobal("Polyglot_native_"+erasedType.toString(), v.utils.toLL(v.ts.Class()));
+            return v.utils.buildCastToBytePtr(primPtr);
+        } else {
+            return v.utils.buildCastToBytePtr(v.utils.getClassObjectGlobal(erasedType.toClass()));
+        }
+    }
+
     /**
      * Builds a function that runs static initializers, and
      * creates the java.lang.Class object representing this class.
@@ -42,6 +52,8 @@ public class JLangClassDeclExt extends JLangExt {
      * for this class, we statically emit these data structures in LLVM IR.
      */
     public static void buildClassLoadingFunc(LLVMTranslator v, ClassType ct, ClassBody cb) {
+
+//        System.out.println("building class loading function for "+ct);
 
         // Declare class object.
         LLVMTypeRef classType = v.utils.toLL(v.ts.Class());
@@ -62,9 +74,9 @@ public class JLangClassDeclExt extends JLangExt {
             		LLVMValueRef nullPtr = LLVMConstNull(v.utils.toLL(ct));
             		LLVMValueRef gep = v.obj.buildFieldElementPtr(nullPtr, fi);
             		LLVMValueRef offset = LLVMConstPtrToInt(gep, v.utils.i32());
-                        LLVMValueRef modifiers = LLVMConstInt(v.utils.i32(), fi.flags().toModifiers(), 1);
-                        LLVMValueRef typeClass = v.utils.buildCastToBytePtr(fi.type().isPrimitive() ? v.utils.getGlobal("Polyglot_native_"+fi.type().toString(), v.utils.toLL(v.ts.Class())) : (fi.type().toClass() == null ? LLVMConstNull(v.utils.i8Ptr()) : v.utils.getClassObjectGlobal(fi.type().toClass())));
-                        LLVMValueRef signature = v.utils.buildGlobalCStr(v.mangler.jniUnescapedSignature(fi.type()));
+                    LLVMValueRef modifiers = LLVMConstInt(v.utils.i32(), fi.flags().toModifiers(), 1);
+                    LLVMValueRef typeClass = getTypePointer(v, fi.type());
+                    LLVMValueRef signature = v.utils.buildGlobalCStr(v.mangler.jniUnescapedSignature(fi.type()));
             		return v.utils.buildConstStruct(name, offset, modifiers, typeClass, signature);
             	})
             	.toArray(LLVMValueRef[]::new);
@@ -84,8 +96,8 @@ public class JLangClassDeclExt extends JLangExt {
             		LLVMValueRef signature = v.utils.buildGlobalCStr(v.mangler.jniUnescapedSignature(fi.type()));
             		LLVMValueRef ptr = v.utils.getStaticField(fi);
             		LLVMValueRef staticPtr = LLVMConstBitCast(ptr, v.utils.i8Ptr());
-                        LLVMValueRef modifiers = LLVMConstInt(v.utils.i32(), fi.flags().toModifiers(), 1);
-                        LLVMValueRef typeClass = fi.type().toClass() == null ? LLVMConstNull(v.utils.i8Ptr()) : v.utils.buildCastToBytePtr(v.utils.getClassObjectGlobal(fi.type().toClass()));
+                    LLVMValueRef modifiers = LLVMConstInt(v.utils.i32(), fi.flags().toModifiers(), 1);
+                    LLVMValueRef typeClass = getTypePointer(v, fi.type());
             		return v.utils.buildConstStruct(name, signature, staticPtr, modifiers, typeClass);
             	})
             	.toArray(LLVMValueRef[]::new);
@@ -99,13 +111,14 @@ public class JLangClassDeclExt extends JLangExt {
                 v.utils.i8Ptr() , // void* trampoline pointer
                 v.utils.i8Ptr(),  // void* for interface methods, the interface method id.
                 v.utils.i32(),     // int32_t A precomputed hash of the intf_id.
-                v.utils.i32()      // modifiers
+                v.utils.i32(),      // modifiers
+                v.utils.i8Ptr()     // return type
         );
         LLVMValueRef[] methodInfoElems = Stream.concat(
                 ct.methods().stream(), ct.constructors().stream())
                 .map(pi -> buildMethodInfo(v, ct, pi))
                 .toArray(LLVMValueRef[]::new);
-        
+
         //Info about implemented interfaces. Needed by runtime reflection
         LLVMValueRef[] interfaceInfoElems = v.allInterfaces(ct).stream()
         		.map(intf -> v.utils.getClassObjectGlobal(intf))
@@ -239,6 +252,8 @@ public class JLangClassDeclExt extends JLangExt {
                 funcName, debugName,
                 v.ts.Class(), Collections.emptyList(),
                 buildBody);
+
+//        System.out.println("done building class loading function");
     }
 
     /**
@@ -292,7 +307,22 @@ public class JLangClassDeclExt extends JLangExt {
 
         LLVMValueRef modifiers = LLVMConstInt(v.utils.i32(), pi.flags().toModifiers(), 1);
 
-        return v.utils.buildConstStruct(name, sig, offset, fnPtrCast, trampolineCast, intfPtr, hash, modifiers);
+        LLVMValueRef returnType;
+
+        //            System.out.println("CI: "+ci.toString());returnType
+//            for(Type t : ci.formalTypes()) {
+//                System.out.println(t);
+//            }
+
+        if (pi instanceof ConstructorInstance) {
+            ConstructorInstance ci = (ConstructorInstance) pi;
+            returnType = getTypePointer(v, ci.container());
+        } else {
+            MethodInstance mi = (MethodInstance) pi;
+            returnType = getTypePointer(v, mi.returnType());
+        }
+
+        return v.utils.buildConstStruct(name, sig, offset, fnPtrCast, trampolineCast, intfPtr, hash, modifiers, returnType);
     }
 
     @SuppressWarnings("WeakerAccess")

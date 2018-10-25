@@ -7,6 +7,8 @@
 
 extern "C" {
 
+jstring internJString(jstring str);
+
 jint
 JVM_GetInterfaceVersion(void);
 
