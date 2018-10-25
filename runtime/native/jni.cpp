@@ -2,6 +2,7 @@
 
 #include "jni_help.h"
 #include "class.h"
+#include "reflect.h"
 
 // Begin official API.
 
@@ -49,9 +50,16 @@ jclass jni_GetSuperclass(JNIEnv *env, jclass sub) {
     // JniUnimplemented("GetSuperclass");
 }
 
-jboolean jni_IsAssignableFrom(JNIEnv *env, jclass sub, jclass sup) {
+jboolean jni_IsAssignableFrom(JNIEnv *env, jclass sup, jclass sub) {
     // dw475 TODO return sub <? sup
+    // return JNI_TRUE;
+    if (sub == NULL) {
+        // return JNI_FALSE;
+        // throw null pointer
+    }
+    // there exists a superclass or superinterface of sub = sup
     return JNI_TRUE;
+    JniUnimplemented("jni_IsAssignableFrom");
 }
 
 jobject jni_ToReflectedField(JNIEnv *env, jclass cls, jfieldID id, jboolean isStatic) {
@@ -157,7 +165,8 @@ jclass jni_GetObjectClass(JNIEnv *env, jobject obj) {
 }
 
 jboolean jni_IsInstanceOf(JNIEnv *env, jobject obj, jclass clazz) {
-    JniUnimplemented("IsInstanceOf");
+    return InstanceOf(obj, clazz);
+    // JniUnimplemented("IsInstanceOf");
 }
 
 jmethodID jni_GetMethodID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {

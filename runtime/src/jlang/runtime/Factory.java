@@ -20,12 +20,4 @@ class Factory {
         return new Object[len];
     }
 
-    static Integer autoBoxInt(int i) {
-        return new Integer(i);
-    }
-
-    static void printString(String s) {
-        System.out.println(s);
-    }
-
 }

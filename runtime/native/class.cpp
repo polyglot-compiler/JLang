@@ -19,6 +19,7 @@
 
 #define MEMCPY(a,b,c) memcpy((void *) a, (void *) b, c)
 static constexpr bool kDebug = false;
+// static constexpr bool kDebug = true;
 
 #define PRIM_CLASS(prim, klass) prim##klass
 #define PRIM_CLASS_DEF(prim) static JClassRep* PRIM_CLASS(prim, Klass);
@@ -137,6 +138,7 @@ void RegisterJavaClass(jclass cls, const JavaClassInfo* info) {
                 , m->name, m->sig, m->offset, m->fnPtr, m->trampoline);
         }
     }
+    // printf("loaded class %s\n", info->name);
 
     assert(classes.count(cls) == 0 && "Java class was loaded twice!");
     classes.emplace(cls, info);
@@ -201,13 +203,16 @@ const jclass initArrayClass(const char* name) {
   return newKlazz;
 }
 
-bool lockPrimRegister = false;
+bool registeringClass = false;
 
 /**
  * Register the primative classes
  */
 const void RegisterPrimitiveClasses() {
-  if (lockPrimRegister) return;
+  // avoid reentrance when registering the Class class
+  // could avoid this by always loading the Class class in main
+  // but this preserves laziness and appears to be same
+  if (registeringClass) return;
 
   jclass globalArrayKlass = getArrayKlass();
 
@@ -215,9 +220,9 @@ const void RegisterPrimitiveClasses() {
   try {
     ClassClass = cnames.at(std::string("java.lang.Class"));
   } catch (const std::out_of_range& oor) {
-    lockPrimRegister = true;
+    registeringClass = true;
     ClassClass = LoadJavaClassFromLib("java.lang.Class");
-    lockPrimRegister = false;
+    registeringClass = false;
   }
   const JavaClassInfo* cinfo = GetJavaClassInfo(ClassClass);
   const int classSize = cinfo->obj_size;

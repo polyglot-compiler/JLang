@@ -6,6 +6,8 @@ import java.util.Random;
 public class ReflectionTest {
     public String c;
     public int a;
+    public boolean bb;
+    public Boolean bbb;
     static Integer b;
     static String s = "AAAA";
 
@@ -57,7 +59,7 @@ public class ReflectionTest {
         System.out.println(Random.class.getDeclaredField("seed"));
         System.out.println("hello" == "hello");
         // this should succeed once we add compile time string interning
-        // System.out.println("hello" == "hel"+"lo");
+        System.out.println("hello" == "hel"+"lo");
         System.out.println("hello" == ("hel"+"lo").intern());
         for (Field fld : f) {
             System.out.println(fld.getName());
