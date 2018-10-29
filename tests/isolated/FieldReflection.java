@@ -1,7 +1,5 @@
 import java.lang.reflect.Method; 
 import java.lang.reflect.Field; 
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.Random;
 
 public class Fields {
   public int a;
