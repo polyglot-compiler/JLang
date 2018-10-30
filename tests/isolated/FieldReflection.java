@@ -1,5 +1,7 @@
 import java.lang.reflect.Method; 
 import java.lang.reflect.Field; 
+import java.util.Arrays;
+import java.util.Comparator;
 
 public class FieldReflection {
   public int a;
@@ -24,6 +26,7 @@ public class FieldReflection {
     FieldReflection aaa = new FieldReflection(1534,2);
     Class cls = aaa.getClass();
     Field[] f = cls.getDeclaredFields();
+    Arrays.sort(f, new FieldComparator());
     System.out.println(f.length);
     for (Field fld : f) {
       System.out.println(fld.getName());
@@ -39,4 +42,11 @@ public class FieldReflection {
     s = "A string";
     b = j;
   }
+
+    public static class FieldComparator implements Comparator<Field> {
+	public int compare(Field f1, Field f2) {
+	    return f1.getName().compareTo(f2.getName());
+	}
+
+    }
 }
