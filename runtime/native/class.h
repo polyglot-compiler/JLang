@@ -27,6 +27,9 @@ extern "C" {
 struct JavaFieldInfo {
     char* name;
     int32_t offset;
+    int32_t modifiers;
+    jclass* type_ptr;
+    char* sig;
 };
 //This is also a representation for the jfieldID type, but
 //represented differently since static fields are implemented as global pointers.
@@ -34,6 +37,8 @@ struct JavaStaticFieldInfo {
     char* name;
     char* sig;
     void* ptr;
+    int32_t modifiers;
+    jclass* type_ptr;
 };
 
 // Concrete representation for the opaque type jmethodID.
@@ -45,6 +50,8 @@ struct JavaMethodInfo {
     void* trampoline; // Trampoline for casting the fnPtr to the correct type.
     void* intf_id;    // For interface methods, the interface id.
     int32_t intf_id_hash; // A precomputed hash of the intf_id.
+    int32_t modifiers;
+    jclass* returnType;
 };
 
 struct JavaClassInfo {
@@ -73,6 +80,8 @@ struct JavaClassInfo {
 // the class information declared above.
 void
 RegisterJavaClass(jclass cls, const JavaClassInfo* data);
+
+void InternStringLit(jstring str);
 
 } // extern "C"
 
@@ -109,3 +118,13 @@ bool isArrayClass(jclass cls);
 bool isPrimitiveClass(jclass cls);
 
 jclass GetComponentClass(jclass cls);
+
+extern jclass Polyglot_native_int;
+extern jclass Polyglot_native_byte;
+extern jclass Polyglot_native_short;
+extern jclass Polyglot_native_long;
+extern jclass Polyglot_native_float;
+extern jclass Polyglot_native_double;
+extern jclass Polyglot_native_char;
+extern jclass Polyglot_native_boolean;
+extern jclass Polyglot_native_void;

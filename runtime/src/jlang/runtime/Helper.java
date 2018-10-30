@@ -21,4 +21,12 @@ class Helper {
     static Object arrayLoad(Object[] arr, int i) {
 	return arr[i];
     }
+
+    static Integer autoBoxInt(int i) {
+        return new Integer(i);
+    }
+
+    static void printString(String s) {
+        System.out.println(s);
+    }
 }

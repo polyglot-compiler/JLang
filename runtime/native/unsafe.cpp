@@ -12,6 +12,8 @@
 #include "rep.h"
 #include "stack_trace.h"
 #include "unsafe.h"
+#include "class.h"
+#include <string.h>
 
 // GCC built-in compare-and-swap.
 #define CAS(ptr, e, x) __sync_val_compare_and_swap(ptr, e, x)
@@ -52,8 +54,8 @@ Java_sun_misc_Unsafe_registerNatives(JNIEnv *env, jclass obj) {
 }
 
 jint
-Java_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J(JNIEnv *env, jobject, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J");
+Java_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset) {
+    return *(reinterpret_cast<jint*>(reinterpret_cast<char*>(obj) + offset));
 }
 
 void
@@ -61,9 +63,14 @@ Java_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI(JNIEnv *env, jobject, jobject
     UnsafeUnimplemented("Java_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI");
 }
 
+extern "C" {
+    jobject Polyglot_jlang_runtime_Factory_autoBoxInt__I (jint);
+}
+
 jobject
-Java_sun_misc_Unsafe_getObject(JNIEnv *env, jobject, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getObject");
+Java_sun_misc_Unsafe_getObject(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset) {
+    // dw475 TODO autobox primative types (need to inspect object field)
+    return *(reinterpret_cast<jobject*>(reinterpret_cast<char*>(obj) + offset));
 }
 
 void
@@ -72,8 +79,8 @@ Java_sun_misc_Unsafe_putObject(JNIEnv *env, jobject, jobject, jlong, jobject) {
 }
 
 jboolean
-Java_sun_misc_Unsafe_getBoolean(JNIEnv *env, jobject, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getBoolean");
+Java_sun_misc_Unsafe_getBoolean(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset) {
+    return *(reinterpret_cast<jboolean*>(reinterpret_cast<char*>(obj) + offset));
 }
 
 void
@@ -82,8 +89,8 @@ Java_sun_misc_Unsafe_putBoolean(JNIEnv *env, jobject, jobject, jlong, jboolean) 
 }
 
 jbyte
-Java_sun_misc_Unsafe_getByte__Ljava_lang_Object_2J(JNIEnv *env, jobject, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getByte__Ljava_lang_Object_2J");
+Java_sun_misc_Unsafe_getByte__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset) {
+    return *(reinterpret_cast<jbyte*>(reinterpret_cast<char*>(obj) + offset));
 }
 
 void
@@ -92,8 +99,8 @@ Java_sun_misc_Unsafe_putByte__Ljava_lang_Object_2JB(JNIEnv *env, jobject, jobjec
 }
 
 jshort
-Java_sun_misc_Unsafe_getShort__Ljava_lang_Object_2J(JNIEnv *env, jobject, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getShort__Ljava_lang_Object_2J");
+Java_sun_misc_Unsafe_getShort__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset) {
+    return *(reinterpret_cast<jshort*>(reinterpret_cast<char*>(obj) + offset));
 }
 
 void
@@ -102,8 +109,8 @@ Java_sun_misc_Unsafe_putShort__Ljava_lang_Object_2JS(JNIEnv *env, jobject, jobje
 }
 
 jchar
-Java_sun_misc_Unsafe_getChar__Ljava_lang_Object_2J(JNIEnv *env, jobject, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getChar__Ljava_lang_Object_2J");
+Java_sun_misc_Unsafe_getChar__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset) {
+    return *(reinterpret_cast<jchar*>(reinterpret_cast<char*>(obj) + offset));
 }
 
 void
@@ -112,8 +119,8 @@ Java_sun_misc_Unsafe_putChar__Ljava_lang_Object_2JC(JNIEnv *env, jobject, jobjec
 }
 
 jlong
-Java_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J(JNIEnv *env, jobject, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J");
+Java_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset) {
+    return *(reinterpret_cast<jlong*>(reinterpret_cast<char*>(obj) + offset));
 }
 
 void
@@ -122,8 +129,8 @@ Java_sun_misc_Unsafe_putLong__Ljava_lang_Object_2JJ(JNIEnv *env, jobject, jobjec
 }
 
 jfloat
-Java_sun_misc_Unsafe_getFloat__Ljava_lang_Object_2J(JNIEnv *env, jobject, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getFloat__Ljava_lang_Object_2J");
+Java_sun_misc_Unsafe_getFloat__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset) {
+    return *(reinterpret_cast<jfloat*>(reinterpret_cast<char*>(obj) + offset));
 }
 
 void
@@ -132,8 +139,8 @@ Java_sun_misc_Unsafe_putFloat__Ljava_lang_Object_2JF(JNIEnv *env, jobject, jobje
 }
 
 jdouble
-Java_sun_misc_Unsafe_getDouble__Ljava_lang_Object_2J(JNIEnv *env, jobject, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getDouble__Ljava_lang_Object_2J");
+Java_sun_misc_Unsafe_getDouble__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset) {
+    return *(reinterpret_cast<jdouble*>(reinterpret_cast<char*>(obj) + offset));
 }
 
 void
@@ -273,18 +280,42 @@ Java_sun_misc_Unsafe_freeMemory(JNIEnv *env, jobject unsafe, jlong ptr) {
 }
 
 jlong
-Java_sun_misc_Unsafe_staticFieldOffset(JNIEnv *env, jobject, jobject) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_staticFieldOffset");
+Java_sun_misc_Unsafe_staticFieldOffset(JNIEnv *env, jobject unsafeObj, jobject fieldObj) {
+    jlong staticoff = Java_sun_misc_Unsafe_objectFieldOffset(env, unsafeObj, fieldObj);
+    return staticoff;
 }
 
+// always constant once we figure them out
+unsigned int fieldSlotOffset = -1;
+unsigned int fieldClazzOffset = -1;
 jlong
-Java_sun_misc_Unsafe_objectFieldOffset(JNIEnv *env, jobject, jobject) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_objectFieldOffset");
+Java_sun_misc_Unsafe_objectFieldOffset(JNIEnv *env, jobject unsafeObj, jobject fieldObj) {
+    int slot = 0;
+    if (fieldSlotOffset == -1) {
+        const JavaClassInfo* info = GetJavaClassInfo(Unwrap(fieldObj)->Cdv()->Class()->Wrap());
+        for (int i = 0; i < info->num_fields; i++) {
+            if (strcmp(info->fields[i].name, "slot") == 0) {
+                fieldSlotOffset = info->fields[i].offset;
+            } else if (strcmp(info->fields[i].name, "clazz") == 0) {
+                fieldClazzOffset = info->fields[i].offset;
+            }
+        }
+    }
+    slot = *((jint *)(((char *) fieldObj)+fieldSlotOffset));
+    jclass ofClass = *((jclass *)(((char *) fieldObj)+fieldClazzOffset));
+    const JavaClassInfo* info = GetJavaClassInfo(ofClass);
+    if (slot >= 0) {
+        return info->fields[slot].offset;
+    } else {
+        // return ((jlong) info->static_fields[-slot-1].ptr) - ((jlong) fieldObj);
+        return ((jlong) info->static_fields[-slot-1].ptr);
+    }
 }
 
 jobject
 Java_sun_misc_Unsafe_staticFieldBase(JNIEnv *env, jobject, jobject) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_staticFieldBase");
+    // UnsafeUnimplemented("Java_sun_misc_Unsafe_staticFieldBase");
+    return NULL;
 }
 
 jboolean
@@ -293,8 +324,13 @@ Java_sun_misc_Unsafe_shouldBeInitialized(JNIEnv *env, jobject, jclass) {
 }
 
 void
-Java_sun_misc_Unsafe_ensureClassInitialized(JNIEnv *env, jobject, jclass) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_ensureClassInitialized");
+Java_sun_misc_Unsafe_ensureClassInitialized(JNIEnv *env, jobject unsafeObj, jclass cls) {
+    // dw475 TODO make sure this is correct
+    // check if class is loaded and load it if not
+    if (GetJavaClassInfo(cls) == NULL) {
+        printf("!!!!CRITICAL!!!!\nFound an instance of not loaded class\n");
+        UnsafeUnimplemented("Java_sun_misc_Unsafe_ensureClassInitialized");
+    }
 }
 
 jint
