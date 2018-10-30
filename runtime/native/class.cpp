@@ -95,7 +95,6 @@ extern "C" {
 
 // invoked by JLang compiler to intern string literals when they are loaded
 void InternStringLit(jstring str) {
-  // dw475 TODO may not be necessary because compiled string literals likely point to same object
   *str = *internJString(str);
 }
 
@@ -277,6 +276,7 @@ bool isPrimitiveClass(jclass cls) {
   } else PRIM_IS_KLASS(cls, double)
   } else PRIM_IS_KLASS(cls, char)
   } else PRIM_IS_KLASS(cls, boolean)
+  } else PRIM_IS_KLASS(cls, void)
   } else {
     return false;
   }

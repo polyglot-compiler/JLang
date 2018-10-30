@@ -59,8 +59,6 @@ public class JLangStringLitExt extends JLangExt {
         LLVMSetLinkage(stringVar, LLVMLinkOnceODRLinkage);
         LLVMSetInitializer(stringVar, string);
 
-        // dw457 TODO this does a function call for every instance of a string literal, some of which
-        // may be duplicates
         LLVMTypeRef internStringFuncType = v.utils.functionType(v.utils.voidType(), LLVMTypeOf(stringVar));
         LLVMValueRef internString = v.utils.getFunction(INTERN_STRING_FUNC, internStringFuncType);
         v.utils.buildProcCall(internString, stringVar);

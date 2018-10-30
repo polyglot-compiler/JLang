@@ -1,9 +1,7 @@
 import java.lang.reflect.Method; 
 import java.lang.reflect.Field; 
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.Random;
 
-public class Fields {
+public class FieldReflection {
   public int a;
   public boolean bb;
   public Boolean bbb;
@@ -23,7 +21,7 @@ public class Fields {
   static String ss = "AAAA";
 
   public static void main(String[] args) throws Exception {
-    Fields aaa = new Fields(1534,2);
+    FieldReflection aaa = new FieldReflection(1534,2);
     Class cls = aaa.getClass();
     Field[] f = cls.getDeclaredFields();
     System.out.println(f.length);
@@ -36,7 +34,7 @@ public class Fields {
     }
   }
 
-  Fields(int i, int j) {
+  FieldReflection(int i, int j) {
     a = i;
     s = "A string";
     b = j;

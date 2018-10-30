@@ -285,11 +285,11 @@ Java_sun_misc_Unsafe_staticFieldOffset(JNIEnv *env, jobject unsafeObj, jobject f
     return staticoff;
 }
 
+// always constant once we figure them out
 unsigned int fieldSlotOffset = -1;
 unsigned int fieldClazzOffset = -1;
 jlong
 Java_sun_misc_Unsafe_objectFieldOffset(JNIEnv *env, jobject unsafeObj, jobject fieldObj) {
-    // dw475 TODO check back
     int slot = 0;
     if (fieldSlotOffset == -1) {
         const JavaClassInfo* info = GetJavaClassInfo(Unwrap(fieldObj)->Cdv()->Class()->Wrap());
