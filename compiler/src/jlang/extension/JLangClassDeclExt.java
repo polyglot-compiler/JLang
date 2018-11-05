@@ -112,7 +112,9 @@ public class JLangClassDeclExt extends JLangExt {
                 v.utils.i8Ptr(),  // void* for interface methods, the interface method id.
                 v.utils.i32(),     // int32_t A precomputed hash of the intf_id.
                 v.utils.i32(),      // modifiers
-                v.utils.i8Ptr()     // return type
+                v.utils.i8Ptr(),     // return type
+                v.utils.i32(),      // number of arg types
+                v.utils.ptrTypeRef(v.utils.i8Ptr())     // argTypes void**
         );
         LLVMValueRef[] methodInfoElems = Stream.concat(
                 ct.methods().stream(), ct.constructors().stream())
@@ -252,8 +254,6 @@ public class JLangClassDeclExt extends JLangExt {
                 funcName, debugName,
                 v.ts.Class(), Collections.emptyList(),
                 buildBody);
-
-//        System.out.println("done building class loading function");
     }
 
     /**
@@ -309,10 +309,16 @@ public class JLangClassDeclExt extends JLangExt {
 
         LLVMValueRef returnType;
 
-        //            System.out.println("CI: "+ci.toString());returnType
-//            for(Type t : ci.formalTypes()) {
-//                System.out.println(t);
-//            }
+//        for(Type t : pi.formalTypes()) {
+//            System.out.println(t);
+//            System.out.println(getTypePointer(v, t));
+//        }
+        LLVMValueRef[] argTypes = pi.formalTypes().stream()
+                .map(argType -> getTypePointer(v, argType))
+                .toArray(LLVMValueRef[]::new);
+        LLVMValueRef argTypesPtr = v.utils.buildGlobalArrayAsPtr(v.utils.i8Ptr(),
+                argTypes);
+        LLVMValueRef numArgTypes = LLVMConstInt(v.utils.i32(), pi.formalTypes().size(), /*sign-extend*/ 1);
 
         if (pi instanceof ConstructorInstance) {
             ConstructorInstance ci = (ConstructorInstance) pi;
@@ -322,7 +328,8 @@ public class JLangClassDeclExt extends JLangExt {
             returnType = getTypePointer(v, mi.returnType());
         }
 
-        return v.utils.buildConstStruct(name, sig, offset, fnPtrCast, trampolineCast, intfPtr, hash, modifiers, returnType);
+        return v.utils.buildConstStruct(name, sig, offset, fnPtrCast, trampolineCast, intfPtr, hash,
+                modifiers, returnType, numArgTypes, argTypesPtr);
     }
 
     @SuppressWarnings("WeakerAccess")

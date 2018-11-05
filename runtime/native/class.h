@@ -52,6 +52,8 @@ struct JavaMethodInfo {
     int32_t intf_id_hash; // A precomputed hash of the intf_id.
     int32_t modifiers;
     jclass* returnType;
+    int32_t numArgTypes;
+    jclass** argTypes;  // array of arg types
 };
 
 struct JavaClassInfo {

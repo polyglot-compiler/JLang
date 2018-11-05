@@ -19,6 +19,7 @@
 #include "jvm.h"
 
 #include "helper.h"
+#include "factory.h"
 
 [[noreturn]] static void JvmUnimplemented(const char* name) {
     fprintf(stderr,
@@ -357,8 +358,20 @@ JVM_DisableCompiler(JNIEnv *env, jclass compCls) {
 
 void
 JVM_StartThread(JNIEnv *env, jobject thread) {
-  //TODO someday there will be synchronization
-  return;
+    //TODO someday there will be synchronization
+    // printf("Starting thread\n");
+    // get run function pointer
+    jclass objectClass = Unwrap(thread)->Cdv()->Class()->Wrap();
+    const JavaClassInfo* info = GetJavaClassInfo(objectClass);
+    JavaMethodInfo* methods = info->methods;
+    for (int i = 0; i < info->num_methods; i++) {
+        if (strcmp(methods[i].name, "run") == 0) {
+            // printf("found run method: %p\n", methods[i].fnPtr);
+            jmethodID mtdId = reinterpret_cast<jmethodID>(&(methods[i]));
+            // CallJavaInstanceMethod<jobject>(thread, mtdId, (const jvalue*) &thread);
+        }
+    }
+    return;
 }
 
 void
@@ -534,7 +547,8 @@ JVM_SetPrimitiveArrayElement(JNIEnv *env, jobject arr, jint index, jvalue v, uns
 
 jobject
 JVM_NewArray(JNIEnv *env, jclass eltClass, jint length) {
-    JvmUnimplemented("JVM_NewArray");
+    // JvmUnimplemented("JVM_NewArray");
+    return CreateJavaObjectArray(length);
 }
 
 jobject
@@ -716,8 +730,22 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             jstring nameString = env->NewStringUTF(methods[i].name);
             jint modifiers = methods[i].modifiers;
             jint slot = i;
-            jobjectArray paramTypes = NULL;
+            jobjectArray paramTypes = CreateJavaObjectArray(methods[i].numArgTypes);
             jclass returnType = NULL;
+            jclass* returnTypePtr = methods[i].returnType;
+            if (returnTypePtr != NULL) {
+                returnType = *returnTypePtr;
+            }
+            for (int k = 0; k < methods[i].numArgTypes; k++) {
+                jclass* argTypePtr = methods[i].argTypes[k];
+                if (argTypePtr != NULL) {
+                    JVM_SetArrayElement(env, paramTypes, k, *argTypePtr);
+                    // const JavaClassInfo* arginfo = GetJavaClassInfo(*argTypePtr);
+                    // printf("class name: %s\n", arginfo->name);
+                } else {
+                    JVM_SetArrayElement(env, paramTypes, k, NULL);
+                }
+            }
             jstring signature = env->NewStringUTF(methods[i].sig);
             // TODO need to get the proper values
             // call the method constructor
