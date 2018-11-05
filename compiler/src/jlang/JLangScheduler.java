@@ -2,16 +2,16 @@
 
 package jlang;
 
+import jlang.ast.JLangNodeFactory;
+import jlang.types.JLangTypeSystem;
 import jlang.util.DesugarBarrier;
 import jlang.util.JLangDesugared;
+import jlang.visit.StringLitFold;
 import polyglot.ast.ClassDecl;
 import polyglot.ast.Lang;
 import polyglot.ast.Node;
 import polyglot.ext.jl7.JL7Scheduler;
-import polyglot.frontend.CyclicDependencyException;
-import polyglot.frontend.JLExtensionInfo;
-import polyglot.frontend.Job;
-import polyglot.frontend.MissingDependencyException;
+import polyglot.frontend.*;
 import polyglot.frontend.goals.EmptyGoal;
 import polyglot.frontend.goals.Goal;
 import polyglot.frontend.goals.VisitorGoal;
@@ -95,6 +95,19 @@ public class JLangScheduler extends JL7Scheduler {
     	return internGoal(DesugarBarrier.create(this));
     }
 
+    /**
+     * Ensure that everything is properly constant folded
+     * for the JVM
+     */
+    public Goal JLangConstFold(Job job) {
+        // add a pass for string constant folding
+        ExtensionInfo extInfo = job.extensionInfo();
+        JLangTypeSystem ts = (JLangTypeSystem) extInfo.typeSystem();
+        JLangNodeFactory nf = (JLangNodeFactory) extInfo.nodeFactory();
+        return new VisitorGoal(job, new StringLitFold(ts, nf));
+
+    }
+
     @Override
     public Goal CodeGenerated(Job job) {
         Goal translate = new LLVMEmitted(job);
@@ -104,6 +117,9 @@ public class JLangScheduler extends JL7Scheduler {
         	 * depend on the desugaring of another.
         	 */
             translate.addPrerequisiteGoal(AllLLVMDesugared(), this);
+
+            // add a constant folding pass to ensure JVM correctness
+            translate.addPrerequisiteGoal(JLangConstFold(job), this);
         }
         catch (CyclicDependencyException e) {
             throw new InternalCompilerError(e);
