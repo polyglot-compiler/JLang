@@ -59,8 +59,8 @@ Java_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeObj
 }
 
 void
-Java_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI(JNIEnv *env, jobject, jobject, jlong, jint) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI");
+Java_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset, jint value) {
+    *(reinterpret_cast<jint*>(reinterpret_cast<char*>(obj) + offset)) = value;
 }
 
 extern "C" {
@@ -69,13 +69,13 @@ extern "C" {
 
 jobject
 Java_sun_misc_Unsafe_getObject(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset) {
-    // dw475 TODO autobox primative types (need to inspect object field)
+    // dw475 TODO autobox primative types (need to inspect object field) (may not have to)
     return *(reinterpret_cast<jobject*>(reinterpret_cast<char*>(obj) + offset));
 }
 
 void
-Java_sun_misc_Unsafe_putObject(JNIEnv *env, jobject, jobject, jlong, jobject) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putObject");
+Java_sun_misc_Unsafe_putObject(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset, jobject value) {
+    *(reinterpret_cast<jobject*>(reinterpret_cast<char*>(obj) + offset)) = value;
 }
 
 jboolean
@@ -84,8 +84,8 @@ Java_sun_misc_Unsafe_getBoolean(JNIEnv *env, jobject unsafeObj, jobject obj, jlo
 }
 
 void
-Java_sun_misc_Unsafe_putBoolean(JNIEnv *env, jobject, jobject, jlong, jboolean) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putBoolean");
+Java_sun_misc_Unsafe_putBoolean(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset, jboolean value) {
+    *(reinterpret_cast<jboolean*>(reinterpret_cast<char*>(obj) + offset)) = value;
 }
 
 jbyte
@@ -94,8 +94,8 @@ Java_sun_misc_Unsafe_getByte__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeOb
 }
 
 void
-Java_sun_misc_Unsafe_putByte__Ljava_lang_Object_2JB(JNIEnv *env, jobject, jobject, jlong, jbyte) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putByte__Ljava_lang_Object_2JB");
+Java_sun_misc_Unsafe_putByte__Ljava_lang_Object_2JB(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset, jbyte value) {
+    *(reinterpret_cast<jbyte*>(reinterpret_cast<char*>(obj) + offset)) = value;
 }
 
 jshort
@@ -104,8 +104,8 @@ Java_sun_misc_Unsafe_getShort__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeO
 }
 
 void
-Java_sun_misc_Unsafe_putShort__Ljava_lang_Object_2JS(JNIEnv *env, jobject, jobject, jlong, jshort) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putShort__Ljava_lang_Object_2JS");
+Java_sun_misc_Unsafe_putShort__Ljava_lang_Object_2JS(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset, jshort value) {
+    *(reinterpret_cast<jshort*>(reinterpret_cast<char*>(obj) + offset)) = value;
 }
 
 jchar
@@ -114,8 +114,8 @@ Java_sun_misc_Unsafe_getChar__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeOb
 }
 
 void
-Java_sun_misc_Unsafe_putChar__Ljava_lang_Object_2JC(JNIEnv *env, jobject, jobject, jlong, jchar) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putChar__Ljava_lang_Object_2JC");
+Java_sun_misc_Unsafe_putChar__Ljava_lang_Object_2JC(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset, jchar value) {
+    *(reinterpret_cast<jchar*>(reinterpret_cast<char*>(obj) + offset)) = value;
 }
 
 jlong
@@ -124,8 +124,8 @@ Java_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeOb
 }
 
 void
-Java_sun_misc_Unsafe_putLong__Ljava_lang_Object_2JJ(JNIEnv *env, jobject, jobject, jlong, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putLong__Ljava_lang_Object_2JJ");
+Java_sun_misc_Unsafe_putLong__Ljava_lang_Object_2JJ(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset, jlong value) {
+    *(reinterpret_cast<jlong*>(reinterpret_cast<char*>(obj) + offset)) = value;
 }
 
 jfloat
@@ -134,8 +134,8 @@ Java_sun_misc_Unsafe_getFloat__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafeO
 }
 
 void
-Java_sun_misc_Unsafe_putFloat__Ljava_lang_Object_2JF(JNIEnv *env, jobject, jobject, jlong, jfloat) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putFloat__Ljava_lang_Object_2JF");
+Java_sun_misc_Unsafe_putFloat__Ljava_lang_Object_2JF(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset, jfloat value) {
+    *(reinterpret_cast<jfloat*>(reinterpret_cast<char*>(obj) + offset)) = value;
 }
 
 jdouble
@@ -144,8 +144,8 @@ Java_sun_misc_Unsafe_getDouble__Ljava_lang_Object_2J(JNIEnv *env, jobject unsafe
 }
 
 void
-Java_sun_misc_Unsafe_putDouble__Ljava_lang_Object_2JD(JNIEnv *env, jobject, jobject, jlong, jdouble) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putDouble__Ljava_lang_Object_2JD");
+Java_sun_misc_Unsafe_putDouble__Ljava_lang_Object_2JD(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset, jdouble value) {
+    *(reinterpret_cast<jdouble*>(reinterpret_cast<char*>(obj) + offset)) = value;
 }
 
 jbyte

@@ -16,6 +16,9 @@ public class FieldReflection {
   public long ll = 1231231232;
   public Long L;
   public String s;
+  public String[] sarr;
+  public int[] iarr;
+  public FieldReflectionGen<String> frGeneric;
 
   static Integer b;
   static String ss = "AAAA";
@@ -30,13 +33,41 @@ public class FieldReflection {
       System.out.println(fld.getModifiers());
       System.out.println(fld.getType());
       System.out.println(fld.get(aaa));
-      System.out.println(fld.getGenericType());
+      // TODO fix something with generics
+      // System.out.println(fld.getGenericType());
+
+      if (fld.getName().equals("a")) {
+        fld.setInt(aaa, 123412);
+      } else if (fld.getName().equals("bb")) {
+        fld.setBoolean(aaa, true);
+      } else if (fld.getName().equals("cc")) {
+        fld.setShort(aaa, new Short((short)17));
+        fld.set(aaa, new Short((short)34));
+      } else if (fld.getName().equals("ff")) {
+        fld.setFloat(aaa, 0.3432f);
+      } else if (fld.getName().equals("d")) {
+        fld.set(aaa, new Double(1234544.92));
+      } else if (fld.getName().equals("j")) {
+        fld.setByte(aaa, (byte) 11);
+      }
     }
+
+    System.out.println(aaa.a);
+    System.out.println(aaa.bb);
+    System.out.println(aaa.cc);
+    System.out.println(aaa.ff);
+    System.out.println(aaa.d);
+    System.out.println(aaa.j);
   }
 
   FieldReflection(int i, int j) {
     a = i;
     s = "A string";
     b = j;
+    sarr = new String[]{"one", "two"};
+  }
+
+  static class FieldReflectionGen<T> {
+    T[] arr;
   }
 }
