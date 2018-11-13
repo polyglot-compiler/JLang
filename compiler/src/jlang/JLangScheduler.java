@@ -104,8 +104,15 @@ public class JLangScheduler extends JL7Scheduler {
         ExtensionInfo extInfo = job.extensionInfo();
         JLangTypeSystem ts = (JLangTypeSystem) extInfo.typeSystem();
         JLangNodeFactory nf = (JLangNodeFactory) extInfo.nodeFactory();
-        return new VisitorGoal(job, new StringLitFold(ts, nf));
-
+        Goal constGoal = new VisitorGoal(job, new StringLitFold(ts, nf));
+        try {
+            // ensure all desugaring is done for the file (might generate more constants)
+            constGoal.addPrerequisiteGoal(LLVMDesugared(job), this);
+        } catch (CyclicDependencyException e) {
+            throw new InternalCompilerError(e);
+        }
+        // intern goal to remove duplicate objects being created (explicit singleton)
+        return internGoal(constGoal);
     }
 
     @Override
