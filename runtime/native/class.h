@@ -23,12 +23,18 @@ extern "C" {
 // exist for the lifetime of the program.
 // The layout must precisely mirror the layout defined in JLang.
 
+struct JavaTypeInfo {
+    jclass* type_ptr;
+    jclass(*init_type_class)(void);
+};
+
 // Concrete representation for the opaque type jfieldID.
 struct JavaFieldInfo {
     char* name;
     int32_t offset;
     int32_t modifiers;
-    jclass* type_ptr;
+    struct JavaTypeInfo* type_info_ptr;
+    // jclass* type_ptr;
     char* sig;
 };
 //This is also a representation for the jfieldID type, but
@@ -130,3 +136,13 @@ extern jclass Polyglot_native_double;
 extern jclass Polyglot_native_char;
 extern jclass Polyglot_native_boolean;
 extern jclass Polyglot_native_void;
+
+extern jclass* Polyglot_native_int_class_type_info;
+extern jclass* Polyglot_native_byte_class_type_info;
+extern jclass* Polyglot_native_short_class_type_info;
+extern jclass* Polyglot_native_long_class_type_info;
+extern jclass* Polyglot_native_float_class_type_info;
+extern jclass* Polyglot_native_double_class_type_info;
+extern jclass* Polyglot_native_char_class_type_info;
+extern jclass* Polyglot_native_boolean_class_type_info;
+extern jclass* Polyglot_native_void_class_type_info;
