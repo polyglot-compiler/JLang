@@ -826,7 +826,14 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
                 int sidx = i-info->num_fields;
                 name = staticFields[sidx].name;
                 modifiers = staticFields[sidx].modifiers;
-                typeClass = staticFields[sidx].type_ptr;
+                if (staticFields[sidx].type_info_ptr->type_ptr != NULL) {
+                    // if not yet initialized, initialize
+                    if (*(staticFields[sidx].type_info_ptr->type_ptr) == NULL) {
+                        *(staticFields[sidx].type_info_ptr->type_ptr) = staticFields[sidx].type_info_ptr->init_type_class();
+                    }
+                }
+                // typeClass = staticFields[sidx].type_ptr;
+                typeClass = staticFields[sidx].type_info_ptr->type_ptr;
                 signature = staticFields[sidx].sig;
                 slot = -(sidx+1); // 0 ambiguity
             }

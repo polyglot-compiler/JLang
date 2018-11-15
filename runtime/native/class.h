@@ -34,7 +34,6 @@ struct JavaFieldInfo {
     int32_t offset;
     int32_t modifiers;
     struct JavaTypeInfo* type_info_ptr;
-    // jclass* type_ptr;
     char* sig;
 };
 //This is also a representation for the jfieldID type, but
@@ -44,7 +43,7 @@ struct JavaStaticFieldInfo {
     char* sig;
     void* ptr;
     int32_t modifiers;
-    jclass* type_ptr;
+    struct JavaTypeInfo* type_info_ptr;
 };
 
 // Concrete representation for the opaque type jmethodID.
