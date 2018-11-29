@@ -19,6 +19,7 @@
 #include "jvm.h"
 
 #include "helper.h"
+#include "factory.h"
 
 [[noreturn]] static void JvmUnimplemented(const char* name) {
     fprintf(stderr,
@@ -93,7 +94,7 @@ jstring internJString(jstring str) {
 extern "C" {
   //we copied this number from open JDK -> not sure the implications
 #define JVM_INTERFACE_VERSION 4
- 
+
 jint
 JVM_GetInterfaceVersion(void) {
   return JVM_INTERFACE_VERSION;
@@ -357,8 +358,22 @@ JVM_DisableCompiler(JNIEnv *env, jclass compCls) {
 
 void
 JVM_StartThread(JNIEnv *env, jobject thread) {
-  //TODO someday there will be synchronization
-  return;
+    //TODO someday there will be synchronization
+    // printf("Starting thread\n");
+    // get run function pointer
+    jclass objectClass = Unwrap(thread)->Cdv()->Class()->Wrap();
+    const JavaClassInfo* info = GetJavaClassInfo(objectClass);
+    JavaMethodInfo* methods = info->methods;
+    for (int i = 0; i < info->num_methods; i++) {
+        if (strcmp(methods[i].name, "run") == 0) {
+            // printf("found run method: %p\n", methods[i].fnPtr);
+            jmethodID mtdId = reinterpret_cast<jmethodID>(&(methods[i]));
+            // CallJavaInstanceMethod<jobject>(thread, mtdId, (const jvalue*) &thread);
+            // intf is Runnable interface
+            // CallJavaInterfaceMethod(jobject obj, jclass intf, const char* name, const char* sig, const jvalue* args) {
+        }
+    }
+    return;
 }
 
 void
@@ -534,7 +549,9 @@ JVM_SetPrimitiveArrayElement(JNIEnv *env, jobject arr, jint index, jvalue v, uns
 
 jobject
 JVM_NewArray(JNIEnv *env, jclass eltClass, jint length) {
-    JvmUnimplemented("JVM_NewArray");
+    // JvmUnimplemented("JVM_NewArray");
+    // dw475 TODO handle eltClass is primative class
+    return CreateJavaObjectArray(length);
 }
 
 jobject
@@ -704,7 +721,7 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
 
         jclass MethodClass = env->FindClass("java.lang.reflect.Method");
 
-        // TODO take into account publiconly argument
+        // dw475 TODO take into account publiconly argument
 
         jobjectArray ret = CreateJavaObjectArray(info->num_methods);
 
@@ -716,8 +733,22 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             jstring nameString = env->NewStringUTF(methods[i].name);
             jint modifiers = methods[i].modifiers;
             jint slot = i;
-            jobjectArray paramTypes = NULL;
+            jobjectArray paramTypes = CreateJavaObjectArray(methods[i].numArgTypes);
             jclass returnType = NULL;
+            jclass* returnTypePtr = methods[i].returnType;
+            if (returnTypePtr != NULL) {
+                returnType = *returnTypePtr;
+            }
+            for (int k = 0; k < methods[i].numArgTypes; k++) {
+                jclass* argTypePtr = methods[i].argTypes[k];
+                if (argTypePtr != NULL) {
+                    JVM_SetArrayElement(env, paramTypes, k, *argTypePtr);
+                    // const JavaClassInfo* arginfo = GetJavaClassInfo(*argTypePtr);
+                    // printf("class name: %s\n", arginfo->name);
+                } else {
+                    JVM_SetArrayElement(env, paramTypes, k, NULL);
+                }
+            }
             jstring signature = env->NewStringUTF(methods[i].sig);
             // TODO need to get the proper values
             // call the method constructor
@@ -777,10 +808,19 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             if (i < info->num_fields) {
                 name = fields[i].name;
                 modifiers = fields[i].modifiers;
-                typeClass = fields[i].type_ptr;
+                if (fields[i].type_info_ptr->type_ptr != NULL) {
+                    // if not yet initialized, initialize
+                    if (*(fields[i].type_info_ptr->type_ptr) == NULL) {
+                        // printf("not yet initialized: %s %p\n", name, fields[i].type_info_ptr->init_type_class);
+                        *(fields[i].type_info_ptr->type_ptr) = fields[i].type_info_ptr->init_type_class();
+                    }
+                    // printf("type ptr: %s %p\n", name, fields[i].type_info_ptr->type_ptr);
+                }
+                typeClass = fields[i].type_info_ptr->type_ptr;
+                // typeClass = fields[i].type_ptr;
                 // printf("Type class for %s: %p %p\n", name, typeClass, *typeClass);
                 signature = fields[i].sig;
-                // slot = fields[i].offset;
+                // printf("sign: %s\n", signature);
                 slot = i;
             } else {
                 int sidx = i-info->num_fields;
@@ -1285,7 +1325,7 @@ extern "C" {
     if ((intptr_t)count <= 0) return -1;
     return vsnprintf(str, count, fmt, args);
   }
-  
+
   int jio_snprintf(char *str, size_t count, const char *fmt, ...) {
     va_list args;
     int len;
