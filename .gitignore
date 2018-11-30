@@ -14,5 +14,7 @@
 .cproject
 .project
 .classpath
+*.ll
+*.o
 *~
 tests/isolated/check
