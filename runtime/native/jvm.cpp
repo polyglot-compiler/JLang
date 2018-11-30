@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include "stack_trace.h"
@@ -1265,7 +1266,35 @@ JVM_Write(jint fd, char *buf, jint nbytes) {
 
 jint
 JVM_Available(jint fd, jlong *pbytes) {
-    JvmUnimplemented("JVM_Available");
+  //mostly from JDK code, TODO understand and change
+  jlong cur, end;
+  int mode;
+  struct stat buf;
+
+  if (fstat(fd, &buf) >= 0) {
+    mode = buf.st_mode;
+    if (S_ISCHR(mode) || S_ISFIFO(mode) || S_ISSOCK(mode)) {
+      /*
+       * XXX: is the following call interruptible? If so, this might
+       * need to go through the INTERRUPT_IO() wrapper as for other
+       * blocking, interruptible calls in this file.
+       */
+      int n;
+      if (ioctl(fd, FIONREAD, &n) >= 0) {
+	*pbytes = n;
+	return 1;
+      }
+    }
+  }
+  if ((cur = lseek(fd, 0L, SEEK_CUR)) == -1) {
+    return 0;
+  } else if ((end = lseek(fd, 0L, SEEK_END)) == -1) {
+    return 0;
+  } else if (lseek(fd, cur, SEEK_SET) == -1) {
+    return 0;
+  }
+  *pbytes = end - cur;
+  return 1;
 }
 
 jlong
