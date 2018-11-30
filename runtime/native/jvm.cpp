@@ -8,7 +8,10 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #include <unordered_map>
-
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "stack_trace.h"
 #include "class.h"
 #include "exception.h"
@@ -32,6 +35,8 @@
     DumpStackTrace();
     abort();
 }
+
+#define MAX_PATH 2048
 
 static void JvmIgnore(const char* name) {
     fprintf(stderr,
@@ -1143,9 +1148,59 @@ JVM_NativePath(char *path) {
   return path;
 }
 
+//This is a JDK specific flag
+//not a real UNIX flag, used by some native code.
+
+#ifndef O_DELETE
+#define O_DELETE 0x10000
+#endif
+
 jint
-JVM_Open(const char *fname, jint flags, jint mode) {
-    JvmUnimplemented("JVM_Open");
+JVM_Open(const char *path, jint oflag, jint mode) {
+
+  if (strlen(path) > MAX_PATH - 1) {
+    //JDK adds this, not sure how they user it
+    // errno = ENAMETOOLONG;
+    return -1;
+  }
+  int fd;
+  int o_delete = (oflag & O_DELETE);
+  oflag = oflag & ~O_DELETE;
+
+  fd = open(path, oflag, mode);
+  if (fd == -1) return -1;
+
+  //If the open succeeded, the file might still be a directory                                                         
+  {
+    struct stat buf;
+    int ret = fstat(fd, &buf);
+    int st_mode = buf.st_mode;
+
+    if (ret != -1) {
+      if ((st_mode & S_IFMT) == S_IFDIR) {
+	//JDK adds this, not sure how they user it
+        //errno = EISDIR;
+        close(fd);
+        return -1;
+      }
+    } else {
+      close(fd);
+      return -1;
+    }
+  }
+  //Comment in the JDK explains how some native code will break without this
+#ifdef FD_CLOEXEC
+  {
+    int flags = fcntl(fd, F_GETFD);
+    if (flags != -1)
+      fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+  }
+#endif
+
+  if (o_delete != 0) {
+    unlink(path);
+  }
+  return fd;
 }
 
 jint
