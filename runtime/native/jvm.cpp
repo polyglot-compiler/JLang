@@ -1245,12 +1245,13 @@ JVM_Open(const char *path, jint oflag, jint mode) {
 
 jint
 JVM_Close(jint fd) {
-    JvmUnimplemented("JVM_Close");
+  return close(fd);
 }
 
 jint
 JVM_Read(jint fd, char *buf, jint nbytes) {
-    JvmUnimplemented("JVM_Read");
+  //TODO make repeatable on interrupt error
+  return read(fd,buf,nbytes);
 }
 
 jint
