@@ -127,6 +127,8 @@ bool isPrimitiveClass(jclass cls);
 
 jclass GetComponentClass(jclass cls);
 
+int arrayRepSize(jclass cls);
+
 extern jclass Polyglot_native_int;
 extern jclass Polyglot_native_byte;
 extern jclass Polyglot_native_short;

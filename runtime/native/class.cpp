@@ -45,6 +45,10 @@ PRIM_CLASS_DEF(void)
   if (Unwrap(cls) == PRIM_CLASS(prim, Klass)) {	\
     return true;
 
+#define PRIM_KLASS_SIZE(cls, prim, size)		\
+  if (Unwrap(cls) == PRIM_CLASS(prim, Klass)) { \
+    return size;
+
 // dw475 TODO correctly set some fields
 #define PRIM_REGISTER(prim)			\
   if(1) { \
@@ -303,6 +307,23 @@ bool isPrimitiveClass(jclass cls) {
   }
 }
 
+/**
+ * Returns the number of bytes used to store the given type in an array
+ */
+int arrayRepSize(jclass cls) {
+  PRIM_KLASS_SIZE(cls, int, sizeof(int))
+  } else PRIM_KLASS_SIZE(cls, byte, sizeof(char))
+  } else PRIM_KLASS_SIZE(cls, short, sizeof(short))	
+  } else PRIM_KLASS_SIZE(cls, long, sizeof(long))
+  } else PRIM_KLASS_SIZE(cls, float, sizeof(float))
+  } else PRIM_KLASS_SIZE(cls, double, sizeof(double))
+  } else PRIM_KLASS_SIZE(cls, char, sizeof(char))
+  } else PRIM_KLASS_SIZE(cls, boolean, sizeof(char))
+  } else PRIM_KLASS_SIZE(cls, void, sizeof(void*))
+  } else {
+     return sizeof(void*);
+  }
+}
 /**
  * Returns the class info object for the given java class object
  */

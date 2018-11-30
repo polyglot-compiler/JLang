@@ -1,6 +1,7 @@
 
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class HashtableTest {
 
@@ -17,6 +18,13 @@ public class HashtableTest {
 	    if (e.getKey().equals("hello")) {
 		System.out.println(e.getKey() + ":" + e.getValue());
 	    }
-	}    
+	}
+	chmtest();
+    }
+
+    public static void chmtest() {
+	ConcurrentHashMap<Integer,String> hm = new ConcurrentHashMap<>();
+	hm.put(3, "yes");
+	System.out.println(hm.get(3));
     }
 }

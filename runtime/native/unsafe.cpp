@@ -344,10 +344,9 @@ Java_sun_misc_Unsafe_arrayBaseOffset(
 
 jint
 Java_sun_misc_Unsafe_arrayIndexScale(JNIEnv *env, jobject, jclass cls) {
-  //TODO confirm that cls is an array classxs
-  JArrayRep* arrCls = reinterpret_cast<JArrayRep*>(cls);
-  jsize elemBytes = arrCls->ElemSize();
-  return elemBytes;
+  if (!isArrayClass(cls)) { return -1; } //TODO what is correct behavior?
+  jclass compClass = GetComponentClass(cls);
+  return arrayRepSize(compClass);
 }
 
 jint
@@ -425,8 +424,9 @@ Java_sun_misc_Unsafe_compareAndSwapLong(
 }
 
 jobject
-Java_sun_misc_Unsafe_getObjectVolatile(JNIEnv *env, jobject, jobject, jlong) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_getObjectVolatile");
+Java_sun_misc_Unsafe_getObjectVolatile(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset) {
+  //TODO do right thing w.r.t memory model and thread ordering
+  return Java_sun_misc_Unsafe_getObject(env, unsafeObj, obj, offset);
 }
 
 void
@@ -515,8 +515,10 @@ Java_sun_misc_Unsafe_putDoubleVolatile(JNIEnv *env, jobject, jobject, jlong, jdo
 }
 
 void
-Java_sun_misc_Unsafe_putOrderedObject(JNIEnv *env, jobject, jobject, jlong, jobject) {
-    UnsafeUnimplemented("Java_sun_misc_Unsafe_putOrderedObject");
+Java_sun_misc_Unsafe_putOrderedObject(JNIEnv *env, jobject unsafeObj, jobject obj, jlong offset, jobject value) {
+  //TODO do the right memory model thing as specified in Unsafe.java
+  //w.r.t. thread ordering
+  return Java_sun_misc_Unsafe_putObject(env, unsafeObj, obj, offset, value);
 }
 
 void
