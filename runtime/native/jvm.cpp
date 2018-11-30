@@ -269,7 +269,7 @@ JVM_MaxMemory(void) {
 
 jint
 JVM_ActiveProcessorCount(void) {
-    JvmUnimplemented("JVM_ActiveProcessorCount");
+  return sysconf(_SC_NPROCESSORS_ONLN);
 }
 
 //TODO use our native lib $ from native.cpp
