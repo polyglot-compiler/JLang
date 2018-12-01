@@ -1,0 +1,7 @@
+    int x, y;
+    y = 10;
+    x = read();
+    read();
+    while (1-y <= -x) {
+        y = x * (-y + 5);
+    }

@@ -16,5 +16,6 @@
 .classpath
 *.ll
 *.o
+*.dSYM
 *~
 tests/isolated/check

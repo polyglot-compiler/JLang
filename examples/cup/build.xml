@@ -1,0 +1,143 @@
+<project name="cup" default ="dist" basedir="." xmlns:if="ant:if" xmlns:unless="ant:unless">
+  <property name="etc"       location="etc"       />
+  <property name="bin"       location="bin"       />
+  <property name="lib"       location="lib"       />
+  <property name="src"       location="src"      />
+  <property name="java"      location="src/java"      />
+  <property name="flex"      location="src/jflex"      />
+  <property name="cup"       location="src/cup"       />
+  <property name="classes"   location="target/classes"   />
+  <property name="dist"      location="target/dist"      />
+  <!--property name="test"      location="test"      /-->
+
+  <!-- initialize the workspace -->
+  <target name="init">
+    <tstamp />
+    <available file="version.txt" property="version.present" />
+    <touch unless:set="version.present" file="version.txt" />
+    <mkdir dir="${java}" />
+    <mkdir dir="${classes}" />
+    <mkdir dir="${dist}" />
+    <loadfile property="cupversion" srcFile="version.txt" failonerror="false" />
+    <property name="cupversion" value="custombuild" unless:set="cupversion"/>
+    <exec executable="git" outputproperty="gitversion">
+      <arg value="log"/>
+      <arg value="-1"/>
+      <arg value="--format=%h"/>
+    </exec>
+    <exec executable="git" outputproperty="changed">
+      <arg value="status"/>
+      <arg value="--porcelain"/>
+      <redirector>
+	<outputfilterchain>
+	<linecontainsregexp>
+	  <regexp pattern='^M.*'/>
+	</linecontainsregexp>
+	<tokenfilter>
+	  <replaceregex pattern=".*" replace="modifications based on "/>
+	</tokenfilter>
+	</outputfilterchain>
+	</redirector>
+    </exec>
+    <property name="svnversion">${changed}${gitversion}</property>
+  </target>
+
+  <property environment="env" />
+
+  <path id="libraries">
+     <fileset dir="${lib}">
+	<include name="**/*.jar" />
+     </fileset>
+  </path>
+
+  <path id="binaries">
+     <fileset dir="${bin}">
+	<include name="**/*.jar" />
+     </fileset>
+  </path>
+
+  <target name="clean">
+    <delete file="${java}/java_cup/parser.java" />
+    <delete file="${java}/java_cup/sym.java" />
+    <delete file="${java}/java_cup/Lexer.java" />
+    <delete dir="${classes}" />
+    <delete dir="${dist}" />
+  </target>
+
+  <taskdef name="cup" classname="java_cup.anttask.CUPTask" classpath="${bin}/java-cup-11.jar" />
+  <taskdef name="jflex" classname="JFlex.anttask.JFlexTask" classpath="${bin}/JFlex.jar" />
+
+  <target name="cup" depends="init">
+    <cup srcfile="${cup}/parser.cup" interface="on" destdir="${java}" parser="parser" symbols="sym" quiet="false" nonterms="true"/>
+  </target>
+
+  <target name="jflex" depends="cup">
+    <jflex file="${flex}/Lexer.jflex" destdir="${java}" />
+  </target>
+
+  <target name="compile" depends="jflex">
+    <replace file="${java}/java_cup/version.java"
+       token="+ version_str"
+       value='+ "v0.11b ${cupversion} (GIT ${svnversion})"'>
+    </replace>
+    <javac srcdir="${java}" destdir="${classes}" verbose="off" listfiles="off" debug="on" source="1.8" target="1.8">
+      <classpath refid="libraries"/>
+    </javac>
+  </target>
+
+  <target name="dist" depends="compile">
+   <jar jarfile="${dist}/java-cup-11b.jar" basedir="${classes}">
+      <manifest>
+        <attribute name="Main-Class" value="java_cup/Main" />
+	<attribute name="Class-Path" value="java-cup-11b-runtime.jar" />
+      </manifest>
+    </jar>
+    <jar jarfile="${dist}/java-cup-11b-runtime.jar" basedir="${classes}" includes="java_cup/runtime/*">
+    </jar>
+   <tar longfile="gnu"  destfile="${dist}/java-cup-bin-11b-${cupversion}.tar.gz" compression="gzip">
+     <tarfileset dir="${dist}" username="ant" group="ant">
+       <depth max="0"/>
+       <include name="*.jar"/>
+     </tarfileset>
+   </tar>
+  </target>
+
+ <target name="src-dist" depends="dist">
+   <tar longfile="gnu"  destfile="${dist}/java-cup-src-11b-${cupversion}.tar.gz" compression="gzip">
+     <tarfileset dir="${src}" username="ant" group="ant" prefix="src">
+       <include name="**"/>
+     </tarfileset>
+     <tarfileset dir="${bin}" username="ant" group="ant" prefix="bin/">
+       <include name="**"/>
+     </tarfileset>
+     <tarfileset dir="${lib}" username="ant" group="ant" prefix="lib/">
+       <include name="**"/>
+     </tarfileset>
+     <tarfileset dir="${src}/.." username="ant" group="ant">
+       <depth max="0"/>
+       <include name="*"/>
+     </tarfileset>
+   </tar>
+  </target>
+
+  <target name="versionbump" depends="init">
+    <echo message="${DSTAMP}" file="version.txt" />
+  </target>  
+
+  <target name="scp" depends="src-dist">
+    <exec executable="scp">
+      <arg value="${dist}/java-cup-src-11b-${cupversion}.tar.gz" />
+      <arg value="${dist}/java-cup-bin-11b-${cupversion}.tar.gz" />
+      <arg value="${dist}/../manual.html" />
+      <arg value="petter@www2.in.tum.de:/srv/www/htdocs/projects/cup/releases" />
+    </exec>
+  </target>
+  
+  <target name="help" depends="init">
+    <echo message="Targets:" />
+    <echo message="  dist           to create CUP jars" />
+    <echo message="  src-dist       to create release packages" />
+    <echo message="  scp            to deploy relase to homepage" />
+    <echo message="  versionbump    to inc release" />
+  </target>
+</project>

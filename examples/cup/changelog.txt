@@ -1,0 +1,518 @@
+CUP version 0.11b 20151001 is a feature release.
+
+Implemented a generic pre-/post DFS search with visitor support
+Also added fragments of XPath 1.0 query support on parse trees
+Fixed the visibility of children and the variant attribute of XMLElement
+
+M. Petter
+Technische Universität München
+2015/10/01
+------------------------------------------------------------------------
+CUP version 0.11b 20150326 is a bugfix release.
+
+Fixed an issue with empty productions having non-empty location information
+Fixed an issue with deprecation of constructors
+
+M. Petter
+Technische Universität München
+2015/02/26
+------------------------------------------------------------------------
+CUP version 0.11b 20150226 is a feature release.
+
+added the means to move Locations
+
+M. Petter
+Technische Universität München
+2015/02/26
+------------------------------------------------------------------------
+CUP version 0.11b 20140808 is a feature/bugfix release.
+
+added expected symbols to the report_error(...) method
+added an expected_token_ids() to inform about valid continuations
+added parameters and code to enable automatic creation of XML parse trees
+fixed a bug in the lookahead computation
+
+M. Petter
+Technische Universität München
+2014/02/26
+------------------------------------------------------------------------
+CUP version 0.11b beta 20140226 is a feature release.
+
+Command line flag -locations now triggers the generation of the identifiers
+xleft and xright in the actions section instead of left and right.
+Both are of type ComplexSymbolFactory.Location instead of plain ints.
+
+M. Petter
+Technische Universität München
+2014/02/26
+------------------------------------------------------------------------
+CUP version 0.11b beta 20140220 is a feature release.
+
+Main switch statement now splits the action code in bundles of 300 productions
+on several different method bodies. Should fix the 65k size boundary problem
+
+M. Petter
+Technische Universität München
+2014/02/20
+------------------------------------------------------------------------
+CUP version 0.11a beta 20060608 is a bugfix release.
+
+Embedded actions in CUP didn't really relay their intermediate results to the
+main action part. now, embedded actions have the following (new) properties:
+- the LHS has the type of the "parent" lhs
+- the RESULT variable of following embedded actions have their RESULT
+  variables initialized with the RESULT of the previous embedded action
+
+M. Petter, A. Flexeder
+Technische Universität München
+2006/06/08
+------------------------------------------------------------------------
+CUP version 0.11a beta 200603230 is a bugfix release.
+
+corrected new issue with SymbolFactory. Forgot to offer one of the non-
+propagating factory methods for Symbol generation. (thanks to 
+Robert.Streich@ObjectFx.com )
+
+M. Petter
+Technische Universität München
+2006/03/30
+------------------------------------------------------------------------
+CUP version 0.11a beta 20060328 is a feature release.
+
+Introduced the concept of the java_cup.runtime.SymbolFactory, which serves
+multiple purposes; now You have the chance to manage extended information
+relating to the sourcecode file in Your symbols, by using own child classes
+of java_cup.runtime.Symbol.
+In Addition to that You can implement Your own child class of SymbolFactory
+to have a callback function whenever a new Symbol is created. This is
+especially handy when equipping Your syntax tree with location information
+from the source code file. For exactly this purpose the new Factories
+java_cup.runtime.DefaultSymbolFactory and
+java_cup.runtime.ComplexSymbolFactory
+are introduced.
+Experiments with the new runtime have revealed a few little flaws in the
+build file, resulting in classpath confusion: In fact, JFlex itself depends
+on the CUP runtime, leading to a mixture of runtimes, that could spoil Your
+build process. I have corrected the errors in the CUP buildfile.
+
+M. Petter
+Technische Universität München
+2006/03/28
+------------------------------------------------------------------------
+CUP version 0.11a beta 20060102 is a bugfix release.
+
+Corrected two minor issues: a build.xml bug resulting in a slightly smaller
+runtime JAR (thanks to Florian deissenb@srs.kundenserver.de ) and an 
+incorrect initialized parameter (thanks to Andreas ag@ibag-edv.de)
+
+M. Petter
+Technische Universität München
+2006/01/02
+------------------------------------------------------------------------
+CUP version 0.11a beta 20051104 is a bugfix release.
+
+the buildfile now creates Java 1.2 compliant code as well as it uses an actual
+JDK 1.2 compliant CUP version for bootstrapping. Martin.vGagern@gmx.net has
+contributed to bugfixes, concerning an ant parameter as well as a more
+informative CODE_STRING Token.
+
+M. Petter
+Technische Universität München
+2005/11/04
+------------------------------------------------------------------------
+CUP version 0.11a beta 20050921 is a combined bugfix release.
+
+added calls to clear the content of static fields in CUP, to be able to
+call the main() method several times instead of only one time without
+strange errors.
+
+M. Petter
+Technische Universität München
+2005/09/21
+------------------------------------------------------------------------
+CUP version 0.11a beta 20050920 is a combined bugfix/feature release.
+
+Made use of .peek() function for Stacks in generated parsers.
+-destdir parameter added for generation in Makefiles or with ant. 
+Completely rewrote the CUP-anttask to properly call ant even, if You use 
+paths including whitespaces.
+
+M. Petter
+Technische Universität München
+2005/09/20
+------------------------------------------------------------------------
+CUP version 0.11a beta 20050628 is a combined bugfix/feature release.
+
+Henning Niss ( hniss at itu dot dk ) sent me a patch to improve the
+generics handling in CUP. It also introduces a new parameter 
+"-typeargs" to cup, whith which one can parametrize the generated parser.
+
+M. Petter
+Technische Universität München
+2005/06/28
+------------------------------------------------------------------------
+CUP version 0.11a beta 20050516 is a management release.
+
+To indicate, that the CUP project switches from the Princeton team to the
+technical university of munich, we switch to version 11 since this moment.
+Nothing else has changed since the last bugfix release, as indicated in
+the version date.
+
+M. Petter
+Technische Universität München
+2005/05/16
+------------------------------------------------------------------------
+CUP version 0.10k TUM Edition 20050516 is a bugfix release.
+
+We forgot to implement a simple line in the wildcard production integration,
+leading to wildcards like ArrayList<? extends MyClass> being
+destroyed. Meanwhile, everything should work as it is supposed to.
+
+M. Petter
+Technische Universität München
+2005/05/16
+------------------------------------------------------------------------
+CUP version 0.10k TUM Edition 20050514 is a bugfix/enhancement release.
+
+Along with the redesigned Lexer, CUP lost a lot of error tracking and
+displaying capabilities; now we have redesigned the Errormanager to display
+even better error informations like column/line and the token in plain text,
+CUP is processing, when the error occurs.
+
+M. Petter
+Technische Universität München
+2005/05/14
+------------------------------------------------------------------------
+CUP version 0.10k TUM Edition 20050510 is a feature release.
+
+CUP now supports generic parametrisation of datatypes for CUP terminals
+and non terminals, as provided by Java 1.5. We do hope, it works correctly
+all flavours of Java generics, as for example wildcards. 
+! Be carefull ! : there are the new keywords "super" and "extends", which
+had to be introduced to support generic types. Watch out for identifiers in
+Your CUP files, that have these names.
+
+There is now an ANT Task for CUP, namely java_cup.anttask.CUPTask. It will
+soon be added to the documentation - for the moment, You can look into the
+sources to figure out, how to use it.
+
+The CUP frontend, which parses .cup-files has changed to a JFlex-generated
+scanner, which allows an easier maintainance.
+
+M. Petter
+Technische Universität München
+2005/05/10
+------------------------------------------------------------------------
+CUP version 0.10k is a maintenance release.
+
+CUP will now accept a filename on the command-line if it is the last
+argument and does not start with "-".  This allows better GUI
+integration.  Some unix-isms in end-of-line handling have been fixed,
+too; thanks to Jean Vaucher <vaucher@iro.umontreal.ca> for the tip.
+
+The java_cup.runtime.Scanner interface has been refined to allow
+the scanner to return null to signal EOF.  JLex and JFlex users will
+like this, as it means they can use the default scanner EOF behavior.
+
+Bruce Hutton <b_hutton@cs.auckland.ac.nz>, Zerksis Umrigar <zdu@acm.org>,
+and Vladimir Antonevich <Vladimir.Antonevich@solcorp.com> all sent bug
+reports touching on erroneous error recovery in the parser runtime.
+Dr. Hutton provided the fixes that I've adopted; Zerksis sent a very
+helpful CUP-vs-bison test case.  If you're in a position to notice
+correct/incorrect error recovery and this release works better for you
+than previous ones, thank them --- and send me email so I know whether
+we've quashed this bug for good.
+
+Klaus Georg Barthelmann <barthel@Informatik.Uni-Mainz.DE> caught an
+oversight in the constructors for java_cup.runtime.Symbol.  I've also
+taken an obsolete constructor allowing specification of a start state
+for some symbol to package-scope; if this causes anyone backwards
+compatibility problems, email me and I will consider changing it back.
+
+C. Scott Ananian
+Laboratory for Computer Science
+Massachusetts Institute of Technology
+Jul-24-1999 [CSA]
+------------------------------------------------------------------------
+CUP version 0.10j adds new features.
+
+A "-version" command-line option is now accepted, which prints out the
+working version of CUP and halts.  This allows automatic version-checking,
+for those applications which require it.
+
+Broadened the CUP input grammar to allow CUP reserved words in package and
+import statements, and in (non)terminal labels. In addition, semicolons
+after 'action code', 'parser code', 'init code', and 'scan with' sections
+have been made optional (if language noise annoys you).  Also, these four
+sections may now appear in any order, instead of the strict ordering
+previously required.  Finally, you can now spell 'non-terminal' as either
+"non terminal" (old way) *or* "nonterminal" without upsetting CUP.
+[Flexibility requested by Stefan Kahrs <S.M.Kahrs@ukc.ac.uk>]
+[Package and import reserved word issues noted by Frank Rehberger,
+ Brandon Schendel, and Bernie Honeisen, among others.]
+
+Clarified the parse table dumps generated by the -dump* options.
+
+I have added code to lr_parser to detect illegal Symbol recycling by the
+scanner and to throw an Error in this case.  The scanner must return
+a fresh Symbol object on each invocation, because these objects are
+tagged with parse state and added to the parse stack.  Object sharing
+does evil things to the parser; don't do it (you won't get away with it).
+[Symbol recycling problems reported by Ken Arnold <Ken.Arnold@Sun.COM>]
+
+Improved scanner interface, designed by David MacMahon <davidm@smartsc.com>.
+The new java_cup.runtime.Scanner interface is used by the default
+implementation of lr_parser.scan().  See the manual for more details.
+Old parsers will work with the new runtime, but parsers generated with
+0.10j will not work with the runtime from earlier versions unless you
+specify the (new) "-noscanner" option.
+
+C. Scott Ananian
+Laboratory for Computer Science
+Massachusetts Institute of Technology
+Jul-24-1999 [CSA]
+------------------------------------------------------------------------
+CUP version 0.10i is a maintenance release.
+
+A one-off bug in the parser error-recovery code has been caught and corrected
+by Chris Harris <ckharris@ucsd.edu>.
+
+The fields in the emitted symbol class have been made public, rather than
+package scope, since the class already was public.
+
+The issues formerly addressed in Appendix D (accessing parser methods/fields
+from the action class) have been partially addressed by adding a new
+private final field named 'parser' to the action object that points to
+the parser object.  THIS INTRODUCES A POTENTIAL INCOMPATIBILITY if you had
+previously defined a field named 'parser' in the 'action code {: ... :}'
+portion of your grammar.  The solution is to rename your field.
+
+Finally, incorporated Jako Andras' suggestions to make CUP more friendly
+to makefiles.
+
+A reminder: please submit bug-fixes or feature-additions as *patches*, not
+complete archives.  Your patch will have a greater chance of integration
+into the distribution if you package each feature or fix as a separate patch,
+instead of lumping everything together and leaving it to me to figure out
+what you've changed and why.
+
+C. Scott Ananian
+Laboratory for Computer Science
+Massachusetts Institute of Technology
+Feb-18-1999 [CSA]
+------------------------------------------------------------------------
+CUP version 0.10h is a maintenance release.
+
+Starting with this version, CUP encodes the various parser tables as strings
+to get around java's 64k method-size limitation.  This allows larger
+parse tables and thus more complicated grammars.
+
+Furthermore, a long-standing buglet that would cause CUP to occasionally
+generate "Attempt to construct a duplicate state" internal errors has been
+fixed.
+
+Another contributed Microsoft-compatible makefile has also been added
+to the distribution.
+
+C. Scott Ananian
+Laboratory for Computer Science
+Massachusetts Institute of Technology
+Feb-10-1999 [CSA]
+------------------------------------------------------------------------
+CUP version 0.10g contains bug fixes, added functionality, and
+performance improvements.  Thanks to Matthias Zenger, Peter Selinger,
+Jaroslaw Kachinarz, Ian Davis and others for contributions.
+
+- New command line option '-interface' added.  This causes JavaCUP to
+  emit an *interface* with the symbol constants, instead of a
+  *class*.  Without the command-line flag, behavior is identical to
+  v0.10f and before: the symbols are emitted as a class.
+- (minor) Added toString() method to java_cup.runtime.Symbol and
+  modified the debugging parser to use it.  This allows you to
+  override toString() to allow a more intelligible debugging parse.
+- The CUP grammar has been extended to allow one to declare array types
+  for javaCUP terminals and non-terminals.  Matthias Zenger first 
+  suggested this feature; Peter Selinger was the first to show the
+  right way to do it.
+- The symbols prefixed with CUP$ now have the parser class file name 
+  added to the prefix as well, to allow more than one parser object
+  per package.  Thanks to Jaroslaw Kachniarz for pointing out this
+  problem.
+- Fixed bug that prevented one from invoking the parser multiple times.
+  To quote Ian Davis, who found and diagnosed the bug:
+    Repeat invocations of the same instantiation of lr_parser.java to parse
+    distinct input statements fail for the simple reason that the stack is
+    not emptied at start of parsing, but the stack offset is reset to 0.
+  This has been fixed.
+- Fixed bug with implicit start productions not receiving a RESULT.
+- Fixed bug with RESULT assignments that are not right-most in the
+  production.
+- Updated documentation.
+
+Known issues:
+- All known bugs have been fixed.
+- The java_cup.runtime.SymbolStack / java_cup.runtime.intStack
+  performance hack originally suggested by Matthias Zenger has been
+  postponed to the next release.  By eliminating typecasts and 
+  synchronized methods, a substantial performance improvement can be 
+  obtained.  Backwards-compatibility issues have forced the postponement 
+  of the code merge.
+
+C. Scott Ananian
+Laboratory for Computer Science
+Massachusetts Institute of Technology
+3/24/98 [CSA]
+------------------------------------------------------------------------
+CUP version 0.10f is a maintenance release.  The code has been cleaned up
+for JDK 1.1 functionality. No major functionality has been added; any bugs
+in 0.10e are still in 0.10f.
+
+- Removed trailing semicolons from class definitions which upset strict
+  compilers (not Sun's javac, for some reason).
+- Changed 'PrintStream's to 'PrintWriter's to eliminate deprecation 
+  warnings.
+
+As of this release, the javaCUP code is being maintained by
+C. Scott Ananian.  Suggestions and bug-fixes should be sent to
+cananian@alumni.princeton.edu. 
+
+Known issues:
+
+- Precedence bug: rules unmarked by precedence information are treated
+  as if they had existing, but very low, precedence.  This can mask
+  parser conflicts.
+- Efficiency hack: java.util.Stack will be replaced in the next
+  release with a special-purpose stack to eliminate
+  performance-robbing type-casts.
+- It has been suggested that the symbol *class* should be an
+  *interface* instead.  This will be a command-line option in the next
+  release. 
+
+C. Scott Ananian
+Laboratory for Computer Science
+Massachusetts Institute of Technology
+12/21/97 [CSA]
+------------------------------------------------------------------------
+CUP version 0.10e contains a few bug fixes from 0.10a
+
+- %prec directive now works correctly 
+	fixed by cananian@princeton.edu <C. Scott Ananian>
+- Shift reduce conflicts are now correctly reported
+	fixed by danwang@cs.princeton.edu <Daniel . Wang>
+- Error with reporting the positon of the error token also fixed
+	fixed by cananian@princeton.edu <C. Scott Ananian>
+- INSTALL script now has a slightly more complex test.
+- foo.java.diff included for changes from previous release
+- Fixed more bugs with reporting of shift reduce conflicts.
+	fixed by danwang@cs.princeton.edu <Daniel . Wang>
+- Fixed bug introduced by previous fix patches from <hosking@.cs.purdue.edu>
+  Added '\r' as a whitespace character for the lexer suggested by 
+	(dladd@spyglass.com)
+- Fixed botched relase
+Daniel Wang
+Department of Computer Science
+Princeton University
+
+Last updated:  9/12/97 [DW]
+------------------------------------------------------------------------
+Changes and Additions to CUP v0.9e
+
+CUP version 0.10a is a major overhaul of CUP.  The changes are severe,
+meaning no backwards compatibility to older versions.
+
+Here are the changes:
+
+1.  CUP now interfaces with the lexer in a completely different
+manner.  In the previous releases, a new class was used for every
+distinct type of terminal.  This release, however, uses only one class:
+The Symbol class.  The Symbol class has three instance variables which 
+are significant to the parser when passing information from the lexer.
+The first is the value instance variable.  This variable contains the 
+value of that terminal.  It is of the type declared as the terminal type
+in the parser specification file.  The second two are the instance
+variables left and right.  They should be filled with the int value of
+where in the input file, character-wise, that terminal was found.
+
+2. Terminal and non-nonterminal declarations now can be declared in two
+different ways to indicate the values of the terminals or non-terminals.
+The previous declarations of the form
+
+terminal {classname} {terminal} [, terminal ...];
+
+still works.  The classname, however indicates the type of the value of
+the terminal or non-terminal, and does not indicate the type of object
+placed on the parse stack.
+
+A declaration, such as:
+
+terminal {terminal} [, terminal ...];
+
+indicates the terminals in the list hold no value.
+
+3. CUP doesn't use the Symbol class for just terminals, but for all
+non-terminals as well.  When a production reduces to a non-terminal, a
+new Symbol is created, and the value field is filled with the value of
+that non-terminal.  The user must know that the terminal and non terminal
+declarations specify a type corresponding to the type of the value field
+for the symbol representing that terminal or non-terminal.
+
+4. Label references do not refer to the object on the parse stack, as in
+the old CUP, but rather to the value of the value instance variable of
+the Symbol that represents that terminal or non-terminal.  Hence,
+references to terminal and non-terminal values is direct, as opposed to
+the old CUP, where the labels referred to objects containing the value
+of the terminal or non-terminal.
+
+5. The RESULT variable refers directly to the value of the non-terminal
+to which a rule reduces, rather than to the object on the parse stack.
+Hence, RESULT is of the same type the non-terminal to which it reduces, 
+as declared in the non terminal declaration.  Again, the reference is
+direct, rather than to something that will contain the data.
+
+6. For every label, two more variables are declared, which are the label
+plus left or the label plus right.  These correspond to the left and
+right locations in the input stream to which that terminal or
+non-terminal came from.  These values are propagated from the input
+terminals, so that the starting non-terminal should have a left value of
+0 and a right value of the location of the last character read. 
+
+7. A call to parse() or debug_parse() return a Symbol.  This Symbol is
+of the start non-terminal, so the value field contains the final RESULT
+assignment. 
+
+8. CUP now has precedenced terminals.  a new declaration section,
+occurring between the terminal and non-terminal declarations and the
+grammar specifies the precedence and associativity of rules.  The
+declarations are of the form:
+
+precedence {left| right | nonassoc} terminal[, terminal ...];
+...
+
+The terminals are assigned a precedence, where terminals on the same
+line have equal precedences, and the precedence declarations farther
+down the list of precedence declarations have higher precedence.  left,
+right and nonassoc specify the associativity of these terminals.  left
+associativity corresponds to a reduce on conflict, right to a shift on
+conflict, and nonassoc to an error on conflict.  Hence, ambiguous
+grammars may now be used.  For a better explanation, see the manual.
+
+9.  Finally the new CUP adds contextual precedence.  A production may be
+declare as followed:
+
+lhs ::= {right hand side list of terminals, non-terminals and actions}
+        %prec {terminal};
+
+this production would then have a precedence equal to the terminal
+specified after the "%prec".  Hence, shift/reduce conflicts can be
+contextually resolved.  Note that the "%prec terminal" part comes after
+all actions strings.  It does not come before the last action string.
+
+For more information read the manual, found in manual.html
+
+Frank Flannery
+Department of Computer Science
+Princeton University
+
+Last updated:  7/3/96 [FF]
+
+

@@ -1,0 +1,128 @@
+import java.util.*;
+import java.io.*;
+import java_cup.runtime.Symbol;
+import java_cup.runtime.ComplexSymbolFactory.ComplexSymbol;
+import java_cup.runtime.ComplexSymbolFactory;
+import minijava.*;
+
+/* Preliminaries to use the scanner.  
+   scan with {: return lexer.next_token(); :};*/
+
+
+parser code {: 
+  public boolean syntaxErrors;
+
+
+  Lexer lexer;
+
+  public Parser(Lexer lex, ComplexSymbolFactory sf) {
+    super(lex,sf);
+    lexer = lex;
+  }
+//  public void report_fatal_error(String message, Object info){
+//      System.out.println("Fatal: ");
+//  }
+  
+  public void report_error(String message, Object info) {
+    syntaxErrors = true;
+    
+    System.out.println(message+" at");
+    
+    if ( !(info instanceof ComplexSymbol) ) return;
+    System.out.println(info);
+    return;
+  }
+:}; 
+
+
+
+/* Terminals (tokens returned by lexer). */
+terminal         SEMICOLON, COMMA, LPAR, RPAR, BEGIN, END;
+terminal         IF, ELSE, WHILE, READ, WRITE, BUNOP, ASSIGN;
+
+terminal Integer TYPE, BINOP, UNOP, COMP, BBINOP;
+terminal Integer INTCONST;
+terminal String  IDENT,STRINGCONST;
+terminal Boolean BOOLCONST;
+
+  
+
+non terminal Program        program;
+non terminal List<Decl>     decllist;
+non terminal Decl           decl;
+non terminal List<Stmt>     stmtlist;
+non terminal List<String>   identlist;
+non terminal Stmt           stmt;
+non terminal Expr           expr;
+non terminal Cond           cond;
+
+precedence left ELSE, UNOP, BINOP, BUNOP, BBINOP;
+
+program   ::=  decllist:d stmtlist:s
+    {: RESULT = new Program(d,s); :}
+    ;
+decllist  ::=  decl:d decllist:dl
+    {: dl.add(d); RESULT = dl; :}
+    | /* leere decllist */
+    {: RESULT = new LinkedList<Decl>(); :}
+    ;
+stmtlist  ::= stmtlist:sl stmt:s
+    {: sl.add(s); RESULT = sl; :}
+    | /* leere stmtlist */
+    {: RESULT = new LinkedList<Stmt>(); :}
+    ;
+decl ::= TYPE IDENT:i identlist:il  SEMICOLON
+    {: il.add(0,i); RESULT = new Decl(il); :}
+    ;
+identlist  ::= identlist:il COMMA IDENT:i
+    {: il.add(i); RESULT = il; :}
+    | /* leere identlist*/
+    {: RESULT = new LinkedList<String>(); :}
+    ;
+stmt ::= SEMICOLON
+    {: RESULT = Stmt.empty(); :}
+    | BEGIN stmtlist:sl END
+    {: RESULT = Stmt.compound(sl); :}
+    | IDENT:i ASSIGN expr:e SEMICOLON
+    {: RESULT = Stmt.assign(i,e); :}
+    | IDENT:i ASSIGN READ LPAR RPAR SEMICOLON
+    {: RESULT = Stmt.read(i); :}
+    | IDENT:i ASSIGN READ LPAR STRINGCONST:s RPAR SEMICOLON
+    {: RESULT = Stmt.read(i,s); :}
+    | WRITE LPAR expr:e RPAR SEMICOLON
+    {: RESULT = Stmt.write(e); :}
+    | WRITE LPAR STRINGCONST:s RPAR SEMICOLON
+    {: RESULT = Stmt.write(s); :}
+    | IF LPAR cond:c RPAR stmt:s
+    {: RESULT = Stmt.ifthen(c,s); :}
+    | IF LPAR cond:c RPAR stmt:t ELSE stmt:e
+    {: RESULT = Stmt.ifthenelse(c,t,e); :}
+    | WHILE LPAR cond:c RPAR stmt:s
+    {: RESULT = Stmt.whileloop(c,s); :}
+    ;
+cond ::= BOOLCONST:c
+    {: RESULT = Cond.boolconst(c); :}
+    | LPAR cond:c RPAR
+    {: RESULT = Cond.priority(c); :}
+    | expr:e1 COMP:op expr:e2
+    {: RESULT = Cond.binop(e1,op,e2); :}
+    | BUNOP cond:c
+    {: RESULT = Cond.unop(c); :}
+    | cond:c1 BBINOP:op cond:c2
+    {: RESULT = Cond.binop(c1,op,c2); :}
+    ;
+/* Yes, this grammar does not adhere to precedence of multiplication over addition                             */
+/* This is due to the fact that Helmut presents an ambiguous grammar in the lecture!                           */
+/* Thus I do not think it would be a good idea to encourage the "intuitive" handling of expressions even more! */
+expr ::= IDENT:i
+    {: RESULT = Expr.ident(i); :}
+    | INTCONST:c
+    {: RESULT = Expr.intconst(c); :}
+    | LPAR expr:e RPAR
+    {: RESULT = Expr.priority(e); :}
+    | BINOP expr:e
+    {: RESULT = Expr.unop(e); :}
+    | expr:e1 BINOP:op expr:e2
+    {: RESULT = Expr.binop(e1,op,e2); :}
+    ;
+
