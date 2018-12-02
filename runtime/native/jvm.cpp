@@ -223,12 +223,15 @@ JVM_OnExit(void (*func)(void)) {
 
 void
 JVM_Exit(jint code) {
-    JvmUnimplemented("JVM_Exit");
+  //TODO determine what else needs to happen on 'VM' shutdown
+  //TODO call registered 'OnExit' functions
+  exit(code);
 }
 
 void
 JVM_Halt(jint code) {
-    JvmUnimplemented("JVM_Halt");
+  //TODO determine what else needs to happen on 'VM' shutdown
+  exit(code);
 }
 
 void
