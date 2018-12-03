@@ -14,8 +14,8 @@ RUNTIME := $(BASE_DIR)/runtime
 
 ifndef TOP_LEVEL_MAKEFILE_INVOKED
 JDK ?= jdk-lite
-JDK := $(BASE_DIR)/$(JDK)
-JDK_CLASSES := $(JDK)/out/classes
+JDK := $(realpath $(BASE_DIR)/$(JDK))
+JDK_CLASSES := $(realpath $(JDK)/out/classes)
 JDK7 ?= /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home/
 endif
 
@@ -89,7 +89,7 @@ $(LL): $(SRC)
 	@JAVA_HOME=$(JDK7) bash -c 'gdb $<'
 
 clean: phony
-	@echo "Removing generated files"
+	@echo "Removing files generated for Unit Tests"
 	@rm -rf *.dSYM *.sol *.ll *.binary *.output *.class check
 
 .PHONY: phony
