@@ -59,6 +59,7 @@ High-level project structure
 
 - [lib](lib) contains Polyglot (the frontend for JLang); a fork of [JavaCPP Presets](https://github.com/bytedeco/javacpp-presets) to generate Java stubs from LLVM headers; and various supporting `.jar` files.
 
+- [examples](examples) contains full Java 7 projects which can be compiled with JLang and executed. Currently, we have included only the CUP parser generator, which can be built with the `make cup` command in the top-level JLang dirctory and is executable with the script [cup.sh](examples/cup/bin/cup.sh).
 
 Status (August 2018)
 -----------------
