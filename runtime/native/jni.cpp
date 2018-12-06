@@ -3,7 +3,7 @@
 #include "jni_help.h"
 #include "class.h"
 #include "reflect.h"
-
+#include "exception.h"
 // Begin official API.
 
 extern "C" {
@@ -67,11 +67,13 @@ jobject jni_ToReflectedField(JNIEnv *env, jclass cls, jfieldID id, jboolean isSt
 }
 
 jint jni_Throw(JNIEnv *env, jthrowable obj) {
-    JniUnimplemented("Throw");
+  throwThrowable(env, obj);
+  return -1;
 }
 
 jint jni_ThrowNew(JNIEnv *env, jclass clazz, const char *msg) {
-    JniUnimplemented("ThrowNew");
+  throwNewThrowable(env, clazz, msg);
+  return -1;
 }
 
 jthrowable jni_ExceptionOccurred(JNIEnv *env) {
