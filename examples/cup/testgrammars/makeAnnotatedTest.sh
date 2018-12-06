@@ -1,3 +1,3 @@
-java -jar ../dist/java-cup-11b.jar -interface -parser Parser -xmlactions test-correctannotations.cup
-javac -cp ../dist/java-cup-11b-runtime.jar:. *.java
-java -cp ../dist/java-cup-11b-runtime.jar:. Parser input.minijava test.xml
+../bin/cup.sh -destdir out -interface -parser Parser -xmlactions test-correctannotations.cup
+javac -cp ../dist/java-cup-11b-runtime.jar:.:out/ -d out *.java out/*.java
+java -cp ../dist/java-cup-11b-runtime.jar:.:out/ Parser input.minijava test.xml

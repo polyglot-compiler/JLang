@@ -1,0 +1,10 @@
+OUT := out
+LL := $(shell find $(OUT)/java_cup/runtime -name "*.ll")
+OBJ := $(LL:%.ll=%.o)
+
+all: $(OBJ)
+.PHONY: all
+
+$(OBJ): %.o: %.ll
+	@echo "Compiling $<"
+	@$(CLANG) -Wno-override-module -fPIC -c -o $@ $<
