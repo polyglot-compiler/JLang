@@ -1,12 +1,11 @@
 JLang
 ========
 
-JLang adds an LLVM back end to the [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler, translating Java down to LLVM IR.
+JLang adds an LLVM back end to the [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler, translating Java down to LLVM IR. From there, a back end can translate to the architecture of choice.
 
 Since Polyglot already translates extended Java code into vanilla Java ASTs, JLang should be interoperable with other Polyglot extensions by default. However, JLang aims to be extensible itself, so that one can write optimized LLVM translations for language extensions when needed.
 
 A user manual and developer guide can be found on the [JLang website](https://polyglot-compiler.github.io/JLang/).
-
 
 Contributing
 ------------
@@ -18,7 +17,6 @@ Before contributing, please do the following.
 (3) Read through the [developer guide](http://polyglot-compiler.github.io/JLang/developer-guide.html) on the website, to get technical details on the most critical subcomponents of JLang.<br>
 (4) If you need to work on compiler translations, get familiar with [LLVM IR](https://llvm.org/docs/LangRef.html).<br>
 (5) If you need to work on native runtime code, get familiar with [JNI](https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/design.html).
-
 
 Quick start guide
 -----------------
