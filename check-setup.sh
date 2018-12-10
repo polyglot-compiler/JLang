@@ -25,7 +25,7 @@ fi
 llvm_version="`llc -version | egrep LLVM.version | awk '{print $3}'`"
 if [[ -z "$llvm_version" ]]
 then
-  echo "- llc not found. Is LLVM installed?"
+  echo "- llc not found. Is LLVM installed and llc in the curren path?"
 fi
 
 case "$llvm_version" in

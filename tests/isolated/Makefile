@@ -18,6 +18,7 @@ endif
 
 BASE_DIR := ../..
 RUNTIME := $(BASE_DIR)/runtime
+SHELL = /bin/sh
 
 
 SRC := $(shell find * -name "*.java")
@@ -83,7 +84,7 @@ $(LL): $(SRC)
 
 %.output: %.binary phony
 	@echo "Generating output for $*"
-	@JAVA_HOME=$(JDK7) bash -c './$<' | tee $@
+	@JAVA_HOME=$(JDK7) bash -c './$<' > $@
 
 clean: phony
 	@echo "Removing generated files"
