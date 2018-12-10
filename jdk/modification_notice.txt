@@ -1,0 +1,2 @@
+// This file's original contents have been modified
+// by a JLang patch on XXDATEXX (the date this source code was compiled)

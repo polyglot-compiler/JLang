@@ -38,10 +38,14 @@ export RUNTIME := $(realpath runtime)
 export RUNTIME_CLASSES := $(RUNTIME)/out/classes
 
 # Clang.
-ifndef CLANG
-export CLANG := clang++
+ifndef CLANG_VERSION
+export CLANG_VERSION := 
+else
+export CLANG_VERSION := -$(CLANG_VERSION)
 endif
 
+export CLANG := clang++$(CLANG_VERSION)
+export LLC := llc$(CLANG_VERSION)
 export SHARED_LIB_FLAGS := -g -lgc -shared -rdynamic
 
 # JDK lib.
@@ -55,6 +59,8 @@ export LIBJVM_FLAGS = $(SHARED_LIB_FLAGS)
 # Test Dir.
 export TESTDIR := $(realpath tests/isolated)
 
+# Example Application Dir.
+export EXAMPLEDIR := $(realpath examples)
 # Platform-specific overrides.
 sinclude defs.$(shell uname)
 
@@ -62,7 +68,7 @@ all: setup compiler runtime jdk
 
 setup:
 	@echo "--- Checking setup ---"
-	@sh check-setup.sh
+	@./check-setup.sh
 
 # Compiler.
 compiler: polyglot
@@ -97,11 +103,17 @@ tests: setup compiler runtime jdk
 	@echo "--- Running Test Suite ---"
 	@$(MAKE) -s -C $(TESTDIR)
 	@echo
+
+cup: setup compiler runtime jdk
+	@echo "--- Building the CUP Parser Generator ---"
+	@$(MAKE) -s -C $(EXAMPLEDIR)/cup
+	@echo
 clean:
 	@echo "Cleaning compiler, runtime, and jdk"
 	@ant -q -S clean
 	@$(MAKE) -s -C $(RUNTIME) clean
 	@$(MAKE) -s -C $(JDK) clean
 	@$(MAKE) -s -C $(TESTDIR) clean
+	@$(MAKE) -s -C $(EXAMPLEDIR)/cup clean
 
 .PHONY: compiler runtime jdk-classes jdk

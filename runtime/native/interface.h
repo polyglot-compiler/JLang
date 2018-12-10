@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 #pragma once
 
 extern "C" {
@@ -13,6 +15,7 @@ struct idv_ht_node {
 } // extern "C"
 
 // The hash table of interface dispatch vectors.
+// representation type is actually a linked list
 class idv_ht {
 public:
 	/**

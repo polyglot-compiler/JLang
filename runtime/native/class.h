@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 // Provides reflection-like support, especially for use by JNI.
 // JLang emits static information for each class, and registers
 // that information by calling RegisterJavaClass upon loading a class.
@@ -21,10 +23,19 @@ extern "C" {
 // exist for the lifetime of the program.
 // The layout must precisely mirror the layout defined in JLang.
 
+struct JavaTypeInfo {
+    jclass* type_ptr;
+    jclass(*init_type_class)(void);
+};
+
 // Concrete representation for the opaque type jfieldID.
 struct JavaFieldInfo {
     char* name;
     int32_t offset;
+    int32_t modifiers;
+    struct JavaTypeInfo* type_info_ptr;
+    // jclass* type_ptr;
+    char* sig;
 };
 //This is also a representation for the jfieldID type, but
 //represented differently since static fields are implemented as global pointers.
@@ -32,6 +43,8 @@ struct JavaStaticFieldInfo {
     char* name;
     char* sig;
     void* ptr;
+    int32_t modifiers;
+    jclass* type_ptr;
 };
 
 // Concrete representation for the opaque type jmethodID.
@@ -43,6 +56,10 @@ struct JavaMethodInfo {
     void* trampoline; // Trampoline for casting the fnPtr to the correct type.
     void* intf_id;    // For interface methods, the interface id.
     int32_t intf_id_hash; // A precomputed hash of the intf_id.
+    int32_t modifiers;
+    jclass* returnType;
+    int32_t numArgTypes;
+    jclass** argTypes;  // array of arg types
 };
 
 struct JavaClassInfo {
@@ -71,6 +88,8 @@ struct JavaClassInfo {
 // the class information declared above.
 void
 RegisterJavaClass(jclass cls, const JavaClassInfo* data);
+
+void InternStringLit(jstring str);
 
 } // extern "C"
 
@@ -107,3 +126,25 @@ bool isArrayClass(jclass cls);
 bool isPrimitiveClass(jclass cls);
 
 jclass GetComponentClass(jclass cls);
+
+int arrayRepSize(jclass cls);
+
+extern jclass Polyglot_native_int;
+extern jclass Polyglot_native_byte;
+extern jclass Polyglot_native_short;
+extern jclass Polyglot_native_long;
+extern jclass Polyglot_native_float;
+extern jclass Polyglot_native_double;
+extern jclass Polyglot_native_char;
+extern jclass Polyglot_native_boolean;
+extern jclass Polyglot_native_void;
+
+extern jclass* Polyglot_native_int_class_type_info;
+extern jclass* Polyglot_native_byte_class_type_info;
+extern jclass* Polyglot_native_short_class_type_info;
+extern jclass* Polyglot_native_long_class_type_info;
+extern jclass* Polyglot_native_float_class_type_info;
+extern jclass* Polyglot_native_double_class_type_info;
+extern jclass* Polyglot_native_char_class_type_info;
+extern jclass* Polyglot_native_boolean_class_type_info;
+extern jclass* Polyglot_native_void_class_type_info;

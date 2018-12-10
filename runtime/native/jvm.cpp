@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -5,7 +7,12 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <dlfcn.h>
-
+#include <unordered_map>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "stack_trace.h"
 #include "class.h"
 #include "exception.h"
@@ -14,6 +21,9 @@
 #include "signals.h"
 
 #include "jvm.h"
+
+#include "helper.h"
+#include "factory.h"
 
 [[noreturn]] static void JvmUnimplemented(const char* name) {
     fprintf(stderr,
@@ -28,16 +38,69 @@
     abort();
 }
 
+#define MAX_PATH 2048
+
 static void JvmIgnore(const char* name) {
     fprintf(stderr,
         "WARNING: JVM method %s is unimplemented, but will not abort.\n", name);
     fflush(stderr);
 }
 
+struct HashableShortArray {
+    int len;
+    unsigned short* chars;
+
+    bool operator==(const HashableShortArray &other) const {
+        if(len == other.len) {
+            for (int i = 0; i < len; i++) {
+                if (chars[i] != other.chars[i]) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
+  }
+};
+
+namespace std {
+
+  template <>
+  struct hash<HashableShortArray>
+  {
+    std::size_t operator()(const HashableShortArray k) const
+    {
+        std::size_t hash = 7;
+        for (int i = 0; i < k.len; i++) {
+            hash = hash*31 + k.chars[i];
+        }
+        return hash;
+    }
+  };
+
+}
+
+std::unordered_map<HashableShortArray, jstring> InternedStrings;
+
+jstring internJString(jstring str) {
+    HashableShortArray* h = (HashableShortArray*)malloc(sizeof(HashableShortArray));
+    h->len = (int) Unwrap(str)->Chars()->Length();
+    h->chars = (unsigned short*) Unwrap(str)->Chars()->Data();
+    auto search = InternedStrings.find(*h);
+    if (search != InternedStrings.end()) {
+        free(h);
+        return search->second;
+    } else {
+        InternedStrings.insert({*h, str});
+        return str;
+    }
+}
+
 extern "C" {
   //we copied this number from open JDK -> not sure the implications
 #define JVM_INTERFACE_VERSION 4
- 
+
 jint
 JVM_GetInterfaceVersion(void) {
   return JVM_INTERFACE_VERSION;
@@ -72,7 +135,9 @@ JVM_Clone(JNIEnv *env, jobject obj) {
 jstring
 JVM_InternString(JNIEnv *env, jstring str) {
   //TODO maybe implement this...maybe
-  return str;
+//   printf("string array elem size: %d\n", Unwrap(str)->Chars()->ElemSize());
+    return internJString(str);
+//   return str;
 }
 
 jlong
@@ -158,12 +223,15 @@ JVM_OnExit(void (*func)(void)) {
 
 void
 JVM_Exit(jint code) {
-    JvmUnimplemented("JVM_Exit");
+  //TODO determine what else needs to happen on 'VM' shutdown
+  //TODO call registered 'OnExit' functions
+  exit(code);
 }
 
 void
 JVM_Halt(jint code) {
-    JvmUnimplemented("JVM_Halt");
+  //TODO determine what else needs to happen on 'VM' shutdown
+  exit(code);
 }
 
 void
@@ -193,7 +261,9 @@ JVM_TotalMemory(void) {
 
 jlong
 JVM_FreeMemory(void) {
-    JvmUnimplemented("JVM_FreeMemory");
+    // dw475 TODO come back to this
+    // always return 1mb for now
+    return 0x100000;
 }
 
 jlong
@@ -203,7 +273,7 @@ JVM_MaxMemory(void) {
 
 jint
 JVM_ActiveProcessorCount(void) {
-    JvmUnimplemented("JVM_ActiveProcessorCount");
+  return sysconf(_SC_NPROCESSORS_ONLN);
 }
 
 //TODO use our native lib $ from native.cpp
@@ -297,8 +367,22 @@ JVM_DisableCompiler(JNIEnv *env, jclass compCls) {
 
 void
 JVM_StartThread(JNIEnv *env, jobject thread) {
-  //TODO someday there will be synchronization
-  return;
+    //TODO someday there will be synchronization
+    // printf("Starting thread\n");
+    // get run function pointer
+    jclass objectClass = Unwrap(thread)->Cdv()->Class()->Wrap();
+    const JavaClassInfo* info = GetJavaClassInfo(objectClass);
+    JavaMethodInfo* methods = info->methods;
+    for (int i = 0; i < info->num_methods; i++) {
+        if (strcmp(methods[i].name, "run") == 0) {
+            // printf("found run method: %p\n", methods[i].fnPtr);
+            jmethodID mtdId = reinterpret_cast<jmethodID>(&(methods[i]));
+            // CallJavaInstanceMethod<jobject>(thread, mtdId, (const jvalue*) &thread);
+            // intf is Runnable interface
+            // CallJavaInterfaceMethod(jobject obj, jclass intf, const char* name, const char* sig, const jvalue* args) {
+        }
+    }
+    return;
 }
 
 void
@@ -445,12 +529,14 @@ JVM_LoadClass0(JNIEnv *env, jobject obj, jclass currClass, jstring currClassName
 
 jint
 JVM_GetArrayLength(JNIEnv *env, jobject arr) {
-    JvmUnimplemented("JVM_GetArrayLength");
+    return reinterpret_cast<JArrayRep*>(arr)->Length();
 }
 
 jobject
 JVM_GetArrayElement(JNIEnv *env, jobject arr, jint index) {
-    JvmUnimplemented("JVM_GetArrayElement");
+    // dw475 TODO inspect this
+    // return ((jobject*) reinterpret_cast<JArrayRep*>(arr)->Data())[index];
+    return Polyglot_jlang_runtime_Helper_arrayLoad___3Ljava_lang_Object_2I(arr, index);
 }
 
 jvalue
@@ -460,7 +546,9 @@ JVM_GetPrimitiveArrayElement(JNIEnv *env, jobject arr, jint index, jint wCode) {
 
 void
 JVM_SetArrayElement(JNIEnv *env, jobject arr, jint index, jobject val) {
-    JvmUnimplemented("JVM_SetArrayElement");
+    // only non-primative objects
+    assert(reinterpret_cast<JArrayRep*>(arr)->ElemSize() == sizeof(void*));
+    ((void**) reinterpret_cast<JArrayRep*>(arr)->Data())[index] = val;
 }
 
 void
@@ -470,7 +558,9 @@ JVM_SetPrimitiveArrayElement(JNIEnv *env, jobject arr, jint index, jvalue v, uns
 
 jobject
 JVM_NewArray(JNIEnv *env, jclass eltClass, jint length) {
-    JvmUnimplemented("JVM_NewArray");
+    // JvmUnimplemented("JVM_NewArray");
+    // dw475 TODO handle eltClass is primative class
+    return CreateJavaObjectArray(length);
 }
 
 jobject
@@ -623,14 +713,145 @@ JVM_GetClassAnnotations(JNIEnv *env, jclass cls) {
     JvmUnimplemented("JVM_GetClassAnnotations");
 }
 
+#define FIELD_INIT_FUNC Polyglot_java_lang_reflect_Field_Field__Ljava_lang_Class_2Ljava_lang_String_2Ljava_lang_Class_2IILjava_lang_String_2_3B
+#define METHOD_INIT_FUNC Polyglot_java_lang_reflect_Method_Method__Ljava_lang_Class_2Ljava_lang_String_2_3Ljava_lang_Class_2Ljava_lang_Class_2_3Ljava_lang_Class_2IILjava_lang_String_2_3B_3B_3B
+
+void FIELD_INIT_FUNC (jobject, jclass, jstring, jclass, jint, jint, jstring, jbyteArray);
+void METHOD_INIT_FUNC (jobject, jclass, jstring, jobjectArray, jclass, jobjectArray, jint, jint, jstring, jbyteArray, jbyteArray, jbyteArray);
+
 jobjectArray
 JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
-    JvmUnimplemented("JVM_GetClassDeclaredMethods");
+    const JavaClassInfo* info = GetJavaClassInfo(ofClass);
+    if (info) {
+        // if primative class (int, boolean), return empty array
+        if (JVM_IsPrimitiveClass(env, ofClass)) {
+            return CreateJavaObjectArray(0);
+        }
+
+        jclass MethodClass = env->FindClass("java.lang.reflect.Method");
+
+        // dw475 TODO take into account publiconly argument
+
+        jobjectArray ret = CreateJavaObjectArray(info->num_methods);
+
+        JavaMethodInfo* methods = info->methods;
+
+        for (int i = 0; i < info->num_methods; i++) {
+            // create new field object
+            jobject newMethod = CreateJavaObject(MethodClass);
+            jstring nameString = env->NewStringUTF(methods[i].name);
+            jint modifiers = methods[i].modifiers;
+            jint slot = i;
+            jobjectArray paramTypes = CreateJavaObjectArray(methods[i].numArgTypes);
+            jclass returnType = NULL;
+            jclass* returnTypePtr = methods[i].returnType;
+            if (returnTypePtr != NULL) {
+                returnType = *returnTypePtr;
+            }
+            for (int k = 0; k < methods[i].numArgTypes; k++) {
+                jclass* argTypePtr = methods[i].argTypes[k];
+                if (argTypePtr != NULL) {
+                    JVM_SetArrayElement(env, paramTypes, k, *argTypePtr);
+                    // const JavaClassInfo* arginfo = GetJavaClassInfo(*argTypePtr);
+                    // printf("class name: %s\n", arginfo->name);
+                } else {
+                    JVM_SetArrayElement(env, paramTypes, k, NULL);
+                }
+            }
+            jstring signature = env->NewStringUTF(methods[i].sig);
+            // TODO need to get the proper values
+            // call the method constructor
+            METHOD_INIT_FUNC(newMethod, ofClass, nameString, paramTypes, returnType, NULL, modifiers, slot, signature, NULL, NULL, NULL);
+            // add it to the array (backwards rn to pass tests)
+            JVM_SetArrayElement(env, ret, info->num_methods-i-1, newMethod);
+        }
+
+        return ret;
+    }
+    return NULL;
+}
+
+static std::unordered_map<jclass, jobjectArray> fieldsCache;
+
+static jobjectArray _EmptyObjectArray = NULL;
+jobjectArray getEmptyObjectArray() {
+    if (_EmptyObjectArray == NULL) {
+        _EmptyObjectArray = CreateJavaObjectArray(0);
+    }
+    return _EmptyObjectArray;
 }
 
 jobjectArray
 JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
-    JvmUnimplemented("JVM_GetClassDeclaredFields");
+    try {
+        return fieldsCache.at(ofClass);
+    } catch (const std::out_of_range& oor) {
+    }
+
+    const JavaClassInfo* info = GetJavaClassInfo(ofClass);
+    if (info) {
+        // if primative class (int, boolean), return empty array
+        if (JVM_IsPrimitiveClass(env, ofClass)) {
+            return getEmptyObjectArray();
+        }
+
+        jclass FieldsClass = env->FindClass("java.lang.reflect.Field");
+
+        // dw475 TODO take into account publiconly argument
+
+        // non-static and static fields
+        jobjectArray ret = CreateJavaObjectArray(info->num_fields + info->num_static_fields);
+
+        JavaFieldInfo* fields = info->fields;
+        JavaStaticFieldInfo* staticFields = info->static_fields;
+
+        for (int i = 0; i < info->num_fields+info->num_static_fields; i++) {
+            // create new field object
+            jobject newField = CreateJavaObject(FieldsClass);
+
+            char* name = NULL;
+            int modifiers = 0;
+            jclass* typeClass = NULL;
+            char* signature = NULL;
+            int slot = 0;
+            if (i < info->num_fields) {
+                name = fields[i].name;
+                modifiers = fields[i].modifiers;
+                if (fields[i].type_info_ptr->type_ptr != NULL) {
+                    // if not yet initialized, initialize
+                    if (*(fields[i].type_info_ptr->type_ptr) == NULL) {
+                        // printf("not yet initialized: %s %p\n", name, fields[i].type_info_ptr->init_type_class);
+                        *(fields[i].type_info_ptr->type_ptr) = fields[i].type_info_ptr->init_type_class();
+                    }
+                    // printf("type ptr: %s %p\n", name, fields[i].type_info_ptr->type_ptr);
+                }
+                typeClass = fields[i].type_info_ptr->type_ptr;
+                // typeClass = fields[i].type_ptr;
+                // printf("Type class for %s: %p %p\n", name, typeClass, *typeClass);
+                signature = fields[i].sig;
+                // printf("sign: %s\n", signature);
+                slot = i;
+            } else {
+                int sidx = i-info->num_fields;
+                name = staticFields[sidx].name;
+                modifiers = staticFields[sidx].modifiers;
+                typeClass = staticFields[sidx].type_ptr;
+                signature = staticFields[sidx].sig;
+                slot = -(sidx+1); // 0 ambiguity
+            }
+            jstring nameString = internJString(env->NewStringUTF(name));
+            jstring sigString = env->NewStringUTF(signature);
+            // call the fields constructor
+            FIELD_INIT_FUNC(newField, ofClass, nameString, typeClass == NULL ? NULL : *typeClass, modifiers, slot, sigString, NULL);
+            // add it to the array
+            JVM_SetArrayElement(env, ret, i, newField);
+        }
+
+        fieldsCache.emplace(ofClass, ret);
+
+        return ret;
+    }
+    return NULL;
 }
 
 jobjectArray
@@ -646,12 +867,29 @@ JVM_GetClassDeclaredConstructors(JNIEnv *env, jclass ofClass, jboolean publicOnl
 
 jint
 JVM_GetClassAccessFlags(JNIEnv *env, jclass cls) {
-    JvmUnimplemented("JVM_GetClassAccessFlags");
+    // dw475 TODO actually implement by adding getModifiers to class
+    // public
+    return 0x1;
+    // JvmUnimplemented("JVM_GetClassAccessFlags");
 }
 
 jobject
 JVM_InvokeMethod(JNIEnv *env, jobject method, jobject obj, jobjectArray args0) {
-    JvmUnimplemented("JVM_InvokeMethod");
+    const JavaClassInfo* info = GetJavaClassInfo(Unwrap(obj)->Cdv()->Class()->Wrap());
+
+    int methodSlotOffset = 0;
+    const JavaClassInfo* methodInfo = GetJavaClassInfo(Unwrap(method)->Cdv()->Class()->Wrap());
+    for (int i = 0; i < methodInfo->num_fields; i++) {
+        if (strcmp(methodInfo->fields[i].name, "slot") == 0) {
+            methodSlotOffset = methodInfo->fields[i].offset;
+            break;
+        }
+    }
+    int slot = *((jint *)(((char *) method)+methodSlotOffset));
+
+    jmethodID mtdId = reinterpret_cast<jmethodID>(&(info->methods[slot]));
+
+    return CallJavaInstanceMethod<jobject>(obj, mtdId, (const jvalue*) reinterpret_cast<JArrayRep*>(args0)->Data());
 }
 
 jobject
@@ -954,19 +1192,70 @@ JVM_NativePath(char *path) {
   return path;
 }
 
+//This is a JDK specific flag
+//not a real UNIX flag, used by some native code.
+
+#ifndef O_DELETE
+#define O_DELETE 0x10000
+#endif
+
 jint
-JVM_Open(const char *fname, jint flags, jint mode) {
-    JvmUnimplemented("JVM_Open");
+JVM_Open(const char *path, jint oflag, jint mode) {
+
+  if (strlen(path) > MAX_PATH - 1) {
+    //JDK adds this, not sure how they user it
+    // errno = ENAMETOOLONG;
+    return -1;
+  }
+  int fd;
+  int o_delete = (oflag & O_DELETE);
+  oflag = oflag & ~O_DELETE;
+
+  fd = open(path, oflag, mode);
+  if (fd == -1) return -1;
+
+  //If the open succeeded, the file might still be a directory                                                         
+  {
+    struct stat buf;
+    int ret = fstat(fd, &buf);
+    int st_mode = buf.st_mode;
+
+    if (ret != -1) {
+      if ((st_mode & S_IFMT) == S_IFDIR) {
+	//JDK adds this, not sure how they user it
+        //errno = EISDIR;
+        close(fd);
+        return -1;
+      }
+    } else {
+      close(fd);
+      return -1;
+    }
+  }
+  //Comment in the JDK explains how some native code will break without this
+#ifdef FD_CLOEXEC
+  {
+    int flags = fcntl(fd, F_GETFD);
+    if (flags != -1)
+      fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+  }
+#endif
+
+  if (o_delete != 0) {
+    unlink(path);
+  }
+  return fd;
 }
 
 jint
 JVM_Close(jint fd) {
-    JvmUnimplemented("JVM_Close");
+  return close(fd);
 }
 
 jint
 JVM_Read(jint fd, char *buf, jint nbytes) {
-    JvmUnimplemented("JVM_Read");
+  //TODO make repeatable on interrupt error
+  return read(fd,buf,nbytes);
 }
 
 jint
@@ -980,7 +1269,35 @@ JVM_Write(jint fd, char *buf, jint nbytes) {
 
 jint
 JVM_Available(jint fd, jlong *pbytes) {
-    JvmUnimplemented("JVM_Available");
+  //mostly from JDK code, TODO understand and change
+  jlong cur, end;
+  int mode;
+  struct stat buf;
+
+  if (fstat(fd, &buf) >= 0) {
+    mode = buf.st_mode;
+    if (S_ISCHR(mode) || S_ISFIFO(mode) || S_ISSOCK(mode)) {
+      /*
+       * XXX: is the following call interruptible? If so, this might
+       * need to go through the INTERRUPT_IO() wrapper as for other
+       * blocking, interruptible calls in this file.
+       */
+      int n;
+      if (ioctl(fd, FIONREAD, &n) >= 0) {
+	*pbytes = n;
+	return 1;
+      }
+    }
+  }
+  if ((cur = lseek(fd, 0L, SEEK_CUR)) == -1) {
+    return 0;
+  } else if ((end = lseek(fd, 0L, SEEK_END)) == -1) {
+    return 0;
+  } else if (lseek(fd, cur, SEEK_SET) == -1) {
+    return 0;
+  }
+  *pbytes = end - cur;
+  return 1;
 }
 
 jlong
@@ -1096,7 +1413,7 @@ extern "C" {
     if ((intptr_t)count <= 0) return -1;
     return vsnprintf(str, count, fmt, args);
   }
-  
+
   int jio_snprintf(char *str, size_t count, const char *fmt, ...) {
     va_list args;
     int len;

@@ -1,5 +1,9 @@
-#include "jni_help.h"
+//Copyright (C) 2018 Cornell University
 
+#include "jni_help.h"
+#include "class.h"
+#include "reflect.h"
+#include "exception.h"
 // Begin official API.
 
 extern "C" {
@@ -38,11 +42,24 @@ jobject jni_ToReflectedMethod(JNIEnv *env, jclass cls, jmethodID id, jboolean is
 }
 
 jclass jni_GetSuperclass(JNIEnv *env, jclass sub) {
-    JniUnimplemented("GetSuperclass");
+    const JavaClassInfo* info = GetJavaClassInfo(sub);
+    if (info->super_ptr == NULL) {
+        return NULL;
+    }
+    return *(info->super_ptr);
+    // JniUnimplemented("GetSuperclass");
 }
 
-jboolean jni_IsAssignableFrom(JNIEnv *env, jclass sub, jclass sup) {
-    JniUnimplemented("IsAssignableFrom");
+jboolean jni_IsAssignableFrom(JNIEnv *env, jclass sup, jclass sub) {
+    // dw475 TODO return sub <? sup
+    // return JNI_TRUE;
+    if (sub == NULL) {
+        // return JNI_FALSE;
+        // throw null pointer
+    }
+    // there exists a superclass or superinterface of sub = sup
+    return JNI_TRUE;
+    JniUnimplemented("jni_IsAssignableFrom");
 }
 
 jobject jni_ToReflectedField(JNIEnv *env, jclass cls, jfieldID id, jboolean isStatic) {
@@ -50,11 +67,13 @@ jobject jni_ToReflectedField(JNIEnv *env, jclass cls, jfieldID id, jboolean isSt
 }
 
 jint jni_Throw(JNIEnv *env, jthrowable obj) {
-    JniUnimplemented("Throw");
+  throwThrowable(env, obj);
+  return -1;
 }
 
 jint jni_ThrowNew(JNIEnv *env, jclass clazz, const char *msg) {
-    JniUnimplemented("ThrowNew");
+  throwNewThrowable(env, clazz, msg);
+  return -1;
 }
 
 jthrowable jni_ExceptionOccurred(JNIEnv *env) {
@@ -148,7 +167,8 @@ jclass jni_GetObjectClass(JNIEnv *env, jobject obj) {
 }
 
 jboolean jni_IsInstanceOf(JNIEnv *env, jobject obj, jclass clazz) {
-    JniUnimplemented("IsInstanceOf");
+    return InstanceOf(obj, clazz);
+    // JniUnimplemented("IsInstanceOf");
 }
 
 jmethodID jni_GetMethodID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
@@ -519,16 +539,13 @@ jint jni_MonitorExit(JNIEnv *env, jobject obj) {
     JniUnimplemented("MonitorExit");
 }
 
-jint jni_GetJavaVM(JNIEnv *env, JavaVM **vm) {
-  *vm = NULL;
-  return 0; //TODO hopefully no NPEs :)
-}
-
+jint jni_GetJavaVM(JNIEnv *env, JavaVM **vm);
+  
 void jni_GetStringRegion(JNIEnv *env, jstring str, jsize start, jsize len, jchar *buf) {
   //TODO error handling on case: if (start < 0 || len <0 || start + len > s_len) {
   //and throw StringIndexOutOfBoundsException
   JArrayRep* str_array = Unwrap(str)->Chars();
-  int str_len = str_array->Length();
+  // int str_len = str_array->Length();
   int elemsize = str_array->ElemSize();
   assert(elemsize == sizeof(jchar));
   jchar* data = reinterpret_cast<jchar*>(str_array->Data());
@@ -540,7 +557,7 @@ void jni_GetStringUTFRegion(JNIEnv *env, jstring str, jsize start, jsize len, ch
   //and throw StringIndexOutOfBoundsException
   if (len > 0) {
     JArrayRep* str_array = Unwrap(str)->Chars();
-    int str_len = str_array->Length();
+    // int str_len = str_array->Length();
     int elemsize = str_array->ElemSize();
     char* str_data = (char*) str_array->Data();
     as_utf8((jchar*)(str_data + (elemsize * start)), len, (u_char*)buf);
@@ -892,7 +909,8 @@ jint jni_DetachCurrentThread(JavaVM *vm) {
 }
 
 jint jni_GetEnv(JavaVM *vm, void **penv, jint version) {
-    JniUnimplemented("GetEnv");
+  *penv = (void*) &jni_JNIEnv;
+  return 0; //TODO handle errors / version checking
 }
 
 jint jni_AttachCurrentThreadAsDaemon(JavaVM *vm, void **penv, void *args) {
@@ -912,5 +930,11 @@ const struct JNIInvokeInterface_ jni_InvokeInterface = {
 };
 
 extern const JavaVM jni_MainJavaVM = {&jni_InvokeInterface};
+
+jint jni_GetJavaVM(JNIEnv *env, JavaVM **vm) {
+  *vm = const_cast<JavaVM*>(&jni_MainJavaVM);
+  return 0; //TODO handle errors and multi threading
+}
+
 
 } // extern "C"

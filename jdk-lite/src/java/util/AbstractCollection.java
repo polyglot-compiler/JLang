@@ -1,3 +1,6 @@
+// This file's original contents have been modified
+// by a JLang patch on 9/6/2018
+
 /*
  * Copyright (c) 1997, 2010, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.

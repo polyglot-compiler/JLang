@@ -1,8 +1,13 @@
+//Copyright (C) 2018 Cornell University
+
 package jlang.util;
 
 import org.bytedeco.javacpp.PointerPointer;
 
 import jlang.visit.LLVMTranslator;
+import jlang.extension.JLangStringLitExt;
+import polyglot.ast.Expr;
+import polyglot.ast.Lang;
 import polyglot.ext.jl5.types.JL5TypeSystem;
 import polyglot.ext.jl5.types.RawClass;
 import polyglot.ext.jl5.types.inference.LubType;
@@ -699,6 +704,42 @@ public class LLVMUtils {
         return LLVMBuildBitCast(v.builder, val, ptrTypeRef(toLL(jty)), "cast_l");
     }
 
+    /**
+     * Returns an llvm value reference of the given constant Java expression.
+     * Returns an LLVM null if it is not a constant Java expression.
+     *
+     * @param n the Expression node to evaluate
+     * @param type the expected LLVM type of the node
+     * @param l the Lang object to use (i.e. what Language Specification to use to define constant expression)
+     * @return An LLVM value reference of the constant value of n or an LLVMConstNull expression
+     */
+    public LLVMValueRef buildConst(Expr n, LLVMTypeRef type,  Lang l) {
+	if (n == null || !l.isConstant(n,l)) {
+	    return null;
+	} else {
+	    Object o = l.constantValue(n, l);
+	    if (o instanceof Character) {
+		return LLVMConstInt(type, new Integer(((Character) o).charValue()), 1);
+	    } else if (o instanceof Boolean) {
+		return LLVMConstInt(type, ((Boolean) o).booleanValue() ? 1 : 0, 1);
+	    } else if (o instanceof Byte) {
+		return LLVMConstInt(type, ((Number) o).byteValue(), 1);
+	    } else if (o instanceof Short) {
+		return LLVMConstInt(type, ((Number) o).intValue(), 1);
+	    } else if (o instanceof Integer) {
+		return LLVMConstInt(type, ((Number) o).intValue(), 1);
+	    } else if (o instanceof Long) {
+		return LLVMConstInt(type, ((Number) o).longValue(), 1);
+	    } else if (o instanceof Number) {
+		return LLVMConstReal(type, ((Number) o).doubleValue());
+	    } else if (o instanceof String) {
+		return LLVMConstBitCast(JLangStringLitExt.translateString(((String) o), v, l), type);
+	    } else {
+		return null;
+	    }
+	}
+    }
+    
     public LLVMValueRef buildConstArray(LLVMTypeRef elemType, LLVMValueRef... values) {
         return LLVMConstArray(elemType, new PointerPointer<>(values), values.length);
     }

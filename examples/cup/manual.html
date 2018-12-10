@@ -1,0 +1,1631 @@
+<html><head>
+<title>CUP User's Manual</title></head><body>
+<div class="container">
+<hr>
+<h1>CUP User's Manual</h1>
+<h3><a href="http://www2.in.tum.de">Michael Petter, Technische Universit&auml;t M&uuml;nchen</a><br />
+<a href="http://www.cc.gatech.edu/gvu/people/Faculty/Scott.E.Hudson.html">
+Scott E. Hudson</a><br> 
+<a href="http://www.cc.gatech.edu/gvu/gvutop.html">
+Graphics Visualization and Usability Center</a><br> 
+<a href="http://www.gatech.edu/TechHome.html">
+Georgia Institute of Technology</a></h3>
+Modified by <a href="http://www.princeton.edu/%7Efrankf">Frank
+Flannery</a>, <a href="http://www.pdos.lcs.mit.edu/%7Ecananian/">C. Scott Ananian</a>, 
+<a href="http://www.cs.princeton.edu/%7Edanwang">Dan Wang</a>, <a href="http://www2.cs.tum.edu/%7Epetter">Michael Petter</a> with advice from 
+<a href="http://www.cs.princeton.edu/%7Eappel">Andrew W. Appel</a><br>
+<br>
+Last updated  06/2014 (v0.11b)
+<hr>
+
+<h3>Table of Contents</h3>
+<ol type="i">
+       <li> <a href="#about">About CUP Version 0.10</a>
+  </li><li> <a href="#about11">About CUP Version 0.11</a>
+  </li>
+</ol>
+<ol>
+       <li> <a href="#intro">Introduction and Example</a>
+  </li><li> <a href="#spec">Specification Syntax</a>
+        <ol><li><a href="#package_spec">Package and import specification</a>
+  </li><li> <a href="#code_part">User code componentes</a>
+  </li><li> <a href="#symbol_list">Symbol lists</a>
+  </li><li> <a href="#precedence">Precedence and associativity declarations</a>
+  </li><li>         <a href="#production_list">The grammar</a></li></ol>
+  </li><li> Running CUP 
+        <ol><li><a href="#running">Command line interface</a>
+  </li><li>         <a href="#ant">CUP and ANT</a></li></ol>
+  </li><li> <a href="#parser">Customizing the Parser</a>
+  </li><li> <a href="#scanner">Scanner interface</a>
+       <ol><li> <a href="#basic-symbols">Basic Symbol management</a>
+  </li><li>  <a href="#advanced-symbols">Advanced Symbol management</a>
+  </li><li>  <a href="#symbolstream-caching">Symbol Stream caching</a></li></ol>
+  </li><li> <a href="#errors">Error Recovery</a>
+        <ol><li><a href="#error_sym">The error symbol</a>
+  </li><li>         <a href="#continuation_symbols">Viable continuations</a></li></ol>
+  </li><li> <a href="#conclusion">Conclusion</a>
+  </li>
+</ol>
+<a href="#refs">References</a>
+<ol type="A">
+       <li> <a href="#appendixa">Grammar for CUP Specification Files</a>
+  </li><li> <a href="#appendixb">A Very Simple Example Scanner</a>
+  </li><li> <a href="#changes">Incompatibilites between CUP 0.9 and CUP 0.10</a>
+  </li><li> <a href="#bugs">Bugs</a>
+  </li><li> <a href="#version">Change log</a>
+  </li>
+</ol>
+
+<a name="about"></a> 
+<h3>i. About CUP Version 0.10</h3>
+Version
+0.10 of CUP adds many new changes and features over the previous releases
+of version 0.9.  These changes attempt to make CUP more like its
+predecessor, YACC.  As a result, the old 0.9 parser specifications for CUP are
+not compatible and a reading of <a href="#changes">appendix C</a> of the new
+manual will be necessary to write new specifications.  The new version,
+however, gives the user more power and options, making parser specifications
+easier to write.
+<a name="about11"></a><h3>ii. About CUP Version 0.11</h3>
+in version 0.11 the TUM team tries to continue the success story of CUP 0.10, 
+beginning with the introduction of generic data types for non-terminal symbols
+as well as a modernisation of the user interface with a comfortable ANT plugin 
+structure.
+<a name="intro">
+<h3>1. Introduction and Example</h3></a>
+
+This manual describes the basic operation and use of the 
+Java<a href="#trademark">(tm)</a>
+Based Constructor of Useful Parsers (CUP for short).
+CUP is a system for generating LALR parsers from simple specifications.
+It serves the same role as the widely used program YACC 
+<a href="#YACCref">[1]</a> and in fact offers most of the features of YACC.  
+However, CUP is written in Java, uses specifications including embedded 
+Java code, and produces parsers which are implemented in Java.<p>
+
+Although this manual covers all aspects of the CUP system, it is relatively
+brief, and assumes you have at least a little bit of knowledge of LR
+parsing.  A working knowledge of YACC is also very helpful in
+understanding how CUP specifications work.
+A number of compiler construction textbooks (such as 
+<a href="#dragonbook">[2</a>,<a href="#crafting">3]</a>) cover this material, 
+and discuss the YACC system (which is quite similar to this one) as a 
+specific example. </p><p> 
+
+Using CUP involves creating a simple specification based on the
+grammar for which a parser is needed, along with construction of a
+scanner capable of breaking characters up into meaningful tokens (such
+as keywords, numbers, and special symbols).</p><p> 
+
+As a simple example, consider a 
+system for evaluating simple arithmetic expressions over integers.  
+This system would read expressions from standard input (each terminated 
+with a semicolon), evaluate them, and print the result on standard output.  
+A grammar for the input to such a system might look like: </p><pre>  expr_list ::= expr_list expr_part | expr_part
+  expr_part ::= expr ';'
+  expr      ::= expr '+' expr | expr '-' expr | expr '*' expr 
+	      | expr '/' expr | expr '%' expr | '(' expr ')'  
+              | '-' expr | number 
+</pre>
+To specify a parser based on this grammar, our first step is to identify and
+name the set of terminal symbols that will appear on input, and the set of 
+non-terminal symbols.  In this case, the non-terminals are: 
+
+<pre><tt>  expr_list, expr_part </tt> and <tt> expr </tt>.</pre>
+
+For terminal names we might choose:
+
+<pre><tt>  SEMI, PLUS, MINUS, TIMES, DIVIDE, MOD, NUMBER, LPAREN,</tt>
+and <tt>RPAREN</tt></pre>
+
+The experienced user will note a problem with the above grammar.  It is
+ambiguous.  An ambiguous grammar is a grammar which, given a certain
+input, can reduce the parts of the input in two different ways such as
+to give two different answers.  Take the above grammar, for
+example. given the following input: <br>
+<tt>3 + 4 * 6</tt><br>
+The grammar can either evaluate the <tt>3 + 4</tt> and then multiply
+seven by six, or it can evaluate <tt>4 * 6</tt> and then add three.
+Older versions of CUP forced the user to write unambiguous grammars, but
+now there is a construct allowing the user to specify precedences and
+associativities for terminals.  This means that the above ambiguous
+grammar can be used, after specifying precedences and associativities.
+There is more explanation later.
+
+Based on these namings we can construct a small CUP specification 
+as follows:<br>
+<hr>
+<pre><tt>// CUP specification for a simple expression evaluator (no actions)
+
+import java_cup.runtime.*;
+
+/* Preliminaries to set up and use the scanner.  */
+init with {: scanner.init();              :};
+scan with {: return scanner.next_token(); :};
+
+/* Terminals (tokens returned by the scanner). */
+terminal            SEMI, PLUS, MINUS, TIMES, DIVIDE, MOD;
+terminal            UMINUS, LPAREN, RPAREN;
+terminal Integer    NUMBER;
+
+/* Non terminals */
+non terminal            expr_list, expr_part;
+non terminal Integer    expr, term, factor;
+
+/* Precedences */
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE, MOD;
+precedence left UMINUS;
+
+/* The grammar */
+expr_list ::= expr_list expr_part | 
+              expr_part;
+expr_part ::= expr SEMI;
+expr      ::= expr PLUS expr 
+            | expr MINUS expr  
+            | expr TIMES expr  
+            | expr DIVIDE expr  
+            | expr MOD expr 
+	    | MINUS expr %prec UMINUS
+            | LPAREN expr RPAREN
+	    | NUMBER
+	    ;
+</tt></pre>
+<hr><br>
+We will consider each part of the specification syntax in detail later.  
+However, here we can quickly see that the specification contains four 
+main parts.  The first part provides preliminary and miscellaneous declarations
+to specify how the parser is to be generated, and supply parts of the 
+runtime code.  In this case we indicate that the <tt>java_cup.runtime</tt>
+classes should be imported, then supply a small bit of initialization code,
+and some code for invoking the scanner to retrieve the next input token.
+The second part of the specification declares terminals and non-terminals,
+and associates object classes with each.  In this case, the terminals
+are declared as either with no type, or of type
+<tt>Integer</tt>.  The specified type of the
+terminal or non-terminal is the type of the value of those terminals or
+non-terminals.  If no type is specified, the terminal or non-terminal
+carries no value.  Here, no type indicates that these
+terminals and non-terminals hold no value.  
+The third part specifies the precedence and
+associativity of terminals.  The last precedence declaration give its
+terminals the highest precedence. The final 
+part of the specification contains the grammar.<p>
+
+ 
+To produce a parser from this specification we use the CUP generator.
+If this specification were stored in a file <tt>parser.cup</tt>, then 
+(on a Unix system at least) we might invoke CUP using a command like:
+</p><pre><tt> java -jar java-cup-11b.jar parser.cup</tt> </pre>
+In this case, the system will produce two Java source files containing 
+parts of the generated parser: <tt>sym.java</tt> and <tt>parser.java</tt>.  
+As you might expect, these two files contain declarations for the classes 
+<tt>sym</tt> and <tt>parser</tt>. The <tt>sym</tt> class contains a series of 
+constant declarations, one for each terminal symbol.  This is typically used 
+by the scanner to refer to symbols (e.g. with code such as 
+"<tt>return new Symbol(sym.SEMI);</tt>" ).  The <tt>parser</tt> class 
+implements the parser itself.<p>
+
+The specification above, while constructing a full parser, does not perform 
+any semantic actions &amp;emdash; it will only indicate success or failure of a parse.
+To calculate and print values of each expression, we must embed Java
+code within the parser to carry out actions at various points.  In CUP,
+actions are contained in <i>code strings</i> which are surrounded by delimiters 
+of the form <tt>{:</tt> and <tt>:}</tt> (we can see examples of this in the 
+<tt>init with</tt> and <tt>scan with</tt> clauses above).  In general, the 
+system records all characters within the delimiters, but does not try to check 
+that it contains valid Java code.</p><p>
+
+A more complete CUP specification for our example system (with actions 
+embedded at various points in the grammar) is shown below:<br>
+</p><hr>
+<pre><tt>// CUP specification for a simple expression evaluator (w/ actions)
+
+import java_cup.runtime.*;
+
+/* Preliminaries to set up and use the scanner.  */
+init with {: scanner.init();              :};
+scan with {: return scanner.next_token(); :};
+
+/* Terminals (tokens returned by the scanner). */
+terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, MOD;
+terminal           UMINUS, LPAREN, RPAREN;
+terminal Integer   NUMBER;
+
+/* Non-terminals */
+non terminal            expr_list, expr_part;
+non terminal Integer    expr;
+
+/* Precedences */
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE, MOD;
+precedence left UMINUS;
+
+/* The grammar */
+expr_list ::= expr_list expr_part 
+	      | 
+              expr_part;
+
+expr_part ::= expr:e 
+	      {: System.out.println("= " + e); :} 
+              SEMI              
+	      ;
+
+expr      ::= expr:e1 PLUS expr:e2    
+	      {: RESULT = new Integer(e1.intValue() + e2.intValue()); :} 
+	      | 
+              expr:e1 MINUS expr:e2    
+              {: RESULT = new Integer(e1.intValue() - e2.intValue()); :} 
+	      | 
+              expr:e1 TIMES expr:e2 
+	      {: RESULT = new Integer(e1.intValue() * e2.intValue()); :} 
+	      | 
+              expr:e1 DIVIDE expr:e2 
+	      {: RESULT = new Integer(e1.intValue() / e2.intValue()); :} 
+	      | 
+              expr:e1 MOD expr:e2 
+	      {: RESULT = new Integer(e1.intValue() % e2.intValue()); :} 
+	      | 
+              NUMBER:n                 
+	      {: RESULT = n; :} 
+	      | 
+              MINUS expr:e             
+	      {: RESULT = new Integer(0 - e.intValue()); :} 
+	      %prec UMINUS
+	      | 
+              LPAREN expr:e RPAREN     
+	      {: RESULT = e; :} 
+	      ;
+</tt></pre>
+<hr><br>
+Here we can see several changes.  Most importantly, code to be executed at 
+various points in the parse is included inside code strings delimited by 
+<tt>{:</tt> and <tt>:}</tt>.  In addition, labels have been placed on various 
+symbols in the right hand side of productions.  For example in:<br>
+<pre>  expr:e1 PLUS expr:e2    
+	{: RESULT = new Integer(e1.intValue() + e2.intValue()); :} 
+</pre>
+<a name="RES_part"></a>
+the first non-terminal <tt>expr</tt> has been labeled with <tt>e1</tt>, and 
+the second with <tt>e2</tt>.  The left hand side value 
+of each production is always implicitly labeled as <tt>RESULT</tt>.<p>
+
+Each symbol appearing in a production is represented at runtime by an
+object of type <tt>Symbol</tt> on the parse stack.  The labels refer to
+the instance variable <tt>value</tt> in those objects.  In the
+expression <tt>expr:e1 PLUS expr:e2</tt>, <tt>e1</tt> and <tt>e2</tt>
+refer to objects of type Integer.  These objects are in the value fields
+of the objects of type <tt>Symbol</tt> representing those non-terminals
+on the parse stack.  <tt>RESULT</tt> is of type <tt>Integer</tt> as
+well, since the resulting non-terminal <tt>expr</tt> was declared as of 
+type <tt>Integer</tt>.  This object becomes the <tt>value</tt> instance
+variable of a new <tt>Symbol</tt> object.</a></p><p>
+
+For each label, two more variables accessible to the user are declared.
+A left and right value labels are passed to the code string, so that the
+user can find out where the left and right side of each terminal or
+non-terminal is in the input stream.  The name of these variables is the
+label name, plus <tt>left</tt> or <tt>right</tt>.  for example, given
+the right hand side of a production <tt>expr:e1 PLUS expr:e2</tt> the
+user could not only access variables <tt>e1</tt> and <tt>e2</tt>, but
+also <tt>e1left, e1right, e2left</tt> and <tt>e2right</tt>.  these
+variables are of type <tt>int</tt>.</p><p>
+
+<a name="lex_part"></a>
+
+The final step in creating a working parser is to create a <i>scanner</i> (also
+known as a <i>lexical analyzer</i> or simply a <i>lexer</i>).  This routine is 
+responsible for reading individual characters, removing things things like
+white space and comments, recognizing which terminal symbols from the 
+grammar each group of characters represents, then returning Symbol objects
+representing these symbols to the parser.
+The terminals will be retrieved with a call to the
+scanner function.  In the example, the parser will call
+<tt>scanner.next_token()</tt>. The scanner should return objects of
+type <tt>java_cup.runtime.Symbol</tt>.  This type is very different than
+older versions of CUP's <tt>java_cup.runtime.symbol</tt>.  These Symbol
+objects contains the instance variable <tt>value</tt> of type Object, 
+which should be
+set by the lexer.  This variable refers to the value of that symbol, and
+the type of object in value should be of the same type as declared in
+the <tt>terminal</tt> and <tt>non terminal</tt> declarations.  In the
+above example, if the lexer wished to pass a NUMBER token, it should
+create a <tt>Symbol</tt> with the <tt>value</tt> instance variable
+filled with an object of type <tt>Integer</tt>.  <code>Symbol</code>
+objects corresponding to terminals and non-terminals with no value
+have a null value field.</a></p><p>
+
+
+The code contained in the <tt>init with</tt> clause of the specification 
+will be executed before any tokens are requested.  Each token will be 
+requested using whatever code is found in the <tt>scan with</tt> clause.
+Beyond this, the exact form the scanner takes is up to you; however
+note that each call to the scanner function should return a new
+instance of <code>java_cup.runtime.Symbol</code> (or a subclass).
+These symbol objects are annotated with parser information and pushed
+onto a stack; reusing objects will result in the parser annotations
+being scrambled.  As of CUP 0.10j, <code>Symbol</code> reuse should be
+detected if it occurs; the parser will throw an <code>Error</code>
+telling you to fix your scanner.</a></p><p>
+
+
+In the </a><a href="#spec">next section</a> a more detailed and formal 
+explanation of all parts of a CUP specification will be given.  
+<a href="#running">Section 3</a> describes options for running the 
+CUP system.  <a href="#parser">Section 4</a> discusses the details 
+of how to customize a CUP parser, while <a href="#scanner">section 5</a>
+discusses the scanner interface added in CUP 0.10j. <a href="#errors">Section
+ 6</a> considers error recovery.  Finally, <a href="#conclusion">Section 7</a> 
+provides a conclusion.
+
+<a name="spec"></a>
+<h3>2. Specification Syntax</h3>
+Now that we have seen a small example, we present a complete description of all 
+parts of a CUP specification.  A specification has four sections with 
+a total of eight specific parts (however, most of these are optional).  
+A specification consists of:
+</p><ul>
+<li> <a href="#package_spec">package and import specifications</a>,
+</li><li> <a href="#parser_class_name">parser class name</a>,
+</li><li> <a href="#code_part">user code components</a>,
+</li><li> <a href="#symbol_list">symbol (terminal and non-terminal) lists</a>, 
+</li><li> <a href="#precedence">precedence declarations</a>, and
+</li><li> <a href="#production_list">the grammar</a>.
+</li></ul>
+Each of these parts must appear in the order presented here.  (A complete 
+grammar for the specification language is given in 
+<a href="#appendixa">Appendix A</a>.)  The particulars of each part of
+the specification are described in the subsections below.<p>
+
+</p><h4><a name="package_spec"></a>2.1 Package and Import Specifications</h4>
+
+A specification begins with optional <tt>package</tt> and <tt>import</tt> 
+declarations.  These have the same syntax, and play the same 
+role, as the package and import declarations found in a normal Java program.
+A package declaration is of the form:
+
+<pre><tt>    package <i>name</i>;</tt></pre>
+
+where name <tt><i>name</i></tt> is a Java package identifier, possibly in
+several parts separated by ".".  In general, CUP employs Java lexical
+conventions.  So for example, both styles of Java comments are supported,
+and identifiers are constructed beginning with a letter, dollar
+sign ($), or underscore (_), which can then be followed by zero or more
+letters, numbers, dollar signs, and underscores.<p>
+
+After an optional <tt>package</tt> declaration, there can be zero or more 
+<tt>import</tt> declarations. As in a Java program these have the form:
+
+</p><pre><tt>    import <i>package_name.class_name</i>;</tt>
+</pre>
+or
+<pre><tt>    import <i>package_name</i>.*;</tt>
+</pre>
+
+The package declaration indicates what package the <tt>sym</tt> and 
+<tt>parser</tt> classes that are generated by the system will be in.  
+Any import declarations that appear in the specification will also appear
+in the source file for the <tt>parser</tt> class allowing various names from
+that package to be used directly in user supplied action code.
+
+After the package and imports, a specification can include a parser
+class name, as follows:
+
+<pre><tt> class <i>name</i>;</tt>
+</pre>
+
+If a class name is supplied, then that is the name that will be used
+for the generated parser code. As well, the generated symbols class
+will have the given name followed by "<tt>Sym</tt>".
+
+<p>If no class name is supplied, then the parser class is called
+"<tt>parser</tt>", and the symbols class is called "<tt>sym</tt>".
+
+<h4><a name="code_part"></a>2.2 User Code Components</h4>
+
+Following these declarations are another series of optional declarations 
+that allow user code to be included
+as part of the generated parser (see <a href="#parser">Section 4</a> for a 
+full description of how the parser uses this code).  As a part of the parser 
+file, a separate non-public class to contain all embedded user actions is 
+produced.  The first <tt>action code</tt> declaration section allows code to 
+be included in this class.  Routines and variables for use by the code 
+embedded in the grammar would normally be placed in this section (a typical 
+example might be symbol table manipulation routines).  This declaration takes 
+the form:
+
+<pre><tt>    action code {: ... :};</tt>
+</pre>
+
+where <tt>{: ... :}</tt> is a code string whose contents will be placed
+directly within the <tt>action class</tt> class declaration.<p>
+
+After the <tt>action code</tt> declaration is an optional 
+<tt>parser code</tt> declaration.  This declaration allows methods and
+variable to be placed directly within the generated parser class.
+Although this is less common, it can be helpful when customizing the 
+parser &amp;emdash; it is possible for example, to include scanning methods inside
+the parser and/or override the default error reporting routines.  This 
+declaration is very similar to the <tt>action code</tt> declaration and 
+takes the form:
+
+</p><pre><tt>    parser code {: ... :};</tt>
+</pre>
+
+Again, code from the code string is placed directly into the generated parser
+class definition.<p>
+
+Next in the specification is the optional <tt>init</tt> declaration 
+which has the form:
+
+</p><pre><tt>    init with {: ... :};</tt></pre>
+
+This declaration provides code that will be executed by the parser
+before it asks for the first token.  Typically, this is used to initialize
+the scanner as well as various tables and other data structures that might
+be needed by semantic actions.  In this case, the code given in the code
+string forms the body of a <tt>void</tt> method inside the <tt>parser</tt> 
+class.<p>
+
+The final (optional) user code section of the specification indicates how 
+the parser should ask for the next token from the scanner.  This has the
+form:
+
+</p><pre><tt>    scan with {: ... :};</tt></pre>
+
+As with the <tt>init</tt> clause, the contents of the code string forms
+the body of a method in the generated parser.  However, in this case
+the method returns an object of type <tt>java_cup.runtime.Symbol</tt>.
+Consequently the code found in the <tt>scan with</tt> clause should 
+return such a value.  See <a href="#scanner">section 5</a> for
+information on the default behavior if the <code>scan with</code>
+section is omitted.<p>
+
+As of CUP 0.10j the action code, parser code, init code, and scan with
+sections may appear in any order. They must, however, precede the
+symbol lists.</p><p>
+
+</p><h4><a name="symbol_list"></a>2.3 Symbol Lists</h4>
+
+Following user supplied code comes the first required part of the 
+specification: the symbol lists.  These declarations are responsible 
+for naming and supplying a type for each terminal and non-terminal
+symbol that appears in the grammar.  As indicated above, each terminal
+and non-terminal symbol is represented at runtime with a <tt>Symbol</tt>
+object.  In
+the case of terminals, these are returned by the scanner and placed on
+the parse stack.  The lexer should put the value of the terminal in the
+<tt>value</tt> instance variable.  
+In the case of non-terminals these replace a series
+of <tt>Symbol</tt> objects on the parse stack whenever the right hand side of
+some production is recognized.  In order to tell the parser which object
+types should be used for which symbol, <tt>terminal</tt> and 
+<tt>non terminal</tt> declarations are used.  These take the forms:
+
+<pre><tt>    terminal <i>classname</i> <i>name1, name2,</i> ...;</tt>
+<tt>    non terminal <i>classname</i> <i>name1, name2,</i> ...;</tt>
+<tt>    terminal <i>name1, name2,</i> ...;</tt>
+</pre>
+
+and
+
+<pre><tt>    non terminal <i>name1, name2,</i> ...;</tt>
+</pre>
+
+where <tt><i>classname</i></tt> can be a multiple part name separated with
+"."s.  The
+<tt><i>classname</i></tt> specified represents the type of the value of
+that terminal or non-terminal.  When accessing these values through
+labels, the users uses the type declared. the <tt><i>classname</i></tt>
+can be of any type.  If no <tt><i>classname</i></tt> is given, then the
+terminal or non-terminal holds no value.  a label referring to such a
+symbol with have a null value. As of CUP 0.10j, you may specify
+non-terminals the declaration "<code>nonterminal</code>" (note, no
+space) as well as the original "<code>non terminal</code>" spelling.<p>
+
+Names of terminals and non-terminals cannot be CUP reserved words;
+these include "code", "action", "parser", "terminal", "non",
+"nonterminal", "init", "scan", "with", "start", "precedence", "left",
+"right", "nonassoc", "import", and "package".</p><p>
+
+</p><h4><a name="precedence"></a>2.4 Precedence and Associativity declarations</h4>
+
+The third section, which is optional, specifies the precedences and
+associativity of terminals.  This is useful for parsing with ambiguous
+grammars, as done in the example above. There are three type of
+precedence/associativity declarations:
+<pre><tt>
+	precedence left     <i>terminal</i>[, <i>terminal</i>...];
+	precedence right    <i>terminal</i>[, <i>terminal</i>...];
+	precedence nonassoc <i>terminal</i>[, <i>terminal</i>...];
+</tt></pre>
+
+The comma separated list indicates that those terminals should have the
+associativity specified at that precedence level and the precedence of
+that declaration.  The order of precedence, from highest to lowest, is
+bottom to top.  Hence, this declares that multiplication and division have
+higher precedence than addition and subtraction:
+<pre><tt>
+	precedence left  ADD, SUBTRACT;
+	precedence left  TIMES, DIVIDE;
+</tt></pre>
+Precedence resolves shift reduce problems.  For example, given the input
+to the above example parser <tt>3 + 4 * 8</tt>, the parser doesn't know
+whether to reduce <tt>3 + 4</tt> or shift the '*' onto the stack.
+However, since '*' has a higher precedence than '+', it will be shifted
+and the multiplication will be performed before the addition.<p>
+
+CUP assigns each one of its terminals a precedence according to these
+declarations.  Any terminals not in this declaration have lowest
+precedence.  CUP also assigns each of its productions a precedence.
+That precedence is equal to the precedence of the last terminal in that
+production.  If the production has no terminals, then it has lowest
+precedence. For example, <tt>expr ::= expr TIMES expr</tt> would have
+the same precedence as <tt>TIMES</tt>.  When there is a shift/reduce
+conflict, the parser determines whether the terminal to be shifted has a
+higher precedence, or if the production to reduce by does.  If the
+terminal has higher precedence, it it shifted, if the production has
+higher precedence, a reduce is performed.  If they have equal
+precedence, associativity of the terminal determine what happens.</p><p>
+
+An associativity is assigned to each terminal used in the
+precedence/associativity declarations.  The three associativities are
+<tt>left, right</tt> and <tt>nonassoc</tt>  Associativities are also
+used to resolve shift/reduce conflicts, but only in the case of equal
+precedences.  If the associativity of the terminal that can be shifted
+is <tt>left</tt>, then a reduce is performed.  This means, if the input
+is a string of additions, like <tt>3 + 4 + 5 + 6 + 7</tt>, the parser
+will <i>always</i> reduce them from left to right, in this case,
+starting with <tt>3 + 4</tt>.  If the associativity of the terminal is
+<tt>right</tt>, it is shifted onto the stack.  hence, the reductions
+will take place from right to left.  So, if PLUS were declared with
+associativity of <tt>right</tt>, the <tt>6 + 7</tt> would be reduced
+first in the above string.  If a terminal is declared as
+<tt>nonassoc</tt>, then two consecutive occurrences of equal precedence
+non-associative terminals generates an error.  This is useful for
+comparison operations.  For example, if the input string is 
+<tt>6 == 7 == 8 == 9</tt>, the parser should generate an error.  If '=='
+is declared as <tt>nonassoc</tt> then an error will be generated. </p><p>
+
+All terminals not used in the precedence/associativity declarations are
+treated as lowest precedence.  If a shift/reduce error results,
+involving two such terminals, it cannot be resolved, as the above
+conflicts are, so it will be reported.</p><p>
+
+</p><h4><a name="production_list"></a>2.5 The Grammar</h4>
+
+The final section of a CUP declaration provides the grammar.  This 
+section optionally starts with a declaration of the form:
+
+<pre><tt>    start with <i>non-terminal</i>;</tt>
+</pre>
+
+This indicates which non-terminal is the <i>start</i> or <i>goal</i> 
+non-terminal for parsing.  If a start non-terminal is not explicitly
+declared, then the non-terminal on the left hand side of the first 
+production will be used.  At the end of a successful parse, CUP returns
+an object of type <tt>java_cup.runtime.Symbol</tt>.  This
+<tt>Symbol</tt>'s value instance variable contains the final reduction
+result.<p>
+
+The grammar itself follows the optional <tt>start</tt> declaration.  Each
+production in the grammar has a left hand side non-terminal followed by 
+the symbol "<tt>::=</tt>", which is then followed by a series of zero or more
+actions, terminal, or non-terminal
+symbols, followed by an optional contextual precedence assignment, 
+and terminated with a semicolon (;).</p>
+
+<a name="label_part"></a>
+<h5>2.5.1 Labels and locations for symbols</h5>
+<p>Each symbol on the right hand side can optionally be labeled with a name.
+Label names appear after the symbol name separated by a colon (:).  Label
+names must be unique within the production, and can be used within action
+code to refer to the value of the symbol.  Along with the label, two
+more variables are created, which are the label plus <tt>left</tt> and
+the label plus <tt>right</tt>.  These are <tt>int</tt> values that
+contain the right and left locations of what the terminal or
+non-terminal covers in the input file.  These values must be properly
+initialized in the terminals by the lexer. The left and right values
+then propagate to non-terminals to which productions reduce.</p><p>
+If there are several productions for the same non-terminal they may be 
+declared together.  In this case the productions start with the non-terminal 
+and "<tt>::=</tt>".  This is followed by multiple right hand sides each 
+separated by a bar (|).  The full set of productions is then terminated by a 
+semicolon.</p>
+<p>However, integers alone might not be good enough for locating symbols in
+an input file. This is why CUP also supports more complex location information
+in the form of <code>Location</code> objects. These objects need to be created
+by the <a href="#advanced-symbols">scanner component</a>. They become available 
+within the actions if the parser generator gets the right commandline parameter. 
+They are accessible via the handles <code>??xleft</code> and <code>??xright</code>, 
+with <code>??</code> being the label for the symbol.
+</p>
+
+<p>
+
+<a name="action_part"></a>
+<h5>2.5.2 User Actions</h5>
+Actions appear in the right hand side as code strings (e.g., Java code inside
+<tt>{:</tt> ... <tt>:}</tt> delimiters).  These are executed by the parser
+at the point when the portion of the production to the left of the 
+action has been recognized.  (Note that the scanner will have returned the 
+token one past the point of the action since the parser needs this extra
+<i>lookahead</i> token for recognition.)</p>
+
+<a name="cpp"></a>
+<h5>2.5.3 Contextual precedence</h5>
+
+<p>Contextual precedence assignments follow all the symbols and actions of
+the right hand side of the production whose precedence it is assigning.
+Contextual precedence assignment allows a production to be assigned a
+precedence not based on the last terminal in it.  A good example is
+shown in the above sample parser specification:
+
+</p><pre>
+	precedence left PLUS, MINUS;
+	precedence left TIMES, DIVIDE, MOD;
+	precedence left UMINUS;
+
+	expr ::=  MINUS expr:e             
+	          {: RESULT = new Integer(0 - e.intValue()); :} 
+	          %prec UMINUS
+</pre>
+
+<p>Here, there production is declared as having the precedence of UMINUS.
+Hence, the parser can give the MINUS sign two different precedences,
+depending on whether it is a unary minus or a subtraction operation. 
+</p>
+
+<a name="running"></a>
+<h3>3. Running CUP</h3>
+<h4>3.1 Command line interface</h4>
+As mentioned above, CUP is written in Java.  To invoke it, one needs
+to use the Java interpreter to invoke the static method 
+<tt>java_cup.Main()</tt>, passing an array of strings containing options.  
+Assuming a Unix machine, the simplest way to do this is typically to invoke it 
+directly from the command line with a command such as: 
+
+<pre><tt>    java -jar java-cup-11b.jar <i>options</i>  <i>inputfile</i></tt></pre>
+
+Once running, CUP expects to find a specification file on standard input
+and produces two Java source files as output. <p>
+
+In addition to the specification file, CUP's behavior can also be changed
+by passing various options to it.  Legal options are documented in
+<code>Main.java</code> and include:
+</p><dl>
+  <dt><tt>-package</tt> <i>name</i>  
+  </dt><dd>Specify that the <tt>parser</tt> and <tt>sym</tt> classes are to be 
+       placed in the named package.  By default, no package specification 
+       is put in the generated code (hence the classes default to the special 
+       "unnamed" package).
+
+  </dd><dt><tt>-parser</tt> <i>name</i>   
+  </dt><dd>Output parser and action code into a file (and class) with the given
+      name instead of the default of "<tt>parser</tt>".
+
+  </dd><dt><tt>-symbols</tt> <i>name</i>  
+  </dt><dd>Output the symbol constant code into a class with the given
+      name instead of the default of "<tt>sym</tt>".
+
+  </dd><dt><tt>-interface</tt>
+  </dt><dd>Outputs the symbol constant code as an <code>interface</code>
+      rather than as a <code>class</code>.
+
+  </dd><dt><tt>-nonterms</tt>      
+  </dt><dd>Place constants for non-terminals into the  symbol constant class.
+      The parser does not need these symbol constants, so they are not normally
+      output.  However, it can be very helpful to refer to these constants
+      when debugging a generated parser.
+
+  </dd><dt><tt>-expect</tt> <i>number</i>      
+  </dt><dd>During parser construction the system may detect that an ambiguous 
+      situation would occur at runtime.  This is called a <i>conflict</i>.  
+      In general, the parser may be unable to decide whether to <i>shift</i> 
+      (read another symbol) or <i>reduce</i> (replace the recognized right 
+      hand side of a production with its left hand side).  This is called a 
+      <i>shift/reduce conflict</i>.  Similarly, the parser may not be able 
+      to decide between reduction with two different productions.  This is 
+      called a <i>reduce/reduce conflict</i>.  Normally, if one or more of 
+      these conflicts occur, parser generation is aborted.  However, in 
+      certain carefully considered cases it may be advantageous to 
+      arbitrarily break such a conflict.  In this case CUP uses YACC 
+      convention and resolves shift/reduce conflicts by shifting, and 
+      reduce/reduce conflicts using the "highest priority" production (the 
+      one declared first in the specification).  In order to enable automatic 
+      breaking of conflicts the <tt>-expect</tt> option must be given 
+      indicating exactly how many conflicts are expected.  Conflicts
+      resolved by precedences and associativities are not reported.
+
+  </dd><dt><tt>-compact_red</tt>   
+  </dt><dd>Including this option enables a table compaction optimization involving
+      reductions.  In particular, it allows the most common reduce entry in 
+      each row of the parse action table to be used as the default for that 
+      row.  This typically saves considerable room in the tables, which can 
+      grow to be very large.  This optimization has the effect of replacing 
+      all error entries in a row with the default reduce entry.  While this 
+      may sound dangerous, if not down right incorrect, it turns out that this 
+      does not affect the correctness of the parser.  In particular, some
+      changes of this type are inherent in LALR parsers (when compared to 
+      canonical LR parsers), and the resulting parsers will still never 
+      read past the first token at which the error could be detected.
+      The parser can, however, make extra erroneous reduces before detecting
+      the error, so this can degrade the parser's ability to do 
+      <a href="#errors">error recovery</a>.
+      (Refer to reference [2] pp. 244-247 or reference [3] pp. 190-194 for a 
+      complete explanation of this compaction technique.) <br><br>
+
+      This option is typically used to work-around the java bytecode
+      limitations on table initialization code sizes.  However, CUP
+      0.10h introduced a string-encoding for the parser tables which
+      is not subject to the standard method-size limitations.
+      Consequently, use of this option should no longer be required
+      for large grammars.
+
+  </dd><dt><tt>-nowarn</tt>        
+  </dt><dd>This options causes all warning messages (as opposed to error messages)
+      produced by the system to be suppressed.
+
+  </dd><dt><tt>-nosummary</tt>     
+  </dt><dd>Normally, the system prints a summary listing such things as the 
+      number of terminals, non-terminals, parse states, etc. at the end of
+      its run.  This option suppresses that summary.
+
+  </dd><dt><tt>-progress</tt>      
+  </dt><dd>This option causes the system to print short messages indicating its
+      progress through various parts of the parser generation process.
+
+  </dd><dt><tt>-dump_grammar</tt>  
+  </dt><dt><tt>-dump_states</tt>   
+  </dt><dt><tt>-dump_tables</tt>   
+  </dt><dt><tt>-dump</tt>          
+  </dt><dd> These options cause the system to produce a human readable dump of
+       the grammar, the constructed parse states (often needed to resolve
+       parse conflicts), and the parse tables (rarely needed), respectively.
+       The <tt>-dump</tt> option can be used to produce all of these dumps.
+
+  </dd><dt><tt>-time</tt>          
+  </dt><dd>This option adds detailed timing statistics to the normal summary of
+      results.  This is normally of great interest only to maintainers of 
+      the system itself.
+
+  </dd><dt><tt>-debug</tt>          
+  </dt><dd>This option produces voluminous internal debugging information about
+      the system as it runs.  This is normally of interest only to maintainers 
+      of the system itself.
+
+  </dd><dt><tt>-nopositions</tt>          
+  </dt><dd>This option keeps CUP from generating code to propagate the left
+      and right hand values of terminals to non-terminals, and then from
+      non-terminals to other terminals.  If the left and right values aren't
+      going to be used by the parser, then it will save some runtime
+      computation to not generate these position propagations.  This option
+      also keeps the left and right label variables from being generated, so
+      any reference to these will cause an error.
+  </dd><dt><tt>-locations</tt>          
+  </dt><dd>This option makes CUP generate xleft/xright handles for
+      accessing Location objects for symbol start/end inside actions.
+  </dd><dt><tt>-xmlactions</tt>          
+  </dt><dd>This option makes CUP generate generic actions that produce
+      XMLElement-objects for any symbol, that is labeled by the CUP spec
+      author. These objects directly mirror the according parse subtree. For this
+      option, You will want to remove types from any symbol as well as
+      ignore the RESULT-handle in any action, should you still want
+      to perform any.
+  </dd><dt><tt>-genericlabels</tt>          
+  </dt><dd>This option goes one step further then -xmlactions by producing
+      the full parse tree as XMLElement-tree.
+  </dd><dt><tt>-noscanner</tt>
+  </dt><dd>CUP 0.10j introduced <a href="#scanner">improved scanner
+  integration</a> and a new interface,
+  <code>java_cup.runtime.Scanner</code>.  By default, the 
+  generated parser refers to this interface, which means you cannot
+  use these parsers with CUP runtimes older than 0.10j.  If your
+  parser does not use the new scanner integration features, then you
+  may specify the <code>-noscanner</code> option to suppress the
+  <code>java_cup.runtime.Scanner</code> references and allow
+  compatibility with old runtimes.  Not many people should have reason
+  to do this.
+
+  </dd><dt><tt>-version</tt>
+  </dt><dd>Invoking CUP with the <code>-version</code> flag will cause it
+  to print out the working version of CUP and halt.  This allows
+  automated CUP version checking for Makefiles, install scripts and
+  other applications which may require it.
+</dd></dl>
+<a name="ant"></a>
+<h4>3.2 Integrating CUP into an <a href="http://ant.apache.org/">ANT</a>
+script</h4>
+<p>To use cup in an ANT script, You have to add the following task definition to
+Your <tt>build.xml</tt> file:</p>
+<pre>&lt;taskdef name="cup"
+  classname="java_cup.anttask.CUPTask"
+  classpathref="cupclasspath"
+/&gt;
+</pre>
+<p>Now, You are ready to use Your new &lt;cup/&gt; task to generate own parsers
+from within ANT. Such a generation statement could look like:</p>
+<pre>&lt;target name="cup"&gt;
+&lt;cup srcfile="path/to/cupfile/Parser.cup"
+  destdir="path/to/javafiles"
+  interface="true"
+/&gt;
+&lt;/target&gt;
+</pre>
+<p>You can specify all commandline flags from chapter <bf>3.1</bf> as boolean
+parameters to Your cuptask to achieve a similar behaviour (as done with
+<tt>-interface</tt> in this little example).</p>
+
+<a name="parser"></a>
+<h3>4. Customizing the Parser</h3>
+
+Each generated parser consists of three generated classes.  The 
+<tt>sym</tt> class (which can be renamed using the <tt>-symbols</tt>
+option) simply contains a series of <tt>int</tt> constants,
+one for each terminal.  Non-terminals are also included if the <tt>-nonterms</tt>
+option is given.  The source file for the <tt>parser</tt> class (which can
+be renamed using the <tt>-parser</tt> option) actually contains two 
+class definitions, the public <tt>parser</tt> class that implements the 
+actual parser, and another non-public class (called <tt>CUP$action</tt>) which 
+encapsulates all user actions contained in the grammar, as well as code from 
+the <tt>action code</tt> declaration.  In addition to user supplied code, this
+class contains one method: <tt>CUP$do_action</tt> which consists of a large 
+switch statement for selecting and executing various fragments of user 
+supplied action code.  In general, all names beginning with the prefix of 
+<tt>CUP$</tt> are reserved for internal uses by CUP generated code. <p> 
+
+The <tt>parser</tt> class contains the actual generated parser.  It is 
+a subclass of <tt>java_cup.runtime.lr_parser</tt> which implements a 
+general table driven framework for an LR parser.  The generated <tt>parser</tt>
+class provides a series of tables for use by the general framework.  
+Three tables are provided:
+</p><dl compact="compact">
+<dt>the production table 
+</dt><dd>provides the symbol number of the left hand side non-terminal, along with
+    the length of the right hand side, for each production in the grammar,
+</dd><dt>the action table
+</dt><dd>indicates what action (shift, reduce, or error) is to be taken on each 
+    lookahead symbol when encountered in each state, and
+</dd><dt>the reduce-goto table
+</dt><dd>indicates which state to shift to after reduces (under each non-terminal
+from each state). 
+</dd></dl>
+(Note that the action and reduce-goto tables are not stored as simple arrays,
+but use a compacted "list" structure to save a significant amount of space.
+See comments the runtime system source code for details.)<p>
+
+Beyond the parse tables, generated (or inherited) code provides a series 
+of methods that can be used to customize the generated parser.  Some of these
+methods are supplied by code found in part of the specification and can 
+be customized directly in that fashion.  The others are provided by the
+<tt>lr_parser</tt> base class and can be overridden with new versions (via
+the <tt>parser code</tt> declaration) to customize the system.  Methods
+available for customization include:
+</p><dl compact="compact">
+<dt><tt>public void user_init()</tt>
+</dt><dd>This method is called by the parser prior to asking for the first token 
+    from the scanner.  The body of this method contains the code from the 
+    <tt>init with</tt> clause of the the specification.  
+</dd><dt><a name="scan_method"></a><tt>public java_cup.runtime.Symbol scan()</tt>
+</dt><dd>This method encapsulates the scanner and is called each time a new
+    terminal is needed by the parser.  The body of this method is 
+    supplied by the <tt>scan with</tt> clause of the specification, if
+    present; otherwise it returns <code>getScanner().next_token()</code>.
+</dd><dt><tt>public java_cup.runtime.Scanner getScanner()</tt>
+</dt><dd>Returns the default scanner.  See <a href="#scanner">section 5</a>.
+</dd><dt><tt>public void setScanner(java_cup.runtime.Scanner s)</tt>
+</dt><dd>Sets the default scanner.  See <a href="#scanner">section 5</a>.
+</dd><dt><tt> public void report_error(String message, Object info)</tt>
+</dt><dd>This method should be called whenever an error message is to be issued.  In
+    the default implementation of this method, the first parameter provides 
+    the text of a message which is printed on <tt>System.err</tt> 
+    and the second parameter is simply ignored.  It is very typical to
+    override this method in order to provide a more sophisticated error
+    reporting mechanism.
+</dd><dt><tt>public void report_fatal_error(String message, Object info)</tt>
+</dt><dd>This method should be called whenever a non-recoverable error occurs.  It 
+    responds by calling <tt>report_error()</tt>, then aborts parsing
+    by calling the parser method <tt>done_parsing()</tt>, and finally
+    throws an exception.  (In general <tt>done_parsing()</tt> should be called 
+    at any point that parsing needs to be terminated early).
+</dd><dt><tt>public List<Integer> expected_token_ids()</tt>
+</dt><dd>This method informs during parsing and especially when handling
+    parsing problems and invalid input about valid continuations for parsing.
+    It returns a list of integer constants which correspond to the constants
+    in the generated <tt>sym.java</tt>. You can retranslate the ids to their
+    string representations, which where used in the grammar specification to
+    declare (non)terminal names, with <tt>symbol_name_from_id(id)</tt>
+    This can be typically used to implement syntax completion or more detailed
+    error messages.
+</dd><dt><tt>public String symbol_name_from_id(int id)</tt>
+</dt><dd>This method translates numerical constants, representing symbol ids 
+    back to their textual representation, declared in the <tt>.cup</tt>
+    parser specification file.
+</dd><dt><tt>public void syntax_error(Symbol cur_token)</tt>
+</dt><dd>This method is called by the parser as soon as a syntax error is detected
+    (but before error recovery is attempted).  In the default implementation it
+    calls: <tt>report_error("Syntax error", null);</tt>.
+</dd><dt><tt>public void unrecovered_syntax_error(Symbol cur_token)</tt>
+</dt><dd>This method is called by the parser if it is unable to recover from a 
+    syntax error.  In the default implementation it calls:
+    <tt>report_fatal_error("Couldn't repair and continue parse", null);</tt>.
+</dd><dt><tt> protected int error_sync_size()</tt>
+</dt><dd>This method is called by the parser to determine how many tokens it must
+    successfully parse in order to consider an error recovery successful.
+    The default implementation returns 3.  Values below 2 are not recommended.
+    See the section on <a href="#errors">error recovery</a> for details.
+</dd></dl>
+
+Parsing itself is performed by the method <tt>public Symbol parse()</tt>.  
+This method starts by getting references to each of the parse tables, 
+then initializes a <tt>CUP$action</tt> object (by calling 
+<tt>protected void init_actions()</tt>). Next it calls <tt>user_init()</tt>,
+then fetches the first lookahead token with a call to <tt>scan()</tt>.
+Finally, it begins parsing.  Parsing continues until <tt>done_parsing()</tt>
+is called (this is done automatically, for example, when the parser
+accepts).  It then returns a <tt>Symbol</tt> with the <tt>value</tt>
+instance variable containing the RESULT of the start production, or
+<tt>null</tt>, if there is no value.<p>
+
+In addition to the normal parser, the runtime system also provides a debugging
+version of the parser.  This operates in exactly the same way as the normal
+parser, but prints debugging messages (by calling 
+<tt>public void debug_message(String mess)</tt> whose default implementation
+prints a message to <tt>System.err</tt>).</p><p>
+
+Based on these routines, invocation of a CUP parser is typically done
+with code such as:
+</p><pre>      /* create a parsing object */
+      parser parser_obj = new parser();
+
+      /* open input files, etc. here */
+      Symbol parse_tree = null;
+
+      try {
+        if (do_debug_parse)
+          parse_tree = parser_obj.debug_parse();
+        else
+          parse_tree = parser_obj.parse();
+      } catch (Exception e) {
+        /* do cleanup here - - possibly rethrow e */
+      } finally {
+	/* do close out here */
+      }
+</pre>
+
+<a name="scanner"></a>
+<h3>5. Scanner Interface</h3>
+
+<a name="basic-symbols" ></a>
+<h4>5.1 Basic Symbol management</h4>
+
+<p>In CUP 0.10j, scanner integration was improved according to
+suggestions made by <a href="http://www.smartsc.com/">David MacMahon</a>.
+The changes make it easier to incorporate JLex and other
+automatically-generated scanners into CUP parsers.</p>
+
+<p>To use the new code, your scanner should implement the
+<code>java_cup.runtime.Scanner</code> interface, defined as:
+</p>
+<pre>
+package java_cup.runtime;
+
+public interface Scanner {
+    public Symbol next_token() throws java.lang.Exception;
+}
+</pre>
+<p>
+In addition to the methods described in <a href="#parser">section
+4</a>, the <code>java_cup.runtime.lr_parser</code> class has two new
+accessor methods, <code>setScanner()</code> and <code>getScanner()</code>.
+The default implementation of <a href="#scan_method"><code>scan()</code></a>
+is:
+</p><pre>  public Symbol scan() throws java.lang.Exception {
+    return getScanner().next_token();
+  }
+</pre>
+<p>
+The generated parser also contains a constructor which takes a
+<code>Scanner</code> and calls <code>setScanner()</code> with it. In
+most cases, then, the <code>init with</code> and <code>scan
+with</code> directives may be omitted.  You can simply create the
+parser with a reference to the desired scanner:
+</p><pre>      /* create a parsing object */
+      parser parser_obj = new parser(new my_scanner());
+</pre>
+or set the scanner after the parser is created:
+<pre>      /* create a parsing object */
+      parser parser_obj = new parser();
+      /* set the default scanner */
+      parser_obj.setScanner(new my_scanner());
+</pre><p>
+Note that because the parser uses look-ahead, resetting the scanner in
+the middle of a parse is not recommended. If you attempt to use the
+default implementation of <code>scan()</code> without first calling
+<code>setScanner()</code>, a <code>NullPointerException</code> will be
+thrown.</p><p>
+As an example of scanner integration, the following three lines in the
+lexer-generator input are all that is required to use a 
+<a href="http://www.cs.princeton.edu/%7Eappel/modern/java/JLex/">JLex</a>
+scanner with CUP:
+</p><pre>%implements java_cup.runtime.Scanner
+%function next_token
+%type java_cup.runtime.Symbol
+</pre>
+It is anticipated that the JLex directive <code>%cup</code> will
+abbreviate the above three directive in the next version of JLex.
+Invoking the parser with the JLex scanner is then simply:
+<pre>parser parser_obj = new parser( new Yylex( some_InputStream_or_Reader));
+</pre>
+
+<p>
+Note that you still have to handle EOF correctly; the JLex code to do
+so is something like:
+</p><pre>%eofval{
+  return sym.EOF;
+%eofval}
+</pre>
+where <code>sym</code> is the name of the symbol class for your
+generated parser.<p>
+
+The simple_calc example in the CUP distribution illustrates the use of
+the scanner integration features with a hand-coded scanner.</p>
+
+<a name="advanced-symbols"></a>
+<h4>5.2 Advanced Symbol management</h4>
+
+<p>Since CUP v11a we offer the possibility of advanced symbol handling in CUP.
+Therefore, You can implement Your own SymbolFactory, derived from
+<code>java_cup.runtime.SymbolFactory</code>, and have CUP manage Your own type of
+symbols. We've done that for You already in the pre-defined
+<code>java_cup.runtime.ComplexSymbolFactory</code>, which provides support for
+detailed location information in the symbol class. Just have a look at CUP's own
+<code>Lexer.jflex</code>, which is already using the new feature.</p>
+
+<p>All You have to do is providing Your CUP-generated parser with the new
+SymbolFactory which can be done like this:</p>
+<pre>
+SymbolFactory symbolFactory = new ComplexSymbolFactory();
+MyParser parser = new MyParser(new Lexer(inputfile,symbolFactory),symbolFactory); 
+</pre>
+
+<p>The <code>ComplexSymbolFactory</code> is used straight-forward: In Your
+lexer, instead of directly creating <code>Symbol</code>-Objects, You call
+the factory's creation methods, called <code>newSymbol(...)</code>.</p>
+
+<p>Most of the times, You will want to use just the <code>ComplexSymbolFactory</code>.
+You can do that, by adding convenience methods into Your parser's body, like the following one
+for symobls with an attached String-value:</p>
+<pre>
+ public Symbol symbol(String plainname, int terminalcode, String lexem){
+    return symbolFactory.newSymbol(plainname, terminalcode, new Location(yyline+1, yycolumn +1), new Location(yyline+1,yycolumn+yylength()), lexem);
+ }
+</pre>
+<p>The <code>Location</code>-Objects provide a convenient way to manage detailed 
+position informations for Your symbols. In order to use them in Your action specifications,
+don't forget to set the <code>-locations</code>-commandline-parameter when running CUP!
+This generates into the frame of each production no plain integer values (referred to via <code>??left,??right</code>,
+with ?? being Your symbol name) any more, but Your beloved Location objects (<code>??xleft,??xright</code>, again
+with ?? Your symbol's name). You can then access all its information like this:</p>
+<pre>
+expr      ::= expr:e1 PLUS expr:e2    
+	      {: RESULT = BinExpr.createAdd(e1,e2);           :} 
+	      | NUMBER:n                 
+	      {: RESULT = Expr.createConst(nxleft,n,nxright); :}
+</pre>
+<p>In the example, we create an expression tree from our input language. Here,
+we store the location information for the subexpressions in the AST. 
+This can be seen in the action for the <code>NUMBER</code>, where we access
+<code>nxleft</code> and <code>nxright</code>. Note, that in this example we
+only store the locations of leaves directly. In a convenient implementation
+of the AST, we would expect a recursive function, that computes the locations for each
+intermediary node in the tree.
+</p>
+
+<a name="symbolstream-caching"></a>
+<h4>5.3 Symbolstream caching</h4>
+
+<p>CUP offers an additional layer between scanner and parser, in order to cache the
+actual sequence of terminal symbols, provided by the scanner for potential later use.
+This comes in handy, if e.g. a pretty printer or syntax highlighter is applied.</p>
+
+<p>Given that the <code>Lexer</code> class implements CUP's <code>Scanner</code>
+interface, we can buffer its output with the <code>ScannerBuffer</code> and access
+the tokenstream with <code>getBuffered()</code>, once the parsing is finished:</p>
+<pre>
+Scanner scanner = new Lexer();
+ScannerBuffer buffer = new ScannerBuffer(lexer);
+Parser p = new Parser(buffer,new ComplexSymbolFactory);
+p.parse();
+System.out.println(buffer.getBuffered());
+</pre>
+
+<a name="errors"></a>
+<h3>6. Error Recovery</h3>
+<a name="error_sym"></a>
+<h4>6.1 The error symbol</h4>
+A final important aspect of building parsers with CUP is 
+support for syntactic error recovery.  CUP uses the same 
+error recovery mechanisms as YACC.  In particular, it supports
+a special error symbol (denoted simply as <tt>error</tt>).
+This symbol plays the role of a special non-terminal which, instead of
+being defined by productions, instead matches an erroneous input 
+sequence.</p><p>
+
+The error symbol only comes into play if a syntax error is
+detected.  If a syntax error is detected then the parser tries to replace
+some portion of the input token stream with <tt>error</tt> and then
+continue parsing.  For example, we might have productions such as:
+
+</p><pre><tt>    stmt ::= expr SEMI | while_stmt SEMI | if_stmt SEMI | ... |
+	     error SEMI
+	     ;</tt></pre>
+
+This indicates that if none of the normal productions for <tt>stmt</tt> can
+be matched by the input, then a syntax error should be declared, and recovery
+should be made by skipping erroneous tokens (equivalent to matching and 
+replacing them with <tt>error</tt>) up to a point at which the parse can 
+be continued with a semicolon (and additional context that legally follows a 
+statement).  An error is considered to be recovered from if and only if a 
+sufficient number of tokens past the <tt>error</tt> symbol can be successfully 
+parsed.  (The number of tokens required is determined by the 
+<tt>error_sync_size()</tt> method of the parser and defaults to 3). <p>
+
+Specifically, the parser first looks for the closest state to the top
+of the parse stack that has an outgoing transition under
+<tt>error</tt>.  This generally corresponds to working from
+productions that represent more detailed constructs (such as a specific
+kind of statement) up to productions that represent more general or
+enclosing constructs (such as the general production for all
+statements or a production representing a whole section of declarations) 
+until we get to a place where an error recovery production
+has been provided for.  Once the parser is placed into a configuration
+that has an immediate error recovery (by popping the stack to the first
+such state), the parser begins skipping tokens to find a point at
+which the parse can be continued.  After discarding each token, the
+parser attempts to parse ahead in the input (without executing any
+embedded semantic actions).  If the parser can successfully parse past
+the required number of tokens, then the input is backed up to the point
+of recovery and the parse is resumed normally (executing all actions).
+If the parse cannot be continued far enough, then another token is
+discarded and the parser again tries to parse ahead.  If the end of
+input is reached without making a successful recovery (or there was no
+suitable error recovery state found on the parse stack to begin with)
+then error recovery fails.
+
+<a name="continuation_symbols"></a>
+<h4>6.2 Viable continuation Symbols</h4>
+<p>In case of parsing errors, CUP offers support in delivering meaningful
+user feedback. Consider that the specified parser is to be applied in a
+fancy IDE which registers parsing errors and makes propositions, on how
+to fix these errors. In these cases, an implementation for the action code
+of an error symbol could consist in telling the IDE about the exact
+location of the unmatched input, as well as the list of viable symbols, with
+which the parser can advance a step in the current state, reaching an
+accepting state. These symbols are coded as integers, and can be decoded to
+their string representations via calls to <code>symbol_name_from_id()</code>.
+Such an action can look like:</p>
+<pre><tt>    stmt ::= expr SEMI | while_stmt SEMI | if_stmt SEMI | ... |
+	     error:e {: 
+                 List<Integer> expected = expected_token_ids();
+                 myIDE.registerParseError(exleft,exright,expected);
+             :} SEMI
+	     ;</tt></pre>
+
+<a name="conclusion"></a>
+<h3>7. Conclusion</h3>
+
+This manual has briefly described the CUP LALR parser generation system.
+CUP is designed to fill the same role as the well known YACC parser
+generator system, but is written in and operates entirely with Java code 
+rather than C or C++.  Additional details on the operation of the system can 
+be found in the parser generator and runtime source code.  See the CUP
+home page below for access to the API documentation for the system and its
+runtime.</p><p>
+
+This document covers version 0.11b of the system.  Check the CUP home
+page:
+<a href="http://www2.in.tum.de/projects/cuptum">
+http://www2.in.tum.de/projects/cuptum/</a>
+for the latest release information, instructions for downloading the
+system, and additional news about CUP.  Bug reports and other 
+comments for the developers should be sent to the CUP maintainer, 
+M. Petter, at
+<a href="mailto:petterATcs.tum.edu">
+petterATcs.tum.edu</a></p><p>
+
+Before this, it was maintained by
+C. Scott Ananian, at
+<a href="cananian@alumni.princeton.edu">
+cananian@alumni.princeton.edu</a></p><p>
+
+CUP was originally written by 
+<a href="http://www.cs.cmu.edu/%7Ehudson/">
+Scott Hudson</a>, in August of 1995.</p><p>
+
+It was extended to support precedence by 
+<a href="http://www.princeton.edu/%7Efrankf">
+Frank Flannery</a>, in July of 1996.</p><p>
+
+On-going improvements have been done by
+<a href="http://www.pdos.lcs.mit.edu/%7Ecananian">
+C. Scott Ananian</a>, the CUP maintainer, from December of 1997 to the
+present.</p><p>
+
+<a name="refs"></a>
+<h3>References</h3>
+</p><dl compact="compact">
+
+<dt><a name="YACCref">[1]</a> 
+</dt><dd>S. C. Johnson, 
+"YACC &amp;emdash; Yet Another Compiler Compiler",
+CS Technical Report #32, 
+Bell Telephone Laboratories,  
+Murray Hill, NJ, 
+1975.
+
+</dd><dt><a name="dragonbook">[2]</a> 
+</dt><dd>A. Aho, R. Sethi, and J. Ullman, 
+<i>Compilers: Principles, Techniques, and Tools</i>, 
+Addison-Wesley Publishing,
+Reading, MA, 
+1986.
+
+</dd><dt><a name="crafting">[3]</a> 
+</dt><dd>C. Fischer, and R. LeBlanc,
+<i>Crafting a Compiler with C</i>,
+Benjamin/Cummings Publishing,
+Redwood City, CA,
+1991.
+
+</dd></dl>
+
+<h3><a name="appendixa" />
+Appendix A. Grammar for CUP Specification Files</a> (0.10j)</h3>
+<hr><br>
+<pre><tt>java_cup_spec      ::= package_spec import_list class_name code_parts
+		       symbol_list precedence_list start_spec 
+		       production_list
+package_spec       ::= PACKAGE multipart_id SEMI | empty
+import_list        ::= import_list import_spec | empty
+import_spec        ::= IMPORT import_id SEMI
+class_name         ::= CLASS ID SEMI | empty
+code_part          ::= action_code_part | parser_code_part |
+                       init_code | scan_code
+code_parts         ::= code_parts code_part | empty
+action_code_part   ::= ACTION CODE CODE_STRING opt_semi
+parser_code_part   ::= PARSER CODE CODE_STRING opt_semi
+init_code          ::= INIT WITH CODE_STRING opt_semi
+scan_code          ::= SCAN WITH CODE_STRING opt_semi
+symbol_list        ::= symbol_list symbol | symbol
+symbol             ::= TERMINAL type_id declares_term |
+                       NON TERMINAL type_id declares_non_term |
+		       NONTERMINAL type_id declares_non_term |
+		       TERMINAL declares_term |
+		       NON TERMINAL declares_non_term |
+		       NONTERMIANL declared_non_term
+term_name_list     ::= term_name_list COMMA new_term_id | new_term_id
+non_term_name_list ::= non_term_name_list COMMA new_non_term_id |
+	               new_non_term_id
+declares_term      ::= term_name_list SEMI
+declares_non_term  ::= non_term_name_list SEMI
+precedence_list    ::= precedence_l | empty
+precedence_l       ::= precedence_l preced + preced;
+preced             ::= PRECEDENCE LEFT terminal_list SEMI
+	               | PRECEDENCE RIGHT terminal_list SEMI
+	               | PRECEDENCE NONASSOC terminal_list SEMI
+terminal_list      ::= terminal_list COMMA terminal_id | terminal_id 
+start_spec         ::= START WITH nt_id SEMI | empty
+production_list    ::= production_list production | production
+production         ::= nt_id COLON_COLON_EQUALS rhs_list SEMI
+rhs_list           ::= rhs_list BAR rhs | rhs
+rhs                ::= prod_part_list PERCENT_PREC term_id |
+                       prod_part_list
+prod_part_list     ::= prod_part_list prod_part | empty
+prod_part          ::= symbol_id opt_label | CODE_STRING
+opt_label          ::= COLON label_id | empty
+multipart_id       ::= multipart_id DOT ID | ID
+import_id          ::= multipart_id DOT STAR | multipart_id
+type_id            ::= multipart_id
+terminal_id        ::= term_id
+term_id            ::= symbol_id
+new_term_id        ::= ID
+new_non_term_id    ::= ID
+nt_id              ::= ID
+symbol_id          ::= ID
+label_id           ::= ID
+opt_semi	   ::= SEMI | empty
+
+</tt></pre>
+<hr><p></p><p>
+
+</p><h3><a name="appendixb"></a>Appendix B. A Very Simple Example Scanner</h3>
+<hr><br>
+<pre><tt>// Simple Example Scanner Class
+
+import java_cup.runtime.*;
+import sym;
+
+public class scanner {
+  /* single lookahead character */
+  protected static int next_char;
+  // since cup v11 we use SymbolFactories rather than Symbols
+  private SymbolFactory sf = new DefaultSymbolFactory();
+
+  /* advance input by one character */
+  protected static void advance()
+    throws java.io.IOException
+    { next_char = System.in.read(); }
+
+  /* initialize the scanner */
+  public static void init()
+    throws java.io.IOException
+    { advance(); }
+
+  /* recognize and return the next complete token */
+  public static Symbol next_token()
+    throws java.io.IOException
+    {
+      for (;;)
+        switch (next_char)
+	  {
+	    case '0': case '1': case '2': case '3': case '4': 
+	    case '5': case '6': case '7': case '8': case '9': 
+	      /* parse a decimal integer */
+	      int i_val = 0;
+	      do {
+	        i_val = i_val * 10 + (next_char - '0');
+	        advance();
+	      } while (next_char &gt;= '0' &amp;&amp; next_char &lt;= '9');
+	    return sf.newSymbol("NUMBER",sym.NUMBER, new Integer(i_val));
+
+	    case ';': advance(); return sf.newSymbol("SEMI",sym.SEMI);
+	    case '+': advance(); return sf.newSymbol("PLUS",sym.PLUS);
+	    case '-': advance(); return sf.newSymbol("MINUS",sym.MINUS);
+	    case '*': advance(); return sf.newSymbol("TIMES",sym.TIMES);
+	    case '/': advance(); return sf.newSymbol("DIVIDE",sym.DIVIDE);
+	    case '%': advance(); return sf.newSymbol("MOD",sym.MOD);
+	    case '(': advance(); return sf.newSymbol("LPAREN",sym.LPAREN);
+	    case ')': advance(); return sf.newSymbol("RPAREN",sym.RPAREN);
+
+	    case -1: return return sf.newSymbol("EOF",sym.EOF);
+
+	    default: 
+	      /* in this simple scanner we just ignore everything else */
+	      advance();
+	    break;
+	  }
+    }
+};
+</tt></pre>
+
+
+<a name="changes" /><h3><a name="changes">Appendix C:  Incompatibilites between CUP 0.9 and CUP 0.10</a></h3>
+
+CUP version 0.10a is a major overhaul of CUP.  The changes are severe,
+meaning no backwards compatibility to older versions.
+
+The changes consist of:
+<ul>
+<li> <a href="#lex_inter">A different lexical interface</a>,
+</li><li> <a href="#new_dec">New terminal/non-terminal declarations</a>,
+</li><li> <a href="#label_ref">Different label references</a>,
+</li><li> <a href="#RESULT_pass">A different way of passing RESULT</a>,
+</li><li> <a href="#pos_prop">New position values and propagation</a>,
+</li><li> <a href="#ret_val">Parser now returns a value</a>,
+</li><li> <a href="#prec_add">Terminal precedence declarations</a> and
+</li><li> <a href="#con_prec">Rule contextual precedence assignment</a>
+</li></ul>
+
+<h5><a name="lex_inter"></a>Lexical Interface</h5>
+
+CUP now interfaces with the lexer in a completely different
+manner.  In the previous releases, a new class was used for every
+distinct type of terminal.  This release, however, uses only one class:
+The <tt>Symbol</tt> class.  The <tt>Symbol</tt> class has three instance
+variables which 
+are significant to the parser when passing information from the lexer.
+The first is the <tt>value</tt> instance variable.  This variable 
+contains the 
+value of that terminal.  It is of the type declared as the terminal type
+in the parser specification file.  The second two are the instance
+variables <tt>left</tt> and <tt>right</tt>.  They should be filled with 
+the <tt>int</tt> value of
+where in the input file, character-wise, that terminal was found.<p>
+
+For more information, refer to the manual on <a href="#lex_part">scanners</a>.
+
+</p><h5><a name="new_dec">Terminal/Non-Terminal Declarations</a></h5>
+
+Terminal and non-terminal declarations now can be declared in two
+different ways to indicate the values of the terminals or
+non-terminals.  The previous declarations of the form
+
+<pre><tt>
+terminal <i>classname terminal</i> [, <i>terminal ...</i>];
+</tt></pre> 
+
+still works.  The classname, however indicates the type of the value of
+the terminal or non-terminal, and does not indicate the type of object
+placed on the parse stack.
+
+A declaration, such as:
+
+<pre><tt>
+terminal <i>terminal</i> [, <i>terminal ...</i>];
+</tt></pre> 
+
+indicates the terminals in the list hold no value.<p>
+
+For more information, refer to the manual on <a href="#symbol_list">declarations</a>.
+
+</p><h5><a name="label_ref">Label References</a></h5>
+
+Label references do not refer to the object on the parse stack, as in
+the old CUP, but rather to the value of the <tt>value</tt> 
+instance variable of
+the <tt>Symbol</tt> that represents that terminal or non-terminal.  Hence,
+references to terminal and non-terminal values is direct, as opposed to
+the old CUP, where the labels referred to objects containing the value
+of the terminal or non-terminal.<p>
+
+For more information, refer to the manual on <a href="#label_part">labels</a>.
+
+</p><h5><a name="RESULT_pass">RESULT Value</a></h5>
+
+The <tt>RESULT</tt> variable refers directly to the value of the 
+non-terminal
+to which a rule reduces, rather than to the object on the parse stack.
+Hence, <tt>RESULT</tt> is of the same type the non-terminal to which 
+it reduces, 
+as declared in the non-terminal declaration.  Again, the reference is
+direct, rather than to something that will contain the data.<p>
+
+For more information, refer to the manual on <a href="#RES_part">RESULT</a>.
+
+</p><h5><a name="pos_prop">Position Propagation</a></h5>
+
+For every label, two more variables are declared, which are the label
+plus <tt>left</tt> or the label plus <tt>right</tt>.  These correspond 
+to the left and
+right locations in the input stream to which that terminal or
+non-terminal came from.  These values are propagated from the input
+terminals, so that the starting non-terminal should have a left value of
+0 and a right value of the location of the last character read.<p>
+
+For more information, refer to the manual on <a href="#label_part">positions</a>. 
+
+</p><h5><a name="ret_val">Return Value</a></h5>
+
+A call to <tt>parse()</tt> or <tt>debug_parse()</tt> returns a
+Symbol.  This Symbol is the start non-terminal, so the <tt>value</tt> 
+instance variable contains the final <tt>RESULT</tt> assignment. 
+
+<h5><a name="prec_add">Precedence</a></h5>
+
+CUP now has precedenced terminals.  a new declaration section,
+occurring between the terminal and non-terminal declarations and the
+grammar specifies the precedence and associativity of rules.  The
+declarations are of the form:
+
+<pre><tt>
+precedence {left| right | nonassoc} <i>terminal</i>[, <i>terminal</i> ...];
+...
+</tt>
+</pre>
+
+The terminals are assigned a precedence, where terminals on the same
+line have equal precedences, and the precedence declarations farther
+down the list of precedence declarations have higher precedence.  
+<tt>left, right</tt> and <tt>nonassoc</tt> specify the associativity 
+of these terminals.  left
+associativity corresponds to a reduce on conflict, right to a shift on
+conflict, and nonassoc to an error on conflict.  Hence, ambiguous
+grammars may now be used.<p>  
+
+For more information, refer to the manual on <a href="#precedence">precedence</a>.
+
+</p><h5><a name="con_prec">Contextual Precedence</a></h5>
+
+Finally the new CUP adds contextual precedence.  A production may be
+declare as followed:
+
+<pre><tt>
+lhs ::= <i>{right hand side list of terminals, non-terminals and actions}</i>
+        %prec <i>{terminal}</i>;
+</tt></pre>
+
+this production would then have a precedence equal to the terminal
+specified after the <tt>%prec</tt>.  Hence, shift/reduce conflicts can be
+contextually resolved.  Note that the <tt>%prec</tt> <i>terminal</i> 
+part comes after all actions strings.  It does not come before the 
+last action string.<p>
+
+For more information, refer to the manual on <a href="#cpp">contextual
+precedence</a>.
+
+These changes implemented by:
+</p><h3>
+<a href="http://www.princeton.edu/%7Efrankf">Frank Flannery</a><br>
+<a href="http://www.cs.princeton.edu/">Department of Computer Science</a><br>
+<a href="http://www.princeton.edu/">Princeton University</a><br>
+</h3>
+<a name="bugs">
+</a><h3><a name="bugs">Appendix D:  Bugs</a></h3>
+In this version of CUP it's difficult for the semantic action phrases (Java code attached
+to productions) to access the <tt>report_error</tt> method and other similar methods and
+objects defined in the <tt>parser code</tt> directive.
+<p>
+This is because the parsing tables (and parsing engine) are in one object (belonging to
+class <tt>parser</tt> or whatever name is specified by the <strong>-parser</strong> directive),
+and the semantic actions are in another object (of class <tt>CUP$actions</tt>).
+</p><p>
+However, there is a way to do it, though it's a bit inelegant.
+The action object has a <tt>private final</tt> field named
+<tt>parser</tt> that points to the parsing object.  Thus,
+methods and instance variables of the parser can be accessed within semantic actions as:
+</p><pre>    parser.report_error(message,info);
+    x = parser.mydata;
+</pre>
+<p>
+Perhaps this will not be necessary in a future release, and that
+such methods and variables as <tt>report_error</tt> and
+<tt>mydata</tt> will be available
+directly from the semantic actions; we will achieve this by combining the 
+"parser" object and the "actions" object together.
+ 
+</p><p>
+For a list of any other currently known bugs in CUP, see
+<a href="http://www.cs.princeton.edu/%7Eappel/modern/java/CUP/bugs.html">
+http://www.cs.princeton.edu/~appel/modern/java/CUP/bugs.html</a>.
+
+<a name="version">
+</a></p><h3>Appendix E:  Change log</h3>
+
+<dl>
+<dt>0.9e</dt><dd>March 1996, Scott Hudson's original version.
+</dd><dt>0.10a</dt><dd>August 1996, <a href="#about">several major changes</a> to
+the interface.
+</dd><dt>0.10b</dt><dd>November 1996, fixes a few minor bugs.
+</dd><dt>0.10c</dt><dd>July 1997, fixes a bug related to precedence declarations.
+</dd><dt>0.10e</dt><dd>September 1997, fixes a bug introduced in 0.10c relating
+to <tt>nonassoc</tt> precedence.  Thanks to 
+<a href="http://www.cs.purdue.edu/homes/hosking">Tony Hosking</a> 
+for reporting the bug and providing the fix.
+Also recognizes carriage-return character as white space and fixes a
+number of other small bugs.
+</dd><dt>0.10f</dt><dd>December 1997, was a maintenance release.  The CUP source
+was cleaned up for JDK 1.1.
+</dd><dt>0.10g</dt><dd>March 1998, adds new features and fixes old bugs.
+The behavior of RESULT assignments was normalized, and a problem
+with implicit start productions was fixed.  The CUP grammar was
+extended to allow array types for terminals and non-terminals, and
+a command-line flag was added to allow the generation of a symbol
+<i>interface</i>, rather than class.  Bugs associated with multiple
+invocations of a single parser object and multiple CUP classes in one 
+package have been stomped on.  Documentation was updated, as well.
+</dd><dt>0.10h-0.10i</dt><dd>February 1999, are maintenance releases.
+</dd><dt>0.10j</dt><dd>July 1999, broadened the CUP input grammar to allow more
+flexibility and improved scanner integration via the
+<code>java_cup.runtime.Scanner</code> interface.
+</dd>
+<dt>0.11a</dt>
+<dd>the changelog has <a href="http://www2.cs.tum.edu/repos/cup/develop/changelog.txt">moved</a> to the
+internet to sustain a more up-to-date state.
+</dd>
+</dl>
+
+
+<hr>
+
+<a name="trademark">
+Java and HotJava are
+trademarks of </a><a href="http://www.sun.com/">Sun Microsystems, Inc.</a>,
+and refer to Sun's Java programming language and HotJava browser
+technologies.
+CUP is not sponsored by or affiliated with Sun Microsystems, Inc.
+
+<hr>
+
+</div>
+</body></html>

@@ -1,0 +1,97 @@
+/* Minijava Grammar */
+import java_cup.runtime.*;
+import java_cup.runtime.ComplexSymbolFactory;
+import java_cup.runtime.ScannerBuffer;
+import java_cup.runtime.XMLElement;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamWriter;
+import java.io.*;
+
+import javax.xml.transform.*;
+import javax.xml.transform.stream.*;
+
+parser code {: 
+  public Parser(Lexer lex, ComplexSymbolFactory sf) {
+    super(lex,sf);
+  }
+  public static void main(String[] args) throws Exception {
+      // initialize the symbol factory
+      ComplexSymbolFactory csf = new ComplexSymbolFactory();
+      // create a buffering scanner wrapper
+      ScannerBuffer lexer = new ScannerBuffer(new Lexer(new BufferedReader(new FileReader(args[0])),csf));
+      // start parsing
+      Parser p = new Parser(lexer,csf);
+      XMLElement e = (XMLElement)p.parse().value;
+
+      for (XMLElement el: SyntaxTreeXPath.query(args[2],e)){
+      	  System.out.println(el.getTagname());
+      }
+
+
+      TestVisitor t = new TestVisitor();
+      SyntaxTreeDFS.dfs(e,t);
+
+      // create XML output file 
+      XMLOutputFactory outFactory = XMLOutputFactory.newInstance();
+      XMLStreamWriter sw = outFactory.createXMLStreamWriter(new FileOutputStream(args[1]));
+      // dump XML output to the file
+      XMLElement.dump(lexer,sw,e,"expr","stmt");
+      
+       // transform the parse tree into an AST and a rendered HTML version
+      Transformer transformer = TransformerFactory.newInstance()
+	    .newTransformer(new StreamSource(new File("tree.xsl")));
+      Source text = new StreamSource(new File(args[1]));
+      transformer.transform(text, new StreamResult(new File("output.xml")));
+      transformer = TransformerFactory.newInstance()
+	    .newTransformer(new StreamSource(new File("tree-view.xsl")));
+      text = new StreamSource(new File("output.xml"));
+      transformer.transform(text, new StreamResult(new File("ast.html")));
+  }
+:}; 
+
+terminal SEMICOLON, COMMA, LPAR, RPAR, BEGIN, END, IF, ELSE, WHILE, READ, WRITE, BUNOP, ASSIGN;
+terminal TYPE, BINOP, UNOP, COMP, BBINOP, INTCONST;
+terminal IDENT,STRINGCONST;
+terminal BOOLCONST;
+
+non terminal program, decllist,decl,stmtlist,identlist,stmt,expr,cond;
+
+precedence left ELSE, UNOP, BINOP, BUNOP, BBINOP;
+
+program   ::=  decllist:d stmtlist:s
+    ;
+decllist  ::=  decl:d decllist:dl
+    | /* empty */
+    ;
+stmtlist  ::= stmtlist:sl stmt:s
+    | /* empty */
+        ;
+decl ::= TYPE IDENT:identifier identlist:il  SEMICOLON
+    ;
+identlist  ::= identlist:il COMMA IDENT:identifier
+    | /* empty */
+    ;
+stmt ::= SEMICOLON
+    | BEGIN stmtlist:sl END
+    | IDENT:lhs ASSIGN expr:rhs SEMICOLON
+    | IDENT:lhs ASSIGN READ LPAR RPAR SEMICOLON
+    | IDENT:lhs ASSIGN READ LPAR STRINGCONST:s RPAR SEMICOLON
+    | WRITE LPAR expr:e RPAR SEMICOLON
+    | WRITE LPAR STRINGCONST:s RPAR SEMICOLON
+    | IF LPAR cond:c RPAR stmt:s
+    | IF LPAR cond:c RPAR stmt:t ELSE stmt:e
+    | WHILE LPAR cond:c RPAR stmt:s
+    ;
+cond ::= BOOLCONST:c
+    | LPAR cond:c RPAR
+    | expr:e1 COMP:op expr:e2
+    | BUNOP cond:c
+    | cond:c1 BBINOP:op cond:c2
+    ;
+expr ::= IDENT:identifier
+    | INTCONST:constant
+    | LPAR expr:e RPAR
+    | BINOP expr:e
+    | expr:e1 BINOP:op expr:e2
+    ;
+

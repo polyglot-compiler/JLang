@@ -1,0 +1,88 @@
+<project name="Compiler" default="dist" basedir=".">
+  <property name="cup"     location="cup"     />
+  <property name="flex"    location="flex"    />
+  <property name="java"    location="src"    />
+  <property name="classes" location="classes" />
+  <property name="dist"    location="dist"    />
+  <property name="lib"     location="lib"     />
+  <property name="tools"     location="bin"     />
+
+  <taskdef name="jflex" classname="JFlex.anttask.JFlexTask" classpath="${tools}/JFlex.jar"  />
+  <taskdef name="cup" classname="java_cup.anttask.CUPTask" classpath="${tools}/java-cup-11b.jar" />
+  <path id="libraries"><files includes="${lib}/java-cup-11b-runtime.jar" /></path>
+
+  <target name="init">
+    <mkdir dir="${classes}"/>
+    <mkdir dir="${dist}"/>
+  </target>
+  <target name="clean">
+    <delete file="${java}/miniparser/Parser.java" />
+    <delete file="${java}/miniparser/Lexer.java" />
+    <delete dir="${classes}" />
+    <delete dir="${dist}" />
+  </target>
+
+  <target name="generate" depends="init">
+    <jflex file="${flex}/Scanner.jflex" destdir="${java}" />
+    <cup srcfile="${cup}/Parser.cup" destdir="${java}" 
+         interface="true" parser="Parser"    />
+  </target>
+
+  <target name="compile" depends="generate">
+    <javac srcdir="${java}" destdir="${classes}"><classpath refid="libraries" /></javac>
+  </target>
+
+  <target name="dist" depends="compile">
+   <copy todir="${dist}"><fileset dir="${lib}" includes="**/**.jar"/></copy>  
+    <jar jarfile="${dist}/Compiler.jar" basedir="${classes}">
+     <manifest>
+       <attribute name="Main-Class" value="miniparser.Main" />
+       <attribute name="Class-Path" value="java-cup-11b-runtime.jar" />
+     </manifest>
+    </jar>
+  </target>
+
+  <target name="run" depends="dist">
+    <echo>! Generating JVM Code</echo>
+    <java jar="${dist}/Compiler.jar"  fork="true">
+      <arg value="-jvm" />
+      <arg value="input.minijava" />
+      <classpath refid="libraries" />
+    </java>
+    <echo>! Generating the syntax tree as Metapost</echo>
+    <java jar="${dist}/Compiler.jar"  fork="true">
+      <arg value="-syntax" />
+      <arg value="input.minijava" />
+      <classpath refid="libraries" />
+    </java>
+    <echo>! Generating the PDF-diagram for the syntax tree</echo>
+    <echo>Dafuer notwendige Tools:</echo>
+    <echo> * Metapost (mpost)   .mp -> .1</echo>
+    <echo> * Metapost (mptopdf) .1  -> .pdf</echo>
+    <echo> ------ Start mp->pdf --------</echo>
+    <exec executable="mpost">
+      <arg value="input.minijava.mp"/>
+    </exec>
+    <exec executable="epstopdf">
+      <arg value="input.minijava.1"/>
+    </exec>
+    <echo> ------ mp->pdf done --------</echo>
+    <echo>! Generating the control flow as Metapost</echo>
+    <java jar="${dist}/Compiler.jar"  fork="true">
+      <arg value="-cfg" />
+      <arg value="input.minijava" />
+      <classpath refid="libraries" />
+    </java>
+    <echo>! Generating the PDF-diagram for the control flow</echo>
+    <echo> * Metapost (mpost)   .cfg.mp -> .cfg.1</echo>
+    <echo> * Metapost (mptopdf) .cfg.1  -> .cfg.pdf</echo>
+    <echo> ------ Start mp->pdf --------</echo>
+    <exec executable="mpost">
+      <arg value="input.minijava.cfg.mp"/>
+    </exec>
+    <exec executable="epstopdf">
+      <arg value="input.minijava.cfg.1"/>
+    </exec>
+    <echo> ------ mp->pdf done --------</echo>
+  </target>
+</project>

@@ -32,10 +32,18 @@ $(SRC): | $(SRC).zip
 # Path JDK sources to work around JLang unimplemented features.
 $(SRC)/patchstamp: | $(SRC)
 	@echo "Patching JDK source files"
-	@for f in `find $(PATCHES) -name "*.patch"`; do patch -p0 < "$$f"; done
+	@for f in `find $(PATCHES) -name "*.patch"`; do \
+			patch -p0 < "$$f"; \
+			NEW_FILE=$(SRC)$$(echo "$${f#patches}" | sed "s/patch/java/g"); \
+			echo "$$NEW_FILE"; \
+			sed "s/XXDATEXX/$$(date +%Y-%m-%d)/g" modification_notice.txt > tmp.txt; \
+			cat "$$NEW_FILE" >> tmp.txt; \
+			cat tmp.txt > "$$NEW_FILE"; \
+		done
+	@rm -f tmp.txt;
 	@date > $@
 
-$(CLASSES)/cstamp: | $(SRC)
+$(CLASSES)/cstamp: $(SRC)/patchstamp $(SRC)
 	@echo "Creating JDK class files"
 	@mkdir -p $(CLASSES)
 	@find $(SRC) -name "*.java" > all.txt
@@ -47,7 +55,7 @@ $(CLASSES)/cstamp: | $(SRC)
 # Use a Hello World program to compile only the most critical slice of the JDK.
 $(OUT)/llstamp: $(SRC)/patchstamp $(PLC_SRC)
 	@echo "Compiling JDK sources"
-	@$(PLC) $(PLC_FLAGS) -d $(OUT) -max-runs $(RUN_COUNT) -entry-point Main Main.java $(SRC)/sun/nio/cs/UTF_8.java $(SRC)/java/io/UnixFileSystem.java
+	@$(PLC) $(PLC_FLAGS) -d $(OUT) -max-runs $(RUN_COUNT) -entry-point Main Main.java $(SRC)/sun/nio/cs/UTF_8.java $(SRC)/java/io/UnixFileSystem.java $(SRC)/javax/xml/stream/XMLStreamException.java $(SRC)/javax/xml/stream/XMLStreamWriter.java
 	@rm $(OUT)/Main.ll
 	@date > $@
 	@echo "Successfully compiled `find $(OUT) -name '*.ll' | wc -l | awk '{print $1}'` files"

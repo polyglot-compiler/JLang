@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 #include <cstdio>
 #include <execinfo.h>
 #include "stack_trace.h"

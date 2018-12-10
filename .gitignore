@@ -14,5 +14,12 @@
 .cproject
 .project
 .classpath
+*.ll
+*.o
+*.dSYM
 *~
 tests/isolated/check
+examples/cup/dist
+examples/cup/out
+examples/cup/test/*.java
+examples/cup/testgrammars/out

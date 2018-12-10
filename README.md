@@ -1,12 +1,12 @@
 JLang
 ========
 
-JLang adds an LLVM back end to the [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler, translating Java down to LLVM IR.
+JLang supports ahead-of-time compilation of Java. It works by adding an LLVM back end to the [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler, allowing Java to be translated down to LLVM IR.
+From there, a back end can translate to the architecture of choice.
 
 Since Polyglot already translates extended Java code into vanilla Java ASTs, JLang should be interoperable with other Polyglot extensions by default. However, JLang aims to be extensible itself, so that one can write optimized LLVM translations for language extensions when needed.
 
 A user manual and developer guide can be found on the [JLang website](https://polyglot-compiler.github.io/JLang/).
-
 
 Contributing
 ------------
@@ -19,7 +19,6 @@ Before contributing, please do the following.
 (4) If you need to work on compiler translations, get familiar with [LLVM IR](https://llvm.org/docs/LangRef.html).<br>
 (5) If you need to work on native runtime code, get familiar with [JNI](https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/design.html).
 
-
 Quick start guide
 -----------------
 
@@ -29,7 +28,7 @@ JLang has the following dependencies, which you will need to download and instal
 
 - [JDK 7](http://www.oracle.com/technetwork/java/javase/downloads/java-archive-downloads-javase7-521261.html) is required to compile programs with JLang, since we target Java 7. Be sure that the `JDK7` environment variable is defined and points to the JDK 7 home directory. When trying to run programs compiled with JLang you will need to set the `JAVA_HOME` environment variable to this value as well (see the test suite Makefile for an example of how to execute JLang-compiled binaries).
 
-- [LLVM](http://llvm.org) and [Clang](https://clang.llvm.org) are needed to build the runtime and create binaries from Java programs. JLang is tested with version 5.0.1, which you can download [here](http://releases.llvm.org/download.html#5.0.1). It may be possible to install through a package manager (e.g., `sudo apt install llvm && sudo apt install clang`). After installation be sure that `llc --version` (for example) and `clang++ --version` report consistent versions. You may have to alter your PATH to pick the right version, especially on a Mac for which a version of `Clang` comes bundled with the command line developer tools. If your clang binary is not named `clang++`, then you must define its name with the `CLANG` environment variable.
+- [LLVM](http://llvm.org) and [Clang](https://clang.llvm.org) are needed to build the runtime and create binaries from Java programs. JLang is tested with version 5.0.1, which you can download [here](http://releases.llvm.org/download.html#5.0.1). It may be possible to install through a package manager (e.g., `sudo apt install llvm && sudo apt install clang`). After installation be sure that `llc --version` (for example) and `clang++ --version` report consistent versions. You may have to alter your PATH to pick the right version, especially on a Mac for which a version of `Clang` comes bundled with the command line developer tools. If your clang binary is named `clang++-VERSION`, then you must define its version with the `CLANG_VERSION` environment variable. For example, if you are running `clang++-5.0` then you should set `CLANG_VERSION=5.0`.
 
 - The [Boehm-Demers-Weiser garbage collector](http://www.hboehm.info/gc/) is also required for creating binaries. JLang is tested with version 7.6.4, which you can download [here](http://www.hboehm.info/gc/gc_source/) or install through a package manager (`brew install boehmgc`). A typical install from source looks like this: `./configure && make && make install`. Note that the garbage collector depends on [libatomic_ops](https://github.com/ivmai/libatomic_ops), which is often available through a package manager.
 
@@ -59,6 +58,7 @@ High-level project structure
 
 - [lib](lib) contains Polyglot (the frontend for JLang); a fork of [JavaCPP Presets](https://github.com/bytedeco/javacpp-presets) to generate Java stubs from LLVM headers; and various supporting `.jar` files.
 
+- [examples](examples) contains full Java 7 projects which can be compiled with JLang and executed. Currently, we have included only the CUP parser generator, which can be built with the `make cup` command in the top-level JLang dirctory and is executable with the script [cup.sh](examples/cup/bin/cup.sh).
 
 Status (August 2018)
 -----------------

@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 package jlang.extension;
 
 import polyglot.ast.FieldDecl;
@@ -26,11 +28,16 @@ public class JLangFieldDeclExt extends JLangExt {
             String mangledName = v.mangler.staticField(fi);
             LLVMTypeRef type = v.utils.toLL(n.declType());
             LLVMValueRef global = v.utils.getGlobal(mangledName, type);
+	    LLVMValueRef val = v.utils.buildConst(n.init(), type, lang());
 
-            // LLVMConstNull will give zero for any type, including numeric and pointer types.
-            // TODO: Could initialize constant fields at compile time here. Coordinate with DesugarInitializers.
-            // TODO: Could use LLVMSetGlobalConstant for constant final fields.
-            LLVMSetInitializer(global, LLVMConstNull(type));
+	    // TODO: Could use LLVMSetGlobalConstant for constant final fields.
+	    if (val != null) {
+		LLVMSetExternallyInitialized(global, 0);
+		LLVMSetInitializer(global, val);
+		LLVMSetLinkage(global, LLVMLinkOnceODRLinkage);
+	    } else {
+		LLVMSetInitializer(global, LLVMConstNull(type));
+	    }
         }
 
         return super.leaveTranslateLLVM(v);

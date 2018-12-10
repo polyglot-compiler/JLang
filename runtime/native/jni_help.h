@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 #ifndef __JNI_H__
 #define __JNI_H__
 
@@ -12,17 +14,13 @@
 #include "rep.h"
 #include "reflect.h"
 #include "stack_trace.h"
+#include "helper.h"
 
 typedef uint8_t u_char;
-#define POLYGLOT_ARRAY_STORE Polyglot_jlang_runtime_Helper_arrayStore___3Ljava_lang_Object_2ILjava_lang_Object_2
 
 static jboolean mainThreadIsAlive = JNI_FALSE;
 static jobject mainThread = NULL;
 static jobject mainThreadGroup = NULL;
-
-extern "C" {
-  void POLYGLOT_ARRAY_STORE(jobjectArray, jint, jobject);
-} //extern "C"
 
 [[noreturn]] static void JniUnimplemented(const char* name) {
   fprintf(stderr,

@@ -1,5 +1,8 @@
+//Copyright (C) 2018 Cornell University
+
 package jlang.extension;
 
+import polyglot.ast.Lang;
 import polyglot.ast.Node;
 import polyglot.ast.StringLit;
 import polyglot.types.ParsedClassType;
@@ -13,6 +16,7 @@ import java.util.stream.Stream;
 import jlang.ast.JLangExt;
 import jlang.visit.LLVMTranslator;
 
+import static jlang.util.Constants.INTERN_STRING_FUNC;
 import static org.bytedeco.javacpp.LLVM.*;
 
 public class JLangStringLitExt extends JLangExt {
@@ -20,7 +24,18 @@ public class JLangStringLitExt extends JLangExt {
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
         StringLit n = (StringLit) node();
-        char[] chars = n.value().toCharArray();
+
+	LLVMValueRef stringVar = translateString(n.value(), v, lang());
+        LLVMTypeRef internStringFuncType = v.utils.functionType(v.utils.voidType(), LLVMTypeOf(stringVar));
+        LLVMValueRef internString = v.utils.getFunction(INTERN_STRING_FUNC, internStringFuncType);
+        v.utils.buildProcCall(internString, stringVar);
+        v.addTranslation(n,LLVMConstBitCast(stringVar, v.utils.toLL(n.type())));
+        return super.leaveTranslateLLVM(v);
+    }
+
+    public static LLVMValueRef translateString(String obj, LLVMTranslator v, Lang l) {
+	
+	char[] chars = obj.toCharArray();
         
         int sizeOfChar= v.utils.sizeOfType(v.ts.Char());
         ParsedClassType arrayType = v.ts.ArrayObject();
@@ -39,7 +54,7 @@ public class JLangStringLitExt extends JLangExt {
                         .toArray(LLVMValueRef[]::new);
 
         LLVMValueRef charArray = v.utils.buildConstStruct(structBody);
-        String reduce = intStream(n.value().getBytes()).mapToObj(b -> b + "_").reduce("", (s1, s2) -> s1 + s2);
+        String reduce = intStream(obj.getBytes()).mapToObj(b -> b + "_").reduce("", (s1, s2) -> s1 + s2);
         String charVarName = "_char_arr_" + reduce;
         LLVMValueRef stringLit = v.utils.getGlobal(charVarName, LLVMTypeOf(charArray));
         LLVMSetLinkage(stringLit, LLVMLinkOnceODRLinkage);
@@ -47,19 +62,17 @@ public class JLangStringLitExt extends JLangExt {
 
         LLVMValueRef dvString = v.dv.getDispatchVectorFor(v.ts.String());
         LLVMValueRef[] stringLitBody =
-                Stream.of(dvString, sync_vars, LLVMConstBitCast(stringLit, v.utils.toLL(arrayType)))
+                Stream.of(dvString, sync_vars, LLVMConstBitCast(stringLit, v.utils.toLL(arrayType)), LLVMConstInt(v.utils.intType(16), 0, 0))
                         .toArray(LLVMValueRef[]::new);
 
         LLVMValueRef string = v.utils.buildConstStruct(stringLitBody);
-        String stringVarName = "_string_lit_" + reduce;
-        LLVMValueRef stringVar = v.utils.getGlobal(stringVarName, LLVMTypeOf(string));
-        LLVMSetLinkage(stringVar, LLVMLinkOnceODRLinkage);
-        LLVMSetInitializer(stringVar, string);
-
-        v.addTranslation(n,LLVMConstBitCast(stringVar, v.utils.toLL(n.type())));
-        return super.leaveTranslateLLVM(v);
+	String stringVarName = "_string_lit_" + reduce;
+	LLVMValueRef stringVar = v.utils.getGlobal(stringVarName, LLVMTypeOf(string));
+	LLVMSetLinkage(stringVar, LLVMLinkOnceODRLinkage);
+	LLVMSetInitializer(stringVar, string);
+	return stringVar;
+	
     }
-
     public static IntStream intStream(byte[] array) {
         return IntStream.range(0, array.length).map(idx -> array[idx]);
     }

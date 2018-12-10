@@ -1,9 +1,13 @@
+//Copyright (C) 2018 Cornell University
+
 #pragma once
 
 #include "jni.h"
 #include "jni_help.h"
 
 extern "C" {
+
+jstring internJString(jstring str);
 
 jint
 JVM_GetInterfaceVersion(void);

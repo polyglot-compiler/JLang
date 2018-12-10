@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 package java.io;
 
 // Hack to easily get console I/O.

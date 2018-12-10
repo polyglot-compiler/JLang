@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 package jlang.extension;
 
 import polyglot.ast.Binary;
@@ -25,9 +27,10 @@ public class JLangBinaryExt extends JLangExt {
     public Node desugar(DesugarLocally v) {
         Binary n = (Binary) node();
 
-        // Desugar string concatenation into a method call.
+        // Desugar string concatenation of non-constants into a method call.
         ClassType strT = v.ts.String();
-        if (n.operator().equals(Binary.ADD) && n.type().typeEquals(strT)) {
+        if (n.operator().equals(Binary.ADD) && n.type().typeEquals(strT)
+        		&& !lang().isConstant(n, lang())) {
             assert n.left().type().typeEquals(strT) && n.right().type().typeEquals(strT);
             return v.tnf.Call(n.position(), n.left(), "concat", strT, strT, n.right());
         }

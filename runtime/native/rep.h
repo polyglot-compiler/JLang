@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 //
 // This file includes class declarations that represent the layout of
 // Java objects, dispatch vectors, arrays, and more.
@@ -86,7 +88,10 @@ private:
 ASSERT_POD(JStringRep);
 
 // Representation for java.lang.Class.
+// This representation is primarily meant to store metadata about the class
+// The java.lang.Class object has many fields
 struct JClassRep {
+    // "Unwraps" the JClassRep into an object rep (i.e. returns the same pointer but with a different type)
     JObjectRep* Super() { return &header_; }
     jclass Wrap() { return reinterpret_cast<jclass>(this); }
 private:

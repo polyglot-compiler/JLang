@@ -1,0 +1,529 @@
+import java.io.*;
+import java_cup.runtime.ComplexSymbolFactory;
+import java_cup.runtime.Symbol;
+import java_cup.runtime.ScannerBuffer;
+import java.util.*;
+import java_cup.runtime.XMLElement;
+import java_cup.runtime.XMLElement.*;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamWriter;
+
+import javax.xml.transform.*;
+import javax.xml.transform.stream.*;    
+
+parser code {:
+    public void syntax_error(Symbol cur_token){
+	System.err.println("Syntax error at "+cur_token);
+    }
+    public static void newScope(){
+	typenames.push(new HashSet<String>());
+    }
+    public static void deleteScope(){
+	typenames.pop();
+    }
+    public static boolean lookupType(String name){
+	for (HashSet<String> scope: typenames)
+	    if (scope.contains(name)) return true;
+	return false;
+    }
+    public static void addType(String name){
+	typenames.peek().add(name);
+    }
+    public static LinkedList<HashSet<String>> typenames = new LinkedList<HashSet<String>>();
+    public Parser(Lexer lex, ComplexSymbolFactory sf) {
+	super(lex,sf);
+    }
+
+    public static void main(String args[]) {
+	try {
+	    ComplexSymbolFactory csf = new ComplexSymbolFactory();
+	    // create a buffering scanner wrapper
+	    ScannerBuffer lexer = new ScannerBuffer(new Lexer(new BufferedReader(new FileReader(args[0])),csf));
+	    // start parsing
+	    Parser p = new Parser(lexer,csf);
+	    System.out.println("Parser runs: ");
+	    newScope();
+	    XMLElement e = (XMLElement)p.parse().value;
+	    // create XML output file 
+	    XMLOutputFactory outFactory = XMLOutputFactory.newInstance();
+	    XMLStreamWriter sw = outFactory.createXMLStreamWriter(new FileOutputStream(args[1]));
+	    // dump XML output to the file
+	    XMLElement.dump(lexer,sw,e); //,"expr","stmt");
+	    // transform the parse tree into an AST and a rendered HTML version
+	    Transformer transformer = TransformerFactory.newInstance()
+		.newTransformer(new StreamSource(new File("tree.xsl")));
+	    Source text = new StreamSource(new File(args[1]));
+	    transformer.transform(text, new StreamResult(new File("output.html")));
+
+	    System.out.println("Parsing finished!");
+	} catch (Exception e) {
+	    e.printStackTrace();
+	} 
+    }
+:};
+
+terminal IDENTIFIER, CONSTANT, STRING_LITERAL, SIZEOF, PTR_OP, INC_OP, DEC_OP, LEFT_OP, RIGHT_OP, LE_OP, GE_OP, EQ_OP, NE_OP,
+    AND_OP, OR_OP, MUL_ASSIGN, DIV_ASSIGN, MOD_ASSIGN, ADD_ASSIGN, SUB_ASSIGN, LEFT_ASSIGN, RIGHT_ASSIGN, AND_ASSIGN,
+    XOR_ASSIGN, OR_ASSIGN, TYPE_NAME, TYPEDEF, EXTERN, STATIC, AUTO, REGISTER,
+    CHAR, SHORT, INT, LONG, SIGNED, UNSIGNED, FLOAT, DOUBLE, CONST, VOLATILE, VOID, STRUCT, UNION, ENUM, ELLIPSIS,
+    CASE, DEFAULT, IF, ELSE, SWITCH, WHILE, DO, FOR, GOTO, CONTINUE, BREAK, RETURN,
+    SEMI, CURLYL, CURLYR, COMMA, COLON, ASSIGN, PARAL, PARAR, SQUAREDL, SQUAREDR, POINT, ADRESS, NOT, TILDE, MINUS, PLUS, MUL, DIVIDE, MODULUS, LESS, GREATER, XOR, OR, COND;
+
+non terminal translation_unit;
+non terminal primary_expression;
+non terminal postfix_expression;
+non terminal expression;
+//non terminal argument_expression_list;
+non terminal assignment_expression;
+non terminal unary_expression;
+non terminal unary_operator;
+non terminal type_name;
+non terminal  cast_expression;
+non terminal  multiplicative_expression;
+non terminal  additive_expression;
+non terminal  relational_expression;
+non terminal  shift_expression;
+non terminal  equality_expression;
+non terminal  and_expression;
+non terminal  exclusive_or_expression;
+non terminal  inclusive_or_expression;
+non terminal  logical_and_expression;
+non terminal  logical_or_expression;
+non terminal  conditional_expression;
+non terminal  constant_expression;
+non terminal  declaration;
+non terminal  declaration_specifiers;
+non terminal  init_declarator_list;
+non terminal  storage_class_specifier;
+non terminal  type_specifier;
+non terminal  type_qualifier;
+non terminal  init_declarator;
+non terminal  declarator;
+non terminal  struct_or_union_specifier;
+non terminal  struct_declaration_list;
+//non terminal struct_or_union;
+non terminal  struct_declaration;
+non terminal  initializer;
+non terminal  specifier_qualifier_list;
+non terminal  struct_declarator_list;
+non terminal  struct_declarator;
+non terminal  enum_specifier;
+non terminal  enumerator_list;
+non terminal  enumerator;
+non terminal  pointer;
+non terminal  direct_declarator;
+non terminal  parameter_type_list;
+non terminal  identifier_list;
+non terminal  type_qualifier_list;
+non terminal  parameter_declaration;
+non terminal  abstract_declarator;
+non terminal  direct_abstract_declarator;
+non terminal  initializer_list;
+non terminal  statement;
+non terminal  labeled_statement;
+non terminal  compound_statement;
+non terminal  selection_statement;
+non terminal  iteration_statement;
+non terminal  jump_statement;
+non terminal  statement_list;
+non terminal  expression_statement;
+non terminal  external_declaration;
+non terminal  function_definition;
+non terminal  declaration_list;
+non terminal  assignment_operator;
+non terminal  parameter_list;
+
+
+precedence nonassoc ELSE;
+
+
+
+start with translation_unit;
+
+
+primary_expression ::= IDENTIFIER:ident
+		   | CONSTANT:constant 
+		   | STRING_LITERAL:stringliteral  
+		   | PARAL expression:e PARAR 
+		   ;
+
+postfix_expression ::= primary_expression:pe 
+		   | postfix_expression:pe SQUAREDL expression:index SQUAREDR 
+		   | postfix_expression:pe PARAL PARAR 
+		   | postfix_expression:pe PARAL expression:e PARAR 
+		   | postfix_expression:pe POINT IDENTIFIER:id
+		   | postfix_expression:pe PTR_OP IDENTIFIER:id
+		   | postfix_expression:pe INC_OP:op
+		   | postfix_expression:pe DEC_OP:op
+		   ;
+
+unary_expression ::= postfix_expression:pe 
+		 | INC_OP:op unary_expression:ue
+		 | DEC_OP:op unary_expression:ue
+		 | unary_operator:uo cast_expression:ce
+		 | SIZEOF unary_expression:ue
+		 | SIZEOF PARAL type_name:tn PARAR
+		 ;
+
+unary_operator
+	::=ADRESS
+	| MUL:op
+	| PLUS:op
+	| MINUS:op
+	| TILDE
+	| NOT:op
+	;
+
+
+cast_expression
+	::=unary_expression:ue
+	| PARAL type_name:tn PARAR cast_expression:ce
+	;
+
+
+multiplicative_expression ::= cast_expression:ce 
+			  | multiplicative_expression:me MUL:op cast_expression:ce
+			  | multiplicative_expression:me DIVIDE:op cast_expression:ce
+			  | multiplicative_expression:me MODULUS:op cast_expression:ce
+			  ;
+
+additive_expression ::= multiplicative_expression:me
+		    | additive_expression:ae PLUS:op multiplicative_expression:me
+		    | additive_expression:ae MINUS:op multiplicative_expression:me
+		    ;
+
+shift_expression ::= additive_expression:ae
+		 | shift_expression:se LEFT_OP additive_expression:ae
+		 | shift_expression:se RIGHT_OP additive_expression:ae
+		 ;
+
+relational_expression ::= shift_expression:se
+		      | relational_expression:re LESS:op shift_expression:se
+		      | relational_expression:re GREATER:op shift_expression:se
+		      | relational_expression:re LE_OP:op shift_expression:se
+		      | relational_expression:re GE_OP:op shift_expression:se
+		      ;
+
+equality_expression ::= relational_expression:re
+		    | equality_expression:ee EQ_OP:op relational_expression:re
+		    | equality_expression:ee NE_OP:op relational_expression:re
+		    ;
+
+and_expression ::= equality_expression:ee
+	       | and_expression:ae ADRESS equality_expression:ee
+	       ;
+
+exclusive_or_expression	::= and_expression:ae
+			| exclusive_or_expression:eoe XOR and_expression:ae
+			;
+
+
+inclusive_or_expression	::= exclusive_or_expression:eoe
+			| inclusive_or_expression:ioe OR exclusive_or_expression:eoe
+			;
+
+logical_and_expression ::= inclusive_or_expression:ioe
+		       | logical_and_expression:lae AND_OP:op inclusive_or_expression:ioe
+		       ;
+
+logical_or_expression ::= logical_and_expression:lae
+		      | logical_or_expression:loe OR_OP:op logical_and_expression:lae
+		      ;
+
+conditional_expression ::= logical_or_expression:loe
+		       | logical_or_expression:loe COND expression:e COLON conditional_expression:ce
+		       ;
+
+
+assignment_expression ::= conditional_expression:ce
+		      | unary_expression:ue assignment_operator:aop assignment_expression:ae
+		      ;
+
+assignment_operator
+	::=ASSIGN        
+	| MUL_ASSIGN     
+	| DIV_ASSIGN     
+	| MOD_ASSIGN     
+	| ADD_ASSIGN     
+	| SUB_ASSIGN     
+	| LEFT_ASSIGN    
+	| RIGHT_ASSIGN   
+ 	| AND_ASSIGN     
+	| XOR_ASSIGN     
+	| OR_ASSIGN      
+	;
+
+expression ::= assignment_expression:ae
+	   | expression:e COMMA assignment_expression:ae
+	   ;
+
+constant_expression
+	::=conditional_expression:ce
+	;
+
+declaration
+	::=declaration_specifiers:ds SEMI
+    | declaration_specifiers:ds init_declarator_list:idl {: 
+							  if (ds.toString().indexOf(">typedef<")>0) {
+							      for (XMLElement e: ((XMLElement)idl).selectById("identifier"))
+								Parser.addType(((Terminal)e).value().toString());
+							  }
+							  :} SEMI
+        ;
+
+declaration_specifiers
+	::=storage_class_specifier:scc 
+        | storage_class_specifier:scc declaration_specifiers:ds 
+	| type_specifier:ts 
+	| type_specifier:ts declaration_specifiers:ds 
+	| type_qualifier:tq 
+	| type_qualifier:tq declaration_specifiers:ds 
+	;
+
+init_declarator_list
+	::=init_declarator:id 
+	| init_declarator_list:idl COMMA init_declarator:id 
+	;
+
+init_declarator
+        ::=declarator:d 
+	| declarator:d ASSIGN initializer:i 
+	;
+
+storage_class_specifier
+    ::=  TYPEDEF:id 
+	| EXTERN:id 
+	| STATIC:id 
+	| AUTO:id 
+	| REGISTER:id
+	;
+ 
+type_specifier
+	::=VOID:type
+	| CHAR:type
+	| SHORT:type
+	| INT:type
+	| LONG:type
+	| FLOAT:type
+	| DOUBLE:type
+	| SIGNED:type
+	| UNSIGNED:type
+	| struct_or_union_specifier:su
+	| enum_specifier:es
+	| TYPE_NAME:type
+	;
+
+struct_or_union_specifier
+	::= STRUCT:s IDENTIFIER:id CURLYL struct_declaration_list:sdl CURLYR 
+	|  STRUCT:s CURLYL struct_declaration_list:sdl CURLYR
+	|  STRUCT:s IDENTIFIER:id 
+	|  UNION:u IDENTIFIER:id CURLYL struct_declaration_list:sdl CURLYR
+	|  UNION:u CURLYL struct_declaration_list:sdl CURLYR
+	|  UNION:u IDENTIFIER:id
+	;
+
+struct_declaration_list
+	::=struct_declaration:s
+	| struct_declaration_list:sl struct_declaration:s
+	;
+
+struct_declaration
+	::=specifier_qualifier_list:sq struct_declarator_list:sd SEMI
+	;
+
+specifier_qualifier_list
+	::=type_specifier:ts specifier_qualifier_list:sq 
+	| type_specifier:ts
+	| type_qualifier:tq specifier_qualifier_list:sq
+	| type_qualifier:tq
+	;
+
+struct_declarator_list
+	::=struct_declarator:s 
+	| struct_declarator_list:sl COMMA struct_declarator:s 
+	;
+
+struct_declarator
+	::=declarator:d 
+	| COLON constant_expression:ce 
+	| declarator:d COLON constant_expression:ce 
+	;
+
+enum_specifier
+	::=ENUM CURLYL enumerator_list:el CURLYR 
+	| ENUM IDENTIFIER:id CURLYL enumerator_list:el CURLYR
+	| ENUM IDENTIFIER:id 
+	;
+
+enumerator_list
+	::=enumerator:e 
+	| enumerator_list:el COMMA enumerator:e 
+	;
+
+enumerator
+	::=IDENTIFIER:id
+	| IDENTIFIER:id ASSIGN constant_expression:ce 
+	;
+
+type_qualifier
+	::=CONST:id
+	| VOLATILE:id 
+	;
+
+declarator
+	::=pointer:p direct_declarator:direct 
+	| direct_declarator:direct
+	;
+
+direct_declarator 
+	::=IDENTIFIER:identifier 
+	| PARAL declarator:d PARAR 
+	| direct_declarator:dd SQUAREDL constant_expression:ce SQUAREDR 
+	| direct_declarator:dd SQUAREDL SQUAREDR  
+	| direct_declarator:dd PARAL parameter_type_list:ptl PARAR  
+	| direct_declarator:dd PARAL identifier_list:il PARAR 
+	| direct_declarator:dd PARAL PARAR
+	;
+
+pointer
+	::=MUL:id 
+	| MUL:id type_qualifier_list:tql
+	| MUL:id pointer:p
+	| MUL:id type_qualifier_list:tql pointer:p
+	;
+
+type_qualifier_list
+	::=type_qualifier:tq 
+	| type_qualifier_list:tql type_qualifier:tq
+	;
+
+
+parameter_type_list
+	::=parameter_list:pl
+	| parameter_list:pl COMMA ELLIPSIS:id
+	;
+
+parameter_list
+	::=parameter_declaration:pd 
+	| parameter_list:pl COMMA parameter_declaration:pd
+	;
+
+parameter_declaration
+	::=declaration_specifiers:ds declarator:d
+	| declaration_specifiers:ds abstract_declarator:ad 
+	| declaration_specifiers:ds
+	;
+
+identifier_list
+	::=IDENTIFIER:id 
+	| identifier_list:idl COMMA IDENTIFIER:id 
+	;
+
+type_name
+	::=specifier_qualifier_list:sl
+	| specifier_qualifier_list:sl abstract_declarator:ad 
+	;
+
+abstract_declarator
+	::=pointer:p
+	| direct_abstract_declarator:dad
+	| pointer:p direct_abstract_declarator:d
+	;
+
+direct_abstract_declarator
+	::=PARAL:id abstract_declarator:ad PARAR 
+	| SQUAREDL:id SQUAREDR 
+	| SQUAREDL:id constant_expression:ce SQUAREDR 
+	| direct_abstract_declarator:dad SQUAREDL:id SQUAREDR
+	| direct_abstract_declarator:dad SQUAREDL:id constant_expression:ce SQUAREDR
+	| PARAL:id PARAR
+	| PARAL:id parameter_type_list:ptl PARAR
+	| direct_abstract_declarator:dad PARAL:id PARAR
+	| direct_abstract_declarator:dad PARAL:id parameter_type_list:ptl PARAR 
+	;
+
+initializer
+	::=assignment_expression:ae
+	| CURLYL initializer_list:il CURLYR
+	| CURLYL initializer_list:il COMMA CURLYR 
+	;
+
+initializer_list
+	::=initializer:i
+	| initializer_list:il COMMA initializer:i
+	;
+
+statement
+	::=labeled_statement:ls
+	| {: Parser.newScope(); :}  compound_statement:cs {: Parser.deleteScope(); :} 
+	| expression_statement:es
+	| selection_statement:ss 
+	| iteration_statement:is 
+	| jump_statement:js
+	;
+
+labeled_statement
+	::=IDENTIFIER:id COLON statement:s
+	| CASE constant_expression:ce COLON statement:s
+	| DEFAULT COLON statement:s
+	;
+
+compound_statement
+	::=CURLYL CURLYR 
+        | CURLYL statement_list:sl CURLYR 
+	| CURLYL declaration_list:dl CURLYR 
+	| CURLYL declaration_list:dl statement_list:sl CURLYR 
+	;
+
+declaration_list
+	::=declaration:d
+	| declaration_list:dl declaration:d 
+	;
+
+statement_list
+	::=statement:s
+	| statement_list:sl statement:s
+	;
+
+expression_statement
+	::=SEMI 
+	| expression:e SEMI 
+	;
+
+selection_statement
+	::=IF PARAL expression:e PARAR statement:s
+	| IF PARAL expression:e PARAR statement:s1 ELSE statement:s2 
+	| SWITCH PARAL expression:e PARAR statement:s
+	;
+
+iteration_statement
+	::=WHILE PARAL expression:e PARAR statement:s 
+	| DO statement:s WHILE PARAL expression:e PARAR SEMI
+	| FOR PARAL expression_statement:es1 expression_statement:es2 PARAR statement:s
+	| FOR PARAL expression_statement:es1 expression_statement:es2 expression:e PARAR statement:s
+	;
+
+jump_statement
+	::=GOTO IDENTIFIER:id SEMI 
+	| CONTINUE SEMI
+	| BREAK SEMI 
+	| RETURN SEMI 
+	| RETURN expression:e SEMI 
+	;
+
+translation_unit
+	::=external_declaration:ed 
+	| translation_unit:tu external_declaration:ed 
+	;
+
+external_declaration
+	::=function_definition:fd 
+	| declaration:d
+	;
+
+function_definition
+	::=declaration_specifiers:ds declarator:d declaration_list:dl {: Parser.newScope(); :} compound_statement:cs {: Parser.deleteScope(); :} 
+	| declaration_specifiers:ds declarator:d {: Parser.newScope(); :}  compound_statement:cs {: Parser.deleteScope(); :} 
+	| declarator:d declaration_list:dl {: Parser.newScope(); :} compound_statement:cs {: Parser.deleteScope(); :} 
+	| declarator:d {: Parser.newScope(); :}  compound_statement:cs {: Parser.deleteScope(); :} 
+	;

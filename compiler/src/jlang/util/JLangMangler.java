@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 package jlang.util;
 
 import jlang.visit.LLVMTranslator;
@@ -278,6 +280,10 @@ public class JLangMangler {
 
     public String classObj(ClassType ct) {
         return classSpecificGlobal(ct, CLASS_STR);
+    }
+
+    public String classTypeInfoObj(ClassType ct) {
+        return classSpecificGlobal(ct, "class_type_info");
     }
 
     public String classInfoGlobal(ClassType ct) {

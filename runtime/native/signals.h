@@ -1,3 +1,5 @@
+//Copyright (C) 2018 Cornell University
+
 #ifndef __JVM_SIGNAL_DEF__
 #define __JVM_SIGNAL_DEF__
 
@@ -10,40 +12,40 @@ struct siglabel {
 
 struct siglabel siglabels[] = {
   /* derived from /usr/include/bits/signum.h on RH7.2 */
-  "HUP",       SIGHUP,         /* Hangup (POSIX).  */
-  "INT",        SIGINT,         /* Interrupt (ANSI).  */
-  "QUIT",       SIGQUIT,        /* Quit (POSIX).  */
-  "ILL",        SIGILL,         /* Illegal instruction (ANSI).  */
-  "TRAP",       SIGTRAP,        /* Trace trap (POSIX).  */
-  "ABRT",       SIGABRT,        /* Abort (ANSI).  */
-  "IOT",        SIGIOT,         /* IOT trap (4.2 BSD).  */
-  "BUS",        SIGBUS,         /* BUS error (4.2 BSD).  */
-  "FPE",        SIGFPE,         /* Floating-point exception (ANSI).  */
-  "KILL",       SIGKILL,        /* Kill, unblockable (POSIX).  */
-  "USR1",       SIGUSR1,        /* User-defined signal 1 (POSIX).  */
-  "SEGV",       SIGSEGV,        /* Segmentation violation (ANSI).  */
-  "USR2",       SIGUSR2,        /* User-defined signal 2 (POSIX).  */
-  "PIPE",       SIGPIPE,        /* Broken pipe (POSIX).  */
-  "ALRM",       SIGALRM,        /* Alarm clock (POSIX).  */
-  "TERM",       SIGTERM,        /* Termination (ANSI).  */
+  {"HUP",       SIGHUP},         /* Hangup (POSIX).  */
+  {"INT",        SIGINT},         /* Interrupt (ANSI).  */
+  {"QUIT",       SIGQUIT},        /* Quit (POSIX).  */
+  {"ILL",        SIGILL},         /* Illegal instruction (ANSI).  */
+  {"TRAP",       SIGTRAP},        /* Trace trap (POSIX).  */
+  {"ABRT",       SIGABRT},        /* Abort (ANSI).  */
+  {"IOT",        SIGIOT},         /* IOT trap (4.2 BSD).  */
+  {"BUS",        SIGBUS},         /* BUS error (4.2 BSD).  */
+  {"FPE",        SIGFPE},         /* Floating-point exception (ANSI).  */
+  {"KILL",       SIGKILL},        /* Kill, unblockable (POSIX).  */
+  {"USR1",       SIGUSR1},        /* User-defined signal 1 (POSIX).  */
+  {"SEGV",       SIGSEGV},        /* Segmentation violation (ANSI).  */
+  {"USR2",       SIGUSR2},        /* User-defined signal 2 (POSIX).  */
+  {"PIPE",       SIGPIPE},        /* Broken pipe (POSIX).  */
+  {"ALRM",       SIGALRM},        /* Alarm clock (POSIX).  */
+  {"TERM",       SIGTERM},        /* Termination (ANSI).  */
 #ifdef SIGSTKFLT
-  "STKFLT",     SIGSTKFLT,      /* Stack fault.  */
+  {"STKFLT",     SIGSTKFLT},      /* Stack fault.  */
 #endif
-  "CHLD",       SIGCHLD,        /* Child status has changed (POSIX).  */
-  "CONT",       SIGCONT,        /* Continue (POSIX).  */
-  "STOP",       SIGSTOP,        /* Stop, unblockable (POSIX).  */
-  "TSTP",       SIGTSTP,        /* Keyboard stop (POSIX).  */
-  "TTIN",       SIGTTIN,        /* Background read from tty (POSIX).  */
-  "TTOU",       SIGTTOU,        /* Background write to tty (POSIX).  */
-  "URG",        SIGURG,         /* Urgent condition on socket (4.2 BSD).  */
-  "XCPU",       SIGXCPU,        /* CPU limit exceeded (4.2 BSD).  */
-  "XFSZ",       SIGXFSZ,        /* File size limit exceeded (4.2 BSD).  */
-  "VTALRM",     SIGVTALRM,      /* Virtual alarm clock (4.2 BSD).  */
-  "PROF",       SIGPROF,        /* Profiling alarm clock (4.2 BSD).  */
-  "WINCH",      SIGWINCH,       /* Window size change (4.3 BSD, Sun).  */
-  "IO",         SIGIO,          /* I/O now possible (4.2 BSD).  */
+  {"CHLD",       SIGCHLD},        /* Child status has changed (POSIX).  */
+  {"CONT",       SIGCONT},        /* Continue (POSIX).  */
+  {"STOP",       SIGSTOP},        /* Stop, unblockable (POSIX).  */
+  {"TSTP",       SIGTSTP},        /* Keyboard stop (POSIX).  */
+  {"TTIN",       SIGTTIN},        /* Background read from tty (POSIX).  */
+  {"TTOU",       SIGTTOU},        /* Background write to tty (POSIX).  */
+  {"URG",        SIGURG},         /* Urgent condition on socket (4.2 BSD).  */
+  {"XCPU",       SIGXCPU},        /* CPU limit exceeded (4.2 BSD).  */
+  {"XFSZ",       SIGXFSZ},        /* File size limit exceeded (4.2 BSD).  */
+  {"VTALRM",     SIGVTALRM},      /* Virtual alarm clock (4.2 BSD).  */
+  {"PROF",       SIGPROF},        /* Profiling alarm clock (4.2 BSD).  */
+  {"WINCH",      SIGWINCH},       /* Window size change (4.3 BSD, Sun).  */
+  {"IO",         SIGIO},          /* I/O now possible (4.2 BSD).  */
 #ifdef SIGSYS
-  "SYS",        SIGSYS          /* Bad system call. Only on some Linuxen! */
+  {"SYS",        SIGSYS}          /* Bad system call. Only on some Linuxen! */
 #endif
 };
 

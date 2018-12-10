@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 if [[ -z "$JDK7" ]]
 then
   echo "- JDK7 environment variable must point to an installation of JDK 7"
@@ -22,7 +22,7 @@ else
   exit 1
 fi
 
-llvm_version="`llc -version | egrep LLVM.version | awk '{print $3}'`"
+llvm_version="`$LLC -version | egrep LLVM.version | awk '{print $3}'`"
 if [[ -z "$llvm_version" ]]
 then
   echo "- llc not found. Is LLVM installed and llc in the curren path?"
@@ -33,7 +33,7 @@ case "$llvm_version" in
   *) echo "- LLVM version is out of date: $llvm_version"; exit 1;;
 esac
 
-clang_version="`clang --version | egrep clang.version | awk '{print $3}'`"
+clang_version="`$CLANG --version | egrep clang.version | awk '{print $3}' | awk -F'-' '{print $1}'`"
 
 if [[ "$llvm_version" != "$clang_version" ]]
 then
