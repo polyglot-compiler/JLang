@@ -29,8 +29,8 @@ then
 fi
 
 case "$llvm_version" in
-  [56789]*) echo "+ LLVM version is up to date: $llvm_version";;
-  *) echo "- LLVM version is out of date: $llvm_version"; exit 1;;
+  [5]*) echo "+ LLVM version is up to date: $llvm_version";;
+  *) echo "- LLVM version is out of date (or too new): $llvm_version"; exit 1;;
 esac
 
 clang_version="`$CLANG --version | egrep clang.version | awk '{print $3}' | awk -F'-' '{print $1}'`"

@@ -1,6 +1,8 @@
 # Indicates to sub-Makefiles that it was invoked by this one.
 export TOP_LEVEL_MAKEFILE_INVOKED := true
 
+export PATH := $(PATH):$(realpath bin)
+
 # Platform-specific flags; these defaults can be overriden in defs.<platform> files,
 # where <platform> is the result of `uname` in bash.
 export SHARED_LIB_EXT := so
@@ -28,8 +30,7 @@ export JNI_INCLUDES := \
 	-I"$(JDK7)/include/linux"
 export JDK7_LIB_PATH := $(JDK7)/jre/lib
 
-# JDK. Use the bare-bones JDK by default.
-JDK ?= jdk-lite
+JDK ?= jdk
 export JDK := $(realpath $(JDK))
 export JDK_CLASSES := $(JDK)/out/classes
 
@@ -68,7 +69,7 @@ all: setup compiler runtime jdk
 
 setup:
 	@echo "--- Checking setup ---"
-	@./check-setup.sh
+	@./bin/check-setup.sh
 
 # Compiler.
 compiler: polyglot
