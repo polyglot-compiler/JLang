@@ -105,7 +105,7 @@ class LLVMEmitted extends CodeGenerated {
             LLVMDisposeMessage(error);
             error.setNull();
 
-            LLVMDIBuilderDestroy(v.debugInfo.diBuilder);
+            LLVMDisposeDIBuilder(v.debugInfo.diBuilder);
             LLVMDisposeBuilder(builder);
             LLVMDisposeModule(mod);
             LLVMContextDispose(context);

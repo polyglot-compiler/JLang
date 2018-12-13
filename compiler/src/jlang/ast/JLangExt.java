@@ -60,7 +60,7 @@ public class JLangExt extends Ext_c implements JLangOps {
                                          LLVMBasicBlockRef trueBlock,
                                          LLVMBasicBlockRef falseBlock) {
         Node n = v.visitEdge(null, node());
-        LLVMBuildCondBr(v.builder, v.getTranslation(n), trueBlock, falseBlock);
+        LLVMBuildCondBr(v.builder, (LLVMValueRef) v.getTranslation(n), trueBlock, falseBlock);
     }
 
     @Override

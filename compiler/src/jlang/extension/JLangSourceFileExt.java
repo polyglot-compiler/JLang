@@ -2,6 +2,7 @@
 
 package jlang.extension;
 
+import org.bytedeco.javacpp.LLVM.LLVMMetadataRef;
 import org.bytedeco.javacpp.PointerPointer;
 
 import jlang.JLangOptions;
@@ -79,10 +80,11 @@ public class JLangSourceFileExt extends JLangExt {
         LLVMMetadataRef[] formals = Stream.of(ts.Object(), ts.Class(), ts.arrayOf(ts.String()))
                 .map(v.debugInfo::debugType)
                 .toArray(LLVMMetadataRef[]::new);
-        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
-                v.debugInfo.diBuilder, new PointerPointer<>(formals), formals.length);
+       PointerPointer<LLVMMetadataRef> typeArray = new PointerPointer<>(formals);
+       LLVMDIBuilderGetOrCreateTypeArray(
+                v.debugInfo.diBuilder, typeArray, formals.length);
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
-                v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
+                v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray, formals.length, LLVMDIFlagZero);
         v.debugInfo.beginFuncDebugInfo(func, ENTRY_TRAMPOLINE, "Java_entry_point", funcDiType, 0);
 
         LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(v.context, func, "body");

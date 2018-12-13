@@ -4,5 +4,5 @@
 	ignore = untracked
 [submodule "lib/javacpp-presets"]
 	path = lib/javacpp-presets
-	url = https://github.com/gharrma/javacpp-presets
+	url = https://github.com/dz333/javacpp-presets-llvm
 	branch = master

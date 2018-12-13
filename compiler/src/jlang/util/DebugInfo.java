@@ -3,6 +3,7 @@
 package jlang.util;
 
 import org.bytedeco.javacpp.BytePointer;
+import org.bytedeco.javacpp.LLVM.LLVMMetadataRef;
 import org.bytedeco.javacpp.PointerPointer;
 
 import jlang.visit.LLVMTranslator;
@@ -37,22 +38,27 @@ public class DebugInfo {
 
     public DebugInfo(LLVMTranslator v, LLVMModuleRef mod, String path) {
         this.v = v;
-        diBuilder = LLVMNewDIBuilder(mod);
+        diBuilder = LLVMCreateDIBuilder(mod);
 
         File file = new File(path);
         fileName = file.getName();
         fileDir = file.getParent();
-        debugFile = LLVMDIBuilderCreateFile(diBuilder, fileName, fileDir);
-
+        debugFile = LLVMDIBuilderCreateFile(diBuilder, fileName, fileName.getBytes().length, fileDir, fileDir.getBytes().length);
+        
         compileUnit = LLVMDIBuilderCreateCompileUnit(
-                diBuilder, DW_LANG_Java, fileName, fileDir, "JLang", 0, "", 0);
-
-        LLVMAddModuleFlag(mod, Warning, "Debug Info Version", DEBUG_INFO_VERSION);
+                diBuilder, DW_LANG_Java, debugFile, "JLang", "Jlang".getBytes().length,
+                0, "", Warning, 0,
+                fileName + ".debug", (fileName + ".debug").getBytes().length,
+                LLVMDWARFEmissionFull, 0, 0, 0);
+        
+        
+      //  LLVMAddModuleFlag(mod, Warning, "Debug Info Version", "Debug Info Version".getBytes().length, compileUnit);
 
         //TODO: Make darwin check more robust : Triple(sys::getProcessTriple()).isOSDarwin()
         BytePointer defaultTargetTriple = LLVMGetDefaultTargetTriple();
-        if (defaultTargetTriple.getString().contains("darwin"))
-            LLVMAddModuleFlag(mod, Warning, "Dwarf Version", DEBUG_DWARF_VERSION);
+        if (defaultTargetTriple.getString().contains("darwin")) {
+ //       	LLVMAddModuleFlag(mod, Warning,  "Dwarf Version",  "Dwarf Version".getBytes().length, compileUnit);
+        }
         LLVMDisposeMessage(defaultTargetTriple);
     }
 
@@ -109,8 +115,8 @@ public class DebugInfo {
         LLVMDIBuilderInsertDeclareAtEnd(
                 diBuilder, alloc, varMetadata,
                 createExpression(),
-                LLVMGetInsertBlock(v.builder),
-                p.line(), p.column(), currentScope());
+                LLVMDIBuilderCreateDebugLocation(v.context, p.line(), p.column(), currentScope(), null),
+                LLVMGetInsertBlock(v.builder));
     }
 
     public void createParamVariable(LLVMTranslator v, Formal f, int index, LLVMValueRef alloc) {
@@ -119,7 +125,7 @@ public class DebugInfo {
         Type t = f.declType();
         LLVMMetadataRef paramVar = LLVMDIBuilderCreateParameterVariable(
                 diBuilder, currentScope(),
-                name, index, debugFile, p.line(),
+                name, name.getBytes().length, index, debugFile, p.line(),
                 debugType(t), /*alwaysPreserve*/ 0, /*flags*/ 0);
         insertDeclareAtEnd(v, alloc, paramVar, p);
     }
@@ -130,7 +136,7 @@ public class DebugInfo {
         Type t = n.declType();
         LLVMMetadataRef localVar = LLVMDIBuilderCreateAutoVariable(
                 diBuilder, currentScope(),
-                name, debugFile, p.line(),
+                name, name.getBytes().length, debugFile, p.line(),
                 debugType(t), /*alwaysPreserve*/ 0, /*flags*/ 0, /*align*/ 0);
         insertDeclareAtEnd(v, alloc, localVar, p);
     }
@@ -141,8 +147,10 @@ public class DebugInfo {
         int line = n.position().line();
         String debugName = pi.container().toClass().fullName() + "#" + n.name() + "(...)";
         LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
-                diBuilder, unit, debugName, v.mangler.proc(pi), unit, line,
-                createFunctionType(pi, unit), /*internalLinkage*/ 0, /*definition*/ 1,
+                diBuilder, currentScope(), debugName, debugName.getBytes().length, 
+                debugName, debugName.getBytes().length, 
+                unit, line, createFunctionType(pi, unit),
+                /*internalLinkage*/ 0, /*definition*/ 1,
                 line, /*DINode::FlagPrototyped*/ 1 << 8, /*isOptimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);
         pushScope(sp);
@@ -153,8 +161,10 @@ public class DebugInfo {
             LLVMMetadataRef funcType, int line) {
         LLVMMetadataRef unit = debugFile;
         LLVMMetadataRef sp = LLVMDIBuilderCreateFunction(
-                diBuilder, unit, debugName, name, unit, line,
-                funcType, /*internalLinkage*/ 0, /*definition*/ 1,
+        		diBuilder, currentScope(), name, name.getBytes().length, 
+                debugName, debugName.getBytes().length, 
+                unit, line, funcType,
+                /*internalLinkage*/ 0, /*definition*/ 1,
                 line, /*DINode::FlagPrototyped*/ 1 << 8, /*isOptimized*/ 0);
         LLVMSetSubprogram(funcRef, sp);
         pushScope(sp);
@@ -164,10 +174,11 @@ public class DebugInfo {
             Position pos, LLVMValueRef func, String name, String debugName,
             List<LLVMMetadataRef> formalDebugTypes) {
         LLVMMetadataRef[] formals = formalDebugTypes.toArray(new LLVMMetadataRef[0]);
-        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
-                v.debugInfo.diBuilder, new PointerPointer<>(formals), formals.length);
+        PointerPointer<LLVMMetadataRef> typeArray = new PointerPointer<>(formals);
+		LLVMDIBuilderGetOrCreateTypeArray(
+                v.debugInfo.diBuilder, typeArray, formals.length);
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
-                v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
+                v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray, formals.length, 0);
         v.debugInfo.beginFuncDebugInfo(func, name, debugName, funcDiType, pos.line());
     }
 
@@ -187,19 +198,19 @@ public class DebugInfo {
         }
         else if (erased.isNull()) {
             debugType = LLVMDIBuilderCreateBasicType(
-                    diBuilder, "null", 8 * v.utils.llvmPtrSize(), DW_ATE_address);
+                    diBuilder, "null", "null".getBytes().length, 8 * v.utils.llvmPtrSize(), DW_ATE_address);
         }
         else if (erased.isArray()) {
             int size = v.utils.sizeOfType(erased);
             LLVMMetadataRef elemType = debugType(erased.toArray().base());
             debugType = LLVMDIBuilderCreateArrayType(
-                    diBuilder, size, size, elemType, /*subscripts*/ null);
+                    diBuilder, size, size, elemType, (LLVMMetadataRef)/*subscripts*/ null, 0);
         }
         else if (erased.isClass()) {
             debugType = LLVMDIBuilderCreateStructType(
-                    diBuilder, currentScope(), erased.toString(), debugFile,
-                    erased.position().line(), /*TODO*/ 0, /*TODO*/ 0, /*flags*/0 ,
-                    /*TODO*/ null, /*TODO*/ null);
+                    diBuilder, currentScope(), erased.toString(), erased.toString().getBytes().length,
+                    debugFile, erased.position().line(), /*TODO*/ 0, /*TODO*/ 0, /*flags*/0 ,
+                    /*TODO*/ null, /*TODO*/ null, 0, 0, null, "", 0);
         }
         else throw new InternalCompilerError("Cannot handle " + erased.getClass());
 
@@ -218,15 +229,16 @@ public class DebugInfo {
             encoding = DW_ATE_float;
         } else throw new InternalCompilerError("Type " + t + " is not a basic type");
         long numBits = 8 * v.utils.sizeOfType(t);
-        return LLVMDIBuilderCreateBasicType(diBuilder, t.toString(), numBits, encoding);
+        return LLVMDIBuilderCreateBasicType(diBuilder, t.toString(), t.toString().getBytes().length, numBits, encoding);
     }
 
     private LLVMMetadataRef createFunctionType(ProcedureInstance pi, LLVMMetadataRef unit) {
         LLVMMetadataRef[] formals = pi.formalTypes().stream()
                 .map(this::debugType).toArray(LLVMMetadataRef[]::new);
-        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
-                diBuilder, new PointerPointer<>(formals), formals.length);
-        return LLVMDIBuilderCreateSubroutineType(diBuilder, unit, typeArray);
+        PointerPointer<LLVMMetadataRef> typeArray = new PointerPointer<>(formals);
+		LLVMDIBuilderGetOrCreateTypeArray(
+                diBuilder, typeArray, formals.length);
+        return LLVMDIBuilderCreateSubroutineType(diBuilder, unit, typeArray, formals.length, /*flags*/0);
     }
 
     // TODO: Use this to limit variables to the correct scope.

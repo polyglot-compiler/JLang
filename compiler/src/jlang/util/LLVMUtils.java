@@ -2,6 +2,7 @@
 
 package jlang.util;
 
+import org.bytedeco.javacpp.Pointer;
 import org.bytedeco.javacpp.PointerPointer;
 
 import jlang.visit.LLVMTranslator;
@@ -252,7 +253,9 @@ public class LLVMUtils {
         LLVMTypeRef funcType = v.utils.functionType(
                 returnType, argTypes.toArray(new LLVMTypeRef[0]));
         LLVMValueRef func = getFunction(name, funcType);
-        v.debugInfo.beginFuncDebugInfo(pos, func, name, debugName, argDebugTypes);
+        //argDebugTypes.add(0, v.debugInfo.debugType((Type) returnType));
+        v.debugInfo.beginFuncDebugInfo(pos, func, name, debugName,
+        		argDebugTypes);
         v.pushFn(func);
 
         // Note that the entry block is reserved exclusively for alloca instructions
@@ -303,10 +306,11 @@ public class LLVMUtils {
         String name = "ctor." + counter;
         LLVMValueRef func = v.utils.getFunction(name, funcType);
         LLVMSetLinkage(func, LLVMPrivateLinkage);
-        LLVMMetadataRef typeArray = LLVMDIBuilderGetOrCreateTypeArray(
-                v.debugInfo.diBuilder, new PointerPointer<>(), /* length */ 0);
+        PointerPointer<Pointer> typeArray = new PointerPointer<>();
+		LLVMDIBuilderGetOrCreateTypeArray(
+                v.debugInfo.diBuilder, typeArray, /* length */ 0);
         LLVMMetadataRef funcDiType = LLVMDIBuilderCreateSubroutineType(
-                v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray);
+                v.debugInfo.diBuilder, v.debugInfo.debugFile, typeArray, /*length*/ 0, /*flags*/ 0);
         v.debugInfo.beginFuncDebugInfo(func, name, name, funcDiType, 0);
 
         LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(v.context, func, "entry");

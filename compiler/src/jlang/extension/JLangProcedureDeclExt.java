@@ -184,9 +184,11 @@ public class JLangProcedureDeclExt extends JLangExt {
 
         // Parameter debug types.
         LLVMMetadataRef fnPtrDebugType = LLVMDIBuilderCreateBasicType(
-                v.debugInfo.diBuilder, "void*", 8 * v.utils.llvmPtrSize(), DW_ATE_address);
+								      v.debugInfo.diBuilder, "void*", "void*".getBytes().length,
+								      8 * v.utils.llvmPtrSize(), DW_ATE_address);
         LLVMMetadataRef argsDebugType = LLVMDIBuilderCreateBasicType(
-                v.debugInfo.diBuilder, "jvalue*", 8 * v.utils.llvmPtrSize(), DW_ATE_address);
+                v.debugInfo.diBuilder, "jvalue*", "jvalue*".getBytes().length,
+                8 * v.utils.llvmPtrSize(), DW_ATE_address);
         List<LLVMMetadataRef> argDebugTypes = Arrays.asList(fnPtrDebugType, argsDebugType);
 
         // Parameter types.
