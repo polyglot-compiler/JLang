@@ -21,14 +21,13 @@ Clone the [repo](https://github.com/polyglot-compiler/JLang) and build using the
 Dependencies
 ----------------
 There are a fair number of dependencies you'll need to install before building JLang:
+> * ANT - Polyglot and JLang are built with ant `build.xml` specifications.
 > * JDK native libraries - Requires a manual download from [Oracle's](https://www.oracle.com/technetwork/java/javase/downloads/java-archive-downloads-javase7-521261.html) website. (Select Java SE Development Kit 7u80 for your target platform).
 > * LLVM + Clang 5.0 - Used to compile the runtime C++ and make executables from *.ll files.
 > * Boehm-Demers-Weiser garbase collector - This implements garbage collection for LLVM and must be linked with the generated code.
 > * Git LFS - used to download the JDK7 java source which is distributed with this repo.
 
 More details on how to install all of these dependencies are included in the [README](https://github.com/polyglot-compiler/JLang/blob/master/README.md).
-
-We have included scripts in the `bin` directory that will download LLVM and Git LFS for you. The other installations are more difficult to script in a platform-indepdendent manner.
 
 Configuration
 -----------------
@@ -164,7 +163,7 @@ $ /home/user/JLang/examples/cup/test>
 Hello World with JLang
 =================
 
-Compiling Hello World
+Compiling Hello World.java
 ----------------------
 
 Once you've built JLang and the JDK runtime using `make` in the top-level directory you can test out JLang with a sample program.
@@ -209,3 +208,61 @@ $ /home/user/JLang> ./bin/execute.sh Hello.o
 hello world!
 $ /home/user/JLang>
 ```
+
+Building Larger Projects With JLang
+===================================
+
+In general, building larger projects which are distributed over more source files requires a slightly different build process.
+
+Compiling *.java files
+---------------------
+JLang requires the user to specify a single entry point since that will become the final top-level LLVM module and executable.
+If only 1 source file is provided, such as in the [HelloWorld](#hello-world-with-jlang) example, then that java file's `static main` method will be used as the entry point.
+
+In the case where multiple source files are present, you can use the `--entry-point` option to specify the entry class by full class name. The `-sourcepath` option can be used to search for any other *.java files required to compile the main class. If `--entry-point` is not specified, then JLang will not search for other *.java files.
+
+For example, the following command could be used to compile a large number of java classes into a single application:
+```
+$ /home/user/JLang/example_app> ../bin/jlangc -cp ../"$JDK"/out/classes -sourcepath src -d out --entry-point org.startup.app.Main src/org/startup/app/Main.java
+```
+
+In this command,
+
+* `-cp ../"$JDK"/out/classes` specifies all of the class files which the compiler may assume already exist as a JLang library. In this case, we are just speciyfying the JDK on our classpath.
+* The `-sourcepath src` option says to start looking for *.java files under the `src` directory.
+* The `-d out` specifies that the output *.ll files should be placed in the `out` directory.
+* `--entry-point` says that the file in `src/org/startup/app/Main.java` is the entry point (as per java package & path naming convention)
+
+Compiling *.ll files
+---------------------
+
+The `compile_ll.sh` script provided in the `bin` directory can still be used to compile many \*.ll files into a single executable.
+As long as your classpath is not dependent upon any pre-built libraries *other than the JDK*, you can simply run this script with all of the \*.ll files produced by JLang as the arguments.
+
+From our example above:
+```
+$ /home/user/JLang/example_app> find out -name "*.ll" | xargs ../bin/compile_ll.sh AppExec
+Wrote compiled binary to AppExec.o
+$ /home/user/JLang/example_app>
+```
+
+The compilation script's first argument is the name of the executable to produce and all other arguments are the list of *.ll files to compile. It expects exactly 1 of these files to be a "top-level" module (which should be `out/org/startup/app/Main.ll` in our example).
+
+Running MyApp
+------------
+
+Executing this app should be exactly the same as the HelloWorld case! Nothing changes between single file and large project compilations at this phase.
+
+```
+$ /home/user/JLang/example_app> ../bin/execute.sh AppExec.o arg1 arg2 -o1 optarg...
+...
+PROFIT
+$ /home/user/JLang/example_app>
+```
+
+
+Building Shared Libraries with JLang
+==================================
+Documentation coming soon
+
+(TLDR; compile each *.ll file into a *.o file individually and then use the `-shared` flag for clang to export them as a single shared library)
