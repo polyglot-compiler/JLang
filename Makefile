@@ -1,7 +1,6 @@
 # Indicates to sub-Makefiles that it was invoked by this one.
 export TOP_LEVEL_MAKEFILE_INVOKED := true
 
-export PATH := $(PATH):$(realpath bin)
 
 # Platform-specific flags; these defaults can be overriden in defs.<platform> files,
 # where <platform> is the result of `uname` in bash.
