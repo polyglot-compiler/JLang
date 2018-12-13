@@ -83,7 +83,7 @@ $(LL): $(SRC)
 
 %.output: %.binary phony
 	@echo "Generating output for $*"
-	@JAVA_HOME=$(JDK7) bash -c './$<' | tee $@
+	@JAVA_HOME=$(JDK7) bash -c './$<' | tee >/dev/null $@
 
 %.debug: %.binary phony
 	@JAVA_HOME=$(JDK7) bash -c 'gdb $<'
