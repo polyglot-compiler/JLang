@@ -6,7 +6,7 @@ layout: default
 Overview
 --------
 
-JLang adds an LLVM backend to the [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler, translating Java into LLVM IR. See the [Getting Started Guid](user-manual.html) to try it out, and the [developer guide](developer-guide.html) for an overview of the codebase.
+JLang adds an LLVM backend to the [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler, translating Java into LLVM IR. See the [Getting Started Guide](user-manual.html) to try it out, and the [developer guide](developer-guide.html) for an overview of the codebase.
 
 JLang supports Java 7, as specified by the [JLS](https://docs.oracle.com/javase/specs/jls/se7/html/index.html). Since Polyglot additionally supports Java language extensions, and since it can generally translate these extensions down to vanilla Java, JLang should be interoperable with other Polyglot extensions by default. However, JLang also aims to be extensible, so that one can write direct translations to LLVM for language extensions when needed.
 
