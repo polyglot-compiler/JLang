@@ -1,8 +1,14 @@
 #/bin/bash
 
+EXP="$1"
+
 isExpectedFailure() {
-    grep -Fxq "$1" expected_fails &>/dev/null
-    echo $?
+    if grep -Fxq "$1" "$EXP"
+    then
+	echo "0"
+    else
+	echo "1"
+    fi
 }
 
 > check
@@ -17,7 +23,7 @@ do
     diff -y -a $i.sol $i.output >> check
     FAIL=$?
     TESTS=$(($TESTS + 1))
-    NOT_EXPECTED=$(isExpectedFailure $i)
+    NOT_EXPECTED=$(isExpectedFailure "$i")
     if [ $FAIL -ne 0 ]
     then
 	if [ $NOT_EXPECTED -eq 1 ]
@@ -31,7 +37,7 @@ do
 	PASSED=$(($PASSED +1))
 	if [ $NOT_EXPECTED -eq 0 ]
 	then
-	    echo "$i is now passing! Update the 'expected_fails' file to remove this test before committing!"
+	    echo "$i is now passing! Update the '$EXP' file to remove this test before committing!"
 	    NEW_PASS=$(($NEW_PASS + 1))
 	fi
     fi

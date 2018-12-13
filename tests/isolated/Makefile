@@ -44,7 +44,7 @@ all: check
 
 check: sol output
 	@echo "******** CHECKING CORRECTNESS *********"
-	@./checkDiffs.sh
+	@./checkDiffs.sh $(realpath expected_fails)
 
 
 sol: $(SOL)
