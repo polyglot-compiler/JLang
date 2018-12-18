@@ -6,7 +6,7 @@ layout: default
 Overview
 --------
 
-JLang adds an LLVM backend to the [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler, translating Java into LLVM IR. See the [user manual](user-manual.html) to try it out, and the [developer guide](developer-guide.html) for an overview of the codebase.
+JLang adds an LLVM backend to the [Polyglot](https://www.cs.cornell.edu/projects/polyglot/) compiler, translating Java into LLVM IR. See the [Getting Started Guide](user-manual.html) to try it out, and the [developer guide](developer-guide.html) for an overview of the codebase.
 
 JLang supports Java 7, as specified by the [JLS](https://docs.oracle.com/javase/specs/jls/se7/html/index.html). Since Polyglot additionally supports Java language extensions, and since it can generally translate these extensions down to vanilla Java, JLang should be interoperable with other Polyglot extensions by default. However, JLang also aims to be extensible, so that one can write direct translations to LLVM for language extensions when needed.
 
@@ -21,15 +21,16 @@ To be more concrete, here's what Polyglot + JLang will allow you to do:
 Status
 ------
 
-JLang currently supports all Java 7 language features, except concurrency and full reflection support. This includes expressions, control flow, exceptions, method dispatch, switch statements, try-with-resources, initializer blocks, implicit type conversions, etc. OpenJDK 7 support is still a work in progress but enough is supported for many standard use cases (such as printing and acessing files).
+JLang currently supports all Java 7 language features, except concurrency and some reflection support. This includes expressions, control flow, exceptions, method dispatch, switch statements, try-with-resources, initializer blocks, implicit type conversions, etc. OpenJDK 7 support is still a work in progress but enough is supported for many standard use cases (such as printing and accessing files).
 
-All unit tests currently pass with OpenJDK 7, except for `HashtableTest.java`, which relies on unimplemented reflection features.
+All unit tests currently pass with OpenJDK 7, except for a number of advanced reflection features, primarily related to generics and array types.
 
 See the [README](https://github.com/polyglot-compiler/JLang) in the repository for the most up-to-date status.
 
 
 Contributing
 ------------
-If you would like to contribute to JLang, please contact us at *{{ site.contact }}* to gain contribution rights.
+If you would like to contribute to JLang, you should fork the repo and create a new branch whose name is related to the [issue](https://github.com/polyglot-compiler/JLang/issues) that you would like to address. You can submit a pull-request in order to have your changes mreged.
 
-If you have contribution rights already, you should clone the repo and create a new branch whose name is related to the [issue](https://github.com/polyglot-compiler/JLang/issues) that you would like to address. You can submit a pull-request in order to have your changes merged into the master branch.
+If you are interested in becoming more involved in JLang as a primary contributor, please contact us at *{{ site.contact }}* to gain contribution rights.
+

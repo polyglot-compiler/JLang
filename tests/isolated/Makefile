@@ -43,7 +43,7 @@ all: check
 
 check: sol output
 	@echo "******** CHECKING CORRECTNESS *********"
-	@./checkDiffs.sh
+	@./checkDiffs.sh $(realpath expected_fails)
 
 
 sol: $(SOL)
@@ -82,7 +82,7 @@ $(LL): $(SRC)
 
 %.output: %.binary phony
 	@echo "Generating output for $*"
-	@JAVA_HOME=$(JDK7) bash -c './$<' > $@
+	@JAVA_HOME=$(JDK7) bash -c './$<' | tee >/dev/null $@
 
 %.debug: %.binary phony
 	@JAVA_HOME=$(JDK7) bash -c 'gdb $<'

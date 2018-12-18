@@ -1,4 +1,11 @@
 #!/bin/bash
+if ! which ant
+then
+    echo "- ant not found. Is ANT installed?"
+    exit 1
+else
+    echo "+ ant found"
+fi
 if [[ -z "$JDK7" ]]
 then
   echo "- JDK7 environment variable must point to an installation of JDK 7"
@@ -29,8 +36,8 @@ then
 fi
 
 case "$llvm_version" in
-  [56789]*) echo "+ LLVM version is up to date: $llvm_version";;
-  *) echo "- LLVM version is out of date: $llvm_version"; exit 1;;
+  [5]*) echo "+ LLVM version is up to date: $llvm_version";;
+  *) echo "- LLVM version is out of date (or too new): $llvm_version"; exit 1;;
 esac
 
 clang_version="`$CLANG --version | egrep clang.version | awk '{print $3}' | awk -F'-' '{print $1}'`"
@@ -39,6 +46,15 @@ if [[ "$llvm_version" != "$clang_version" ]]
 then
   echo "- llc and clang versions do not match: $llvm_version vs $clang_version"
   exit 1
+fi
+
+
+if ! ld -lgc &>/dev/null
+then
+    echo "- The Boehm-Demers-Weiser garbace collector (libgc) is not installed as a shared library"
+    exit 1
+else
+    echo "+ Found libgc shared library"
 fi
 
 echo "Setup looks good"
