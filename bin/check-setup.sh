@@ -1,5 +1,5 @@
 #!/bin/bash
-if ! which ant
+if ! which ant &>/dev/null
 then
     echo "- ant not found. Is ANT installed?"
     exit 1
@@ -32,7 +32,7 @@ fi
 llvm_version="`$LLC -version | egrep LLVM.version | awk '{print $3}'`"
 if [[ -z "$llvm_version" ]]
 then
-  echo "- llc not found. Is LLVM installed and llc in the curren path?"
+  echo "- llc not found. Is LLVM installed and llc in the current path?"
 fi
 
 case "$llvm_version" in
