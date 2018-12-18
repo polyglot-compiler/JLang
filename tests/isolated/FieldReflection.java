@@ -22,12 +22,12 @@ public class FieldReflection {
   public long ll = 1231231232;
   public Long L;
   public String s;
-  // TODO test these
-  // public String[] sarr;
-  // public int[] iarr;
+    // TODO test these
+  public String[] sarr;
+  public int[] iarr;
   // TODO once inner classes have correct signatures
-  // public FieldReflectionGen<String> frGeneric;
-  // public ArrayList<String> strArrayList;
+  public FieldReflectionGen<String> frGeneric;
+  public ArrayList<String> strArrayList;
 
   static Integer b;
   static String ss = "AAAA";
@@ -41,8 +41,8 @@ public class FieldReflection {
   static long sl = 1234449L;
 
   public static void main(String[] args) throws Exception {
-    // System.out.println(Long.class);
-    // System.out.println(Short.class);
+    System.out.println(Long.class);
+    System.out.println(Short.class);
     FieldReflection aaa = new FieldReflection(1534,2);
     Class cls = aaa.getClass();
     Field[] f = cls.getDeclaredFields();
@@ -123,7 +123,7 @@ public class FieldReflection {
     a = i;
     s = "A string";
     b = j;
-    // sarr = new String[]{"one", "two"};
+    sarr = new String[]{"one", "two"};
   }
 
   static class FieldReflectionGen<T> {
