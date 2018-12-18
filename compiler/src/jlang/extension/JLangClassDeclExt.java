@@ -7,7 +7,6 @@ import org.bytedeco.javacpp.LLVM.*;
 
 import jlang.ast.JLangExt;
 import jlang.util.Constants;
-import jlang.util.LLVMUtils;
 import jlang.visit.LLVMTranslator;
 import polyglot.ast.*;
 import polyglot.types.*;
@@ -16,8 +15,6 @@ import polyglot.util.SerialVersionUID;
 import java.lang.Override;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static jlang.util.Constants.REGISTER_CLASS_FUNC;
@@ -44,7 +41,7 @@ public class JLangClassDeclExt extends JLangExt {
         }
     }
 
-    private static LLVMValueRef getTypeInitPointer(LLVMTranslator v, Type t) {
+    private static LLVMValueRef getClassTypeInfoPointer(LLVMTranslator v, Type t) {
         LLVM.LLVMTypeRef loadFuncType = v.utils.ptrTypeRef(v.utils.functionType(v.utils.toLL(v.ts.Class())));
 
         LLVM.LLVMTypeRef classType = v.utils.ptrTypeRef(v.utils.toLL(v.ts.Class()));
@@ -86,7 +83,7 @@ public class JLangClassDeclExt extends JLangExt {
                 v.utils.i8Ptr(), // char* name
                 v.utils.i32(),    // int32_t offset
                 v.utils.i32(),    // int32_t modifiers
-                v.utils.i8Ptr(), // jclass* type_ptr
+                v.utils.i8Ptr(), // class_type_info*
                 v.utils.i8Ptr() // char* sig
         );
         LLVMValueRef[] fieldInfoElems = ct.fields().stream().filter(fi -> !fi.flags().isStatic())
@@ -96,8 +93,7 @@ public class JLangClassDeclExt extends JLangExt {
             		LLVMValueRef gep = v.obj.buildFieldElementPtr(nullPtr, fi);
             		LLVMValueRef offset = LLVMConstPtrToInt(gep, v.utils.i32());
                     LLVMValueRef modifiers = LLVMConstInt(v.utils.i32(), fi.flags().toModifiers(), 1);
-//                    LLVMValueRef typeClass = getTypePointer(v, fi.type());
-                    LLVMValueRef typeClassInfo = getTypeInitPointer(v, fi.type());
+                    LLVMValueRef typeClassInfo = getClassTypeInfoPointer(v, fi.type());
                     LLVMValueRef signature = v.utils.buildGlobalCStr(v.mangler.jniUnescapedSignature(fi.type()));
                     return v.utils.buildConstStruct(name, offset, modifiers, typeClassInfo, signature);
             	})
@@ -109,7 +105,7 @@ public class JLangClassDeclExt extends JLangExt {
         		v.utils.i8Ptr(), // char* sig (field type)
         		v.utils.i8Ptr(), //  void* to field, stored as global var
                 v.utils.i32(),    // int32_t modifiers
-                v.utils.i8Ptr() // jclass* type_ptr
+                v.utils.i8Ptr() // class_type_info*
         );
 
         LLVMValueRef[] staticFieldElems = ct.fields().stream().filter(fi -> fi.flags().isStatic())
@@ -119,8 +115,8 @@ public class JLangClassDeclExt extends JLangExt {
             		LLVMValueRef ptr = v.utils.getStaticField(fi);
             		LLVMValueRef staticPtr = LLVMConstBitCast(ptr, v.utils.i8Ptr());
                     LLVMValueRef modifiers = LLVMConstInt(v.utils.i32(), fi.flags().toModifiers(), 1);
-                    LLVMValueRef typeClass = getTypePointer(v, fi.type());
-            		return v.utils.buildConstStruct(name, signature, staticPtr, modifiers, typeClass);
+                    LLVMValueRef typeClassInfo = getClassTypeInfoPointer(v, fi.type());
+            		return v.utils.buildConstStruct(name, signature, staticPtr, modifiers, typeClassInfo);
             	})
             	.toArray(LLVMValueRef[]::new);
 
