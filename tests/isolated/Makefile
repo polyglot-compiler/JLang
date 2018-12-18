@@ -19,7 +19,6 @@ JDK_CLASSES := $(realpath $(JDK)/out/classes)
 JDK7 ?= /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home/
 endif
 
-
 SRC := $(shell find * -name "*.java")
 
 CLASSES := $(SRC:.java=.class)

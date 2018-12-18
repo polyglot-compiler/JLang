@@ -22,8 +22,10 @@ classes: $(CLASSES)/cstamp
 
 # Extract OpenJDK 7 source.
 # The zip file comes from https://sourceforge.net/projects/jdk7src/
+
 $(SRC): | $(SRC).zip
 	@echo "Unzipping JDK sources"
+	@git lfs pull
 	@unzip -q -d $@ $(SRC).zip
 	@cp -r $(SRC) $(SRC).orig
 
