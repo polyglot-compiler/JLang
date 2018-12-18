@@ -3,7 +3,7 @@ title: "Developer Guide"
 layout: default
 ---
 
-This document is up to date as of August 2018.
+This document is up to date as of December 2018.
 
 Contents
 --------
@@ -54,7 +54,8 @@ is specified [here](https://docs.oracle.com/javase/7/docs/technotes/guides/jni/s
 - The [LLVM C API](http://llvm.org/doxygen/group__LLVMC.html),
 should be referenced whenever writing translations to LLVM IR. The
 [Instruction Builder module](http://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html)
-is particularly useful, since that's used to create LLVM instructions.
+is particularly useful, since that's used to create LLVM instructions. Please be sure to reference the correct
+LLVM API version, since there have been significant changes in portions of this API between 5.0, 7.0 and current mainstream releases.
 
 
 Building and Workflow
@@ -71,18 +72,27 @@ of this library is important, because native code in OpenJDK assumes that
 this library exists, and that it contains the methods defined in
 `runtime/native/jvm.cpp`.
 
-By default, the `jdk-lite` directory is used to build a minimal "bare-bones" JDK. The
+The `jdk-lite` directory can be used to build a minimal "bare-bones" JDK. The
 Java sources in `jdk-lite` are compiled down to LLVM IR, then linked together
-into a shared library arbitrarily called `libjdk`. If you want to use the full
-OpenJDK, you can instead run `JDK=jdk make` at the top level, which will
-switch to using the `jdk` directory. The makefile in the `jdk` directory will
-unzip OpenJDK 7 source files, apply a small number of temporary patches that
+into a shared library arbitrarily called `libjdk`. This can be built with the command
+`JDK=jdk-lite make`.
+
+By default, the full OpenJDK is compiled instead.
+The makefile in the `jdk` directory will unzip OpenJDK 7 source files,
+apply a small number of temporary patches that
 help work around unimplemented features in JLang, and then compile everything
 into `libjdk` as before. Here it will also put your local JDK 7 installation
 on the dynamically loaded search path of `libjdk`, so that JDK code has access
 to the native code that is part of OpenJDK 7. *Note:* This linking doesn't work
 on all systems and the final binary compilation of executables must also link
 the OpenJDK 7 native code libraries.
+
+*Note: Not every single source
+file in the JDK is compiled, only those required to initialize the `java.lang.System`
+class and run a HelloWorld like Java program. This comprises approximately 1500 source
+files, which suffices for all of our unit tests and provided example programs.
+It is ongoing work to compile the remainder of the JDK source and add that functionality
+to the `libjdk` build.*
 
 The makefile in `tests/isolated` will compile each unit test and create an
 executable by linking with `libjvm` from the runtime and `libjdk` from the
@@ -103,23 +113,24 @@ The result to of `jlangc` is LLVM IR in the form of a `.ll` file for
 each compiled Java file.
 
 The `bin/plc` script is intended to automate the linking part of building
-an executable, though it may be out of date. Refer to the makefiles above
+an executable, though it is currently out of date. Refer to the makefiles above
 for how to link things together.
 
 ### Testing
 
 The unit tests in `tests/isolated` are thorough, and should be your primary
 resource for checking correctness after making changes to the compiler or
-runtime. I suggest setting up the `TestFunctional` class as a JUnit run
-configuration in IntelliJ or Eclipse, and running it before pushing any commit.
-
-These tests can be run from the top-level Makefile via the `make tests` command.
+runtime. These tests can be run from the top-level Makefile via the `make tests` command.
+There is also a file called `expected_fails` which tracks currently failing
+tests and the makefile uses this to detect regressions or newly passing tests
+in its success/failure report when running `make tests`.
 
 The makefile in `tests/isolated` also makes it easy to run individual tests
 manually from the command line. You can run commands like `make Add.ll` to
 compile just `Add.java` down to LLVM IR, or `make Add.sol` to generate
 the expected output using `javac`, or `make Add.output` to compile, link
-and run.
+and run. *This is currently slightly broken and needs some makefile hacking
+love*
 
 
 LLVM API
@@ -131,7 +142,7 @@ automatically. Normally this requires some careful configuration, but someone
 has already done most of that work as part of `javacpp-presets`, a repository
 hosting JNI bridges for popular C++ libraries.
 
-The LLVM C API is limited in that it does not have a stable API for debug
+The LLVM C API (v5.x) is limited in that it does not have a stable API for debug
 information. Other languages (Go, Rust, etc.) get around this by manually
 creating their own C bindings. Our solution: start with the LLVM Go bindings,
 and create custom additional bindings as needed. This process is automated
@@ -143,6 +154,13 @@ we provide up-to-date `.jar` files in the JLang repository
 [directly](https://github.com/polyglot-compiler/JLang/tree/master/lib),
 for OS X and Linux.
 
+Other LLVM Version Support
+------------------------
+The LLVM C API has changed significantly between version 5.0, 7.0 and mainline llvm (currently 10).
+There is currently a branch called [llvm7](https://github.com/polyglot-compiler/JLang/tree/llvm7) dedicated to making JLang LLVM 7.0 compatible.
+
+Due to the number of api behavioral changes this requies new javacpp-preset jars and re-writing
+portions of the JLang source code to use the new APIs. This is ongoing work and <span style="color:red">♥</span>**needs some love**<span style="color:red">♥</span>.
 
 Desugaring Passes
 -----------------

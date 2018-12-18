@@ -1,5 +1,5 @@
 ---
-title: "Getting Started"
+title: "User Manual"
 layout: default
 ---
 
