@@ -48,8 +48,18 @@ then
   exit 1
 fi
 
+if [[ $(uname) == "Linux" ]]
+then
+    LGC_CHECK_CMD="ld -lgc &>/dev/null"
+elif [[ $(uname) == "Darwin" ]]
+then
+    LGC_CHECK_CMD="! ld -lgc 2>&1 >/dev/null | grep -q \"library not found\""
+else
+    echo "- The operating system $(uname) is not supported."
+    exit 1
+fi
 
-if ! ld -lgc &>/dev/null
+if ! eval $LGC_CHECK_CMD
 then
     echo "- The Boehm-Demers-Weiser garbace collector (libgc) is not installed as a shared library"
     exit 1
