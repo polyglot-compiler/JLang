@@ -8,6 +8,9 @@ then
     JDK7_LIB="$JDK7_LIB"/amd64
 fi
 
+CLANG=clang++
+LLC=llc
+
 if ! [ -z "$CLANG_VERSION" ]
 then
     CLANG=clang++-"$CLANG_VERSION"
