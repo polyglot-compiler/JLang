@@ -53,6 +53,19 @@ a {
       margin-top: 1rem;
       margin-left: 0; } }
 
+.main-btn {
+    color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(21, 152, 87, 0.92);
+    border-color: rgba(21,152,87,0.8);
+    margin-bottom: 0;
+}
+
+.main-btn:hover {
+    color: rgba(255, 255, 255, 0.7);
+    background-color: rgba(21, 152, 87, 0.92);
+    border-color: rgba(0,0,0,0.8);
+    border-width: 2px;
+}
 .page-header {
   color: #fff;
   text-align: center;
