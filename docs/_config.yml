@@ -2,7 +2,8 @@ kramdown:
   input: GFM
   hard_wrap: false
 project: "JLang"
-contact: dzag **at** cs **dot** cornell **dot** edu
+contact: jlang-users-l@cornell.edu
+contact-join: jlang-users-l-request@cornell.edu
 
 github:
   url: https://github.com/polyglot-compiler/JLang
