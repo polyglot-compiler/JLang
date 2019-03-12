@@ -39,6 +39,7 @@
 }
 
 #define MAX_PATH 2048
+#define ARRAY_CLS "jlang.runtime.Array"
 
 static void JvmIgnore(const char* name) {
     fprintf(stderr,
@@ -811,45 +812,47 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
 
             char* name = NULL;
             int modifiers = 0;
-            jclass* typeClass = NULL;
+            jclass* typePtr = NULL;
             char* signature = NULL;
             int slot = 0;
             if (i < info->num_fields) {
                 name = fields[i].name;
                 modifiers = fields[i].modifiers;
-                if (fields[i].type_info_ptr->type_ptr != NULL) {
-                    // if not yet initialized, initialize
-                    if (*(fields[i].type_info_ptr->type_ptr) == NULL) {
-                        // printf("not yet initialized: %s %p\n", name, fields[i].type_info_ptr->init_type_class);
-                        *(fields[i].type_info_ptr->type_ptr) = fields[i].type_info_ptr->init_type_class();
-                    }
-                    // printf("type ptr: %s %p\n", name, fields[i].type_info_ptr->type_ptr);
-                }
-                typeClass = fields[i].type_info_ptr->type_ptr;
-                // typeClass = fields[i].type_ptr;
-                // printf("Type class for %s: %p %p\n", name, typeClass, *typeClass);
                 signature = fields[i].sig;
-                // printf("sign: %s\n", signature);
+
+                // initialized Array's type_ptr if it is NULL.
+                if (fields[i].type_ptr == NULL && isArrayClassName(signature)) {
+                    fields[i].type_ptr = (jclass*)malloc(sizeof(jclass*));
+                    *fields[i].type_ptr = GetJavaClassFromName(signature);
+                }
+
+                typePtr = fields[i].type_ptr;
                 slot = i;
             } else {
                 int sidx = i-info->num_fields;
                 name = staticFields[sidx].name;
                 modifiers = staticFields[sidx].modifiers;
-                if (staticFields[sidx].type_info_ptr->type_ptr != NULL) {
-                    // if not yet initialized, initialize
-                    if (*(staticFields[sidx].type_info_ptr->type_ptr) == NULL) {
-                        *(staticFields[sidx].type_info_ptr->type_ptr) = staticFields[sidx].type_info_ptr->init_type_class();
-                    }
-                }
-                // typeClass = staticFields[sidx].type_ptr;
-                typeClass = staticFields[sidx].type_info_ptr->type_ptr;
                 signature = staticFields[sidx].sig;
+
+                // initialized Array's type_ptr if it is NULL.
+                if (staticFields[sidx].type_ptr == NULL && isArrayClassName(signature)) {
+                    staticFields[sidx].type_ptr = (jclass*)malloc(sizeof(jclass*));
+                    *staticFields[sidx].type_ptr = GetJavaClassFromName(signature);
+                }
+
+                typePtr = staticFields[sidx].type_ptr;
                 slot = -(sidx+1); // 0 ambiguity
             }
             jstring nameString = internJString(env->NewStringUTF(name));
-            jstring sigString = env->NewStringUTF(signature);
+            // Our field.sig is Java's string representation of field's type
+            // Java's signature is used for Generics.
+            // For non-generic type, the signature should be NULL.
+            // For now, we don't support generics so we set sigString = NULL.
+            // jstring sigString = env->NewStringUTF(signature);
+            jstring sigString = NULL;
+            
             // call the fields constructor
-            FIELD_INIT_FUNC(newField, ofClass, nameString, typeClass == NULL ? NULL : *typeClass, modifiers, slot, sigString, NULL);
+            FIELD_INIT_FUNC(newField, ofClass, nameString, typePtr == NULL ? NULL : *typePtr, modifiers, slot, sigString, NULL);
             // add it to the array
             JVM_SetArrayElement(env, ret, i, newField);
         }

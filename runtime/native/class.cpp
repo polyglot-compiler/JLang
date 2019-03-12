@@ -90,18 +90,6 @@ jclass Polyglot_native_char;
 jclass Polyglot_native_boolean;
 jclass Polyglot_native_void;
 
-// This should be fine because the type pointers will never be null
-// dw475 TODO add register primatives as load function
-jclass* Polyglot_native_int_class_type_info = &Polyglot_native_int;
-jclass* Polyglot_native_byte_class_type_info = &Polyglot_native_byte;
-jclass* Polyglot_native_short_class_type_info = &Polyglot_native_short;
-jclass* Polyglot_native_long_class_type_info = &Polyglot_native_long;
-jclass* Polyglot_native_float_class_type_info = &Polyglot_native_float;
-jclass* Polyglot_native_double_class_type_info = &Polyglot_native_double;
-jclass* Polyglot_native_char_class_type_info = &Polyglot_native_char;
-jclass* Polyglot_native_boolean_class_type_info = &Polyglot_native_boolean;
-jclass* Polyglot_native_void_class_type_info = &Polyglot_native_void;
-
 // For simplicity we store class information in a map.
 // If we find this to be too slow, we could allocate extra memory for
 // class objects and store the information inline with each instance.
