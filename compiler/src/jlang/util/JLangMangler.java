@@ -282,11 +282,6 @@ public class JLangMangler {
         return classSpecificGlobal(ct, CLASS_STR);
     }
 
-    // TODO: remove?
-//    public String classTypeInfoObj(ClassType ct) {
-//        return classSpecificGlobal(ct, "class_type_info");
-//    }
-
     public String classInfoGlobal(ClassType ct) {
         return classSpecificGlobal(ct, CLASS_INFO_STR);
     }

@@ -782,6 +782,22 @@ jobjectArray getEmptyObjectArray() {
     return _EmptyObjectArray;
 }
 
+// Convert a jni type signature to its class name.
+// Rules: replace all slashes with dots.
+// e.g. [Ljava/lang/String; -> [Ljava.lang.String;
+const char* ConvertSignatureToClassName(const char* signature) {
+    int len = strlen(signature);
+    char* name = (char*) malloc(len + 1);
+    strcpy(name, signature);
+    for(int i = 0; i < len; i++)
+    {
+        if (name[i] == '/') {
+            name[i] = '.';
+        }
+    }
+    return name;
+}
+
 jobjectArray
 JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
     try {
@@ -823,7 +839,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
                 // initialized Array's type_ptr if it is NULL.
                 if (fields[i].type_ptr == NULL && isArrayClassName(signature)) {
                     fields[i].type_ptr = (jclass*)malloc(sizeof(jclass*));
-                    *fields[i].type_ptr = GetJavaClassFromName(signature);
+                    *fields[i].type_ptr = GetJavaClassFromName(ConvertSignatureToClassName(signature));
                 }
 
                 typePtr = fields[i].type_ptr;
@@ -837,7 +853,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
                 // initialized Array's type_ptr if it is NULL.
                 if (staticFields[sidx].type_ptr == NULL && isArrayClassName(signature)) {
                     staticFields[sidx].type_ptr = (jclass*)malloc(sizeof(jclass*));
-                    *staticFields[sidx].type_ptr = GetJavaClassFromName(signature);
+                    *staticFields[sidx].type_ptr = GetJavaClassFromName(ConvertSignatureToClassName(signature));
                 }
 
                 typePtr = staticFields[sidx].type_ptr;
