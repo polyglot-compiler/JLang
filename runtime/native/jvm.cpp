@@ -783,19 +783,19 @@ jobjectArray getEmptyObjectArray() {
 }
 
 // Convert a jni type signature to its class name.
+// len specifies the length of the signature string including the null terminator.
+// className is required to point to a char array of length len.
 // Rules: replace all slashes with dots.
 // e.g. [Ljava/lang/String; -> [Ljava.lang.String;
-const char* ConvertSignatureToClassName(const char* signature) {
-    int len = strlen(signature);
-    char* name = (char*) malloc(len + 1);
-    strcpy(name, signature);
+void ConvertSignatureToClassName(char* className, const char* signature, int len) {
     for(int i = 0; i < len; i++)
     {
-        if (name[i] == '/') {
-            name[i] = '.';
+        if (signature[i] == '/') {
+            className[i] = '.';
+        } else {
+            className[i] = signature[i];
         }
     }
-    return name;
 }
 
 jobjectArray
@@ -839,7 +839,10 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
                 // initialized Array's type_ptr if it is NULL.
                 if (fields[i].type_ptr == NULL && isArrayClassName(signature)) {
                     fields[i].type_ptr = (jclass*)malloc(sizeof(jclass*));
-                    *fields[i].type_ptr = GetJavaClassFromName(ConvertSignatureToClassName(signature));
+                    int len = strlen(signature) + 1;
+                    char className[len];
+                    ConvertSignatureToClassName(className, signature, len);
+                    *fields[i].type_ptr = GetJavaClassFromName(className);
                 }
 
                 typePtr = fields[i].type_ptr;
@@ -853,7 +856,10 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
                 // initialized Array's type_ptr if it is NULL.
                 if (staticFields[sidx].type_ptr == NULL && isArrayClassName(signature)) {
                     staticFields[sidx].type_ptr = (jclass*)malloc(sizeof(jclass*));
-                    *staticFields[sidx].type_ptr = GetJavaClassFromName(ConvertSignatureToClassName(signature));
+                    int len = strlen(signature) + 1;
+                    char className[len];
+                    ConvertSignatureToClassName(className, signature, len);
+                    *staticFields[sidx].type_ptr = GetJavaClassFromName(className);
                 }
 
                 typePtr = staticFields[sidx].type_ptr;
