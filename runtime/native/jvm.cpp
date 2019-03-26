@@ -787,8 +787,8 @@ jobjectArray getEmptyObjectArray() {
 // className is required to point to a char array of length len.
 // Rules: replace all slashes with dots.
 // e.g. [Ljava/lang/String; -> [Ljava.lang.String;
-void ConvertSignatureToClassName(char* className, const char* signature, int len) {
-    for(int i = 0; i < len; i++)
+void ConvertSignatureToClassName(char *className, const char *signature, int len) {
+    for (int i = 0; i < len; i++)
     {
         if (signature[i] == '/') {
             className[i] = '.';
