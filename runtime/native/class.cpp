@@ -16,6 +16,7 @@
 #include "class.h"
 #include "rep.h"
 #include "object_array.h"
+#include "array.h"
 
 #define MEMCPY(a,b,c) memcpy((void *) a, (void *) b, c)
 static constexpr bool kDebug = false;
@@ -213,6 +214,14 @@ const jclass initArrayClass(const char* name) {
   newInfo->name = newName;
   RegisterJavaClass(newKlazz, newInfo);
   return newKlazz;
+}
+
+// TODO: support dv cache and fix the warning (class.cpp:203).
+DispatchVector* initArrayDispatchVector(const char* name) {
+  DispatchVector* runtimeArrayCdv = getRuntimeArrayCdv();
+  JClassRep** newClassPtr = new JClassRep*(Unwrap(initArrayClass(name)));
+  DispatchVector* newCdv = new DispatchVector{newClassPtr, runtimeArrayCdv->Idv(), runtimeArrayCdv->SuperTypes()};
+  return newCdv;
 }
 
 bool registeringClass = false;

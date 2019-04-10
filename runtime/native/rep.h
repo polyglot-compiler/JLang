@@ -26,7 +26,7 @@ struct JArrayRep;
 struct JStringRep;
 struct JClassRep;
 
-struct type_info {
+struct type_info {\
     int32_t size;
     void* super_type_ids[];
 };
@@ -37,7 +37,7 @@ struct DispatchVector {
     idv_ht* Idv() { return idv_; }
     void SetIdv(idv_ht* idv) { idv_ = idv; }
     type_info* SuperTypes() { return super_types_; }
-private:
+public:
     JClassRep** class_; // Notice: double-pointer.
 	idv_ht* idv_;
     type_info* super_types_;

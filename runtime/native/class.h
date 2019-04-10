@@ -13,6 +13,7 @@
 #include "jni.h"
 #include <stdint.h>
 #include <utility>
+#include "rep.h"
 
 #define IS_STATIC_METHOD(minfo) ((minfo)->offset == -1)
 #define IS_CONSTRUCTOR(minfo) ((minfo)->offset == -2)
@@ -82,6 +83,8 @@ struct JavaClassInfo {
 // the class information declared above.
 void
 RegisterJavaClass(jclass cls, const JavaClassInfo* data);
+
+DispatchVector* initArrayDispatchVector(const char* name);
 
 void InternStringLit(jstring str);
 
