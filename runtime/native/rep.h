@@ -68,6 +68,8 @@ struct JArrayRep {
     void* Data() { return data_; }
     JObjectRep* Super() { return &header_; }
     jarray Wrap() { return reinterpret_cast<jarray>(this); }
+    void SetLength(jsize len) { len_ = len; }
+    void SetElemSize(jsize elem_size) { elem_size_ = elem_size; }
 private:
     JObjectRep header_;
     jsize len_;

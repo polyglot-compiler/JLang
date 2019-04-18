@@ -86,6 +86,8 @@ RegisterJavaClass(jclass cls, const JavaClassInfo* data);
 
 DispatchVector* initArrayDispatchVector(const char* name);
 
+jarray initArray(const char* arrType, jarray len);
+
 void InternStringLit(jstring str);
 
 } // extern "C"

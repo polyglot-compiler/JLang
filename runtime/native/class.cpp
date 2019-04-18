@@ -11,6 +11,7 @@
 #include <string>
 #include <dlfcn.h>
 #include <stdio.h>
+#include <gc.h>
 #include "jni.h"
 #include "jvm.h"
 #include "class.h"
@@ -397,6 +398,47 @@ jclass GetComponentClass(jclass cls) {
     }
   }
   return NULL;
+}
+
+/**
+ * Helper function to initialize an array in runtime. 
+ */
+JArrayRep* initArray(const char* arrType, int* len, int depth) {
+  const char* componentName = getComponentName(arrType);
+  DispatchVector* cdv = initArrayDispatchVector(arrType);
+
+  jclass primComponent = primitiveComponentNameToClass(componentName);
+  int elementSize;
+  if (primComponent == NULL) {
+    // any array or reference type
+    elementSize = sizeof(void*);
+  } else {
+    elementSize = arrayRepSize(primComponent);
+  }
+
+  // TODO: not sure if this is correct
+  JArrayRep* arr = (JArrayRep*)GC_MALLOC(sizeof(JArrayRep) + elementSize * (*len));
+  arr->Super()->SetCdv(cdv);
+  arr->SetLength(*len);
+  arr->SetElemSize(elementSize);
+  // initialize elements when it is not leaf.
+  // For leaf array, elements are 0 for all types. 
+  if (depth > 1) {
+    void** data = (void**)arr->Data();
+    for (int i = 0; i < (*len); ++i) {
+      data[i] = (void*)initArray(componentName, len + 1, depth - 1);
+    }
+  }
+  return arr;
+}
+
+jarray initArray(const char* arrType, jarray len) {
+  JArrayRep* arrLen = Unwrap(len);
+  // TODO: casting jint to int is fine?
+  int* data = (int*)arrLen->Data();
+  int size = arrLen->Length();
+  JArrayRep* arr = initArray(arrType, data, size);
+  return arr->Wrap();
 }
 
 /**
