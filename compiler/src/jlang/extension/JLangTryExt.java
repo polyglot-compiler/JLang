@@ -250,7 +250,11 @@ public class JLangTryExt extends JLangExt {
                 frame.buildFinallyBlockBranchingTo(rethrowBlock);
             } else {
                 // We did not catch the exception. Resume unwinding.
-                LLVMBuildResume(v.builder, lpadCatchRes);
+                // LLVMBuildResume(v.builder, lpadCatchRes);
+                LLVMValueRef resumeFun = v.utils.getFunction(Constants.RESUME_UNWIND_EXCEPTION,
+                    v.utils.functionType(LLVMVoidTypeInContext(v.context), v.utils.i8Ptr()));
+                v.utils.buildProcCall(resumeFun, catchExn);
+                LLVMBuildUnreachable(v.builder);
             }
         }
 
