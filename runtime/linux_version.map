@@ -7,7 +7,8 @@ SUNWprivate_1.1 {
 		jio*;
 		Java_sun_misc_Unsafe*;
 		RegisterJavaClass; #TODO rename all of the functions called from JLang-compiled code to have same prefix
-		initArrayDispatchVector;
+		createArray;
+		create1DArray;
 		InternStringLit;
 		GetJavaNativeFunc; #Then we can just export PREFIX*
 		createUnwindException;

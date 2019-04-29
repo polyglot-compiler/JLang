@@ -84,9 +84,9 @@ struct JavaClassInfo {
 void
 RegisterJavaClass(jclass cls, const JavaClassInfo* data);
 
-DispatchVector* initArrayDispatchVector(const char* name);
+jarray createArray(const char* arrType, int* len, int sizeOfLen, int numOfCdvMethods);
 
-jarray initArray(const char* arrType, jarray len);
+jarray create1DArray(const char* arrType, int len, int numOfCdvMethods);
 
 void InternStringLit(jstring str);
 

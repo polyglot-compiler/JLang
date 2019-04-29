@@ -217,14 +217,6 @@ const jclass initArrayClass(const char* name) {
   return newKlazz;
 }
 
-// TODO: support dv cache and fix the warning (class.cpp:203).
-DispatchVector* initArrayDispatchVector(const char* name) {
-  DispatchVector* runtimeArrayCdv = getRuntimeArrayCdv();
-  JClassRep** newClassPtr = new JClassRep*(Unwrap(initArrayClass(name)));
-  DispatchVector* newCdv = new DispatchVector{newClassPtr, runtimeArrayCdv->Idv(), runtimeArrayCdv->SuperTypes()};
-  return newCdv;
-}
-
 bool registeringClass = false;
 
 /**
@@ -307,17 +299,18 @@ bool isPrimitiveClass(jclass cls) {
 
 /**
  * Returns the number of bytes used to store the given type in an array
+ * It respects size defined in LLVMUtils.sizeOfType(Type t).
  */
 int arrayRepSize(jclass cls) {
-  PRIM_KLASS_SIZE(cls, int, sizeof(int))
-  } else PRIM_KLASS_SIZE(cls, byte, sizeof(char))
-  } else PRIM_KLASS_SIZE(cls, short, sizeof(short))	
-  } else PRIM_KLASS_SIZE(cls, long, sizeof(long))
-  } else PRIM_KLASS_SIZE(cls, float, sizeof(float))
-  } else PRIM_KLASS_SIZE(cls, double, sizeof(double))
-  } else PRIM_KLASS_SIZE(cls, char, sizeof(char))
-  } else PRIM_KLASS_SIZE(cls, boolean, sizeof(char))
-  } else PRIM_KLASS_SIZE(cls, void, sizeof(void*))
+  PRIM_KLASS_SIZE(cls, int, 4)
+  } else PRIM_KLASS_SIZE(cls, byte, 1)
+  } else PRIM_KLASS_SIZE(cls, short, 2)	
+  } else PRIM_KLASS_SIZE(cls, long, 8)
+  } else PRIM_KLASS_SIZE(cls, float, 4)
+  } else PRIM_KLASS_SIZE(cls, double, 8)
+  } else PRIM_KLASS_SIZE(cls, char, 2)
+  } else PRIM_KLASS_SIZE(cls, boolean, 1)
+  } else PRIM_KLASS_SIZE(cls, void, 8)
   } else {
      return sizeof(void*);
   }
@@ -400,10 +393,25 @@ jclass GetComponentClass(jclass cls) {
   return NULL;
 }
 
+static int _numOfRuntimeArrayCdvMethods = 0;
+DispatchVector* initArrayDispatchVector(const char* name) {
+  DispatchVector* runtimeArrayCdv = getRuntimeArrayCdv();
+  const JavaClassInfo* runtimeArrayInfo = GetJavaClassInfo(runtimeArrayCdv->Class()->Wrap());
+  int runtimeArrayCdvSize = sizeof(DispatchVector) + _numOfRuntimeArrayCdvMethods * sizeof(void*);
+  DispatchVector* newCdv = (DispatchVector*)malloc(runtimeArrayCdvSize);
+  memcpy(newCdv, runtimeArrayCdv, runtimeArrayCdvSize);
+  JClassRep** newClassPtr = new JClassRep*(Unwrap(initArrayClass(name)));
+  newCdv->SetClassPtr(newClassPtr);
+  const JavaClassInfo* info = GetJavaClassInfo((*newClassPtr)->Wrap());
+  // TODO: temporary bad solution
+  const_cast<JavaClassInfo*>(info)->cdv = (void*)newCdv;
+  return newCdv;
+}
+
 /**
  * Helper function to initialize an array in runtime. 
  */
-JArrayRep* initArray(const char* arrType, int* len, int depth) {
+JArrayRep* initArrayHelper(const char* arrType, int* len, int depth) {
   const char* componentName = getComponentName(arrType);
   DispatchVector* cdv = initArrayDispatchVector(arrType);
 
@@ -416,7 +424,6 @@ JArrayRep* initArray(const char* arrType, int* len, int depth) {
     elementSize = arrayRepSize(primComponent);
   }
 
-  // TODO: not sure if this is correct
   JArrayRep* arr = (JArrayRep*)GC_MALLOC(sizeof(JArrayRep) + elementSize * (*len));
   arr->Super()->SetCdv(cdv);
   arr->SetLength(*len);
@@ -426,18 +433,42 @@ JArrayRep* initArray(const char* arrType, int* len, int depth) {
   if (depth > 1) {
     void** data = (void**)arr->Data();
     for (int i = 0; i < (*len); ++i) {
-      data[i] = (void*)initArray(componentName, len + 1, depth - 1);
+      data[i] = (void*)initArrayHelper(componentName, len + 1, depth - 1);
     }
   }
   return arr;
 }
 
-jarray initArray(const char* arrType, jarray len) {
-  JArrayRep* arrLen = Unwrap(len);
-  // TODO: casting jint to int is fine?
-  int* data = (int*)arrLen->Data();
-  int size = arrLen->Length();
-  JArrayRep* arr = initArray(arrType, data, size);
+jarray createArray(const char* arrType, int* len, int sizeOfLen, int numOfCdvMethods) {
+  if (_numOfRuntimeArrayCdvMethods == 0) {
+    _numOfRuntimeArrayCdvMethods = numOfCdvMethods;
+  }
+  JArrayRep* arr = initArrayHelper(arrType, len, sizeOfLen);
+  return arr->Wrap();
+}
+
+// TODO: Or pass length as a pointer and discard 1D array special case
+jarray create1DArray(const char* arrType, int len, int numOfCdvMethods) {
+  if (_numOfRuntimeArrayCdvMethods == 0) {
+    _numOfRuntimeArrayCdvMethods = numOfCdvMethods;
+  }
+  const char* componentName = getComponentName(arrType);
+  DispatchVector* cdv = initArrayDispatchVector(arrType);
+
+  jclass primComponent = primitiveComponentNameToClass(componentName);
+  int elementSize;
+  if (primComponent == NULL) {
+    // any array or reference type
+    elementSize = sizeof(void*);
+  } else {
+    elementSize = arrayRepSize(primComponent);
+  }
+
+  JArrayRep* arr = (JArrayRep*)GC_MALLOC(sizeof(JArrayRep) + elementSize * len);
+  arr->Super()->SetCdv(cdv);
+  arr->SetLength(len);
+  arr->SetElemSize(elementSize);
+
   return arr->Wrap();
 }
 

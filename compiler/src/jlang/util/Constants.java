@@ -31,7 +31,8 @@ public class Constants {
     public static final String CREATE_EXCEPTION = "createUnwindException";
     public static final String THROW_EXCEPTION = "throwUnwindException";
     public static final String EXTRACT_EXCEPTION = "extractJavaExceptionObject";
-    public static final String INIT_ARRAY_DV_FUNC = "initArrayDispatchVector";
+    public static final String CREATE_ARRAY = "createArray";
+    public static final String CREATE_1D_ARRAY = "create1DArray";
 
     public static final Set<String> NON_INVOKE_FUNCTIONS = new HashSet<>(CollectionUtil.list(
             CALLOC, CREATE_EXCEPTION, EXTRACT_EXCEPTION

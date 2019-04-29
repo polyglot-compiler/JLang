@@ -34,6 +34,7 @@ struct type_info {\
 // Class dispatch vector.
 struct DispatchVector {
     JClassRep* Class() { return *class_; }
+    void SetClassPtr(JClassRep** class_ptr) { class_ = class_ptr; }
     idv_ht* Idv() { return idv_; }
     void SetIdv(idv_ht* idv) { idv_ = idv; }
     type_info* SuperTypes() { return super_types_; }
@@ -41,6 +42,7 @@ public:
     JClassRep** class_; // Notice: double-pointer.
 	idv_ht* idv_;
     type_info* super_types_;
+    void* methods_[0]; // a list of method pointers in dv.
 };
 
 // Currently unimplemented.

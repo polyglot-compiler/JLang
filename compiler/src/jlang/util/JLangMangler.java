@@ -69,6 +69,38 @@ public class JLangMangler {
         }
     }
 
+    /**
+     * Returns the name of the entity (class, primitive types, array, and etc.) formatted for
+     * use by Class#getName().
+     * Rules to mangle the name are specified here:
+     * https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getName()
+     *
+     * E.g., package.Clazz$InnerClass
+     */
+    public String userVisibleEntityName(Type t) {
+        Type et = v.ts.erasureType(t);
+        if      (et.isBoolean()) return "boolean";
+        else if (et.isByte())    return "byte";
+        else if (et.isChar())    return "char";
+        else if (et.isShort())   return "short";
+        else if (et.isInt())     return "int";
+        else if (et.isLong())    return "long";
+        else if (et.isFloat())   return "float";
+        else if (et.isDouble())  return "double";
+        else if (et.isVoid())    return "void";
+        else if (et.isArray()) {
+            // jni replace "." with "/" so we need to revert it here.
+            return jniUnescapedSignature(et).replace("/", ".");
+        }
+        else if (et.isClass()) {
+            ClassType base = (ClassType) et.toClass().declaration();
+            return base.fullName();
+        }
+        else {
+            throw new InternalCompilerError("Unsupported type for mangling: " + et);
+        }
+    }
+
     private boolean isValidCFuncChar(char c) {
     	return Character.isDigit(c) || Character.isLetter(c) || c == '_';
     }

@@ -25,24 +25,6 @@ import static org.bytedeco.javacpp.LLVM.*;
 public class JLangNewArrayExt extends JLangExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
 
-    @Override
-    public Node desugar(DesugarLocally v) {
-        NewArray n = (NewArray) node();
-
-        // Desugar multidimensional arrays.
-        // (Note that array initializer expressions are an exception,
-        // since they have their own translation.)
-        if (n.init() == null && n.dims().size() > 1) {
-            try {
-                return desugarMultidimensional(v);
-            } catch (SemanticException e) {
-                throw new InternalCompilerError(e);
-            }
-        }
-
-        return super.desugar(v);
-    }
-
     /**
      * Desugars multidimensional arrays into a runtime call, which in turn builds the
      * multidimensional array by recursively building and initializing single dimensional arrays.
@@ -92,82 +74,56 @@ public class JLangNewArrayExt extends JLangExt {
         if (n.init() != null) {
             // Steal the translation of the initializer.
             res = v.getTranslation(n.init());
-        }
-        else {
-            if (n.dims().size() > 1)
-                throw new InternalCompilerError("Multidimensional arrays should be desugared");
-            LLVMValueRef len = v.getTranslation(n.dims().get(0));
+        } else if (n.dims().size() > 1) {
+            LLVMValueRef[] len = n.dims().stream()
+                    .map(v::<LLVMValueRef>getTranslation)
+                    .toArray(LLVMValueRef[]::new);
+
             res = translateNewArray(v, len, n.type().toArray());
+        } else {
+            LLVMValueRef len = v.getTranslation(n.dims().get(0));
+            res = translateNew1DArray(v, len, n.type().toArray());
         }
 
         v.addTranslation(n, res);
         return super.leaveTranslateLLVM(v);
     }
 
-    public static LLVMValueRef translateNewArray(LLVMTranslator v, LLVMValueRef len, ArrayType type) {
+    public static LLVMValueRef translateNewArray(LLVMTranslator v, LLVMValueRef[] len, ArrayType type) {
         ClassType arrType = v.ts.ArrayObject();
-        TypeSystem ts = v.ts;
-        ConstructorInstance arrayConstructor;
-        try {
-            arrayConstructor = ts.findConstructor(
-                    arrType, Collections.nCopies(2, ts.Int()), arrType, /*fromClient*/ true);
-        } catch (SemanticException e) {
-            throw new InternalCompilerError(e);
+        LLVMTypeRef createArrayType = v.utils.functionType(
+                v.utils.toLL(arrType),
+                v.utils.i8Ptr(),
+                v.utils.ptrTypeRef(v.utils.i32()),
+                v.utils.i32(),
+                v.utils.i32()
+        );
+        LLVMValueRef createArray = v.utils.getFunction(Constants.CREATE_ARRAY, createArrayType);
+        LLVMValueRef name = v.utils.buildGlobalCStr(v.mangler.userVisibleEntityName(type));
+        LLVMValueRef arrSize = LLVMConstInt(v.utils.i32(), len.length, 0);
+        LLVMValueRef arrLen = v.utils.buildArrayAlloca("arr.len", v.utils.i32(), arrSize);
+        LLVMValueRef numOfCdvMethods = LLVMConstInt(v.utils.i32(), v.cdvMethods(arrType).size(), 0);
+
+        for (int i = 0; i < len.length; i++) {
+            LLVMValueRef gep = v.utils.buildGEP(arrLen, i);
+            LLVMBuildStore(v.builder, len[i], gep);
         }
-        int sizeOfType = v.utils.sizeOfType(type.base());
 
-        LLVMTypeRef i64 = LLVMInt64TypeInContext(v.context);
-        LLVMTypeRef i32 = LLVMInt32TypeInContext(v.context);
-        LLVMValueRef elemSizeArg = LLVMConstInt(i32, sizeOfType, /*sign-extend*/ 0);
-        LLVMValueRef arrLen64 = LLVMBuildSExt(v.builder, len, i64, "arr.len");
-        LLVMValueRef elemSize = LLVMConstInt(i64, sizeOfType, /*sign-extend*/ 0);
-        LLVMValueRef contentSize = LLVMBuildMul(v.builder, elemSize, arrLen64, "mul");
-        LLVMValueRef headerSize = v.obj.sizeOf(arrType);
-        LLVMValueRef size = LLVMBuildAdd(v.builder, headerSize, contentSize, "size");
+        return v.utils.buildFunCall(createArray, name, arrLen, arrSize, numOfCdvMethods);
+    }
 
-        LLVMValueRef[] arg = {len, elemSizeArg};
+    public static LLVMValueRef translateNew1DArray(LLVMTranslator v, LLVMValueRef len, ArrayType type) {
+        ClassType arrType = v.ts.ArrayObject();
+        LLVMTypeRef create1DArrayType = v.utils.functionType(
+                v.utils.toLL(arrType),
+                v.utils.i8Ptr(),
+                v.utils.i32(),
+                v.utils.i32()
+        );
+        LLVMValueRef create1DArray = v.utils.getFunction(Constants.CREATE_1D_ARRAY, create1DArrayType);
+        LLVMValueRef name = v.utils.buildGlobalCStr(v.mangler.userVisibleEntityName(type));
+        LLVMValueRef numOfCdvMethods = LLVMConstInt(v.utils.i32(), v.cdvMethods(arrType).size(), 0);
 
-        // LLVMTranslator v, LLVMValueRef[] args, LLVMValueRef size, ConstructorInstance ci
-
-        ReferenceType clazz = arrayConstructor.container();
-
-        // Allocate space for the new object.
-        LLVMValueRef calloc = LLVMGetNamedFunction(v.mod, Constants.CALLOC);
-        LLVMValueRef obj = v.utils.buildFunCall(calloc, size);
-
-        // Bitcast object
-        LLVMValueRef objCast = LLVMBuildBitCast(v.builder, obj, v.utils.toLL(clazz), "obj_cast");
-
-        // Set the Dispatch vector
-        // TODO: Could probably do this inside the constructor function instead?
-        LLVMValueRef gep = v.obj.buildDispatchVectorElementPtr(objCast, clazz);
-
-        LLVMValueRef initDV = v.utils.getFunction(Constants.INIT_ARRAY_DV_FUNC,
-                v.utils.functionType(v.utils.ptrTypeRef(v.dv.structTypeRef(clazz)), v.utils.i8Ptr()));
-        // TODO: should use className instead of signature name
-        LLVMValueRef name = v.utils.buildGlobalCStr(v.mangler.jniUnescapedSignature(type));
-        LLVMValueRef dv = v.utils.buildFunCall(initDV, name);
-
-        LLVMBuildStore(v.builder, dv, gep);
-
-        // Call the constructor function
-        String mangledFuncName = v.mangler.proc(arrayConstructor);
-
-        LLVMTypeRef funcType = v.utils.toLL(arrayConstructor);
-        LLVMValueRef funcPtr = v.utils.getFunction(mangledFuncName, funcType);
-
-        // Bitcast the function so that the formal types are the types that
-        // the arguments were cast to by DesugarImplicitConversions. It is
-        // needed due to potential mismatch between the types caused by erasure.
-        LLVMTypeRef funcTyCast = v.utils.toLLFuncTy(
-                clazz, v.ts.Void(), arrayConstructor.formalTypes());
-        funcPtr = LLVMBuildBitCast(v.builder, funcPtr, v.utils.ptrTypeRef(funcTyCast), "cast");
-
-        LLVMValueRef[] llvmArgs = Stream.concat(
-                Stream.of(objCast), Arrays.stream(arg))
-                .toArray(LLVMValueRef[]::new);
-        v.utils.buildProcCall(funcPtr, llvmArgs);
-
-        return objCast;
+        return v.utils.buildFunCall(create1DArray, name, len, numOfCdvMethods);
     }
 }
