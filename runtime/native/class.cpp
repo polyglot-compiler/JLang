@@ -16,7 +16,7 @@
 #include "jvm.h"
 #include "class.h"
 #include "rep.h"
-#include "object_array.h"
+#include "base_class.h"
 #include "array.h"
 #include "constants.h"
 
@@ -236,7 +236,7 @@ const jclass initArrayClass(const char* name) {
  */
 const void RegisterPrimitiveClasses() {
 
-  jclass baseClass = getArrayKlass();
+  jclass baseClass = getBaseClass();
   classSize = getClassSize();
   
   REGISTER_PRIM_CLASS(int)

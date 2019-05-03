@@ -80,7 +80,6 @@ public class JLangDesugared extends AbstractGoal {
             "java.util.Iterator",
             "java.lang.Integer",
             Constants.RUNTIME_ARRAY,
-            Constants.RUNTIME_ARRAY_TYPE,
             Constants.RUNTIME_HELPER
     };
 

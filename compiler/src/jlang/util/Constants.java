@@ -14,7 +14,6 @@ public class Constants {
     public static final String RUNTIME_PACKAGE = "jlang.runtime";
     public static final String RUNTIME_HELPER = RUNTIME_PACKAGE + ".Helper";
     public static final String RUNTIME_ARRAY = RUNTIME_PACKAGE + ".Array";
-    public static final String RUNTIME_ARRAY_TYPE = RUNTIME_ARRAY + ".Type";
 
     public static final String PRIMITIVE_CLASS_OBJECT_SUFFIX = "ClassObject";
 

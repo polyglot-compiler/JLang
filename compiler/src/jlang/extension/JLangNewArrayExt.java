@@ -2,69 +2,21 @@
 
 package jlang.extension;
 
+import jlang.ast.JLangExt;
 import jlang.util.Constants;
-import polyglot.ast.*;
-import polyglot.types.*;
-import polyglot.util.InternalCompilerError;
-import polyglot.util.Position;
+import jlang.visit.LLVMTranslator;
+import polyglot.ast.NewArray;
+import polyglot.ast.Node;
+import polyglot.types.ArrayType;
+import polyglot.types.ClassType;
 import polyglot.util.SerialVersionUID;
 
 import java.lang.Override;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.stream.Stream;
 
-import jlang.ast.JLangExt;
-import jlang.visit.DesugarLocally;
-import jlang.visit.LLVMTranslator;
-
-import static jlang.util.Constants.RUNTIME_ARRAY;
-import static jlang.util.Constants.RUNTIME_ARRAY_TYPE;
 import static org.bytedeco.javacpp.LLVM.*;
 
 public class JLangNewArrayExt extends JLangExt {
     private static final long serialVersionUID = SerialVersionUID.generate();
-
-    /**
-     * Desugars multidimensional arrays into a runtime call, which in turn builds the
-     * multidimensional array by recursively building and initializing single dimensional arrays.
-     */
-    protected Expr desugarMultidimensional(DesugarLocally v) throws SemanticException {
-        NewArray n = (NewArray) node();
-        assert n.init() == null && n.dims().size() > 1;
-
-        Position pos = n.position();
-        ClassType arrType = v.ts.typeForName(RUNTIME_ARRAY).toClass();
-        ReferenceType leafTypeEnum = v.ts.typeForName(RUNTIME_ARRAY_TYPE).toReference();
-
-        Type leafType;
-        if (n.additionalDims() > 0) {
-            // If there are additional dims, then the leaf arrays store null array references.
-            leafType = v.ts.Object();
-        } else {
-            leafType = n.type().toArray().ultimateBase();
-        }
-        String leafTypeStr = getLeafTypeString(leafType);
-        Field leafTypeField = v.tnf.StaticField(pos, leafTypeEnum, leafTypeStr);
-        ArrayInit lens = (ArrayInit) v.nf.ArrayInit(pos, n.dims()).type(v.ts.arrayOf(v.ts.Int()));
-        String name = "createMultidimensional";
-        return v.tnf.StaticCall(pos, arrType, arrType, name, leafTypeField, lens);
-    }
-
-    // Returns the name of the enum constant corresponding to the given array leaf type.
-    // These constants exist in runtime code.
-    private String getLeafTypeString(Type t) {
-        if (t.isBoolean())   return "BOOLEAN";
-        if (t.isByte())      return "BYTE";
-        if (t.isChar())      return "CHAR";
-        if (t.isShort())     return "SHORT";
-        if (t.isInt())       return "INT";
-        if (t.isLong())      return "LONG";
-        if (t.isFloat())     return "FLOAT";
-        if (t.isDouble())    return "DOUBLE";
-        if (t.isReference()) return "OBJECT";
-        throw new InternalCompilerError("Unhandled array leaf type");
-    }
 
     @Override
     public Node leaveTranslateLLVM(LLVMTranslator v) {
