@@ -9,6 +9,7 @@
 #include "gc.h"
 #include "rep.h"
 #include "stack_trace.h"
+#include "class.h"
 
 extern "C" {
 
@@ -46,6 +47,8 @@ int main(int argc, char** argv) {
     sigaction(SIGSEGV, &sa, 0);
     sigaction(SIGBUS, &sa, 0);
     sigaction(SIGFPE, &sa, 0);
+
+    RegisterPrimitiveClasses();
 
     // Ignore the 0th argument, which is the name of the program.
     --argc, ++argv;

@@ -18,6 +18,7 @@
 #include "rep.h"
 #include "object_array.h"
 #include "array.h"
+#include "constants.h"
 
 #define MEMCPY(a,b,c) memcpy((void *) a, (void *) b, c)
 static constexpr bool kDebug = false;
@@ -204,15 +205,29 @@ const jclass initArrayClass(const char* name) {
     printf("WARNING: class size not yet initialized\n");
     jclass_size = sizeof(JClassRep);
   }
+
+  // create base array class and its info.
   jclass globalArrayKlass = getArrayKlass();
   jclass newKlazz = (jclass)malloc(jclass_size);
-  memcpy(newKlazz, globalArrayKlass, sizeof(JClassRep));
+  memcpy(newKlazz, globalArrayKlass, jclass_size);
   JavaClassInfo* newInfo = (JavaClassInfo*)malloc(sizeof(JavaClassInfo));
   memcpy(newInfo, GetJavaClassInfo(globalArrayKlass), sizeof(JavaClassInfo));
+
+  // init and set name.
   int nameLen = strlen(name) + 1; //add the '\0' terminator
   char* newName = (char*)malloc(nameLen);
   memcpy(newName, name, nameLen);
   newInfo->name = newName;
+
+  // init and set cdv/
+  int numOfCdv = getNumOfRuntimeArrayCdvMethods();
+  DispatchVector* runtimeArrayCdv = getRuntimeArrayCdv();
+  int runtimeArrayCdvSize = sizeof(DispatchVector) + numOfCdv * sizeof(void*);
+  DispatchVector* newCdv = (DispatchVector*)malloc(runtimeArrayCdvSize);
+  memcpy(newCdv, runtimeArrayCdv, runtimeArrayCdvSize);
+  newCdv->SetClassPtr(new JClassRep*(Unwrap(newKlazz)));
+  newInfo->cdv = (void*)newCdv;
+
   RegisterJavaClass(newKlazz, newInfo);
   return newKlazz;
 }
@@ -229,18 +244,8 @@ const void RegisterPrimitiveClasses() {
   if (registeringClass) return;
 
   jclass globalArrayKlass = getArrayKlass();
-
-  jclass ClassClass = NULL;
-  try {
-    ClassClass = cnames.at(std::string("java.lang.Class"));
-  } catch (const std::out_of_range& oor) {
-    registeringClass = true;
-    ClassClass = LoadJavaClassFromLib("java.lang.Class");
-    registeringClass = false;
-  }
-  const JavaClassInfo* cinfo = GetJavaClassInfo(ClassClass);
-  classSize = cinfo->obj_size;
-
+  classSize = getClassSize();
+  
   REGISTER_PRIM_CLASS(int)
 
   REGISTER_PRIM_CLASS(byte)
@@ -372,6 +377,12 @@ const jclass GetJavaClassFromName(const char* name) {
   }
 }
 
+DispatchVector* GetJavaCdvFromName(const char* name) {
+  jclass clazz = GetJavaClassFromName(name);
+  const JavaClassInfo* info = GetJavaClassInfo(clazz);
+  return (DispatchVector*)info->cdv;
+}
+
 /**
  * Returns the class inside the given array class's array.
  * If the given class is not an array class, this function
@@ -393,27 +404,12 @@ jclass GetComponentClass(jclass cls) {
   return NULL;
 }
 
-static int _numOfRuntimeArrayCdvMethods = 0;
-DispatchVector* initArrayDispatchVector(const char* name) {
-  DispatchVector* runtimeArrayCdv = getRuntimeArrayCdv();
-  const JavaClassInfo* runtimeArrayInfo = GetJavaClassInfo(runtimeArrayCdv->Class()->Wrap());
-  int runtimeArrayCdvSize = sizeof(DispatchVector) + _numOfRuntimeArrayCdvMethods * sizeof(void*);
-  DispatchVector* newCdv = (DispatchVector*)malloc(runtimeArrayCdvSize);
-  memcpy(newCdv, runtimeArrayCdv, runtimeArrayCdvSize);
-  JClassRep** newClassPtr = new JClassRep*(Unwrap(initArrayClass(name)));
-  newCdv->SetClassPtr(newClassPtr);
-  const JavaClassInfo* info = GetJavaClassInfo((*newClassPtr)->Wrap());
-  // TODO: temporary bad solution
-  const_cast<JavaClassInfo*>(info)->cdv = (void*)newCdv;
-  return newCdv;
-}
-
 /**
  * Helper function to initialize an array in runtime. 
  */
 JArrayRep* initArrayHelper(const char* arrType, int* len, int depth) {
   const char* componentName = getComponentName(arrType);
-  DispatchVector* cdv = initArrayDispatchVector(arrType);
+  DispatchVector* cdv = GetJavaCdvFromName(arrType);
 
   jclass primComponent = primitiveComponentNameToClass(componentName);
   int elementSize;
@@ -439,21 +435,15 @@ JArrayRep* initArrayHelper(const char* arrType, int* len, int depth) {
   return arr;
 }
 
-jarray createArray(const char* arrType, int* len, int sizeOfLen, int numOfCdvMethods) {
-  if (_numOfRuntimeArrayCdvMethods == 0) {
-    _numOfRuntimeArrayCdvMethods = numOfCdvMethods;
-  }
+jarray createArray(const char* arrType, int* len, int sizeOfLen) {
   JArrayRep* arr = initArrayHelper(arrType, len, sizeOfLen);
   return arr->Wrap();
 }
 
 // TODO: Or pass length as a pointer and discard 1D array special case
-jarray create1DArray(const char* arrType, int len, int numOfCdvMethods) {
-  if (_numOfRuntimeArrayCdvMethods == 0) {
-    _numOfRuntimeArrayCdvMethods = numOfCdvMethods;
-  }
+jarray create1DArray(const char* arrType, int len) {
   const char* componentName = getComponentName(arrType);
-  DispatchVector* cdv = initArrayDispatchVector(arrType);
+  DispatchVector* cdv = GetJavaCdvFromName(arrType);
 
   jclass primComponent = primitiveComponentNameToClass(componentName);
   int elementSize;

@@ -84,13 +84,15 @@ struct JavaClassInfo {
 void
 RegisterJavaClass(jclass cls, const JavaClassInfo* data);
 
-jarray createArray(const char* arrType, int* len, int sizeOfLen, int numOfCdvMethods);
+jarray createArray(const char* arrType, int* len, int sizeOfLen);
 
-jarray create1DArray(const char* arrType, int len, int numOfCdvMethods);
+jarray create1DArray(const char* arrType, int len);
 
 void InternStringLit(jstring str);
 
 } // extern "C"
+
+const void RegisterPrimitiveClasses();
 
 const JavaClassInfo*
 GetJavaClassInfo(jclass cls);
