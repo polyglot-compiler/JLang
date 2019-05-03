@@ -75,11 +75,10 @@ PRIM_CLASS_DEF(void)
 // dw475 TODO should copy over sync vars
 #define REGISTER_PRIM_CLASS(prim) \
   PRIM_CLASS(prim, Klass) = (JClassRep*)malloc(classSize); \
-  memcpy(PRIM_CLASS(prim, Klass), globalArrayKlass, sizeof(JClassRep)); \
+  memcpy(PRIM_CLASS(prim, Klass), globalArrayKlass, classSize); \
   Polyglot_native_##prim = reinterpret_cast<jclass>(PRIM_CLASS(prim, Klass)); \
   PRIM_REGISTER(prim);
 
-static bool primKlassInit = false;
 static int classSize = 0;
 
 // Define class references for JLang compiler
@@ -232,16 +231,10 @@ const jclass initArrayClass(const char* name) {
   return newKlazz;
 }
 
-bool registeringClass = false;
-
 /**
  * Register the primative classes
  */
 const void RegisterPrimitiveClasses() {
-  // avoid reentrance when registering the Class class
-  // could avoid this by always loading the Class class in main
-  // but this preserves laziness and appears to be same
-  if (registeringClass) return;
 
   jclass globalArrayKlass = getArrayKlass();
   classSize = getClassSize();
@@ -324,10 +317,6 @@ int arrayRepSize(jclass cls) {
  * Returns the class info object for the given java class object
  */
 const JavaClassInfo* GetJavaClassInfo(jclass cls) {
-  if (!primKlassInit) {
-    RegisterPrimitiveClasses();
-    primKlassInit = true;
-  }
   try {
     return classes.at(cls);
   } catch (const std::out_of_range& oor) {
@@ -360,16 +349,10 @@ const jclass GetJavaClassFromPathName(const char* name) {
  * Example: java.lang.Class returns the Class class object
  */
 const jclass GetJavaClassFromName(const char* name) {
-  // printf("get from name: %s\n", name);
-  if (!primKlassInit) {
-    RegisterPrimitiveClasses();
-    primKlassInit = true;
-  }
   try {
     return cnames.at(std::string(name));
   } catch (const std::out_of_range& oor) {
     if (isArrayClassName(name)) {
-      // printf("init array class: %s\n", name);
       return initArrayClass(name);
     } else {
       return NULL;
