@@ -9,7 +9,7 @@ extern "C" {
 static int __classSize = 0;
 static int __numOfRuntimeCdvArrayMethods = 0;
 
-inline void init() {
+static void initConstants() {
     if (__classSize == 0 && __numOfRuntimeCdvArrayMethods == 0) {
         Polyglot_jlang_runtime_Constants_load_class();
         __classSize = Polyglot_jlang_runtime_Constants_classSize;
@@ -18,11 +18,11 @@ inline void init() {
 }
 
 int getClassSize() {
-    init();
+    initConstants();
     return __classSize;
 }
 
 int getNumOfRuntimeArrayCdvMethods() {
-    init();
+    initConstants();
     return __numOfRuntimeCdvArrayMethods;
 }

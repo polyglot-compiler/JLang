@@ -61,8 +61,9 @@ jobject CloneJavaObject(jobject obj) {
   auto info = GetJavaClassInfo(cls);
   int size = 0;
   jobject new_obj;
-  if (strcmp(info->name, ARRAY_CLS) == 0 || isArrayClass(cls)) {
+  if (isArrayClass(cls) || strcmp(info->name, ARRAY_CLS) == 0) {
     JArrayRep* array = Unwrap(reinterpret_cast<jarray>(obj));
+    // info-> obj_size == sizeof(JArrayRep)
     size = info->obj_size + (array->Length() * array->ElemSize());
     new_obj = (jobject) GC_MALLOC(size);
   } else {

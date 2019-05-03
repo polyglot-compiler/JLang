@@ -75,7 +75,7 @@ PRIM_CLASS_DEF(void)
 // dw475 TODO should copy over sync vars
 #define REGISTER_PRIM_CLASS(prim) \
   PRIM_CLASS(prim, Klass) = (JClassRep*)malloc(classSize); \
-  memcpy(PRIM_CLASS(prim, Klass), globalArrayKlass, classSize); \
+  memcpy(PRIM_CLASS(prim, Klass), baseClass, classSize); \
   Polyglot_native_##prim = reinterpret_cast<jclass>(PRIM_CLASS(prim, Klass)); \
   PRIM_REGISTER(prim);
 
@@ -206,11 +206,11 @@ const jclass initArrayClass(const char* name) {
   }
 
   // create base array class and its info.
-  jclass globalArrayKlass = getArrayKlass();
+  jclass runtimeArrayClass = getRuntimeArrayClass();
   jclass newKlazz = (jclass)malloc(jclass_size);
-  memcpy(newKlazz, globalArrayKlass, jclass_size);
+  memcpy(newKlazz, runtimeArrayClass, jclass_size);
   JavaClassInfo* newInfo = (JavaClassInfo*)malloc(sizeof(JavaClassInfo));
-  memcpy(newInfo, GetJavaClassInfo(globalArrayKlass), sizeof(JavaClassInfo));
+  memcpy(newInfo, GetJavaClassInfo(runtimeArrayClass), sizeof(JavaClassInfo));
 
   // init and set name.
   int nameLen = strlen(name) + 1; //add the '\0' terminator
@@ -236,7 +236,7 @@ const jclass initArrayClass(const char* name) {
  */
 const void RegisterPrimitiveClasses() {
 
-  jclass globalArrayKlass = getArrayKlass();
+  jclass baseClass = getArrayKlass();
   classSize = getClassSize();
   
   REGISTER_PRIM_CLASS(int)

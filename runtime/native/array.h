@@ -2,4 +2,5 @@
 
 #include "rep.h"
 
-DispatchVector* getRuntimeArrayCdv();
+jclass getRuntimeArrayClass();
+DispatchVector *getRuntimeArrayCdv();

@@ -61,7 +61,7 @@ struct JavaClassInfo {
     char* name;
     jclass* super_ptr;
     void* cdv; //is a DispatchVector*
-    int32_t obj_size;
+    int32_t obj_size; // for array, it does not include data_size
 
     jboolean isIntf;
 
