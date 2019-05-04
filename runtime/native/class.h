@@ -130,7 +130,11 @@ bool isPrimitiveClass(jclass cls);
 
 jclass GetComponentClass(jclass cls);
 
+char primitiveNameToComponentName(const char* name);
+
 int arrayRepSize(jclass cls);
+
+jarray create1DArray(const char* arrType, int len);
 
 extern jclass Polyglot_native_int;
 extern jclass Polyglot_native_byte;

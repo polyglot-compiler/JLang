@@ -559,9 +559,33 @@ JVM_SetPrimitiveArrayElement(JNIEnv *env, jobject arr, jint index, jvalue v, uns
 
 jobject
 JVM_NewArray(JNIEnv *env, jclass eltClass, jint length) {
-    // JvmUnimplemented("JVM_NewArray");
-    // dw475 TODO handle eltClass is primative class
-    return CreateJavaObjectArray(length);
+    const JavaClassInfo* info = GetJavaClassInfo(eltClass);
+    if (isArrayClassName(info->name)) {
+        // element is array.
+        // [arr\0
+        int len = strlen(info->name) + 1;
+        char arrName[len+1];
+        arrName[0] = '[';
+        strcpy(arrName + 1, info->name);
+        return create1DArray(arrName, length);        
+    } else {
+        char primName = primitiveNameToComponentName(info->name);
+        if (primName != '\0') {
+            // element is primitive.
+            // [I\0
+            char arrName[3] = {'[', primName, '\0'};
+            return create1DArray(arrName, length);    
+        } else {
+            // element is object.
+            // [Lclassname;\0
+            int len = strlen(info->name) + 3;
+            char arrName[len+1];
+            arrName[0] = '['; arrName[1] = 'L';
+            strcpy(arrName + 2, info->name);
+            arrName[len - 1] = ';'; arrName[len] = '\0';
+            return create1DArray(arrName, length);
+        }
+    }
 }
 
 jobject
@@ -685,7 +709,6 @@ JVM_IsPrimitiveClass(JNIEnv *env, jclass cls) {
 
 jclass
 JVM_GetComponentType(JNIEnv *env, jclass cls) {
-  //TODO actually check that cls is array class
   return GetComponentClass(cls);
 }
 

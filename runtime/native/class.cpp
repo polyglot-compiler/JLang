@@ -290,6 +290,34 @@ jclass primitiveComponentNameToClass(const char* name) {
 }
 
 /**
+ * Returns the component name for the given primitive type name.
+ * If it is not a primitive type name, return '\0'.
+ * 
+ * e.g. "int" -> 'I', "byte" -> 'B', "java.lang.Object" -> '\0'
+ */
+char primitiveNameToComponentName(const char* name) {
+  PRIM_NAME_CHECK(name, "int") 
+    return 'I';
+  } else PRIM_NAME_CHECK(name, "byte")
+    return 'B';
+  } else PRIM_NAME_CHECK(name, "short")
+    return 'S';
+  } else PRIM_NAME_CHECK(name, "long")
+    return 'J';
+  } else PRIM_NAME_CHECK(name, "float")
+    return 'F';
+  } else PRIM_NAME_CHECK(name, "double")
+    return 'D';
+  } else PRIM_NAME_CHECK(name, "char")
+    return 'C';
+  } else PRIM_NAME_CHECK(name, "boolean")
+    return 'Z';
+  } else {
+    return '\0';
+  }
+}
+
+/**
  * Returns true of the given class object points to a
  * primative class object
  */
@@ -388,12 +416,20 @@ jclass GetComponentClass(jclass cls) {
   if (isArrayClass(cls)) {
     const JavaClassInfo* info = GetJavaClassInfo(cls);
     if (info != NULL) {
-      const char* className = getComponentName(info->name);
-      jclass primComponent = primitiveComponentNameToClass(className);
+      const char* componentName = getComponentName(info->name);
+      jclass primComponent = primitiveComponentNameToClass(componentName);
       if (primComponent == NULL) {
-	return GetJavaClassFromName(className);
+        if (isArrayClassName(componentName)) {
+  	      return GetJavaClassFromName(componentName);
+        } else {
+          int len = strlen(componentName) - 2;
+          char className[len + 1];
+          strncpy(className, componentName + 1, len);
+          className[len] = '\0';
+          return GetJavaClassFromName(className);
+        }
       } else {
-	return primComponent;
+	      return primComponent;
       }
     }
   }
