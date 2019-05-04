@@ -123,7 +123,6 @@ public class FieldReflection {
     a = i;
     s = "A string";
     b = j;
-    sarr = new String[]{"one", "two"};
   }
 
   static class FieldReflectionGen<T> {
