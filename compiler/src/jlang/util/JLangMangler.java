@@ -62,7 +62,7 @@ public class JLangMangler {
         }
         else if (et.isClass()) {
             ClassType base = (ClassType) et.toClass().declaration();
-            return "L" + base.fullName().replace('.', '/') + ";";
+            return "L" + userVisibleClassName(base).replace('.', '/') + ";";
         }
         else {
             throw new InternalCompilerError("Unsupported type for mangling: " + et);
@@ -94,7 +94,7 @@ public class JLangMangler {
         }
         else if (et.isClass()) {
             ClassType base = (ClassType) et.toClass().declaration();
-            return base.fullName();
+            return userVisibleClassName(base);
         }
         else {
             throw new InternalCompilerError("Unsupported type for mangling: " + et);

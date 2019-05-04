@@ -826,45 +826,52 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             // create new field object
             jobject newField = CreateJavaObject(FieldsClass);
 
-            char* name = NULL;
+            char* name = nullptr;
             int modifiers = 0;
-            jclass* typePtr = NULL;
-            char* signature = NULL;
+            jclass** typePtrPtr = nullptr;
+            char* signature = nullptr;
             int slot = 0;
+
             if (i < info->num_fields) {
                 name = fields[i].name;
                 modifiers = fields[i].modifiers;
                 signature = fields[i].sig;
-
-                // initialized Array's type_ptr if it is NULL.
-                if (fields[i].type_ptr == NULL && isArrayClassName(signature)) {
-                    fields[i].type_ptr = (jclass*)malloc(sizeof(jclass*));
-                    int len = strlen(signature) + 1;
-                    char className[len];
-                    ConvertSignatureToClassName(className, signature, len);
-                    *fields[i].type_ptr = GetJavaClassFromName(className);
-                }
-
-                typePtr = fields[i].type_ptr;
+                typePtrPtr = &fields[i].type_ptr;
                 slot = i;
             } else {
                 int sidx = i-info->num_fields;
                 name = staticFields[sidx].name;
                 modifiers = staticFields[sidx].modifiers;
                 signature = staticFields[sidx].sig;
-
-                // initialized Array's type_ptr if it is NULL.
-                if (staticFields[sidx].type_ptr == NULL && isArrayClassName(signature)) {
-                    staticFields[sidx].type_ptr = (jclass*)malloc(sizeof(jclass*));
-                    int len = strlen(signature) + 1;
-                    char className[len];
-                    ConvertSignatureToClassName(className, signature, len);
-                    *staticFields[sidx].type_ptr = GetJavaClassFromName(className);
-                }
-
-                typePtr = staticFields[sidx].type_ptr;
+                typePtrPtr = &staticFields[sidx].type_ptr;
                 slot = -(sidx+1); // 0 ambiguity
             }
+
+            if (*typePtrPtr == nullptr) {
+                // initialized Array's type_ptr if it is NULL.
+                if (!isArrayClassName(signature)) {
+                    printf("WARNING: Non-Array field has null type_ptr\n");
+                }
+                int len = strlen(signature) + 1;
+                char className[len];
+                ConvertSignatureToClassName(className, signature, len);
+                *typePtrPtr = new jclass(GetJavaClassFromName(className));
+            } else if (**typePtrPtr == nullptr) {
+                // The typeClass that type_ptr points to has not initialized yet.
+                // Call the class loading function to load it.
+                int len = strlen(signature) + 1 - 2; // get rid of head (L) and tail (;)
+                if (len <= 1) {
+                    printf("WARNING: Primitive class is not initialized correctly\n");
+                }
+                char className[len];
+                ConvertSignatureToClassName(className, signature + 1, len);
+                className[len - 1] = '\0';
+                LoadJavaClassFromLib(className);
+                if (**typePtrPtr == nullptr) {
+                    printf("WARNING: Class is not loaded correctly\n");
+                }
+            }
+
             jstring nameString = internJString(env->NewStringUTF(name));
             // Our field.sig is Java's string representation of field's type
             // Java's signature is used for Generics.
@@ -874,7 +881,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             jstring sigString = NULL;
             
             // call the fields constructor
-            FIELD_INIT_FUNC(newField, ofClass, nameString, typePtr == NULL ? NULL : *typePtr, modifiers, slot, sigString, NULL);
+            FIELD_INIT_FUNC(newField, ofClass, nameString, **typePtrPtr, modifiers, slot, sigString, NULL);
             // add it to the array
             JVM_SetArrayElement(env, ret, i, newField);
         }
