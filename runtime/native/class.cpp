@@ -218,6 +218,19 @@ const jclass initArrayClass(const char* name) {
   memcpy(newName, name, nameLen);
   newInfo->name = newName;
 
+  // init and set obj_size.
+  newInfo->obj_size = sizeof(JArrayRep);
+
+  // zero out fields and methods runtime information to conform
+  // the reflectio behavior of Array. See jlang.runtime.Array 
+  // for a more detailed explanation.
+  newInfo->num_fields = 0;
+  newInfo->fields = nullptr;
+  newInfo->num_static_fields = 0;
+  newInfo->static_fields = nullptr;
+  newInfo->num_methods = 0;
+  newInfo->methods = nullptr;
+
   // init and set cdv/
   int numOfCdv = getNumOfRuntimeArrayCdvMethods();
   DispatchVector* runtimeArrayCdv = getRuntimeArrayCdv();
