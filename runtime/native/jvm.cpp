@@ -757,16 +757,17 @@ jobjectArray
 JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
     const JavaClassInfo* info = GetJavaClassInfo(ofClass);
     if (info) {
+        const char* methodArrType = "[Ljava.lang.reflect.Method;";
         // if primative class (int, boolean), return empty array
         if (JVM_IsPrimitiveClass(env, ofClass)) {
-            return CreateJavaObjectArray(0);
+            return create1DArray(methodArrType, 0);
         }
 
         jclass MethodClass = env->FindClass("java.lang.reflect.Method");
 
         // dw475 TODO take into account publiconly argument
 
-        jobjectArray ret = CreateJavaObjectArray(info->num_methods);
+        jobjectArray ret = create1DArray(methodArrType, info->num_methods);
 
         JavaMethodInfo* methods = info->methods;
 
@@ -776,18 +777,16 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             jstring nameString = env->NewStringUTF(methods[i].name);
             jint modifiers = methods[i].modifiers;
             jint slot = i;
-            jobjectArray paramTypes = CreateJavaObjectArray(methods[i].numArgTypes);
+            jobjectArray paramTypes = create1DArray("[Ljava.lang.Class;", methods[i].numArgTypes);
             jclass returnType = NULL;
             jclass* returnTypePtr = methods[i].returnType;
-            if (returnTypePtr != NULL) {
+            if (returnTypePtr == NULL) {
                 returnType = *returnTypePtr;
             }
             for (int k = 0; k < methods[i].numArgTypes; k++) {
                 jclass* argTypePtr = methods[i].argTypes[k];
                 if (argTypePtr != NULL) {
                     JVM_SetArrayElement(env, paramTypes, k, *argTypePtr);
-                    // const JavaClassInfo* arginfo = GetJavaClassInfo(*argTypePtr);
-                    // printf("class name: %s\n", arginfo->name);
                 } else {
                     JVM_SetArrayElement(env, paramTypes, k, NULL);
                 }
@@ -840,9 +839,10 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
 
     const JavaClassInfo* info = GetJavaClassInfo(ofClass);
     if (info) {
+        const char* fieldArrType = "[Ljava.lang.reflect.Field;";
         // if primative class (int, boolean), return empty array
         if (JVM_IsPrimitiveClass(env, ofClass)) {
-            return getEmptyObjectArray();
+            return create1DArray(fieldArrType, 0);
         }
 
         jclass FieldsClass = env->FindClass("java.lang.reflect.Field");
@@ -850,7 +850,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
         // dw475 TODO take into account publiconly argument
 
         // non-static and static fields
-        jobjectArray ret = CreateJavaObjectArray(info->num_fields + info->num_static_fields);
+        jobjectArray ret = create1DArray(fieldArrType, info->num_fields + info->num_static_fields);
 
         JavaFieldInfo* fields = info->fields;
         JavaStaticFieldInfo* staticFields = info->static_fields;
@@ -931,7 +931,7 @@ JVM_GetClassDeclaredConstructors(JNIEnv *env, jclass ofClass, jboolean publicOnl
   //TODO actually implement this - the following doesn't work yet
   auto class_info = GetJavaClassInfo(ofClass);
   if (class_info == NULL) {
-    return CreateJavaObjectArray(0);
+    return create1DArray("[Ljava.lang.reflect.Constructor;", 0);
   } else {
     return GetJavaConstructors(ofClass, class_info, publicOnly);
   }
