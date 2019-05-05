@@ -115,5 +115,10 @@ clean:
 	@$(MAKE) -s -C $(JDK) clean
 	@$(MAKE) -s -C $(TESTDIR) clean
 	@$(MAKE) -s -C $(EXAMPLEDIR)/cup clean
+clean-test:
+	@echo "Cleaning compiler, runtime, and tests"
+	@ant -q -S clean
+	@$(MAKE) -s -C $(RUNTIME) clean
+	@$(MAKE) -s -C $(TESTDIR) clean
 
-.PHONY: compiler runtime jdk-classes jdk
+.PHONY: compiler runtime jdk-classes jdk clean-test

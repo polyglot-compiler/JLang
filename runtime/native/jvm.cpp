@@ -41,6 +41,16 @@
 #define MAX_PATH 2048
 #define ARRAY_CLS "jlang.runtime.Array"
 
+// vCode specified in openjdk/hotspot/src/share/vm/prims/jvm.h
+#define JVM_T_BOOLEAN 4
+#define JVM_T_CHAR    5
+#define JVM_T_FLOAT   6
+#define JVM_T_DOUBLE  7
+#define JVM_T_BYTE    8
+#define JVM_T_SHORT   9
+#define JVM_T_INT    10
+#define JVM_T_LONG   11
+
 static void JvmIgnore(const char* name) {
     fprintf(stderr,
         "WARNING: JVM method %s is unimplemented, but will not abort.\n", name);
