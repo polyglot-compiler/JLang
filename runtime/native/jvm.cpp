@@ -780,7 +780,7 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             jobjectArray paramTypes = create1DArray("[Ljava.lang.Class;", methods[i].numArgTypes);
             jclass returnType = NULL;
             jclass* returnTypePtr = methods[i].returnType;
-            if (returnTypePtr == NULL) {
+            if (returnTypePtr != NULL) {
                 returnType = *returnTypePtr;
             }
             for (int k = 0; k < methods[i].numArgTypes; k++) {
