@@ -13,6 +13,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <vector>
 #include "stack_trace.h"
 #include "class.h"
 #include "exception.h"
@@ -753,6 +754,25 @@ JVM_GetClassAnnotations(JNIEnv *env, jclass cls) {
 void FIELD_INIT_FUNC (jobject, jclass, jstring, jclass, jint, jint, jstring, jbyteArray);
 void METHOD_INIT_FUNC (jobject, jclass, jstring, jobjectArray, jclass, jobjectArray, jint, jint, jstring, jbyteArray, jbyteArray, jbyteArray);
 
+std::vector<std::string> parseMethodSig(const std::string& sig) {
+    std::vector<std::string> names;
+    for (int i = 0; i < sig.size(); ) {
+        int len;
+        if (sig[i] == '(' || sig[i] == ')') {
+            i++;
+            continue;
+        } else if (sig[i] == '[' || sig[i] == 'L') { // array or class
+            int end = sig.find(';', i);
+            len = end - i + 1;
+        } else { // primitive
+            len = 1;
+        }
+        names.push_back(SigToClassName(sig.substr(i, len)));
+        i += len;
+    }
+    return names;
+}
+
 jobjectArray
 JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
     const JavaClassInfo* info = GetJavaClassInfo(ofClass);
@@ -760,14 +780,14 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
         const char* methodArrType = "[Ljava.lang.reflect.Method;";
         // if primative class (int, boolean), return empty array
         if (JVM_IsPrimitiveClass(env, ofClass)) {
-            return create1DArray(methodArrType, 0);
+            return (jobjectArray)create1DArray(methodArrType, 0);
         }
 
         jclass MethodClass = env->FindClass("java.lang.reflect.Method");
 
         // dw475 TODO take into account publiconly argument
 
-        jobjectArray ret = create1DArray(methodArrType, info->num_methods);
+        jobjectArray ret = (jobjectArray)create1DArray(methodArrType, info->num_methods);
 
         JavaMethodInfo* methods = info->methods;
 
@@ -777,26 +797,31 @@ JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
             jstring nameString = env->NewStringUTF(methods[i].name);
             jint modifiers = methods[i].modifiers;
             jint slot = i;
-            jobjectArray paramTypes = create1DArray("[Ljava.lang.Class;", methods[i].numArgTypes);
-            jclass returnType = NULL;
-            jclass* returnTypePtr = methods[i].returnType;
-            if (returnTypePtr != NULL) {
-                returnType = *returnTypePtr;
+            std::vector<std::string> classNames = parseMethodSig(methods[i].sig);
+
+            if (methods[i].returnType == nullptr) {
+                methods[i].returnType = new jclass(GetJavaClassFromName(classNames.back().c_str()));
+            } else if (*methods[i].returnType == NULL) {
+                LoadJavaClassFromLib(classNames.back().c_str());
             }
+            jclass returnType = *methods[i].returnType;
+
+            jobjectArray paramTypes = (jobjectArray)create1DArray("[Ljava.lang.Class;", methods[i].numArgTypes);
             for (int k = 0; k < methods[i].numArgTypes; k++) {
-                jclass* argTypePtr = methods[i].argTypes[k];
-                if (argTypePtr != NULL) {
-                    JVM_SetArrayElement(env, paramTypes, k, *argTypePtr);
-                } else {
-                    JVM_SetArrayElement(env, paramTypes, k, NULL);
+                if (methods[i].argTypes[k] == nullptr) {
+                    methods[i].argTypes[k] = new jclass(GetJavaClassFromName(classNames[k].c_str()));
+                } else if (*methods[i].argTypes[k] == nullptr) {
+                    LoadJavaClassFromLib(classNames[k].c_str());
                 }
+                JVM_SetArrayElement(env, paramTypes, k, *methods[i].argTypes[k]);
             }
+
             jstring signature = env->NewStringUTF(methods[i].sig);
             // TODO need to get the proper values
             // call the method constructor
-            METHOD_INIT_FUNC(newMethod, ofClass, nameString, paramTypes, returnType, NULL, modifiers, slot, signature, NULL, NULL, NULL);
-            // add it to the array (backwards rn to pass tests)
-            JVM_SetArrayElement(env, ret, info->num_methods-i-1, newMethod);
+            METHOD_INIT_FUNC(newMethod, ofClass, nameString, paramTypes, returnType, NULL, modifiers, slot, NULL, NULL, NULL, NULL);
+
+            JVM_SetArrayElement(env, ret, i, newMethod);
         }
 
         return ret;
@@ -809,25 +834,9 @@ static std::unordered_map<jclass, jobjectArray> fieldsCache;
 static jobjectArray _EmptyObjectArray = NULL;
 jobjectArray getEmptyObjectArray() {
     if (_EmptyObjectArray == NULL) {
-        _EmptyObjectArray = CreateJavaObjectArray(0);
+        _EmptyObjectArray = (jobjectArray)CreateJavaObjectArray(0);
     }
     return _EmptyObjectArray;
-}
-
-// Convert a jni type signature to its class name.
-// len specifies the length of the signature string including the null terminator.
-// className is required to point to a char array of length len.
-// Rules: replace all slashes with dots.
-// e.g. [Ljava/lang/String; -> [Ljava.lang.String;
-void ConvertSignatureToClassName(char *className, const char *signature, int len) {
-    for (int i = 0; i < len; i++)
-    {
-        if (signature[i] == '/') {
-            className[i] = '.';
-        } else {
-            className[i] = signature[i];
-        }
-    }
 }
 
 jobjectArray
@@ -842,7 +851,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
         const char* fieldArrType = "[Ljava.lang.reflect.Field;";
         // if primative class (int, boolean), return empty array
         if (JVM_IsPrimitiveClass(env, ofClass)) {
-            return create1DArray(fieldArrType, 0);
+            return (jobjectArray)create1DArray(fieldArrType, 0);
         }
 
         jclass FieldsClass = env->FindClass("java.lang.reflect.Field");
@@ -850,7 +859,7 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
         // dw475 TODO take into account publiconly argument
 
         // non-static and static fields
-        jobjectArray ret = create1DArray(fieldArrType, info->num_fields + info->num_static_fields);
+        jobjectArray ret = (jobjectArray)create1DArray(fieldArrType, info->num_fields + info->num_static_fields);
 
         JavaFieldInfo* fields = info->fields;
         JavaStaticFieldInfo* staticFields = info->static_fields;
@@ -885,21 +894,13 @@ JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly) {
                 if (!isArrayClassName(signature)) {
                     printf("WARNING: Non-Array field has null type_ptr\n");
                 }
-                int len = strlen(signature) + 1;
-                char className[len];
-                ConvertSignatureToClassName(className, signature, len);
-                *typePtrPtr = new jclass(GetJavaClassFromName(className));
+                std::string className = SigToClassName(signature);
+                *typePtrPtr = new jclass(GetJavaClassFromName(className.c_str()));
             } else if (**typePtrPtr == nullptr) {
                 // The typeClass that type_ptr points to has not initialized yet.
                 // Call the class loading function to load it.
-                int len = strlen(signature) + 1 - 2; // get rid of head (L) and tail (;)
-                if (len <= 1) {
-                    printf("WARNING: Primitive class is not initialized correctly\n");
-                }
-                char className[len];
-                ConvertSignatureToClassName(className, signature + 1, len);
-                className[len - 1] = '\0';
-                LoadJavaClassFromLib(className);
+                std::string className = SigToClassName(signature);
+                LoadJavaClassFromLib(className.c_str());
                 if (**typePtrPtr == nullptr) {
                     printf("WARNING: Class is not loaded correctly\n");
                 }
@@ -931,7 +932,7 @@ JVM_GetClassDeclaredConstructors(JNIEnv *env, jclass ofClass, jboolean publicOnl
   //TODO actually implement this - the following doesn't work yet
   auto class_info = GetJavaClassInfo(ofClass);
   if (class_info == NULL) {
-    return create1DArray("[Ljava.lang.reflect.Constructor;", 0);
+    return (jobjectArray)create1DArray("[Ljava.lang.reflect.Constructor;", 0);
   } else {
     return GetJavaConstructors(ofClass, class_info, publicOnly);
   }

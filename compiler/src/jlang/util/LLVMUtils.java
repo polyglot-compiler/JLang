@@ -776,23 +776,29 @@ public class LLVMUtils {
         return LLVMConstNamedStruct(type, valArr, values.length);
     }
 
-    public LLVMValueRef buildAnonGlobal(LLVMValueRef val) {
+    public LLVMValueRef buildAnonGlobal(LLVMValueRef val, boolean IsConstant) {
         LLVMValueRef var = getGlobal("", LLVMTypeOf(val));
         LLVMSetInitializer(var, val);
-        LLVMSetGlobalConstant(var, 1);
+        LLVMSetGlobalConstant(var, IsConstant ? 1 : 0);
         LLVMSetLinkage(var, LLVMPrivateLinkage);
         return var;
     }
 
     public LLVMValueRef buildGlobalArrayAsPtr(LLVMTypeRef elemType, LLVMValueRef[] values) {
         LLVMValueRef arr = buildConstArray(elemType, values);
-        LLVMValueRef global = buildAnonGlobal(arr);
+        LLVMValueRef global = buildAnonGlobal(arr, false);
+        return v.utils.buildGEP(global, 0, 0);
+    }
+
+    public LLVMValueRef buildGlobalConstArrayAsPtr(LLVMTypeRef elemType, LLVMValueRef[] values) {
+        LLVMValueRef arr = buildConstArray(elemType, values);
+        LLVMValueRef global = buildAnonGlobal(arr, true);
         return v.utils.buildGEP(global, 0, 0);
     }
 
     public LLVMValueRef buildGlobalCStr(String str) {
         LLVMValueRef val = LLVMConstStringInContext(v.context, str, str.length(), 0);
-        LLVMValueRef global = buildAnonGlobal(val);
+        LLVMValueRef global = buildAnonGlobal(val, true);
         return v.utils.buildGEP(global, 0, 0);
     }
 

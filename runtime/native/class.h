@@ -13,6 +13,7 @@
 #include "jni.h"
 #include <stdint.h>
 #include <utility>
+#include <string>
 #include "rep.h"
 
 #define IS_STATIC_METHOD(minfo) ((minfo)->offset == -1)
@@ -133,6 +134,8 @@ jclass GetComponentClass(jclass cls);
 char primitiveNameToComponentName(const char* name);
 
 int arrayRepSize(jclass cls);
+
+std::string SigToClassName(const std::string& sig);
 
 jarray create1DArray(const char* arrType, int len);
 

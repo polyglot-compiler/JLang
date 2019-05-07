@@ -154,26 +154,26 @@ public class JLangClassDeclExt extends JLangExt {
                 LLVMConstInt(v.utils.i32(), interfaceInfoElems.length, /*sign-extend*/ 0),
 
                 // Implemented Interface Pointers, jclass**
-                v.utils.buildGlobalArrayAsPtr(v.utils.ptrTypeRef(classType),
+                v.utils.buildGlobalConstArrayAsPtr(v.utils.ptrTypeRef(classType),
                 		interfaceInfoElems),
 
                 // Number of instance fields, i32
                 LLVMConstInt(v.utils.i32(), fieldInfoElems.length, /*sign-extend*/ 0),
 
                 // Instance fields, { char* name, int32_t offset }
-                v.utils.buildGlobalArrayAsPtr(fieldInfoType, fieldInfoElems),
+                v.utils.buildGlobalConstArrayAsPtr(fieldInfoType, fieldInfoElems),
 
                 // Number of static fields, i32
                 LLVMConstInt(v.utils.i32(), staticFieldElems.length, /*sign-extend*/ 0),
 
                 // Static fields, { char* name, void* ptr }
-                v.utils.buildGlobalArrayAsPtr(staticFieldType, staticFieldElems),
+                v.utils.buildGlobalConstArrayAsPtr(staticFieldType, staticFieldElems),
 
                 // Number of methods, i32
                 LLVMConstInt(v.utils.i32(), methodInfoElems.length, /*sign-extend*/ 0),
 
                 // Methods, { char* name, char* sig, int32_t offset, void* fnPtr, void* trampoline }
-                v.utils.buildGlobalArrayAsPtr(methodInfoType, methodInfoElems)
+                v.utils.buildGlobalConstArrayAsPtr(methodInfoType, methodInfoElems)
 
 
         );

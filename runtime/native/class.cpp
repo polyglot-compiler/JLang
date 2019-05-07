@@ -12,6 +12,8 @@
 #include <dlfcn.h>
 #include <stdio.h>
 #include <gc.h>
+#include <algorithm>
+#include <stdexcept>
 #include "jni.h"
 #include "jvm.h"
 #include "class.h"
@@ -436,10 +438,47 @@ jclass GetComponentClass(jclass cls) {
   return NULL;
 }
 
+// Convert a jni type signature to its class name.
+// len specifies the length of the signature string including the null terminator.
+// className is required to point to a char array of length len.
+// Rules: replace all slashes with dots.
+// e.g. [Ljava/lang/String; -> [Ljava.lang.String;
+std::string SigToClassName(const std::string& sig) {
+  if (sig[0] == '[') { // array
+    std::string name(sig);
+    std::replace(name.begin(), name.end(), '/', '.');
+    return name;
+  } else if (sig[0] == 'L') { // class
+    // get rid of head (L) and tail (;)
+    std::string name = sig.substr(1, sig.size() - 2);
+    std::replace(name.begin(), name.end(), '/', '.');
+    return name;
+  } else if (sig == "I") { // primitive type
+    return "int";
+  } else if (sig == "B") {
+    return "byte";
+  } else if (sig == "S") {
+    return "short";
+  } else if (sig == "J") {
+    return "long";
+  } else if (sig == "F") {
+    return "float";
+  } else if (sig == "D") {
+    return "double";
+  } else if (sig == "C") {
+    return "char";
+  } else if (sig == "Z") {
+    return "boolean";
+  } else if (sig == "V") {
+    return "void";
+  }
+  throw std::invalid_argument("invalid signature to be converted: " + sig);
+}
+
 /**
  * Helper function to initialize an array in runtime. 
  */
-JArrayRep* initArrayHelper(const char* arrType, int* len, int depth) {
+JArrayRep* createArrayHelper(const char* arrType, int* len, int depth) {
   const char* componentName = getComponentName(arrType);
   DispatchVector* cdv = GetJavaCdvFromName(arrType);
 
@@ -461,14 +500,14 @@ JArrayRep* initArrayHelper(const char* arrType, int* len, int depth) {
   if (depth > 1) {
     void** data = (void**)arr->Data();
     for (int i = 0; i < (*len); ++i) {
-      data[i] = (void*)initArrayHelper(componentName, len + 1, depth - 1);
+      data[i] = (void*)createArrayHelper(componentName, len + 1, depth - 1);
     }
   }
   return arr;
 }
 
 jarray createArray(const char* arrType, int* len, int sizeOfLen) {
-  JArrayRep* arr = initArrayHelper(arrType, len, sizeOfLen);
+  JArrayRep* arr = createArrayHelper(arrType, len, sizeOfLen);
   return arr->Wrap();
 }
 
