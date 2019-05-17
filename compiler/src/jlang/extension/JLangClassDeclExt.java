@@ -167,7 +167,7 @@ public class JLangClassDeclExt extends JLangExt {
                 LLVMConstInt(v.utils.i32(), staticFieldElems.length, /*sign-extend*/ 0),
 
                 // Static fields, { char* name, void* ptr }
-                v.utils.buildGlobalConstArrayAsPtr(staticFieldType, staticFieldElems),
+                v.utils.buildGlobalArrayAsPtr(staticFieldType, staticFieldElems),
 
                 // Number of methods, i32
                 LLVMConstInt(v.utils.i32(), methodInfoElems.length, /*sign-extend*/ 0),
