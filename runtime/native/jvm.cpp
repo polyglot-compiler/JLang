@@ -756,19 +756,24 @@ void METHOD_INIT_FUNC (jobject, jclass, jstring, jobjectArray, jclass, jobjectAr
 
 std::vector<std::string> parseMethodSig(const std::string& sig) {
     std::vector<std::string> names;
+    int start = 0;
     for (int i = 0; i < sig.size(); ) {
-        int len;
+        int end;
         if (sig[i] == '(' || sig[i] == ')') {
             i++;
+            start = i;
             continue;
-        } else if (sig[i] == '[' || sig[i] == 'L') { // array or class
-            int end = sig.find(';', i);
-            len = end - i + 1;
+        } else if (sig[i] == '[') { // array
+            i++;
+            continue;
+        } else if (sig[i] == 'L') { // class
+            end = sig.find(';', i);
         } else { // primitive
-            len = 1;
+            end = i;
         }
-        names.push_back(SigToClassName(sig.substr(i, len)));
-        i += len;
+        names.push_back(SigToClassName(sig.substr(start, end - start + 1)));
+        i = end + 1;
+        start = i;
     }
     return names;
 }
