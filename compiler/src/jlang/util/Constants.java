@@ -14,7 +14,6 @@ public class Constants {
     public static final String RUNTIME_PACKAGE = "jlang.runtime";
     public static final String RUNTIME_HELPER = RUNTIME_PACKAGE + ".Helper";
     public static final String RUNTIME_ARRAY = RUNTIME_PACKAGE + ".Array";
-    public static final String RUNTIME_ARRAY_TYPE = RUNTIME_ARRAY + ".Type";
 
     public static final String PRIMITIVE_CLASS_OBJECT_SUFFIX = "ClassObject";
 
@@ -31,8 +30,10 @@ public class Constants {
     public static final String CREATE_EXCEPTION = "createUnwindException";
     public static final String THROW_EXCEPTION = "throwUnwindException";
     public static final String EXTRACT_EXCEPTION = "extractJavaExceptionObject";
+    public static final String CREATE_ARRAY = "createArray";
+    public static final String CREATE_1D_ARRAY = "create1DArray";
     public static final String RESUME_UNWIND_EXCEPTION = "_Unwind_Resume";
-
+  
     public static final Set<String> NON_INVOKE_FUNCTIONS = new HashSet<>(CollectionUtil.list(
             CALLOC, CREATE_EXCEPTION, EXTRACT_EXCEPTION
     ));

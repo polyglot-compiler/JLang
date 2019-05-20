@@ -11,11 +11,16 @@
 #include <string>
 #include <dlfcn.h>
 #include <stdio.h>
+#include <gc.h>
+#include <algorithm>
+#include <stdexcept>
 #include "jni.h"
 #include "jvm.h"
 #include "class.h"
 #include "rep.h"
-#include "object_array.h"
+#include "base_class.h"
+#include "array.h"
+#include "constants.h"
 
 #define MEMCPY(a,b,c) memcpy((void *) a, (void *) b, c)
 static constexpr bool kDebug = false;
@@ -72,11 +77,10 @@ PRIM_CLASS_DEF(void)
 // dw475 TODO should copy over sync vars
 #define REGISTER_PRIM_CLASS(prim) \
   PRIM_CLASS(prim, Klass) = (JClassRep*)malloc(classSize); \
-  memcpy(PRIM_CLASS(prim, Klass), globalArrayKlass, sizeof(JClassRep)); \
+  memcpy(PRIM_CLASS(prim, Klass), baseClass, classSize); \
   Polyglot_native_##prim = reinterpret_cast<jclass>(PRIM_CLASS(prim, Klass)); \
   PRIM_REGISTER(prim);
 
-static bool primKlassInit = false;
 static int classSize = 0;
 
 // Define class references for JLang compiler
@@ -89,18 +93,6 @@ jclass Polyglot_native_double;
 jclass Polyglot_native_char;
 jclass Polyglot_native_boolean;
 jclass Polyglot_native_void;
-
-// This should be fine because the type pointers will never be null
-// dw475 TODO add register primatives as load function
-jclass* Polyglot_native_int_class_type_info = &Polyglot_native_int;
-jclass* Polyglot_native_byte_class_type_info = &Polyglot_native_byte;
-jclass* Polyglot_native_short_class_type_info = &Polyglot_native_short;
-jclass* Polyglot_native_long_class_type_info = &Polyglot_native_long;
-jclass* Polyglot_native_float_class_type_info = &Polyglot_native_float;
-jclass* Polyglot_native_double_class_type_info = &Polyglot_native_double;
-jclass* Polyglot_native_char_class_type_info = &Polyglot_native_char;
-jclass* Polyglot_native_boolean_class_type_info = &Polyglot_native_boolean;
-jclass* Polyglot_native_void_class_type_info = &Polyglot_native_void;
 
 // For simplicity we store class information in a map.
 // If we find this to be too slow, we could allocate extra memory for
@@ -214,43 +206,54 @@ const jclass initArrayClass(const char* name) {
     printf("WARNING: class size not yet initialized\n");
     jclass_size = sizeof(JClassRep);
   }
-  jclass globalArrayKlass = getArrayKlass();
+
+  // create base array class and its info.
+  jclass runtimeArrayClass = getRuntimeArrayClass();
   jclass newKlazz = (jclass)malloc(jclass_size);
-  memcpy(newKlazz, globalArrayKlass, sizeof(JClassRep));
+  memcpy(newKlazz, runtimeArrayClass, jclass_size);
   JavaClassInfo* newInfo = (JavaClassInfo*)malloc(sizeof(JavaClassInfo));
-  memcpy(newInfo, GetJavaClassInfo(globalArrayKlass), sizeof(JavaClassInfo));
+  memcpy(newInfo, GetJavaClassInfo(runtimeArrayClass), sizeof(JavaClassInfo));
+
+  // init and set name.
   int nameLen = strlen(name) + 1; //add the '\0' terminator
   char* newName = (char*)malloc(nameLen);
   memcpy(newName, name, nameLen);
   newInfo->name = newName;
+
+  // init and set obj_size.
+  newInfo->obj_size = sizeof(JArrayRep);
+
+  // zero out fields and methods runtime information to conform
+  // the reflectio behavior of Array. See jlang.runtime.Array 
+  // for a more detailed explanation.
+  newInfo->num_fields = 0;
+  newInfo->fields = nullptr;
+  newInfo->num_static_fields = 0;
+  newInfo->static_fields = nullptr;
+  newInfo->num_methods = 0;
+  newInfo->methods = nullptr;
+
+  // init and set cdv/
+  int numOfCdv = getNumOfRuntimeArrayCdvMethods();
+  DispatchVector* runtimeArrayCdv = getRuntimeArrayCdv();
+  int runtimeArrayCdvSize = sizeof(DispatchVector) + numOfCdv * sizeof(void*);
+  DispatchVector* newCdv = (DispatchVector*)malloc(runtimeArrayCdvSize);
+  memcpy(newCdv, runtimeArrayCdv, runtimeArrayCdvSize);
+  newCdv->SetClassPtr(new JClassRep*(Unwrap(newKlazz)));
+  newInfo->cdv = (void*)newCdv;
+
   RegisterJavaClass(newKlazz, newInfo);
   return newKlazz;
 }
-
-bool registeringClass = false;
 
 /**
  * Register the primative classes
  */
 const void RegisterPrimitiveClasses() {
-  // avoid reentrance when registering the Class class
-  // could avoid this by always loading the Class class in main
-  // but this preserves laziness and appears to be same
-  if (registeringClass) return;
 
-  jclass globalArrayKlass = getArrayKlass();
-
-  jclass ClassClass = NULL;
-  try {
-    ClassClass = cnames.at(std::string("java.lang.Class"));
-  } catch (const std::out_of_range& oor) {
-    registeringClass = true;
-    ClassClass = LoadJavaClassFromLib("java.lang.Class");
-    registeringClass = false;
-  }
-  const JavaClassInfo* cinfo = GetJavaClassInfo(ClassClass);
-  classSize = cinfo->obj_size;
-
+  jclass baseClass = getBaseClass();
+  classSize = getClassSize();
+  
   REGISTER_PRIM_CLASS(int)
 
   REGISTER_PRIM_CLASS(byte)
@@ -289,6 +292,34 @@ jclass primitiveComponentNameToClass(const char* name) {
 }
 
 /**
+ * Returns the component name for the given primitive type name.
+ * If it is not a primitive type name, return '\0'.
+ * 
+ * e.g. "int" -> 'I', "byte" -> 'B', "java.lang.Object" -> '\0'
+ */
+char primitiveNameToComponentName(const char* name) {
+  PRIM_NAME_CHECK(name, "int") 
+    return 'I';
+  } else PRIM_NAME_CHECK(name, "byte")
+    return 'B';
+  } else PRIM_NAME_CHECK(name, "short")
+    return 'S';
+  } else PRIM_NAME_CHECK(name, "long")
+    return 'J';
+  } else PRIM_NAME_CHECK(name, "float")
+    return 'F';
+  } else PRIM_NAME_CHECK(name, "double")
+    return 'D';
+  } else PRIM_NAME_CHECK(name, "char")
+    return 'C';
+  } else PRIM_NAME_CHECK(name, "boolean")
+    return 'Z';
+  } else {
+    return '\0';
+  }
+}
+
+/**
  * Returns true of the given class object points to a
  * primative class object
  */
@@ -309,17 +340,18 @@ bool isPrimitiveClass(jclass cls) {
 
 /**
  * Returns the number of bytes used to store the given type in an array
+ * It respects size defined in LLVMUtils.sizeOfType(Type t).
  */
 int arrayRepSize(jclass cls) {
-  PRIM_KLASS_SIZE(cls, int, sizeof(int))
-  } else PRIM_KLASS_SIZE(cls, byte, sizeof(char))
-  } else PRIM_KLASS_SIZE(cls, short, sizeof(short))	
-  } else PRIM_KLASS_SIZE(cls, long, sizeof(long))
-  } else PRIM_KLASS_SIZE(cls, float, sizeof(float))
-  } else PRIM_KLASS_SIZE(cls, double, sizeof(double))
-  } else PRIM_KLASS_SIZE(cls, char, sizeof(char))
-  } else PRIM_KLASS_SIZE(cls, boolean, sizeof(char))
-  } else PRIM_KLASS_SIZE(cls, void, sizeof(void*))
+  PRIM_KLASS_SIZE(cls, int, 4)
+  } else PRIM_KLASS_SIZE(cls, byte, 1)
+  } else PRIM_KLASS_SIZE(cls, short, 2)	
+  } else PRIM_KLASS_SIZE(cls, long, 8)
+  } else PRIM_KLASS_SIZE(cls, float, 4)
+  } else PRIM_KLASS_SIZE(cls, double, 8)
+  } else PRIM_KLASS_SIZE(cls, char, 2)
+  } else PRIM_KLASS_SIZE(cls, boolean, 1)
+  } else PRIM_KLASS_SIZE(cls, void, 8)
   } else {
      return sizeof(void*);
   }
@@ -328,10 +360,6 @@ int arrayRepSize(jclass cls) {
  * Returns the class info object for the given java class object
  */
 const JavaClassInfo* GetJavaClassInfo(jclass cls) {
-  if (!primKlassInit) {
-    RegisterPrimitiveClasses();
-    primKlassInit = true;
-  }
   try {
     return classes.at(cls);
   } catch (const std::out_of_range& oor) {
@@ -364,21 +392,21 @@ const jclass GetJavaClassFromPathName(const char* name) {
  * Example: java.lang.Class returns the Class class object
  */
 const jclass GetJavaClassFromName(const char* name) {
-  // printf("get from name: %s\n", name);
-  if (!primKlassInit) {
-    RegisterPrimitiveClasses();
-    primKlassInit = true;
-  }
   try {
     return cnames.at(std::string(name));
   } catch (const std::out_of_range& oor) {
     if (isArrayClassName(name)) {
-      // printf("init array class: %s\n", name);
       return initArrayClass(name);
     } else {
       return NULL;
     }
   }
+}
+
+DispatchVector* GetJavaCdvFromName(const char* name) {
+  jclass clazz = GetJavaClassFromName(name);
+  const JavaClassInfo* info = GetJavaClassInfo(clazz);
+  return (DispatchVector*)info->cdv;
 }
 
 /**
@@ -390,16 +418,119 @@ jclass GetComponentClass(jclass cls) {
   if (isArrayClass(cls)) {
     const JavaClassInfo* info = GetJavaClassInfo(cls);
     if (info != NULL) {
-      const char* className = getComponentName(info->name);
-      jclass primComponent = primitiveComponentNameToClass(className);
+      const char* componentName = getComponentName(info->name);
+      jclass primComponent = primitiveComponentNameToClass(componentName);
       if (primComponent == NULL) {
-	return GetJavaClassFromName(className);
+        if (isArrayClassName(componentName)) {
+  	      return GetJavaClassFromName(componentName);
+        } else {
+          int len = strlen(componentName) - 2;
+          char className[len + 1];
+          strncpy(className, componentName + 1, len);
+          className[len] = '\0';
+          return GetJavaClassFromName(className);
+        }
       } else {
-	return primComponent;
+	      return primComponent;
       }
     }
   }
   return NULL;
+}
+
+// Convert a jni type signature to its class name.
+// len specifies the length of the signature string including the null terminator.
+// className is required to point to a char array of length len.
+// Rules: replace all slashes with dots.
+// e.g. [Ljava/lang/String; -> [Ljava.lang.String;
+std::string SigToClassName(const std::string& sig) {
+  if (sig[0] == '[') { // array
+    std::string name(sig);
+    std::replace(name.begin(), name.end(), '/', '.');
+    return name;
+  } else if (sig[0] == 'L') { // class
+    // get rid of head (L) and tail (;)
+    std::string name = sig.substr(1, sig.size() - 2);
+    std::replace(name.begin(), name.end(), '/', '.');
+    return name;
+  } else if (sig == "I") { // primitive type
+    return "int";
+  } else if (sig == "B") {
+    return "byte";
+  } else if (sig == "S") {
+    return "short";
+  } else if (sig == "J") {
+    return "long";
+  } else if (sig == "F") {
+    return "float";
+  } else if (sig == "D") {
+    return "double";
+  } else if (sig == "C") {
+    return "char";
+  } else if (sig == "Z") {
+    return "boolean";
+  } else if (sig == "V") {
+    return "void";
+  }
+  throw std::invalid_argument("invalid signature to be converted: " + sig);
+}
+
+/**
+ * Helper function to initialize an array in runtime. 
+ */
+JArrayRep* createArrayHelper(const char* arrType, int* len, int depth) {
+  const char* componentName = getComponentName(arrType);
+  DispatchVector* cdv = GetJavaCdvFromName(arrType);
+
+  jclass primComponent = primitiveComponentNameToClass(componentName);
+  int elementSize;
+  if (primComponent == NULL) {
+    // any array or reference type
+    elementSize = sizeof(void*);
+  } else {
+    elementSize = arrayRepSize(primComponent);
+  }
+
+  JArrayRep* arr = (JArrayRep*)GC_MALLOC(sizeof(JArrayRep) + elementSize * (*len));
+  arr->Super()->SetCdv(cdv);
+  arr->SetLength(*len);
+  arr->SetElemSize(elementSize);
+  // initialize elements when it is not leaf.
+  // For leaf array, elements are 0 for all types. 
+  if (depth > 1) {
+    void** data = (void**)arr->Data();
+    for (int i = 0; i < (*len); ++i) {
+      data[i] = (void*)createArrayHelper(componentName, len + 1, depth - 1);
+    }
+  }
+  return arr;
+}
+
+jarray createArray(const char* arrType, int* len, int sizeOfLen) {
+  JArrayRep* arr = createArrayHelper(arrType, len, sizeOfLen);
+  return arr->Wrap();
+}
+
+// TODO: Or pass length as a pointer and discard 1D array special case
+jarray create1DArray(const char* arrType, int len) {
+  const char* componentName = getComponentName(arrType);
+  DispatchVector* cdv = GetJavaCdvFromName(arrType);
+
+  jclass primComponent = primitiveComponentNameToClass(componentName);
+  int elementSize;
+  if (primComponent == NULL) {
+    // any array or reference type
+    elementSize = sizeof(void*);
+  } else {
+    elementSize = arrayRepSize(primComponent);
+  }
+
+  JArrayRep* arr = (JArrayRep*)GC_MALLOC(sizeof(JArrayRep) + elementSize * len);
+  arr->Super()->SetCdv(cdv);
+  arr->SetLength(len);
+  arr->SetElemSize(elementSize);
+
+  return arr->Wrap();
 }
 
 /**

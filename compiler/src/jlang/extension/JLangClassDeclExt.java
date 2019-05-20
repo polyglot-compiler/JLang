@@ -2,6 +2,7 @@
 
 package jlang.extension;
 
+import jlang.types.JLangParsedClassType_c;
 import org.bytedeco.javacpp.LLVM;
 import org.bytedeco.javacpp.LLVM.*;
 
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static jlang.util.Constants.REGISTER_CLASS_FUNC;
+import static jlang.util.Constants.RUNTIME_ARRAY;
 import static org.bytedeco.javacpp.LLVM.*;
 
 public class JLangClassDeclExt extends JLangExt {
@@ -36,28 +38,10 @@ public class JLangClassDeclExt extends JLangExt {
         if (erasedType.isPrimitive()) {
             LLVMValueRef primPtr = v.utils.getGlobal("Polyglot_native_"+erasedType.toString(), v.utils.toLL(v.ts.Class()));
             return v.utils.buildCastToBytePtr(primPtr);
+        } else if (erasedType.equalsImpl(v.ts.ArrayObject())) {
+            return LLVMConstNull(v.utils.i8Ptr());
         } else {
             return v.utils.buildCastToBytePtr(v.utils.getClassObjectGlobal(erasedType.toClass()));
-        }
-    }
-
-    private static LLVMValueRef getClassTypeInfoPointer(LLVMTranslator v, Type t) {
-        LLVM.LLVMTypeRef loadFuncType = v.utils.ptrTypeRef(v.utils.functionType(v.utils.toLL(v.ts.Class())));
-
-        LLVM.LLVMTypeRef classType = v.utils.ptrTypeRef(v.utils.toLL(v.ts.Class()));
-        // add a global class type info struct
-        LLVM.LLVMTypeRef classTypeInfo = v.utils.structType(
-                classType,    // type_ptr
-                loadFuncType     // init pointer
-        );
-        Type erasedType = v.utils.erasureLL(t);
-        if (erasedType.isPrimitive()) {
-            LLVMValueRef primPtr = v.utils.getGlobal("Polyglot_native_"+erasedType.toString()+"_class_type_info", classTypeInfo);
-            return v.utils.buildCastToBytePtr(primPtr);
-        } else {
-            String classTypeInfoMangled = v.mangler.classTypeInfoObj(erasedType.toClass());
-            LLVMValueRef clazzGlobal = v.utils.getGlobal(classTypeInfoMangled, classTypeInfo);
-            return v.utils.buildCastToBytePtr(clazzGlobal);
         }
     }
 
@@ -83,7 +67,7 @@ public class JLangClassDeclExt extends JLangExt {
                 v.utils.i8Ptr(), // char* name
                 v.utils.i32(),    // int32_t offset
                 v.utils.i32(),    // int32_t modifiers
-                v.utils.i8Ptr(), // class_type_info*
+                v.utils.i8Ptr(), // type_ptr*
                 v.utils.i8Ptr() // char* sig
         );
         LLVMValueRef[] fieldInfoElems = ct.fields().stream().filter(fi -> !fi.flags().isStatic())
@@ -93,9 +77,9 @@ public class JLangClassDeclExt extends JLangExt {
             		LLVMValueRef gep = v.obj.buildFieldElementPtr(nullPtr, fi);
             		LLVMValueRef offset = LLVMConstPtrToInt(gep, v.utils.i32());
                     LLVMValueRef modifiers = LLVMConstInt(v.utils.i32(), fi.flags().toModifiers(), 1);
-                    LLVMValueRef typeClassInfo = getClassTypeInfoPointer(v, fi.type());
+                    LLVMValueRef typeClass = getTypePointer(v, fi.type());
                     LLVMValueRef signature = v.utils.buildGlobalCStr(v.mangler.jniUnescapedSignature(fi.type()));
-                    return v.utils.buildConstStruct(name, offset, modifiers, typeClassInfo, signature);
+                    return v.utils.buildConstStruct(name, offset, modifiers, typeClass, signature);
             	})
             	.toArray(LLVMValueRef[]::new);
 
@@ -104,8 +88,8 @@ public class JLangClassDeclExt extends JLangExt {
         		v.utils.i8Ptr(), // char* name
         		v.utils.i8Ptr(), // char* sig (field type)
         		v.utils.i8Ptr(), //  void* to field, stored as global var
-                v.utils.i32(),    // int32_t modifiers
-                v.utils.i8Ptr() // class_type_info*
+                v.utils.i32(),   // int32_t modifiers
+                v.utils.i8Ptr() // type_ptr*
         );
 
         LLVMValueRef[] staticFieldElems = ct.fields().stream().filter(fi -> fi.flags().isStatic())
@@ -115,8 +99,8 @@ public class JLangClassDeclExt extends JLangExt {
             		LLVMValueRef ptr = v.utils.getStaticField(fi);
             		LLVMValueRef staticPtr = LLVMConstBitCast(ptr, v.utils.i8Ptr());
                     LLVMValueRef modifiers = LLVMConstInt(v.utils.i32(), fi.flags().toModifiers(), 1);
-                    LLVMValueRef typeClassInfo = getClassTypeInfoPointer(v, fi.type());
-            		return v.utils.buildConstStruct(name, signature, staticPtr, modifiers, typeClassInfo);
+                    LLVMValueRef typeClass = getTypePointer(v, fi.type());
+            		return v.utils.buildConstStruct(name, signature, staticPtr, modifiers, typeClass);
             	})
             	.toArray(LLVMValueRef[]::new);
 
@@ -170,7 +154,7 @@ public class JLangClassDeclExt extends JLangExt {
                 LLVMConstInt(v.utils.i32(), interfaceInfoElems.length, /*sign-extend*/ 0),
 
                 // Implemented Interface Pointers, jclass**
-                v.utils.buildGlobalArrayAsPtr(v.utils.ptrTypeRef(classType),
+                v.utils.buildGlobalConstArrayAsPtr(v.utils.ptrTypeRef(classType),
                 		interfaceInfoElems),
 
                 // Number of instance fields, i32
@@ -351,31 +335,6 @@ public class JLangClassDeclExt extends JLangExt {
 
         v.classObjs.toTypeIdentity(ct, /*extern*/ false);
         buildClassLoadingFunc(v, ct, cb);
-
-        // make type info object
-        LLVM.LLVMTypeRef loadFuncType = v.utils.ptrTypeRef(v.utils.functionType(v.utils.toLL(v.ts.Class())));
-        LLVM.LLVMTypeRef classType = v.utils.ptrTypeRef(v.utils.toLL(v.ts.Class()));
-        // add a global classInfo struct
-        LLVM.LLVMTypeRef classTypeInfo = v.utils.structType(
-               classType,    // type_ptr
-               loadFuncType     // init pointer
-        );
-        // get the variable name
-        String typeInfoMangled = v.mangler.classTypeInfoObj(ct);
-        // make it a global
-        LLVMValueRef typeInfoGlobal = v.utils.getGlobal(typeInfoMangled, classTypeInfo);
-        // get the function name
-        String funcName = v.mangler.classLoadingFunc(ct);
-        // get the function pointer
-        LLVMValueRef func = v.utils.getFunction(funcName, loadFuncType);
-        // get the type pointer
-        LLVMValueRef typePtr = v.utils.getGlobal(v.mangler.classObj(ct), classType);
-        // build the type info struct
-        LLVMValueRef typeInfoStruct = v.utils.buildConstStruct(typePtr, func);
-        // set initializers (externally init = 0/false)
-        LLVMSetExternallyInitialized(typeInfoGlobal, 0);
-        LLVMSetInitializer(typeInfoGlobal, typeInfoStruct);
-        LLVMSetLinkage(typeInfoGlobal, LLVMLinkOnceODRLinkage);
 
         if (ct.flags().isInterface()) {
             // Interfaces don't have the remaining class data structure.

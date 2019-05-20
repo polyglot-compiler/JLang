@@ -28,6 +28,9 @@ public interface ObjectStruct {
     /** Returns the size (in bytes) of the given class. */
     LLVMValueRef sizeOf(ReferenceType rt);
 
+    /** Returns the size (in bytes) of the given class. */
+    int sizeOfObj(ReferenceType rt);
+
     /** Returns a pointer to the dispatch dispatch vector. */
     LLVMValueRef buildDispatchVectorElementPtr(LLVMValueRef instance, ReferenceType rt);
 

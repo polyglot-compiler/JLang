@@ -324,7 +324,7 @@ GetJavaConstructors(jclass clazz, const JavaClassInfo* info, jboolean publicOnly
 	ctor_count++;
       }
     }
-    jobjectArray res = CreateJavaObjectArray(ctor_count);
+    jobjectArray res = (jobjectArray)create1DArray("[Ljava.lang.reflect.Constructor;", ctor_count);
     int ctors_copied = 0;
     for (int i = 0; ctors_copied < ctor_count; i++) {
       if (IS_CONSTRUCTOR(&(info->methods[i]))) {

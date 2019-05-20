@@ -54,7 +54,7 @@ public class FieldReflection {
       System.out.println(fld.getType());
       System.out.println(fld.get(aaa));
       // TODO fix something with generics
-      System.out.println(fld.getGenericType());
+      // System.out.println(fld.getGenericType());
 
       if (fld.getName().equals("a")) {
         fld.setInt(aaa, 123412);
@@ -123,7 +123,6 @@ public class FieldReflection {
     a = i;
     s = "A string";
     b = j;
-    sarr = new String[]{"one", "two"};
   }
 
   static class FieldReflectionGen<T> {

@@ -1,0 +1,22 @@
+--- src.orig/sun/reflect/UnsafeFieldAccessorImpl.java	2019-05-18 20:59:00.000000000 +0800
++++ src/sun/reflect/UnsafeFieldAccessorImpl.java	2019-05-18 21:02:07.000000000 +0800
+@@ -40,12 +40,17 @@
+     static final Unsafe unsafe = Unsafe.getUnsafe();
+ 
+     protected final Field   field;
+-    protected final int     fieldOffset;
++    protected final long    fieldOffset;
+     protected final boolean isFinal;
+ 
+     UnsafeFieldAccessorImpl(Field field) {
+         this.field = field;
+-        fieldOffset = unsafe.fieldOffset(field);
++        if (Modifier.isStatic(field.getModifiers())) {
++            this.fieldOffset = unsafe.staticFieldOffset(field);
++        } else {
++            this.fieldOffset = unsafe.objectFieldOffset(field);
++        }
++
+         isFinal = Modifier.isFinal(field.getModifiers());
+     }
+ 

@@ -307,7 +307,7 @@ Java_sun_misc_Unsafe_objectFieldOffset(JNIEnv *env, jobject unsafeObj, jobject f
     if (slot >= 0) {
         return info->fields[slot].offset;
     } else {
-         return ((jlong) info->static_fields[-slot-1].ptr) - ((jlong) fieldObj);
+         return (jlong)info->static_fields[-slot-1].ptr;
     }
 }
 
@@ -317,7 +317,7 @@ Java_sun_misc_Unsafe_staticFieldBase(JNIEnv *env, jobject unsafeObj, jobject fie
     // WARNING: Assume the address of static field is within 32bit offset range 
     //          of the fieldObj since sun.misc.Unsafe.fieldOffset(field) cast
     //          the offset from long to int.
-    return fieldObj;
+    return nullptr;
 }
 
 jboolean

@@ -147,6 +147,10 @@ public class LLVMUtils {
         return ptrTypeRef(i8());
     }
 
+    public LLVMTypeRef i32Ptr() {
+        return ptrTypeRef(i32());
+    }
+
     public LLVMTypeRef intType(int numBits) {
         return LLVMIntTypeInContext(v.context, numBits);
     }
@@ -336,6 +340,18 @@ public class LLVMUtils {
 
         v.debugInfo.popScope();
         LLVMPositionBuilderAtEnd(v.builder, prevBlock);
+    }
+
+    /**
+     * Allocates space for a new variable on the stack, and returns the pointer to this space.
+     * Does not change the position of the instruction builder.
+     */
+    public LLVMValueRef buildArrayAlloca(String name, LLVMTypeRef t, LLVMValueRef size) {
+        LLVMBasicBlockRef prevBlock = LLVMGetInsertBlock(v.builder);
+        LLVMPositionBuilderAtEnd(v.builder, LLVMGetEntryBasicBlock(v.currFn()));
+        LLVMValueRef res = LLVMBuildArrayAlloca(v.builder, t, size, name);
+        LLVMPositionBuilderAtEnd(v.builder, prevBlock);
+        return res;
     }
 
     /**
@@ -760,23 +776,29 @@ public class LLVMUtils {
         return LLVMConstNamedStruct(type, valArr, values.length);
     }
 
-    public LLVMValueRef buildAnonGlobal(LLVMValueRef val) {
+    public LLVMValueRef buildAnonGlobal(LLVMValueRef val, boolean IsConstant) {
         LLVMValueRef var = getGlobal("", LLVMTypeOf(val));
         LLVMSetInitializer(var, val);
-        LLVMSetGlobalConstant(var, 1);
+        LLVMSetGlobalConstant(var, IsConstant ? 1 : 0);
         LLVMSetLinkage(var, LLVMPrivateLinkage);
         return var;
     }
 
     public LLVMValueRef buildGlobalArrayAsPtr(LLVMTypeRef elemType, LLVMValueRef[] values) {
         LLVMValueRef arr = buildConstArray(elemType, values);
-        LLVMValueRef global = buildAnonGlobal(arr);
+        LLVMValueRef global = buildAnonGlobal(arr, false);
+        return v.utils.buildGEP(global, 0, 0);
+    }
+
+    public LLVMValueRef buildGlobalConstArrayAsPtr(LLVMTypeRef elemType, LLVMValueRef[] values) {
+        LLVMValueRef arr = buildConstArray(elemType, values);
+        LLVMValueRef global = buildAnonGlobal(arr, true);
         return v.utils.buildGEP(global, 0, 0);
     }
 
     public LLVMValueRef buildGlobalCStr(String str) {
         LLVMValueRef val = LLVMConstStringInContext(v.context, str, str.length(), 0);
-        LLVMValueRef global = buildAnonGlobal(val);
+        LLVMValueRef global = buildAnonGlobal(val, true);
         return v.utils.buildGEP(global, 0, 0);
     }
 

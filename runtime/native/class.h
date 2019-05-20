@@ -13,6 +13,8 @@
 #include "jni.h"
 #include <stdint.h>
 #include <utility>
+#include <string>
+#include "rep.h"
 
 #define IS_STATIC_METHOD(minfo) ((minfo)->offset == -1)
 #define IS_CONSTRUCTOR(minfo) ((minfo)->offset == -2)
@@ -23,17 +25,12 @@ extern "C" {
 // exist for the lifetime of the program.
 // The layout must precisely mirror the layout defined in JLang.
 
-struct JavaTypeInfo {
-    jclass* type_ptr;
-    jclass(*init_type_class)(void);
-};
-
 // Concrete representation for the opaque type jfieldID.
 struct JavaFieldInfo {
     char* name;
     int32_t offset;
     int32_t modifiers;
-    struct JavaTypeInfo* type_info_ptr;
+    jclass* type_ptr;
     char* sig;
 };
 //This is also a representation for the jfieldID type, but
@@ -43,7 +40,7 @@ struct JavaStaticFieldInfo {
     char* sig;
     void* ptr;
     int32_t modifiers;
-    struct JavaTypeInfo* type_info_ptr;
+    jclass* type_ptr;
 };
 
 // Concrete representation for the opaque type jmethodID.
@@ -65,7 +62,7 @@ struct JavaClassInfo {
     char* name;
     jclass* super_ptr;
     void* cdv; //is a DispatchVector*
-    int32_t obj_size;
+    int32_t obj_size; // for array, it does not include data_size
 
     jboolean isIntf;
 
@@ -88,9 +85,15 @@ struct JavaClassInfo {
 void
 RegisterJavaClass(jclass cls, const JavaClassInfo* data);
 
+jarray createArray(const char* arrType, int* len, int sizeOfLen);
+
+jarray create1DArray(const char* arrType, int len);
+
 void InternStringLit(jstring str);
 
 } // extern "C"
+
+const void RegisterPrimitiveClasses();
 
 const JavaClassInfo*
 GetJavaClassInfo(jclass cls);
@@ -120,13 +123,21 @@ GetJavaStaticMethodInfo(jclass cls, const char* name, const char* sig);
 jclass
 LoadJavaClassFromLib(const char* name);
 
+bool isArrayClassName(const char* name);
+
 bool isArrayClass(jclass cls);
 
 bool isPrimitiveClass(jclass cls);
 
 jclass GetComponentClass(jclass cls);
 
+char primitiveNameToComponentName(const char* name);
+
 int arrayRepSize(jclass cls);
+
+std::string SigToClassName(const std::string& sig);
+
+jarray create1DArray(const char* arrType, int len);
 
 extern jclass Polyglot_native_int;
 extern jclass Polyglot_native_byte;
@@ -137,13 +148,3 @@ extern jclass Polyglot_native_double;
 extern jclass Polyglot_native_char;
 extern jclass Polyglot_native_boolean;
 extern jclass Polyglot_native_void;
-
-extern jclass* Polyglot_native_int_class_type_info;
-extern jclass* Polyglot_native_byte_class_type_info;
-extern jclass* Polyglot_native_short_class_type_info;
-extern jclass* Polyglot_native_long_class_type_info;
-extern jclass* Polyglot_native_float_class_type_info;
-extern jclass* Polyglot_native_double_class_type_info;
-extern jclass* Polyglot_native_char_class_type_info;
-extern jclass* Polyglot_native_boolean_class_type_info;
-extern jclass* Polyglot_native_void_class_type_info;

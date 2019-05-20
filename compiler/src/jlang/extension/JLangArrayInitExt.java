@@ -5,7 +5,6 @@ package jlang.extension;
 import polyglot.ast.ArrayInit;
 import polyglot.ast.Expr;
 import polyglot.ast.Node;
-import polyglot.types.Type;
 import polyglot.util.InternalCompilerError;
 import polyglot.util.SerialVersionUID;
 
@@ -28,11 +27,10 @@ public class JLangArrayInitExt extends JLangExt {
         // this node with respect to its parent.
         if (!n.type().isArray())
             throw new InternalCompilerError("ArrayInit node does not have an array type");
-        Type elemType = n.type().toArray().base();
 
         LLVMValueRef len = LLVMConstInt(
                 v.utils.toLL(v.ts.Int()), n.elements().size(), /*signExtend*/ 0);
-        LLVMValueRef array = JLangNewArrayExt.translateNewArray(v, len, elemType);
+        LLVMValueRef array = JLangNewArrayExt.translateNew1DArray(v, len, n.type().toArray());
 
         if (!n.elements().isEmpty()) {
             LLVMValueRef base = v.obj.buildArrayBaseElementPtr(array, n.type().toArray());

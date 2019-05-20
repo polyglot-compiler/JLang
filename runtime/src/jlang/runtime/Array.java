@@ -11,61 +11,26 @@ import java.io.Serializable;
  * correct amount of memory for an array instance.
  */
 class Array implements Cloneable, Serializable {
-    public final int length;
-    private final int elementSize;
-    // Array data is only visible to the compiler.
-    
+    public final int length = 0;
+    private int elementSize;
+//    Array data is only visible to the compiler.
+//    private byte[] data;
+
     /**
      * Single-dimensional arrays. To create a new array, the compiler will
-     * allocate enough memory for an instance of this class plus the
-     * array data, then emit a call to this constructor.
+     * invoke a runtime function `createArray`. It will allocate enough memory
+     * for an instance of this class plus the array data, and
+     * then set length and elementSize correctly.
+     * <p>
+     * Reference: https://docs.oracle.com/javase/specs/jls/se7/html/jls-10.html#jls-10.7
+     * <p>
+     * Reflection of Array has an unintuitive behavior in Java. Its fields and methods
+     * cannot be found by invoking int[].class or arr.getClass(). To conform this behavior,
+     * we erase all fields and methods information in runtime ClassInfo.
+     * To use the reflection of Array, we should use methods in java.lang.reflect.Array instead.
      */
-    Array(int length, int elementSize) {
-        // Note that entries have already been cleared,
-        // since we use calloc to allocate memory.
-        this.length = length;
-	this.elementSize = elementSize;
-    }
 
-    enum Type { BOOLEAN, BYTE, CHAR, SHORT, INT, LONG, FLOAT, DOUBLE, OBJECT }
-
-    /** Create a multidimensional array with the specified element type. */
-    static Array createMultidimensional(Type type, int[] lens) {
-        return createMultidimensional(type, lens, 0);
-    }
-
-    static Array createMultidimensional(Type type, int[] lens, int depth) {
-        if (depth == lens.length - 1) {
-            // Leaf array. Already zero-initialized through calloc.
-            return create(type, lens[depth]);
-        }
-        else {
-            // Recurse.
-            Array[] res = (Array[]) (Object) create(Type.OBJECT, lens[depth]);
-            for (int i = 0; i < res.length; ++i)
-                res[i] = createMultidimensional(type, lens, depth + 1);
-            return (Array) (Object) res;
-        }
-    }
-
-    static Array create(Type type, int len) {
-        // The casts succeeds because Array and type[] are
-        // equivalent from the perspective of JLang.
-        switch (type) {
-            case BOOLEAN: return (Array) (Object) new boolean[len];
-            case BYTE:    return (Array) (Object) new byte   [len];
-            case CHAR:    return (Array) (Object) new char   [len];
-            case SHORT:   return (Array) (Object) new short  [len];
-            case INT:     return (Array) (Object) new int    [len];
-            case LONG:    return (Array) (Object) new long   [len];
-            case FLOAT:   return (Array) (Object) new float  [len];
-            case DOUBLE:  return (Array) (Object) new double [len];
-            case OBJECT:  return (Array) (Object) new Object [len];
-            default:
-                throw new Error("Unhandled array base type");
-        }
-    }
-
+    @Override
     public Array clone() {
         try {
             return (Array) super.clone();

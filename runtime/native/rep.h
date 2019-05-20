@@ -26,7 +26,7 @@ struct JArrayRep;
 struct JStringRep;
 struct JClassRep;
 
-struct type_info {
+struct type_info {\
     int32_t size;
     void* super_type_ids[];
 };
@@ -34,13 +34,15 @@ struct type_info {
 // Class dispatch vector.
 struct DispatchVector {
     JClassRep* Class() { return *class_; }
+    void SetClassPtr(JClassRep** class_ptr) { class_ = class_ptr; }
     idv_ht* Idv() { return idv_; }
     void SetIdv(idv_ht* idv) { idv_ = idv; }
     type_info* SuperTypes() { return super_types_; }
-private:
+public:
     JClassRep** class_; // Notice: double-pointer.
 	idv_ht* idv_;
     type_info* super_types_;
+    void* methods_[0]; // a list of method pointers in dv.
 };
 
 // Currently unimplemented.
@@ -68,6 +70,8 @@ struct JArrayRep {
     void* Data() { return data_; }
     JObjectRep* Super() { return &header_; }
     jarray Wrap() { return reinterpret_cast<jarray>(this); }
+    void SetLength(jsize len) { len_ = len; }
+    void SetElemSize(jsize elem_size) { elem_size_ = elem_size; }
 private:
     JObjectRep header_;
     jsize len_;

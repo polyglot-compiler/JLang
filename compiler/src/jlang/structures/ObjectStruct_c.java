@@ -114,6 +114,18 @@ public class ObjectStruct_c implements ObjectStruct {
     }
 
     @Override
+    public int sizeOfObj(ReferenceType rt) {
+        List<FieldInstance> instances = getOrComputeInstanceFields(rt);
+        int size = 0;
+        size += v.utils.llvmPtrSize(); // DV
+        size += v.utils.llvmPtrSize(); // Sync_Var
+        for (FieldInstance inst : instances) {
+            size += v.utils.sizeOfType(inst.type());
+        }
+        return size;
+    }
+
+    @Override
     public LLVMValueRef buildDispatchVectorElementPtr(LLVMValueRef instance, ReferenceType rt) {
         structTypeRefNonOpaque(rt); // Ensure non-opaque type.
         return v.utils.buildGEP(instance, 0, Layout.DV.ordinal());
