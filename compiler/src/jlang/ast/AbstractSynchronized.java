@@ -9,10 +9,10 @@ import polyglot.visit.TypeChecker;
 
 import java.util.List;
 
-public abstract class SynchronizedChange extends Stmt_c {
+public abstract class AbstractSynchronized extends Stmt_c {
     protected Expr expr;
 
-    public SynchronizedChange(Position pos, Expr expr, Ext ext) {
+    public AbstractSynchronized(Position pos, Expr expr, Ext ext) {
         super(pos, ext);
         this.expr = expr;
     }
@@ -32,14 +32,14 @@ public abstract class SynchronizedChange extends Stmt_c {
         return expr;
     }
 
-    protected <N extends SynchronizedChange> N expr(N n, Expr expr) {
+    protected <N extends AbstractSynchronized> N expr(N n, Expr expr) {
         if (n.expr == expr) return n;
         n = copyIfNeeded(n);
         n.expr = expr;
         return n;
     }
 
-    protected <N extends SynchronizedChange> N reconstruct(N n, Expr expr) {
+    protected <N extends AbstractSynchronized> N reconstruct(N n, Expr expr) {
         return expr(n, expr);
     }
 

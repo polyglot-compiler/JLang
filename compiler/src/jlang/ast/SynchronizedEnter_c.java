@@ -5,7 +5,7 @@ import polyglot.util.CodeWriter;
 import polyglot.util.Position;
 import polyglot.visit.PrettyPrinter;
 
-public class SynchronizedEnter_c extends SynchronizedChange implements SynchronizedEnter {
+public class SynchronizedEnter_c extends AbstractSynchronized implements SynchronizedEnter {
 
     SynchronizedEnter_c(Position pos, Expr expr, Ext ext) {
         super(pos, expr, ext);

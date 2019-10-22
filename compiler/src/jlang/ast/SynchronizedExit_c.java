@@ -6,7 +6,7 @@ import polyglot.util.CodeWriter;
 import polyglot.util.Position;
 import polyglot.visit.PrettyPrinter;
 
-public class SynchronizedExit_c extends SynchronizedChange implements SynchronizedExit {
+public class SynchronizedExit_c extends AbstractSynchronized implements SynchronizedExit {
 
     SynchronizedExit_c(Position pos, Expr expr, Ext ext) {
         super(pos, expr, ext);

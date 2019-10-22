@@ -33,7 +33,9 @@ public class DesugarSynchronized extends DesugarVisitor {
             return desugarSynchronizedNode((Synchronized) n);
         } else if (n instanceof MethodDecl) {
             MethodDecl node = (MethodDecl) n;
-            if (node.flags().isSynchronized()) {
+            if (node.flags().isSynchronized() && node.body() != null) {
+                // TODO: how to handle public synchronized native void foo()
+                // Remove && node.body() != null after figure out how to handle it
                 Block body = node.body();
                 Expr synchronizedObj;
                 if (node.flags().isStatic()) {
@@ -64,14 +66,13 @@ public class DesugarSynchronized extends DesugarVisitor {
      */
     private Block desugarSynchronizedNode(Synchronized node) {
         Position pos = node.position();
-        // TempSSA or TempVar? Create unique name for each use?
+
         LocalDecl declObj = tnf.TempSSA("syncObj", node.expr());
         Local obj = tnf.Local(pos, declObj);
 
         SynchronizedEnter syncEnter = nf.SynchronizedEnter(pos, copy(obj));
         SynchronizedExit syncExit = nf.SynchronizedExit(pos, copy(obj));
 
-        // Should we copy the node?
         Block tryBlock = nf.Block(pos, syncEnter, node.body());
         Block finallyBlock = nf.Block(pos, syncExit);
 
