@@ -355,6 +355,7 @@ void JVM_StopThread(JNIEnv *env, jobject thread, jobject exception) {
 }
 
 jboolean JVM_IsThreadAlive(JNIEnv *env, jobject thread) {
+    //TODO return JNI_TRUE for any thread which is live, not just the currently running one.
     return (thread == currentThread) ? currentThreadState : JNI_FALSE;
 }
 
