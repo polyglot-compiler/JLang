@@ -15,6 +15,8 @@ RUN_COUNT := $(shell echo "2 * $(NUM_JAVA_FILES)" | bc)
 # JLANG flags when compiling the JDK.
 PLC_FLAGS := -assert -method-filter jdk-method-filter.txt -sourcepath $(SRC)
 
+CPP_FLAGS := -g -std=c++14 $(MACOS_FLAGS)
+
 all: $(LIBJDK)
 
 .PHONY: classes
@@ -72,7 +74,7 @@ $(OUT)/ostamp: $(OUT)/llstamp
 # These are due to methods that the JDK normally registers at runtime.
 $(OUT)/stubs.o: stubs.cpp
 	@echo "Compiling missing symbol stubs"
-	@$(CLANG) -g -std=c++14 -fPIC $(JNI_INCLUDES) -c -o $@ $<
+	@$(CLANG) $(CPP_FLAGS) -fPIC $(JNI_INCLUDES) -c -o $@ $<
 
 # Create a shared library for compiled JDK classes.
 # Notice that we link directly with the system JDK's native code.

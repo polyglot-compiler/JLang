@@ -4,3 +4,12 @@ export SHARED_LIB_EXT := dylib
 export LIBJVM_FLAGS += \
 	-current_version 1.0.0 -compatibility_version 1.0.0 \
 	-undefined dynamic_lookup
+
+# use xcode header search path for macOS 10.15+
+export MACOS_FLAGS :=
+ifeq ($(shell expr $(shell sw_vers -productVersion) \>= 10.15),1)
+	MACOS_FLAGS += \
+		-isysroot $(shell xcrun --show-sdk-path) \
+		-I/usr/local/include
+endif
+

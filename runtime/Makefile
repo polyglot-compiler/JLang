@@ -20,9 +20,10 @@ ALL_OBJ := $(JAVA_OBJ) $(NATIVE_OBJ)
 
 JAVA_FLAGS := \
 	-g -Wno-override-module -fPIC
+
 NATIVE_FLAGS := \
 	-g -fPIC -std=c++14 -Inative $(JNI_INCLUDES) \
-	-Wall -MMD -pthread
+	-Wall -MMD -pthread $(MACOS_FLAGS)
 
 all: classes $(LIBJVM)
 
