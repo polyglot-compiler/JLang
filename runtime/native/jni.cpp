@@ -1,5 +1,8 @@
 // Copyright (C) 2018 Cornell University
 
+#include <gc.h>
+#include <pthread.h>
+
 #include "class.h"
 #include "exception.h"
 #include "jni_help.h"

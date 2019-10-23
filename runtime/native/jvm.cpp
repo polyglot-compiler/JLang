@@ -19,6 +19,8 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
+#include <time.h>
+#include <pthread.h>
 
 #include "jvm.h"
 
@@ -50,6 +52,8 @@
 #define JVM_T_SHORT 9
 #define JVM_T_INT 10
 #define JVM_T_LONG 11
+
+#define BILLION 1000000000
 
 thread_local jobject currentThread = nullptr;
 thread_local bool currentThreadState = false;
@@ -122,15 +126,43 @@ jint JVM_IHashCode(JNIEnv *env, jobject obj) {
 }
 
 void JVM_MonitorWait(JNIEnv *env, jobject obj, jlong ms) {
-    JvmUnimplemented("JVM_MonitorWait");
+    if (Unwrap(obj)->SyncVars() == nullptr) {
+        printf("wait() must be called when the object is locked.");
+    }
+
+    sync_vars *syncVars = Unwrap(obj)->SyncVars();
+    if (ms == 0) {
+        // wait until notified
+        pthread_cond_wait(&syncVars->cond, &syncVars->mutex);
+    } else {
+        timespec t;
+        clock_gettime(CLOCK_REALTIME, &t);
+        t.tv_sec += ms / 1000;
+        t.tv_nsec += (ms % 1000) * 1000;
+
+        t.tv_sec += t.tv_nsec / BILLION;
+        t.tv_nsec = t.tv_nsec % BILLION;
+
+        pthread_cond_timedwait(&syncVars->cond, &syncVars->mutex, &t);
+    }
 }
 
 void JVM_MonitorNotify(JNIEnv *env, jobject obj) {
-    JvmUnimplemented("JVM_MonitorNotify");
+    if (Unwrap(obj)->SyncVars() == nullptr) {
+        printf("notify() must be called when the object is locked.");
+    }
+
+    sync_vars *syncVars = Unwrap(obj)->SyncVars();
+    pthread_cond_signal(&syncVars->cond);
 }
 
 void JVM_MonitorNotifyAll(JNIEnv *env, jobject obj) {
-    JvmUnimplemented("JVM_MonitorNotifyAll");
+    if (Unwrap(obj)->SyncVars() == nullptr) {
+        printf("notifyAll() must be called when the object is locked.");
+    }
+
+    sync_vars *syncVars = Unwrap(obj)->SyncVars();
+    pthread_cond_broadcast(&syncVars->cond);
 }
 
 jobject JVM_Clone(JNIEnv *env, jobject obj) { return CloneJavaObject(obj); }
