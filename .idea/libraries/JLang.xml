@@ -7,6 +7,7 @@
       <root url="jar://$PROJECT_DIR$/lib/llvm-linux-x86_64.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/llvm.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/ppg.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/polyglot/lib/polyglot.jar!/" />
     </CLASSES>
     <JAVADOC>
       <root url="jar://$PROJECT_DIR$/lib/llvm-javadoc.jar!/" />

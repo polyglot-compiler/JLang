@@ -17,7 +17,6 @@
     </orderEntry>
     <orderEntry type="library" name="JLang" level="project" />
     <orderEntry type="module" module-name="runtime" />
-    <orderEntry type="module" module-name="polyglot" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="inheritedJdk" />
   </component>
