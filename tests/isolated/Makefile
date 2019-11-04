@@ -17,6 +17,7 @@ JDK ?= jdk-lite
 JDK := $(realpath $(BASE_DIR)/$(JDK))
 JDK_CLASSES := $(realpath $(JDK)/out/classes)
 JDK7 ?= /Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home/
+JDK7_LIB_PATH := $(JDK7)/jre/lib
 endif
 
 SRC := $(shell find * -name "*.java")
