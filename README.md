@@ -40,7 +40,7 @@ Finally, build JLang by running `make` at the top level of the repository. By de
 
 To run the test-suite you can execute the `make tests` at the top level of the repository. In order to run specific tests, the test Makefile can also be run from the `tests/isolated` directory; however, some environment variables may not be appropriately set depending upon your operating system.
 
-If you want to run unit tests from IntelliJ, run the `TestAll` class, using the top level of the repository as the working directory.
+To open this project in IntelliJ, simply open the top level directory of the repository after running `make` once. If you want to run unit tests from IntelliJ, run the `TestAll` class, with the top level of the repository as the working directory and all necessary environment variables. *Caveat*: IntelliJ does not support `$PATH` syntax. You must explicitly write out all paths if you want to append a new one.
 
 
 High-level project structure
