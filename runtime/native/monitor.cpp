@@ -32,7 +32,6 @@ void Monitor::enter(jobject obj) {
     // sanity check
     syncObjs.push_back(obj);
 
-    // TODO: use global lock to synchronize initialization.
     if (Unwrap(obj)->SyncVars() == nullptr) {
         sync_vars *syncVars =
             reinterpret_cast<sync_vars *>(GC_MALLOC(sizeof(sync_vars)));
