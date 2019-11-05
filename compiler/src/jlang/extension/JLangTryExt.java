@@ -85,7 +85,7 @@ public class JLangTryExt extends JLangExt {
          */
         private Set<LLVMBasicBlockRef> finallyDestBlocks;
 
-        private ExceptionFrame(
+        public ExceptionFrame(
                 LLVMTranslator v,
                 LLVMBasicBlockRef lpadCatch,
                 LLVMBasicBlockRef lpadFinally) {
@@ -165,7 +165,7 @@ public class JLangTryExt extends JLangExt {
         // finally block landing pad, or otherwise at an enclosing try-catch landing pad.
         frame.lpadCatch = null;
 
-        // Even if no catch claus matches an in-flight exception, we must still stop unwinding
+        // Even if no catch clause matches an in-flight exception, we must still stop unwinding
         // if (1) there is a finally block, or (2) there is an enclosing landing pad in this
         // same function. (1) is true because finally blocks might raise a new exception or
         // cancel the existing one (through a control transfer), and the unwinder disallows

@@ -4,6 +4,7 @@
 #include "exception.h"
 #include "jni_help.h"
 #include "reflect.h"
+#include "monitor.h"
 // Begin official API.
 
 extern "C" {
@@ -772,11 +773,13 @@ jint jni_UnregisterNatives(JNIEnv *env, jclass clazz) {
 }
 
 jint jni_MonitorEnter(JNIEnv *env, jobject obj) {
-    JniUnimplemented("MonitorEnter");
+    Monitor::Instance().enter(obj);
+    return 0;
 }
 
 jint jni_MonitorExit(JNIEnv *env, jobject obj) {
-    JniUnimplemented("MonitorExit");
+    Monitor::Instance().exit(obj);
+    return 0;
 }
 
 jint jni_GetJavaVM(JNIEnv *env, JavaVM **vm);
