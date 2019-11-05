@@ -51,6 +51,9 @@
 #define JVM_T_INT 10
 #define JVM_T_LONG 11
 
+thread_local jobject currentThread = nullptr;
+thread_local bool currentThreadState = false;
+
 static void JvmIgnore(const char *name) {
     fprintf(stderr,
             "WARNING: JVM method %s is unimplemented, but will not abort.\n",
@@ -352,7 +355,8 @@ void JVM_StopThread(JNIEnv *env, jobject thread, jobject exception) {
 }
 
 jboolean JVM_IsThreadAlive(JNIEnv *env, jobject thread) {
-    return (thread == mainThread) ? mainThreadIsAlive : JNI_FALSE;
+    //TODO return JNI_TRUE for any thread which is live, not just the currently running one.
+    return (thread == currentThread) ? currentThreadState : JNI_FALSE;
 }
 
 void JVM_SuspendThread(JNIEnv *env, jobject thread) {
@@ -381,8 +385,7 @@ void JVM_Sleep(JNIEnv *env, jclass threadClass, jlong millis) {
 }
 
 jobject JVM_CurrentThread(JNIEnv *env, jclass threadClass) {
-    // TODO real multi-threading
-    return GetMainThread();
+    return currentThread;
 }
 
 jint JVM_CountStackFrames(JNIEnv *env, jobject thread) {
