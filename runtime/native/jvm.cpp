@@ -11,6 +11,7 @@
 #include "rep.h"
 #include "signals.h"
 #include "stack_trace.h"
+#include "threads.h"
 
 #include <chrono>
 #include <cstdio>
@@ -333,23 +334,17 @@ void JVM_EnableCompiler(JNIEnv *env, jclass compCls) {
 void JVM_DisableCompiler(JNIEnv *env, jclass compCls) { return; }
 
 void JVM_StartThread(JNIEnv *env, jobject thread) {
-    // TODO someday there will be synchronization
-    // printf("Starting thread\n");
-    // get run function pointer
-    jclass objectClass = Unwrap(thread)->Cdv()->Class()->Wrap();
-    const JavaClassInfo *info = GetJavaClassInfo(objectClass);
-    JavaMethodInfo *methods = info->methods;
-    for (int i = 0; i < info->num_methods; i++) {
-        if (strcmp(methods[i].name, "run") == 0) {
-            // printf("found run method: %p\n", methods[i].fnPtr);
-            jmethodID mtdId = reinterpret_cast<jmethodID>(&(methods[i]));
-            // CallJavaInstanceMethod<jobject>(thread, mtdId, (const jvalue*)
-            // &thread); intf is Runnable interface
-            // CallJavaInterfaceMethod(jobject obj, jclass intf, const char*
-            // name, const char* sig, const jvalue* args) {
-        }
+    // TODO: GLOBALMUTEX
+    ScopedLock lock(&Threads::Instance().globalMutex);
+    
+    static int i = 0;
+    i++;
+    if (i > 1) {
+        auto run = [thread]() {
+            CallJavaInstanceMethod<jobject>(thread, "run", "()V", nullptr);
+        };
+        Threads::Instance().startThread(thread, run);
     }
-    return;
 }
 
 void JVM_StopThread(JNIEnv *env, jobject thread, jobject exception) {

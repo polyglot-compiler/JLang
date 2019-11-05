@@ -1,14 +1,30 @@
-// Copyright (C) 2018 Cornell University
+// Copyright (C) 2019 Cornell University
 
-#include "rep.h"
-#include <pthread.h>
+#include "threads.h"
 
-extern "C" {
+Threads::Threads() {
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    if (pthread_mutex_init(&globalMutex, &attr) != 0) {
+        perror("mutex init failed");
+    }
+}
 
-pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
+Threads &Threads::Instance() {
+    static Threads *instance;
+    if (instance == nullptr) {
+        instance = new Threads();
+    }
+    return *instance;
+}
 
-void init_mutex(jobject obj) {}
+Threads::~Threads() {
+    for (auto &it : threads) {
+        it.second.join();
+    }
+}
 
-void init_cond_var(jobject obj) {}
-
-} // extern "C"
+void Threads::startThread(jobject jthread, std::function<void()> func) {
+    threads.emplace(jthread, func);
+}
