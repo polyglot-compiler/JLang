@@ -3,5 +3,8 @@
     <option name="AUTODETECT_INDENTS" value="false" />
     <option name="LINE_SEPARATOR" value="&#10;" />
     <option name="RIGHT_MARGIN" value="100" />
+    <JavaCodeStyleSettings>
+      <option name="INSERT_INNER_CLASS_IMPORTS" value="true" />
+    </JavaCodeStyleSettings>
   </code_scheme>
 </component>
