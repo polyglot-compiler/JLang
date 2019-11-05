@@ -8,6 +8,16 @@
 #include <gc.h>
 #include <pthread.h>
 
+//
+// Monitor
+//
+
+Monitor::Monitor() {
+    if (pthread_mutex_init(&mutex, nullptr) != 0) {
+        perror("mutex init failed");
+    }
+}
+
 Monitor &Monitor::Instance() {
     static Monitor *instance;
     if (instance == nullptr) {
@@ -17,6 +27,8 @@ Monitor &Monitor::Instance() {
 }
 
 void Monitor::enter(jobject obj) {
+    ScopedLock lock(&mutex);
+
     // sanity check
     syncObjs.push_back(obj);
 
@@ -43,6 +55,8 @@ void Monitor::enter(jobject obj) {
 }
 
 void Monitor::exit(jobject obj) {
+    ScopedLock lock(&mutex);
+
     // sanity check
     jobject enter = syncObjs.back();
     syncObjs.pop_back();
@@ -58,6 +72,8 @@ void Monitor::exit(jobject obj) {
 }
 
 void Monitor::wait(jobject obj, jlong ms) {
+    ScopedLock lock(&mutex);
+
     // sanity check
     if (!hasEntered(obj)) {
         printf("wait() must be called when the object is locked.");
@@ -81,6 +97,8 @@ void Monitor::wait(jobject obj, jlong ms) {
 }
 
 void Monitor::notify(jobject obj) {
+    ScopedLock lock(&mutex);
+
     if (!hasEntered(obj)) {
         printf("notify() must be called when the object is locked.");
     }
@@ -90,6 +108,8 @@ void Monitor::notify(jobject obj) {
 }
 
 void Monitor::notifyAll(jobject obj) {
+    ScopedLock lock(&mutex);
+
     if (!hasEntered(obj)) {
         printf("notifyAll() must be called when the object is locked.");
     }
@@ -99,6 +119,8 @@ void Monitor::notifyAll(jobject obj) {
 }
 
 bool Monitor::hasEntered(jobject obj) {
+    ScopedLock lock(&mutex);
+
     // Check if syncVars are initialized as a shortcut.
     if (Unwrap(obj)->SyncVars() == nullptr) {
         return false;
@@ -107,3 +129,13 @@ bool Monitor::hasEntered(jobject obj) {
     return std::find(syncObjs.rbegin(), syncObjs.rend(), obj) !=
            syncObjs.rend();
 }
+
+//
+// ScopedLock
+//
+
+ScopedLock::ScopedLock(pthread_mutex_t *_mutex) : mutex(_mutex) {
+    pthread_mutex_lock(mutex);
+}
+
+ScopedLock::~ScopedLock() { pthread_mutex_unlock(mutex); }
