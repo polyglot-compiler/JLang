@@ -2,10 +2,11 @@
 
 #include "monitor.h"
 
+#include "rep.h"
+
+#include <algorithm>
 #include <gc.h>
 #include <pthread.h>
-
-#include "rep.h"
 
 Monitor &Monitor::Instance() {
     static Monitor *instance;
@@ -17,7 +18,7 @@ Monitor &Monitor::Instance() {
 
 void Monitor::enter(jobject obj) {
     // sanity check
-    syncVars.push_back(obj);
+    syncObjs.push_back(obj);
 
     // TODO: use global lock to synchronize initialization.
     if (Unwrap(obj)->SyncVars() == nullptr) {
@@ -37,26 +38,72 @@ void Monitor::enter(jobject obj) {
 
         Unwrap(obj)->SetSyncVars(syncVars);
     }
-    static int i = 0;
-    i++;
-    // printf("lock %d\n", i);
+
     pthread_mutex_lock(&Unwrap(obj)->SyncVars()->mutex);
 }
 
 void Monitor::exit(jobject obj) {
     // sanity check
-    jobject enter = syncVars.back();
-    syncVars.pop_back();
+    jobject enter = syncObjs.back();
+    syncObjs.pop_back();
     if (enter != obj) {
         printf("EROOR: synchronized enter and exit should be in reverse order "
                "style.\n");
     }
-
     if (Unwrap(obj)->SyncVars() == nullptr) {
         printf("SyncVars must have already been initialized in MonitorEnter\n");
     }
-    static int i = 0;
-    i++;
-    // printf("unlock%d\n", i);
+
     pthread_mutex_unlock(&Unwrap(obj)->SyncVars()->mutex);
+}
+
+void Monitor::wait(jobject obj, jlong ms) {
+    // sanity check
+    if (!hasEntered(obj)) {
+        printf("wait() must be called when the object is locked.");
+    }
+
+    sync_vars *syncVars = Unwrap(obj)->SyncVars();
+    if (ms == 0) {
+        // wait until notified
+        pthread_cond_wait(&syncVars->cond, &syncVars->mutex);
+    } else {
+        timespec t;
+        clock_gettime(CLOCK_REALTIME, &t);
+        t.tv_sec += ms / 1000;
+        t.tv_nsec += (ms % 1000) * 1000;
+
+        t.tv_sec += t.tv_nsec / 1'000'000'000;
+        t.tv_nsec = t.tv_nsec % 1'000'000'000;
+
+        pthread_cond_timedwait(&syncVars->cond, &syncVars->mutex, &t);
+    }
+}
+
+void Monitor::notify(jobject obj) {
+    if (!hasEntered(obj)) {
+        printf("notify() must be called when the object is locked.");
+    }
+
+    sync_vars *syncVars = Unwrap(obj)->SyncVars();
+    pthread_cond_signal(&syncVars->cond);
+}
+
+void Monitor::notifyAll(jobject obj) {
+    if (!hasEntered(obj)) {
+        printf("notifyAll() must be called when the object is locked.");
+    }
+
+    sync_vars *syncVars = Unwrap(obj)->SyncVars();
+    pthread_cond_broadcast(&syncVars->cond);
+}
+
+bool Monitor::hasEntered(jobject obj) {
+    // Check if syncVars are initialized as a shortcut.
+    if (Unwrap(obj)->SyncVars() == nullptr) {
+        return false;
+    }
+
+    return std::find(syncObjs.rbegin(), syncObjs.rend(), obj) !=
+           syncObjs.rend();
 }

@@ -7,8 +7,9 @@
 
 class Monitor {
   private:
-    std::deque<jobject> syncVars;
+    std::deque<jobject> syncObjs;
     Monitor() = default;
+    bool hasEntered(jobject obj);
 
   public:
     Monitor(const Monitor &) = delete;
@@ -17,4 +18,8 @@ class Monitor {
     static Monitor &Instance();
     void enter(jobject obj);
     void exit(jobject obj);
+
+    void wait(jobject obj, jlong ms);
+    void notify(jobject obj);
+    void notifyAll(jobject obj);
 };
