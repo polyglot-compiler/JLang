@@ -334,12 +334,7 @@ void JVM_StartThread(JNIEnv *env, jobject thread) {
     // TODO: GLOBALMUTEX
     ScopedLock lock(&Threads::Instance().globalMutex);
     
-    // TODO: do not ignore the first thread
-    static int i = 0;
-    i++;
-    if (i > 1) {
-        Threads::Instance().startThread(thread);
-    }
+    Threads::Instance().startThread(thread);
 }
 
 void JVM_StopThread(JNIEnv *env, jobject thread, jobject exception) {

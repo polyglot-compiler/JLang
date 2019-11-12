@@ -24,6 +24,10 @@ Threads &Threads::Instance() {
 
 void Threads::join() {
     for (auto &it : threads) {
+        jboolean isDaemon = CallJavaInstanceMethod<jboolean>(it.first, "isDaemon", "()Z", nullptr);
+        if (isDaemon) {
+            continue;
+        }
         int ret = pthread_join(it.second, nullptr);
         if (ret) {
             perror("cannot join thread");
@@ -35,7 +39,7 @@ void* start_routine(void* jthread) {
     jobject thread = static_cast<jobject>(jthread);
     currentThread = thread;
     currentThreadState = true;
-    CallJavaInstanceMethod<jobject>(thread, "run", "()V", nullptr);
+    CallJavaInstanceMethod<void>(thread, "run", "()V", nullptr);
     return nullptr;
 }
 
