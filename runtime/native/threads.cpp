@@ -2,6 +2,9 @@
 
 #include "threads.h"
 
+thread_local jobject currentThread = nullptr;
+thread_local bool currentThreadState = false;
+
 Threads::Threads() {
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
@@ -19,12 +22,26 @@ Threads &Threads::Instance() {
     return *instance;
 }
 
-Threads::~Threads() {
+void Threads::join() {
     for (auto &it : threads) {
-        it.second.join();
+        int ret = pthread_join(it.second, nullptr);
+        if (ret) {
+            perror("cannot join thread");
+        }
     }
 }
 
-void Threads::startThread(jobject jthread, std::function<void()> func) {
-    threads.emplace(jthread, func);
+void* start_routine(void* jthread) {
+    jobject thread = static_cast<jobject>(jthread);
+    currentThread = thread;
+    currentThreadState = true;
+    CallJavaInstanceMethod<jobject>(thread, "run", "()V", nullptr);
+    return nullptr;
+}
+
+void Threads::startThread(jobject jthread) {
+    int ret = pthread_create(&threads[jthread], nullptr, start_routine, jthread);
+    if (ret) {
+        perror("cannot start thread\n");
+    }
 }

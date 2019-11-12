@@ -55,9 +55,6 @@
 #define JVM_T_INT 10
 #define JVM_T_LONG 11
 
-thread_local jobject currentThread = nullptr;
-thread_local bool currentThreadState = false;
-
 static void JvmIgnore(const char *name) {
     fprintf(stderr,
             "WARNING: JVM method %s is unimplemented, but will not abort.\n",
@@ -337,13 +334,11 @@ void JVM_StartThread(JNIEnv *env, jobject thread) {
     // TODO: GLOBALMUTEX
     ScopedLock lock(&Threads::Instance().globalMutex);
     
+    // TODO: do not ignore the first thread
     static int i = 0;
     i++;
     if (i > 1) {
-        auto run = [thread]() {
-            CallJavaInstanceMethod<jobject>(thread, "run", "()V", nullptr);
-        };
-        Threads::Instance().startThread(thread, run);
+        Threads::Instance().startThread(thread);
     }
 }
 

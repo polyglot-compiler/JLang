@@ -11,6 +11,8 @@
 #include "rep.h"
 #include "stack_trace.h"
 #include "init.h"
+#include "threads.h"
+#include "jvm.h"
 
 extern "C" {
 
@@ -68,4 +70,8 @@ int main(int argc, char **argv) {
     }
     InitializeMainThread();
     Polyglot_jlang_runtime_MainWrapper_runMain___3Ljava_lang_String_2(args);
+
+    if (currentThread == GetMainThread()) {
+        Threads::Instance().join();
+    }
 }

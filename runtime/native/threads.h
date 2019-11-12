@@ -5,18 +5,21 @@
 #include <thread>
 #include <unordered_map>
 
+extern thread_local jobject currentThread;
+extern thread_local bool currentThreadState;
+
 class Threads {
   public:
     Threads(const Threads &threads) = delete;
     Threads &operator=(const Threads &threads) = delete;
     static Threads &Instance();
 
-    ~Threads();
-    void startThread(jobject jthread, std::function<void()> func);
+    void startThread(jobject jthread);
+    void join();
 
     pthread_mutex_t globalMutex;
 
   private:
     Threads();
-    std::unordered_map<jobject, std::thread> threads;
+    std::unordered_map<jobject, pthread_t> threads;
 };

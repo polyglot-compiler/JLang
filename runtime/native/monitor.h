@@ -3,6 +3,7 @@
 #pragma once
 
 #include <deque>
+#include <unordered_map>
 #include <jni.h>
 #include <pthread.h>
 
@@ -20,7 +21,7 @@ class Monitor {
     void notifyAll(jobject obj);
 
   private:
-    std::deque<jobject> syncObjs;
+    static thread_local std::deque<jobject> syncObjs;
     pthread_mutex_t mutex;
 
     Monitor();

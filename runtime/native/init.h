@@ -2,4 +2,8 @@
 
 #pragma once
 
+#include <jni.h>
+
+jobject GetMainThread();
+
 void InitializeMainThread();

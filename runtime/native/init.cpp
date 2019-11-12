@@ -8,7 +8,7 @@ extern "C" {
 void Polyglot_java_lang_System_initializeSystemClass__();
 } // extern "C"
 
-static jobject GetMainThread() {
+jobject GetMainThread() {
     // Caveat: The name of the main ThreadGroup is "system", which is different
     // from Java's behavior, "main".
     //
@@ -17,6 +17,12 @@ static jobject GetMainThread() {
     // initialized, which is not the case here. If we really want to follow
     // Java's behavior, we could patch the JDK to have another contructor for 
     // this.
+
+    static jobject mainThread = nullptr;
+
+    if (mainThread) {
+        return mainThread;
+    }
 
     // create JavaGroup object associated with main Thread.
     auto thread_group_clazz = LoadJavaClassFromLib("java.lang.ThreadGroup");
@@ -36,7 +42,7 @@ static jobject GetMainThread() {
 
     // create main Thread object.
     auto thread_clazz = GetJavaClassFromName("java.lang.Thread");
-    jobject mainThread = CreateJavaObject(thread_clazz);
+    mainThread = CreateJavaObject(thread_clazz);
     const jobject mainThreadArgs[] = {mainThreadGroup, mainStr};
     CallJavaInstanceMethod<jobject>(
         mainThread, "<init>",
