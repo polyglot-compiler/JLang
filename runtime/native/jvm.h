@@ -493,4 +493,3 @@ void JVM_GetVersionInfo(JNIEnv *env, jvm_version_info *info, size_t info_size);
 } // extern "C"
 
 extern thread_local jobject currentThread;
-extern thread_local bool currentThreadState;

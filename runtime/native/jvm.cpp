@@ -338,22 +338,21 @@ void JVM_StartThread(JNIEnv *env, jobject thread) {
 }
 
 void JVM_StopThread(JNIEnv *env, jobject thread, jobject exception) {
-    // TODO someday there will be synchronization
+    JvmUnimplemented("JVM_StopThread is Deprecated in Java8");
     return;
 }
 
 jboolean JVM_IsThreadAlive(JNIEnv *env, jobject thread) {
-    //TODO return JNI_TRUE for any thread which is live, not just the currently running one.
-    return (thread == currentThread) ? currentThreadState : JNI_FALSE;
+    return Threads::Instance().threads[thread].threadStatus;
 }
 
 void JVM_SuspendThread(JNIEnv *env, jobject thread) {
-    // TODO someday there will be synchronization
+    JvmUnimplemented("JVM_SuspendThread is Deprecated in Java8");
     return;
 }
 
 void JVM_ResumeThread(JNIEnv *env, jobject thread) {
-    // TODO someday there will be synchronization
+    JvmUnimplemented("JVM_ResumeThread is Deprecated in Java8");
     return;
 }
 
@@ -363,7 +362,7 @@ void JVM_SetThreadPriority(JNIEnv *env, jobject thread, jint prio) {
 }
 
 void JVM_Yield(JNIEnv *env, jclass threadClass) {
-    // TODO someday there will be synchronization
+    pthread_yield();
     return;
 }
 

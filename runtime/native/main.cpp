@@ -71,7 +71,5 @@ int main(int argc, char **argv) {
     InitializeMainThread();
     Polyglot_jlang_runtime_MainWrapper_runMain___3Ljava_lang_String_2(args);
 
-    if (currentThread == GetMainThread()) {
-        Threads::Instance().join();
-    }
+    Threads::Instance().join();
 }

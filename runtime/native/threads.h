@@ -6,7 +6,11 @@
 #include <unordered_map>
 
 extern thread_local jobject currentThread;
-extern thread_local bool currentThreadState;
+
+struct NativeThread {
+  pthread_t tid;
+  bool threadStatus;
+};
 
 class Threads {
   public:
@@ -16,10 +20,12 @@ class Threads {
 
     void startThread(jobject jthread);
     void join();
+    std::unordered_map<jobject, NativeThread> threads;
 
     pthread_mutex_t globalMutex;
 
   private:
     Threads();
-    std::unordered_map<jobject, pthread_t> threads;
 };
+
+jobject GetMainThread();
