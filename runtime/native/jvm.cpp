@@ -362,7 +362,7 @@ void JVM_SetThreadPriority(JNIEnv *env, jobject thread, jint prio) {
 }
 
 void JVM_Yield(JNIEnv *env, jclass threadClass) {
-    pthread_yield();
+    sched_yield();
     return;
 }
 
