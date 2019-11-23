@@ -8,6 +8,11 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <pthread.h>
+
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
 
 #include "native.h"
 
@@ -89,3 +94,8 @@ GetJavaNativeFunc(jclass cls,               // e.g., java.lang.Object
     DumpStackTrace();
     abort();
 }
+
+extern "C" void* __GC_malloc(size_t size) {
+    return GC_malloc(size);
+}
+
