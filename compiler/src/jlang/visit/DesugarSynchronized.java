@@ -34,9 +34,9 @@ public class DesugarSynchronized extends DesugarVisitor {
             //  synchronized(o) {...}
             // To
             //  {
-            //      Object temp = o;
-            //      try { MonitorEnter(o); ... }
-            //      finally { MonitorExit(o); }
+            //      Object syncObj = o;
+            //      try { MonitorEnter(syncObj); ... }
+            //      finally { MonitorExit(syncObj); }
             //  }
             Synchronized node = (Synchronized) n;
             Position pos = node.position();

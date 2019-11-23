@@ -22,6 +22,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static jlang.extension.JLangSynchronizedExt.buildMonitorFunc;
 import static org.bytedeco.javacpp.LLVM.*;
 
 /**
@@ -804,6 +805,9 @@ public class LLVMUtils {
 
     /** Emits a check to ensure that the given class has been loaded by the runtime. */
     public void buildClassLoadCheck(ClassType ct) {
+        // Synchronize the class loading function.
+        buildMonitorFunc(v, Constants.MONITOR_ENTER, LLVMConstNull(v.utils.toLL(v.ts.Object())));
+
         LLVMBasicBlockRef loadClass = v.utils.buildBlock("load.class");
         LLVMBasicBlockRef end = v.utils.buildBlock("continue");
         String classMangled = v.mangler.classObj(ct);
@@ -821,6 +825,8 @@ public class LLVMUtils {
         LLVMBuildBr(v.builder, end);
 
         LLVMPositionBuilderAtEnd(v.builder, end);
+
+        buildMonitorFunc(v, Constants.MONITOR_EXIT, LLVMConstNull(v.utils.toLL(v.ts.Object())));
     }
 
     /**
