@@ -17,7 +17,7 @@ public class Constants {
 
     public static final String PRIMITIVE_CLASS_OBJECT_SUFFIX = "ClassObject";
 
-    public static final String CALLOC = "GC_malloc";
+    public static final String CALLOC = "__GC_malloc";
     public static final String ENTRY_TRAMPOLINE = "Java_jlang_runtime_MainWrapper_main";
     public static final int LLVM_ADDR_SPACE = 0;
 
