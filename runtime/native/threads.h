@@ -2,7 +2,7 @@
 
 #include <functional>
 #include <jvm.h>
-#include <thread>
+#include <pthread.h>
 #include <unordered_map>
 
 extern thread_local jobject currentThread;

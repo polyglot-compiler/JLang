@@ -18,11 +18,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <dlfcn.h>
-#include <gc.h>
 #include <stdexcept>
 #include <stdio.h>
 #include <string>
 #include <unordered_map>
+
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
 
 #define MEMCPY(a, b, c) memcpy((void *)a, (void *)b, c)
 static constexpr bool kDebug = false;
@@ -147,14 +150,9 @@ void RegisterJavaClass(jclass cls, const JavaClassInfo *info) {
                    m->name, m->sig, m->offset, m->fnPtr, m->trampoline);
         }
     }
-    // printf("loaded class %s\n", info->name);
-
     assert(classes.count(cls) == 0 && "Java class was loaded twice!");
     classes.emplace(cls, info);
     std::string cname(info->name);
-    // if (strstr(info->name, "FieldReflection") != NULL) {
-    //   printf("reg name: %s\n", info->name);
-    // }
     cnames.emplace(cname, cls);
 }
 
@@ -198,6 +196,9 @@ const char *getComponentName(const char *name) { return &(name[1]); }
  * Returns the newly created array class
  */
 const jclass initArrayClass(const char *name) {
+    // TODO: GLOBALMUTEX
+    ScopedLock lock(&Threads::Instance().globalMutex);
+
     int jclass_size = classSize;
     if (jclass_size == 0) {
         printf("WARNING: class size not yet initialized\n");
@@ -394,7 +395,7 @@ int arrayRepSize(jclass cls) {
 const JavaClassInfo *GetJavaClassInfo(jclass cls) {
     // TODO: GLOBALMUTEX
     ScopedLock lock(&Threads::Instance().globalMutex);
-
+    
     try {
         return classes.at(cls);
     } catch (const std::out_of_range &oor) {

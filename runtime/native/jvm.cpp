@@ -539,6 +539,9 @@ jclass JVM_FindClassFromBootLoader(JNIEnv *env, const char *name) {
 
 jclass JVM_FindClassFromCaller(JNIEnv *env, const char *name, jboolean init,
                                jobject loader, jclass caller) {
+    // TODO: GLOBALMUTEX
+    ScopedLock lock(&Threads::Instance().globalMutex);
+
     auto clazz = GetJavaClassFromPathName(name);
     if (clazz != NULL) {
         return clazz;
@@ -681,6 +684,9 @@ std::vector<std::string> parseMethodSig(const std::string &sig) {
 
 jobjectArray JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass,
                                          jboolean publicOnly) {
+    // TODO: GLOBALMUTEX
+    ScopedLock lock(&Threads::Instance().globalMutex);
+
     const JavaClassInfo *info = GetJavaClassInfo(ofClass);
     if (info) {
         const char *methodArrType = "[Ljava.lang.reflect.Method;";

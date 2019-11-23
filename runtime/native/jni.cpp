@@ -1,13 +1,17 @@
 // Copyright (C) 2018 Cornell University
 
-#include <gc.h>
-#include <pthread.h>
-
 #include "class.h"
 #include "exception.h"
 #include "jni_help.h"
 #include "reflect.h"
 #include "monitor.h"
+#include "threads.h"
+
+#include <pthread.h>
+
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
 // Begin official API.
 
 extern "C" {
@@ -30,6 +34,8 @@ jclass jni_FindClass(JNIEnv *env, const char *name) {
         return NULL;
     jclass clazz = GetJavaClassFromPathName(name);
     if (clazz == NULL) {
+        // TODO: GLOBALMUTEX
+        ScopedLock lock(&Threads::Instance().globalMutex);
         return LoadJavaClassFromLib(name);
     } else {
         return clazz;

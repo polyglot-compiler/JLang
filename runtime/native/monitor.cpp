@@ -3,14 +3,29 @@
 #include "monitor.h"
 
 #include "rep.h"
+#include "threads.h"
 
 #include <algorithm>
-#include <gc.h>
 #include <pthread.h>
+#include <unordered_map>
+#include <assert.h>
+
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
 
 //
 // Monitor
 //
+
+// A map used for sanity check.
+// It is from a lock object to the thread_id which is currently holding this
+// lock and the level of the recursive mutex.
+// This map is shared by all threads.
+std::unordered_map<jobject, std::pair<pthread_t, int>> lockMap;
+
+// A fake object to hold the sync_var of class loading function.
+JObjectRep classLoadFakeObj;
 
 Monitor::Monitor() {
     if (pthread_mutex_init(&mutex, nullptr) != 0) {
@@ -27,9 +42,16 @@ Monitor &Monitor::Instance() {
 }
 
 void Monitor::enter(jobject obj) {
-
     {
         ScopedLock lock(&mutex);
+
+        if (obj == nullptr) {
+            // If obj is nullptr, it is invoked before the a class loading
+            // function. We could use a fake object sync_var for all class
+            // loading functions.
+            obj = classLoadFakeObj.Wrap();
+        }
+
         // sanity check
         Monitor::syncObjs.push_back(obj);
 
@@ -53,11 +75,28 @@ void Monitor::enter(jobject obj) {
     }
 
     pthread_mutex_lock(&Unwrap(obj)->SyncVars()->mutex);
+
+    {
+        // sanity check
+        ScopedLock lock(&mutex);
+        if (lockMap[obj].second == 0) {
+            lockMap[obj].first = pthread_self();
+            lockMap[obj].second = 1;
+        } else {
+            assert(pthread_self() == lockMap[obj].first);
+            lockMap[obj].second++;
+        }
+    }
 }
 
 void Monitor::exit(jobject obj) {
     {
         ScopedLock lock(&mutex);
+
+        if (obj == nullptr) {
+            // See Monitor::enter(jobject obj) comment.
+            obj = classLoadFakeObj.Wrap();
+        }
 
         // sanity check
         jobject enter = Monitor::syncObjs.back();
@@ -71,18 +110,43 @@ void Monitor::exit(jobject obj) {
         }
     }
 
+    {
+        // sanity check
+        ScopedLock lock(&mutex);
+        assert(pthread_self() == lockMap[obj].first && lockMap[obj].second > 0);
+        if (lockMap[obj].second == 1) {
+            lockMap[obj].first = 0;
+            lockMap[obj].second = 0;
+        } else {
+            lockMap[obj].second--;
+        }
+    }
+
     pthread_mutex_unlock(&Unwrap(obj)->SyncVars()->mutex);
 }
 
 void Monitor::wait(jobject obj, jlong ms) {
+    int times;
     {
         ScopedLock lock(&mutex);
+
+        if (obj == nullptr) {
+            // See Monitor::enter(jobject obj) comment.
+            obj = classLoadFakeObj.Wrap();
+        }
 
         // sanity check
         if (!hasEntered(obj)) {
             printf("wait() must be called when the object is locked.");
         }
+
+        // sanity check
+        assert(pthread_self() == lockMap[obj].first && lockMap[obj].second > 0);
+        times = lockMap[obj].second;
+        lockMap[obj].first = 0;
+        lockMap[obj].second = 0;
     }
+
 
     sync_vars *syncVars = Unwrap(obj)->SyncVars();
     if (ms == 0) {
@@ -99,11 +163,24 @@ void Monitor::wait(jobject obj, jlong ms) {
 
         pthread_cond_timedwait(&syncVars->cond, &syncVars->mutex, &t);
     }
+
+    {
+        // sanity check
+        ScopedLock lock(&mutex);
+        assert(lockMap[obj].second == 0);
+        lockMap[obj].first = pthread_self();
+        lockMap[obj].second = times;
+    }
 }
 
 void Monitor::notify(jobject obj) {
     {
         ScopedLock lock(&mutex);
+
+        if (obj == nullptr) {
+            // See Monitor::enter(jobject obj) comment.
+            obj = classLoadFakeObj.Wrap();
+        }
 
         if (!hasEntered(obj)) {
             printf("notify() must be called when the object is locked.");
@@ -117,6 +194,12 @@ void Monitor::notify(jobject obj) {
 void Monitor::notifyAll(jobject obj) {
     {
         ScopedLock lock(&mutex);
+
+        if (obj == nullptr) {
+            // See Monitor::enter(jobject obj) comment.
+            obj = classLoadFakeObj.Wrap();
+        }
+
         if (!hasEntered(obj)) {
             printf("notifyAll() must be called when the object is locked.");
         }
