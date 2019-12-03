@@ -111,11 +111,6 @@ jstring internJString(jstring str) {
     }
 }
 
-void throwInterruptedException(JNIEnv *env, const char* msg) {
-    jclass clazz = FindClass("java.lang.InterruptedException");
-    throwNewThrowable(env, clazz, msg);
-}
-
 extern "C" {
 // we copied this number from open JDK -> not sure the implications
 #define JVM_INTERFACE_VERSION 4
@@ -128,6 +123,11 @@ jint JVM_IHashCode(JNIEnv *env, jobject obj) {
 }
 
 void JVM_MonitorWait(JNIEnv *env, jobject obj, jlong ms) {
+    // check interrupted before waiting
+    if (Threads::Instance().threads[currentThread].interrupted) {
+        Threads::Instance().threads[currentThread].interrupted = false;
+        throwInterruptedException(env);
+    }
     Monitor::Instance().wait(obj, ms);
 }
 
@@ -384,12 +384,14 @@ jint JVM_CountStackFrames(JNIEnv *env, jobject thread) {
 }
 
 void JVM_Interrupt(JNIEnv *env, jobject thread) {
-    throwInterruptedException(env, "test");
+    Threads::Instance().threads[thread].interrupted = true;
 }
 
 jboolean JVM_IsInterrupted(JNIEnv *env, jobject thread,
                            jboolean clearInterrupted) {
-    JvmUnimplemented("JVM_IsInterrupted");
+    bool interrupted = Threads::Instance().threads[thread].interrupted;
+    Threads::Instance().threads[thread].interrupted &= !static_cast<bool>(clearInterrupted);
+    return static_cast<jboolean>(interrupted);
 }
 
 jboolean JVM_HoldsLock(JNIEnv *env, jclass threadClass, jobject obj) {

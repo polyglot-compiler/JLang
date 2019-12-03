@@ -13,4 +13,5 @@ class Exceptions {
     static void throwThrowable(Throwable t) throws Throwable {
 	throw t;
     }
+    static void throwInterruptedException() throws InterruptedException { throw new InterruptedException(); }
 }

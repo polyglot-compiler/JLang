@@ -10,6 +10,7 @@ extern thread_local jobject currentThread;
 struct NativeThread {
     pthread_t tid;
     bool threadStatus;
+    bool interrupted;
 };
 
 class Threads {
