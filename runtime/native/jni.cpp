@@ -12,6 +12,7 @@
 #define GC_THREADS
 #include <gc.h>
 #undef GC_THREADS
+
 // Begin official API.
 
 extern "C" {

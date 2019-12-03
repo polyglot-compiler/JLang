@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <unwind.h>
 #include <cassert>
+#include <pthread.h>
 
 #define GC_THREADS
 #include <gc.h>

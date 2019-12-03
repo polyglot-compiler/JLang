@@ -4,6 +4,7 @@
 // Java class objects. These data structures are used to support
 // JVM/JNI functionality, such as reflection.
 #include "class.h"
+
 #include "array.h"
 #include "base_class.h"
 #include "constants.h"
@@ -12,6 +13,7 @@
 #include "rep.h"
 #include "monitor.h"
 #include "threads.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
@@ -22,6 +24,7 @@
 #include <stdio.h>
 #include <string>
 #include <unordered_map>
+#include <pthread.h>
 
 #define GC_THREADS
 #include <gc.h>
