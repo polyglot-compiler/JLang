@@ -111,6 +111,11 @@ jstring internJString(jstring str) {
     }
 }
 
+void throwInterruptedException(JNIEnv *env, const char* msg) {
+    jclass clazz = FindClass("java.lang.InterruptedException");
+    throwNewThrowable(env, clazz, msg);
+}
+
 extern "C" {
 // we copied this number from open JDK -> not sure the implications
 #define JVM_INTERFACE_VERSION 4
@@ -379,7 +384,7 @@ jint JVM_CountStackFrames(JNIEnv *env, jobject thread) {
 }
 
 void JVM_Interrupt(JNIEnv *env, jobject thread) {
-    JvmUnimplemented("JVM_Interrupt");
+    throwInterruptedException(env, "test");
 }
 
 jboolean JVM_IsInterrupted(JNIEnv *env, jobject thread,
@@ -540,18 +545,12 @@ jclass JVM_FindClassFromCaller(JNIEnv *env, const char *name, jboolean init,
                                jobject loader, jclass caller) {
     ScopedLock lock(Monitor::Instance().globalMutex());
 
-    auto clazz = GetJavaClassFromPathName(name);
-    if (clazz != NULL) {
-        return clazz;
-    } else { // try to load class from jdklib
-        clazz = LoadJavaClassFromLib(name);
-        if (clazz == NULL) {
-            throwClassNotFoundException(env, name);
-            return NULL; // to make the compiler happy
-        } else {
-            return clazz;
-        }
+    jclass clazz = FindClassFromPathName(name);
+    if (clazz == nullptr) {
+        throwClassNotFoundException(env, name);
+        return nullptr; // to make the compiler happy
     }
+    return clazz;
 }
 
 jclass JVM_FindClassFromClassLoader(JNIEnv *env, const char *name,

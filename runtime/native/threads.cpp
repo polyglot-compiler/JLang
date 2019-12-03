@@ -21,7 +21,7 @@ jobject GetMainThread() {
     }
 
     // create JavaGroup object associated with main Thread.
-    auto thread_group_clazz = LoadJavaClassFromLib("java.lang.ThreadGroup");
+    auto thread_group_clazz = FindClass("java.lang.ThreadGroup");
     jobject mainThreadGroup = CreateJavaObject(thread_group_clazz);
     CallJavaInstanceMethod<jobject>(mainThreadGroup, "<init>", "()V", nullptr);
 
@@ -37,7 +37,7 @@ jobject GetMainThread() {
     jstring mainStr = CreateJavaString(mainCharArray);
 
     // create main Thread object.
-    auto thread_clazz = GetJavaClassFromName("java.lang.Thread");
+    auto thread_clazz = FindClass("java.lang.Thread");
     mainThread = CreateJavaObject(thread_clazz);
     const jobject mainThreadArgs[] = {mainThreadGroup, mainStr};
     CallJavaInstanceMethod<jobject>(

@@ -11,13 +11,13 @@ void Polyglot_java_lang_System_initializeSystemClass__();
 
 void InitializeMainThread() {
     // initialize classes
-    LoadJavaClassFromLib("java.lang.String");
-    LoadJavaClassFromLib("java.lang.System");
-    LoadJavaClassFromLib("java.lang.Thread");
-    LoadJavaClassFromLib("java.lang.ThreadGroup");
-    LoadJavaClassFromLib("java.lang.reflect.Method");
-    LoadJavaClassFromLib("java.lang.ref.Finalizer");
-    LoadJavaClassFromLib("java.lang.Class");
+    FindClass("java.lang.String");
+    FindClass("java.lang.System");
+    FindClass("java.lang.Thread");
+    FindClass("java.lang.ThreadGroup");
+    FindClass("java.lang.reflect.Method");
+    FindClass("java.lang.ref.Finalizer");
+    FindClass("java.lang.Class");
 
     // setup currentThread for main thread
     currentThread = GetMainThread();

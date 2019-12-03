@@ -118,6 +118,10 @@ GetJavaStaticMethodInfo(jclass cls, const char *name, const char *sig);
 
 jclass LoadJavaClassFromLib(const char *name);
 
+jclass FindClass(const char *name);
+
+jclass FindClassFromPathName(const char *name);
+
 bool isArrayClassName(const char *name);
 
 bool isArrayClass(jclass cls);
