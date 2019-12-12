@@ -342,6 +342,11 @@ Some AST extensions are unneeded, either because they do not require a translati
 - MethodDecl (uses ProcedureDeclExt)
 - Eval (the child translation suffices)
 
+Concurrency and Synchronization
+-------------------------------
+
+To have the garbage collector work correctly in multi-threaded code, we need to define a macro variable `GC_THREADS` before including `gc.h` but after `pthreads.h`, as its [documentation](https://github.com/ivmai/bdwgc/blob/master/doc/gcinterface.md) specifies.
+
 
 Debugging Tips
 --------------
