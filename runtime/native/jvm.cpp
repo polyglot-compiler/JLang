@@ -331,7 +331,6 @@ void JVM_EnableCompiler(JNIEnv *env, jclass compCls) {
 void JVM_DisableCompiler(JNIEnv *env, jclass compCls) { return; }
 
 void JVM_StartThread(JNIEnv *env, jobject thread) {
-    // TODO: GLOBALMUTEX
     ScopedLock lock(&Threads::Instance().globalMutex);
     
     Threads::Instance().startThread(thread);
@@ -684,7 +683,6 @@ std::vector<std::string> parseMethodSig(const std::string &sig) {
 
 jobjectArray JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass,
                                          jboolean publicOnly) {
-    // TODO: GLOBALMUTEX
     ScopedLock lock(&Threads::Instance().globalMutex);
 
     const JavaClassInfo *info = GetJavaClassInfo(ofClass);

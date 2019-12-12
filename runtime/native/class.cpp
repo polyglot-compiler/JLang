@@ -120,7 +120,6 @@ void InternStringLit(jstring str) { *str = *internJString(str); }
  * info points to the info object for that class
  */
 void RegisterJavaClass(jclass cls, const JavaClassInfo *info) {
-    // TODO: GLOBALMUTEX
     ScopedLock lock(&Threads::Instance().globalMutex);
 
     if (kDebug) {
@@ -199,7 +198,6 @@ const char *getComponentName(const char *name) { return &(name[1]); }
  * Returns the newly created array class
  */
 const jclass initArrayClass(const char *name) {
-    // TODO: GLOBALMUTEX
     ScopedLock lock(&Threads::Instance().globalMutex);
 
     int jclass_size = classSize;
@@ -396,7 +394,6 @@ int arrayRepSize(jclass cls) {
  * Returns the class info object for the given java class object
  */
 const JavaClassInfo *GetJavaClassInfo(jclass cls) {
-    // TODO: GLOBALMUTEX
     ScopedLock lock(&Threads::Instance().globalMutex);
     
     try {
@@ -579,7 +576,6 @@ jarray create1DArray(const char *arrType, int len) {
  */
 const JavaStaticFieldInfo *GetJavaStaticFieldInfo(jclass cls, const char *name,
                                                   const char *sig) {
-    // TODO: GLOBALMUTEX
     ScopedLock lock(&Threads::Instance().globalMutex);
 
     auto *clazz = classes.at(cls);
@@ -601,7 +597,6 @@ const JavaStaticFieldInfo *GetJavaStaticFieldInfo(jclass cls, const char *name,
  * Return the field information for the given class's field
  */
 const JavaFieldInfo *GetJavaFieldInfo(jclass cls, const char *name) {
-    // TODO: GLOBALMUTEX
     ScopedLock lock(&Threads::Instance().globalMutex);
 
     auto *clazz = classes.at(cls);
@@ -622,7 +617,6 @@ const JavaFieldInfo *GetJavaFieldInfo(jclass cls, const char *name) {
 const std::pair<JavaMethodInfo *, int32_t>
 TryGetJavaMethodInfo(jclass cls, const char *name, const char *sig,
                      bool search_super) {
-    // TODO: GLOBALMUTEX
     ScopedLock lock(&Threads::Instance().globalMutex);
     
     auto *clazz = classes.at(cls);
