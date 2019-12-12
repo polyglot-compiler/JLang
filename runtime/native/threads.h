@@ -8,8 +8,8 @@
 extern thread_local jobject currentThread;
 
 struct NativeThread {
-  pthread_t tid;
-  bool threadStatus;
+    pthread_t tid;
+    bool threadStatus;
 };
 
 class Threads {
@@ -22,10 +22,8 @@ class Threads {
     void join();
     std::unordered_map<jobject, NativeThread> threads;
 
-    pthread_mutex_t globalMutex;
-
   private:
-    Threads();
+    Threads() = default;
 };
 
 jobject GetMainThread();

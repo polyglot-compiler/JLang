@@ -6,9 +6,9 @@
 #include "threads.h"
 
 #include <algorithm>
+#include <assert.h>
 #include <pthread.h>
 #include <unordered_map>
-#include <assert.h>
 
 #define GC_THREADS
 #include <gc.h>
@@ -27,11 +27,38 @@ static constexpr bool kDebug = false;
 // This map is shared by all threads.
 std::unordered_map<jobject, std::pair<pthread_t, int>> lockMap;
 
+static void initSyncVars(jobject obj) {
+    sync_vars *syncVars =
+        reinterpret_cast<sync_vars *>(GC_MALLOC(sizeof(sync_vars)));
+
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    if (pthread_mutex_init(&syncVars->mutex, &attr) != 0) {
+        perror("mutex init failed");
+    }
+
+    if (pthread_cond_init(&syncVars->cond, nullptr) != 0) {
+        perror("condition variable init failed");
+    }
+
+    Unwrap(obj)->SetSyncVars(syncVars);
+}
+
 // A fake object to hold the sync_var of class loading function.
 // The class loading code could utilize this global object to ensure that
 // every class is only initilized by one thread once.
-JObjectRep __Polyglot_native_ClassLoadObject;
-jobject Polyglot_native_ClassLoadObject = __Polyglot_native_ClassLoadObject.Wrap();
+JObjectRep __Polyglot_native_GlobalMutexObject;
+
+static jobject getGlobalMutexObject() {
+    if (__Polyglot_native_GlobalMutexObject.SyncVars() == nullptr) {
+        initSyncVars(__Polyglot_native_GlobalMutexObject.Wrap());
+    }
+    return __Polyglot_native_GlobalMutexObject.Wrap();
+}
+
+jobject Polyglot_native_GlobalMutexObject = getGlobalMutexObject();
+
 
 Monitor::Monitor() {
     if (pthread_mutex_init(&mutex, nullptr) != 0) {
@@ -57,21 +84,7 @@ void Monitor::enter(jobject obj) {
         }
 
         if (Unwrap(obj)->SyncVars() == nullptr) {
-            sync_vars *syncVars =
-                reinterpret_cast<sync_vars *>(GC_MALLOC(sizeof(sync_vars)));
-
-            pthread_mutexattr_t attr;
-            pthread_mutexattr_init(&attr);
-            pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-            if (pthread_mutex_init(&syncVars->mutex, &attr) != 0) {
-                perror("mutex init failed");
-            }
-
-            if (pthread_cond_init(&syncVars->cond, nullptr) != 0) {
-                perror("condition variable init failed");
-            }
-
-            Unwrap(obj)->SetSyncVars(syncVars);
+            initSyncVars(obj);
         }
     }
 
@@ -99,11 +112,13 @@ void Monitor::exit(jobject obj) {
             jobject enter = Monitor::syncObjs.back();
             Monitor::syncObjs.pop_back();
             if (enter != obj) {
-            printf("EROOR: synchronized enter and exit should be in reverse order "
-                "style.\n");
+                printf("EROOR: synchronized enter and exit should be in "
+                       "reverse order "
+                       "style.\n");
             }
             if (Unwrap(obj)->SyncVars() == nullptr) {
-                printf("SyncVars must have already been initialized in MonitorEnter\n");
+                printf("SyncVars must have already been initialized in "
+                       "MonitorEnter\n");
             }
         }
     }
@@ -135,13 +150,13 @@ void Monitor::wait(jobject obj, jlong ms) {
             }
 
             // sanity check
-            assert(pthread_self() == lockMap[obj].first && lockMap[obj].second > 0);
+            assert(pthread_self() == lockMap[obj].first &&
+                   lockMap[obj].second > 0);
             times = lockMap[obj].second;
             lockMap[obj].first = 0;
             lockMap[obj].second = 0;
         }
     }
-
 
     sync_vars *syncVars = Unwrap(obj)->SyncVars();
     if (ms == 0) {
@@ -199,11 +214,15 @@ bool Monitor::hasEntered(jobject obj) {
         return false;
     }
 
-    return std::find(Monitor::syncObjs.rbegin(), Monitor::syncObjs.rend(), obj) !=
-           Monitor::syncObjs.rend();
+    return std::find(Monitor::syncObjs.rbegin(), Monitor::syncObjs.rend(),
+                     obj) != Monitor::syncObjs.rend();
 }
 
 thread_local std::deque<jobject> Monitor::syncObjs;
+
+pthread_mutex_t *Monitor::globalMutex() {
+    return &Unwrap(getGlobalMutexObject())->SyncVars()->mutex;
+}
 
 //
 // ScopedLock

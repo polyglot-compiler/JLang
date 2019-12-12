@@ -331,7 +331,7 @@ void JVM_EnableCompiler(JNIEnv *env, jclass compCls) {
 void JVM_DisableCompiler(JNIEnv *env, jclass compCls) { return; }
 
 void JVM_StartThread(JNIEnv *env, jobject thread) {
-    ScopedLock lock(&Threads::Instance().globalMutex);
+    ScopedLock lock(Monitor::Instance().globalMutex());
     
     Threads::Instance().startThread(thread);
 }
@@ -538,8 +538,7 @@ jclass JVM_FindClassFromBootLoader(JNIEnv *env, const char *name) {
 
 jclass JVM_FindClassFromCaller(JNIEnv *env, const char *name, jboolean init,
                                jobject loader, jclass caller) {
-    // TODO: GLOBALMUTEX
-    ScopedLock lock(&Threads::Instance().globalMutex);
+    ScopedLock lock(Monitor::Instance().globalMutex());
 
     auto clazz = GetJavaClassFromPathName(name);
     if (clazz != NULL) {
@@ -683,7 +682,7 @@ std::vector<std::string> parseMethodSig(const std::string &sig) {
 
 jobjectArray JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass,
                                          jboolean publicOnly) {
-    ScopedLock lock(&Threads::Instance().globalMutex);
+    ScopedLock lock(Monitor::Instance().globalMutex());
 
     const JavaClassInfo *info = GetJavaClassInfo(ofClass);
     if (info) {
@@ -759,6 +758,7 @@ jobjectArray getEmptyObjectArray() {
 
 jobjectArray JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass,
                                         jboolean publicOnly) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
     try {
         return fieldsCache.at(ofClass);
     } catch (const std::out_of_range &oor) {
@@ -850,6 +850,7 @@ jobjectArray JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass,
 
 jobjectArray JVM_GetClassDeclaredConstructors(JNIEnv *env, jclass ofClass,
                                               jboolean publicOnly) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
     // TODO actually implement this - the following doesn't work yet
     auto class_info = GetJavaClassInfo(ofClass);
     if (class_info == NULL) {
@@ -869,6 +870,8 @@ jint JVM_GetClassAccessFlags(JNIEnv *env, jclass cls) {
 
 jobject JVM_InvokeMethod(JNIEnv *env, jobject method, jobject obj,
                          jobjectArray args0) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     const JavaClassInfo *info =
         GetJavaClassInfo(Unwrap(obj)->Cdv()->Class()->Wrap());
 

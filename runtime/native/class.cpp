@@ -120,7 +120,7 @@ void InternStringLit(jstring str) { *str = *internJString(str); }
  * info points to the info object for that class
  */
 void RegisterJavaClass(jclass cls, const JavaClassInfo *info) {
-    ScopedLock lock(&Threads::Instance().globalMutex);
+    ScopedLock lock(Monitor::Instance().globalMutex());
 
     if (kDebug) {
         printf("loading %s %s with super class %s\n",
@@ -198,7 +198,7 @@ const char *getComponentName(const char *name) { return &(name[1]); }
  * Returns the newly created array class
  */
 const jclass initArrayClass(const char *name) {
-    ScopedLock lock(&Threads::Instance().globalMutex);
+    ScopedLock lock(Monitor::Instance().globalMutex());
 
     int jclass_size = classSize;
     if (jclass_size == 0) {
@@ -394,7 +394,7 @@ int arrayRepSize(jclass cls) {
  * Returns the class info object for the given java class object
  */
 const JavaClassInfo *GetJavaClassInfo(jclass cls) {
-    ScopedLock lock(&Threads::Instance().globalMutex);
+    ScopedLock lock(Monitor::Instance().globalMutex());
     
     try {
         return classes.at(cls);
@@ -576,7 +576,7 @@ jarray create1DArray(const char *arrType, int len) {
  */
 const JavaStaticFieldInfo *GetJavaStaticFieldInfo(jclass cls, const char *name,
                                                   const char *sig) {
-    ScopedLock lock(&Threads::Instance().globalMutex);
+    ScopedLock lock(Monitor::Instance().globalMutex());
 
     auto *clazz = classes.at(cls);
     auto *fields = clazz->static_fields;
@@ -597,7 +597,7 @@ const JavaStaticFieldInfo *GetJavaStaticFieldInfo(jclass cls, const char *name,
  * Return the field information for the given class's field
  */
 const JavaFieldInfo *GetJavaFieldInfo(jclass cls, const char *name) {
-    ScopedLock lock(&Threads::Instance().globalMutex);
+    ScopedLock lock(Monitor::Instance().globalMutex());
 
     auto *clazz = classes.at(cls);
     auto *fields = clazz->fields;
@@ -617,7 +617,7 @@ const JavaFieldInfo *GetJavaFieldInfo(jclass cls, const char *name) {
 const std::pair<JavaMethodInfo *, int32_t>
 TryGetJavaMethodInfo(jclass cls, const char *name, const char *sig,
                      bool search_super) {
-    ScopedLock lock(&Threads::Instance().globalMutex);
+    ScopedLock lock(Monitor::Instance().globalMutex());
     
     auto *clazz = classes.at(cls);
     auto *methods = clazz->methods;

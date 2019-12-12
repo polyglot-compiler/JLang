@@ -50,15 +50,6 @@ jobject GetMainThread() {
 
 thread_local jobject currentThread = nullptr;
 
-Threads::Threads() {
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    if (pthread_mutex_init(&globalMutex, &attr) != 0) {
-        perror("mutex init failed");
-    }
-}
-
 Threads &Threads::Instance() {
     static Threads *instance;
     if (instance == nullptr) {

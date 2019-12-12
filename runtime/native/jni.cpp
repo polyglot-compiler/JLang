@@ -35,7 +35,7 @@ jclass jni_FindClass(JNIEnv *env, const char *name) {
         return NULL;
     jclass clazz = GetJavaClassFromPathName(name);
     if (clazz == NULL) {
-        ScopedLock lock(&Threads::Instance().globalMutex);
+        ScopedLock lock(Monitor::Instance().globalMutex());
         return LoadJavaClassFromLib(name);
     } else {
         return clazz;

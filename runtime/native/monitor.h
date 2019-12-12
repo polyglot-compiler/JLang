@@ -20,6 +20,8 @@ class Monitor {
     void notify(jobject obj);
     void notifyAll(jobject obj);
 
+    pthread_mutex_t *globalMutex();
+
   private:
     static thread_local std::deque<jobject> syncObjs;
     pthread_mutex_t mutex;
