@@ -806,7 +806,8 @@ public class LLVMUtils {
     /** Emits a check to ensure that the given class has been loaded by the runtime. */
     public void buildClassLoadCheck(ClassType ct) {
         // Synchronize the class loading function.
-        buildMonitorFunc(v, Constants.MONITOR_ENTER, LLVMConstNull(v.utils.toLL(v.ts.Object())));
+        LLVMValueRef classLoadObj = v.utils.getGlobal(Constants.CLASS_LOAD_OBJECT, v.utils.toLL(v.ts.Object()));
+        buildMonitorFunc(v, Constants.MONITOR_ENTER, classLoadObj);
 
         LLVMBasicBlockRef loadClass = v.utils.buildBlock("load.class");
         LLVMBasicBlockRef end = v.utils.buildBlock("continue");
@@ -826,7 +827,7 @@ public class LLVMUtils {
 
         LLVMPositionBuilderAtEnd(v.builder, end);
 
-        buildMonitorFunc(v, Constants.MONITOR_EXIT, LLVMConstNull(v.utils.toLL(v.ts.Object())));
+        buildMonitorFunc(v, Constants.MONITOR_EXIT, classLoadObj);
     }
 
     /**

@@ -28,7 +28,10 @@ static constexpr bool kDebug = false;
 std::unordered_map<jobject, std::pair<pthread_t, int>> lockMap;
 
 // A fake object to hold the sync_var of class loading function.
-JObjectRep classLoadFakeObj;
+// The class loading code could utilize this global object to ensure that
+// every class is only initilized by one thread once.
+JObjectRep __Polyglot_native_ClassLoadObject;
+jobject Polyglot_native_ClassLoadObject = __Polyglot_native_ClassLoadObject.Wrap();
 
 Monitor::Monitor() {
     if (pthread_mutex_init(&mutex, nullptr) != 0) {
@@ -47,13 +50,6 @@ Monitor &Monitor::Instance() {
 void Monitor::enter(jobject obj) {
     {
         ScopedLock lock(&mutex);
-
-        if (obj == nullptr) {
-            // If obj is nullptr, it wants to synchronize the class loading
-            // function. Here, we use a fake object sync_var for all class
-            // loading functions.
-            obj = classLoadFakeObj.Wrap();
-        }
 
         if (kDebug) {
             // sanity check
@@ -98,11 +94,6 @@ void Monitor::exit(jobject obj) {
     {
         ScopedLock lock(&mutex);
 
-        if (obj == nullptr) {
-            // See Monitor::enter(jobject obj) comment.
-            obj = classLoadFakeObj.Wrap();
-        }
-
         // sanity check
         if (kDebug) {
             jobject enter = Monitor::syncObjs.back();
@@ -136,11 +127,6 @@ void Monitor::wait(jobject obj, jlong ms) {
     int times;
     {
         ScopedLock lock(&mutex);
-
-        if (obj == nullptr) {
-            // See Monitor::enter(jobject obj) comment.
-            obj = classLoadFakeObj.Wrap();
-        }
 
         if (kDebug) {
             // sanity check
@@ -186,11 +172,6 @@ void Monitor::notify(jobject obj) {
     {
         ScopedLock lock(&mutex);
 
-        if (obj == nullptr) {
-            // See Monitor::enter(jobject obj) comment.
-            obj = classLoadFakeObj.Wrap();
-        }
-
         if (kDebug && !hasEntered(obj)) {
             printf("notify() must be called when the object is locked.");
         }
@@ -203,11 +184,6 @@ void Monitor::notify(jobject obj) {
 void Monitor::notifyAll(jobject obj) {
     {
         ScopedLock lock(&mutex);
-
-        if (obj == nullptr) {
-            // See Monitor::enter(jobject obj) comment.
-            obj = classLoadFakeObj.Wrap();
-        }
 
         if (kDebug && !hasEntered(obj)) {
             printf("notifyAll() must be called when the object is locked.");
