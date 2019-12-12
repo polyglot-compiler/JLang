@@ -24,7 +24,7 @@ There are a fair number of dependencies you'll need to install before building J
 > * ANT - Polyglot and JLang are built with ant `build.xml` specifications.
 > * JDK native libraries - Requires a manual download from [Oracle's](https://www.oracle.com/technetwork/java/javase/downloads/java-archive-downloads-javase7-521261.html) website. (Select Java SE Development Kit 7u80 for your target platform).
 > * LLVM + Clang 5.0 - Used to compile the runtime C++ and make executables from *.ll files.
-> * Boehm-Demers-Weiser garbase collector - This implements garbage collection for LLVM and must be linked with the generated code.
+> * Boehm-Demers-Weiser garbage collector - This implements garbage collection for LLVM and must be linked with the generated code.
 > * Git LFS - used to download the JDK7 java source which is distributed with this repo.
 
 More details on how to install all of these dependencies are included in the [README](https://github.com/polyglot-compiler/JLang/blob/master/README.md).
