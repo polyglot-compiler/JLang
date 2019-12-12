@@ -2,10 +2,9 @@
 
 package jlang.util;
 
-import org.bytedeco.javacpp.PointerPointer;
-
-import jlang.visit.LLVMTranslator;
 import jlang.extension.JLangStringLitExt;
+import jlang.visit.LLVMTranslator;
+import org.bytedeco.javacpp.PointerPointer;
 import polyglot.ast.Expr;
 import polyglot.ast.Lang;
 import polyglot.ext.jl5.types.JL5TypeSystem;
@@ -756,7 +755,7 @@ public class LLVMUtils {
 	    }
 	}
     }
-    
+
     public LLVMValueRef buildConstArray(LLVMTypeRef elemType, LLVMValueRef... values) {
         return LLVMConstArray(elemType, new PointerPointer<>(values), values.length);
     }
@@ -806,7 +805,8 @@ public class LLVMUtils {
     /** Emits a check to ensure that the given class has been loaded by the runtime. */
     public void buildClassLoadCheck(ClassType ct) {
         // Synchronize the class loading function.
-        LLVMValueRef classLoadObj = v.utils.getGlobal(Constants.CLASS_LOAD_OBJECT, v.utils.toLL(v.ts.Object()));
+        LLVMValueRef classLoadObjPtr = v.utils.getGlobal(Constants.CLASS_LOAD_OBJECT, v.utils.toLL(v.ts.Object()));
+        LLVMValueRef classLoadObj = LLVMBuildLoad(v.builder, classLoadObjPtr, "load.classLoad");
         buildMonitorFunc(v, Constants.MONITOR_ENTER, classLoadObj);
 
         LLVMBasicBlockRef loadClass = v.utils.buildBlock("load.class");
