@@ -1,4 +1,4 @@
-public class PrimativeReflection {
+public class PrimitiveReflection {
 
   public static void main(String[] args) {
     System.out.println(int.class);
