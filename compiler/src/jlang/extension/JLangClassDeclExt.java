@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static jlang.extension.JLangSynchronizedExt.buildMonitorFunc;
+import static jlang.extension.JLangSynchronizedExt.buildMonitorFuncWithGlobalMutex;
 import static jlang.util.Constants.REGISTER_CLASS_FUNC;
 import static jlang.util.Constants.RUNTIME_ARRAY;
 import static org.bytedeco.javacpp.LLVM.*;
@@ -192,9 +193,7 @@ public class JLangClassDeclExt extends JLangExt {
 
         Runnable buildBody = () -> {
             // Synchronize the class loading function.
-            LLVMValueRef globalMutexPtr = v.utils.getGlobal(Constants.GLOBAL_MUTEX_OBJECT, v.utils.toLL(v.ts.Object()));
-            LLVMValueRef globalMutex = LLVMBuildLoad(v.builder, globalMutexPtr, "load.classLoad");
-            buildMonitorFunc(v, Constants.MONITOR_ENTER, globalMutex);
+            buildMonitorFuncWithGlobalMutex(v, Constants.MONITOR_ENTER);
 
             // Allocate and store a new java.lang.Class instance.
             // Note that we do not call any constructors for the allocated class objects.
@@ -252,7 +251,7 @@ public class JLangClassDeclExt extends JLangExt {
                 }
             }
 
-            buildMonitorFunc(v, Constants.MONITOR_EXIT, globalMutex);
+            buildMonitorFuncWithGlobalMutex(v, Constants.MONITOR_EXIT);
 
             // Return the loaded class.
             LLVMBuildRet(v.builder, clazz);

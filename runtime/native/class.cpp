@@ -690,12 +690,11 @@ jclass LoadJavaClassFromLib(const char *name) {
  * function will be invoked. The class name is in the format java.lang.Class
  */
 jclass FindClass(const char *name) {
-    Monitor::Instance().enter(nullptr);
+    ScopedLock scopedLock(Monitor::Instance().globalMutex());
     jclass clazz = GetJavaClassFromName(name);
     if (clazz == nullptr) {
         clazz = LoadJavaClassFromLib(name);
     }
-    Monitor::Instance().exit(nullptr);
     return clazz;
 }
 
@@ -704,11 +703,10 @@ jclass FindClass(const char *name) {
  * function will be invoked. The class name is in the format java/lang/Class
  */
 jclass FindClassFromPathName(const char *name) {
-    Monitor::Instance().enter(nullptr);
+    ScopedLock scopedLock(Monitor::Instance().globalMutex());
     jclass clazz = GetJavaClassFromPathName(name);
     if (clazz == nullptr) {
         clazz = LoadJavaClassFromLib(name);
     }
-    Monitor::Instance().exit(nullptr);
     return clazz;
 }

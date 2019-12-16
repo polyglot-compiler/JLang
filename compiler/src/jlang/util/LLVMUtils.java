@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static jlang.extension.JLangSynchronizedExt.buildMonitorFunc;
+import static jlang.extension.JLangSynchronizedExt.buildMonitorFuncWithGlobalMutex;
 import static org.bytedeco.javacpp.LLVM.*;
 
 /**
@@ -805,9 +806,7 @@ public class LLVMUtils {
     /** Emits a check to ensure that the given class has been loaded by the runtime. */
     public void buildClassLoadCheck(ClassType ct) {
         // Synchronize the class loading function.
-        LLVMValueRef globalMutexPtr = v.utils.getGlobal(Constants.GLOBAL_MUTEX_OBJECT, v.utils.toLL(v.ts.Object()));
-        LLVMValueRef globalMutex = LLVMBuildLoad(v.builder, globalMutexPtr, "load.classLoad");
-        buildMonitorFunc(v, Constants.MONITOR_ENTER, globalMutex);
+        buildMonitorFuncWithGlobalMutex(v, Constants.MONITOR_ENTER);
 
         LLVMBasicBlockRef loadClass = v.utils.buildBlock("load.class");
         LLVMBasicBlockRef end = v.utils.buildBlock("continue");
@@ -827,7 +826,7 @@ public class LLVMUtils {
 
         LLVMPositionBuilderAtEnd(v.builder, end);
 
-        buildMonitorFunc(v, Constants.MONITOR_EXIT, globalMutex);
+        buildMonitorFuncWithGlobalMutex(v, Constants.MONITOR_EXIT);
     }
 
     /**

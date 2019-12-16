@@ -48,17 +48,13 @@ static void initSyncVars(jobject obj) {
 // A fake object to hold the sync_var of class loading function.
 // The class loading code could utilize this global object to ensure that
 // every class is only initilized by one thread once.
-JObjectRep __Polyglot_native_GlobalMutexObject;
-
-static jobject getGlobalMutexObject() {
+extern "C" jobject getGlobalMutexObject() {
+    static JObjectRep __Polyglot_native_GlobalMutexObject;
     if (__Polyglot_native_GlobalMutexObject.SyncVars() == nullptr) {
         initSyncVars(__Polyglot_native_GlobalMutexObject.Wrap());
     }
     return __Polyglot_native_GlobalMutexObject.Wrap();
 }
-
-jobject Polyglot_native_GlobalMutexObject = getGlobalMutexObject();
-
 
 Monitor::Monitor() {
     if (pthread_mutex_init(&mutex, nullptr) != 0) {

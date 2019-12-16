@@ -4,6 +4,7 @@
 
 #include "class.h"
 #include "rep.h"
+#include "monitor.h"
 
 #include <jni.h>
 #include <string.h>
@@ -66,6 +67,8 @@ jstring CreateJavaString(jcharArray chars) {
 }
 
 jobject CreateJavaObject(jclass clazz) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     auto info = GetJavaClassInfo(clazz);
     // TODO set exception (class is interface or abstract)
     if (info == NULL || info->cdv == NULL) {
@@ -81,6 +84,8 @@ jobject CreateJavaObject(jclass clazz) {
 
 jobject CloneJavaObject(jobject obj) {
     // TODO set exception if class is not cloneable
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     auto objRep = Unwrap(obj);
     auto cdv = objRep->Cdv();
     auto cls = cdv->Class()->Wrap();
