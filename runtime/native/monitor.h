@@ -7,6 +7,10 @@
 #include <jni.h>
 #include <pthread.h>
 
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
+
 class Monitor {
   public:
     Monitor(const Monitor &monitor) = delete;

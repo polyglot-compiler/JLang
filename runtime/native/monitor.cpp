@@ -7,8 +7,8 @@
 
 #include <algorithm>
 #include <assert.h>
-#include <pthread.h>
 #include <unordered_map>
+#include <pthread.h>
 
 #define GC_THREADS
 #include <gc.h>

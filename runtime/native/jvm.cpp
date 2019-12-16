@@ -19,7 +19,6 @@
 #include <cstring>
 #include <dlfcn.h>
 #include <fcntl.h>
-#include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -28,6 +27,11 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
+#include <pthread.h>
+
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
 
 [[noreturn]] static void JvmUnimplemented(const char *name) {
     fprintf(stderr,
@@ -733,10 +737,15 @@ jobjectArray JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass,
             }
 
             jstring signature = env->NewStringUTF(methods[i].sig);
+
+            // TODO: use the correct checkedExceptions
+            jobjectArray checkedExceptions = (jobjectArray)create1DArray(
+                "[Ljava.lang.Class;", 0);
+            
             // TODO need to get the proper values
             // call the method constructor
             METHOD_INIT_FUNC(newMethod, ofClass, nameString, paramTypes,
-                             returnType, NULL, modifiers, slot, NULL, NULL,
+                             returnType, checkedExceptions, modifiers, slot, NULL, NULL,
                              NULL, NULL);
 
             JVM_SetArrayElement(env, ret, i, newMethod);

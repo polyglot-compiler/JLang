@@ -146,7 +146,7 @@ public class JLangClassDeclExt extends JLangExt {
                 		LLVMConstNull(v.utils.i8Ptr()) :
                 		v.utils.buildCastToBytePtr(v.dv.getDispatchVectorFor(ct)),
 
-                // Object size (Base Object Rep + all fields) in bytes, i32
+                // Object size (Base Object Rep + all fields) in bytes, i64
                 v.obj.sizeOf(ct),
 
                 // Boolean isInterface, jboolean (i8)
