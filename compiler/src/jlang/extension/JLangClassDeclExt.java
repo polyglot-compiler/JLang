@@ -130,6 +130,22 @@ public class JLangClassDeclExt extends JLangExt {
         		.map(intf -> v.utils.getClassObjectGlobal(intf))
         		.toArray(LLVMValueRef[]::new);
 
+        LLVMTypeRef classInfoType = v.utils.structType(
+                v.utils.i8Ptr(), // char* name
+                v.utils.ptrTypeRef(classType), // jclass*
+                v.utils.i8Ptr(),   // void*
+                v.utils.i64(), // obj_size
+                v.utils.i8() , // jboolean
+                v.utils.i32(),  // int32_t
+                v.utils.ptrTypeRef(v.utils.ptrTypeRef(classType)),     // jclass **
+                v.utils.i32(),      // int32_t
+                v.utils.ptrTypeRef(fieldInfoType),     // JavaFieldInfo*
+                v.utils.i32(),      // int32_t
+                v.utils.ptrTypeRef(staticFieldType),     // JavaStaticFieldInfo*
+                v.utils.i32(),      // int32_t
+                v.utils.ptrTypeRef(methodInfoType)      // JavaMethodInfo*
+        );
+
         // This layout must precisely mirror the layout defined in the runtime (class.cpp).
         LLVMValueRef classInfo = v.utils.buildConstStruct(
 
@@ -182,7 +198,7 @@ public class JLangClassDeclExt extends JLangExt {
 
         // Emit class info as a global variable.
         String classInfoMangled = v.mangler.classInfoGlobal(ct);
-        LLVMValueRef classInfoGlobal = v.utils.getGlobal(classInfoMangled, LLVMTypeOf(classInfo));
+        LLVMValueRef classInfoGlobal = v.utils.getGlobal(classInfoMangled, classInfoType);
         LLVMSetInitializer(classInfoGlobal, classInfo);
         LLVMSetGlobalConstant(classInfoGlobal, 1);
         LLVMSetLinkage(classInfoGlobal, LLVMPrivateLinkage);
