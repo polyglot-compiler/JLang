@@ -23,7 +23,7 @@ JAVA_FLAGS := \
 
 NATIVE_FLAGS := \
 	-g -fPIC -std=c++14 -Inative $(JNI_INCLUDES) \
-	-Wall -MMD -pthread $(MACOS_FLAGS)
+	-Wall -MMD -pthread $(MACOS_FLAGS) -D_GLIBCXX_DEBUG
 
 all: classes $(LIBJVM)
 

@@ -101,6 +101,8 @@ template <> struct hash<HashableShortArray> {
 std::unordered_map<HashableShortArray, jstring> InternedStrings;
 
 jstring internJString(jstring str) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     HashableShortArray *h =
         (HashableShortArray *)malloc(sizeof(HashableShortArray));
     h->len = (int)Unwrap(str)->Chars()->Length();
