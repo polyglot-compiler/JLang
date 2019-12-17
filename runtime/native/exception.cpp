@@ -2,17 +2,20 @@
 
 #include "exception.h"
 
+#include "reflect.h"
+#include "stack_trace.h"
+
 #include <cstdio>
 #include <cstring>
 #include <inttypes.h>
 #include <stdexcept>
 #include <unwind.h>
-
 #include <cassert>
-#include <gc.h>
+#include <pthread.h>
 
-#include "reflect.h"
-#include "stack_trace.h"
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
 
 // Large chunks of this file are from ExceptionDemo.cpp in llvm/examples,
 // and some chunks are from llvm/BinaryFormat/Dwarf.h.

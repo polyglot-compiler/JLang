@@ -1,12 +1,18 @@
 // Copyright (C) 2018 Cornell University
 
-#include "jni.h"
-#include <string.h>
+#include "factory.h"
 
 #include "class.h"
-#include "factory.h"
-#include "gc.h"
 #include "rep.h"
+
+#include <jni.h>
+#include <string.h>
+#include <pthread.h>
+
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
+
 
 #define ARRAY_CLS "jlang.runtime.Array"
 // The name must match that used in jlang.runtime.Factory,

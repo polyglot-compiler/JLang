@@ -24,10 +24,16 @@ void RegisterJavaNativeFunc(jclass cls,            // e.g., java.lang.Object
 //
 // The signature of this function must precisely match
 // the signature used in JLang.
-extern "C" void *
+extern "C" {
+
+void *
 GetJavaNativeFunc(jclass cls,               // e.g., java.lang.Object
                   const char *name,         // e.g., wait
                   const char *signature,    // e.g., (J)V
                   const char *short_symbol, // e.g., Java_java_lang_Object_wait
                   const char *long_symbol // e.g., Java_java_lang_Object_wait__J
 );
+
+void *__GC_malloc(size_t size);
+
+} // extern "C"

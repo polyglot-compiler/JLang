@@ -6,12 +6,15 @@
 #include <string.h>
 
 #include "interface.h"
+#include "monitor.h"
+#include "threads.h"
 
 extern "C" {
 
 void __createInterfaceTables(DispatchVector *D, int capacity, int size,
                              int intf_id_hashcodes[], void *intf_ids[],
                              void *intf_tables[]) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
     idv_ht *ittab = new idv_ht(capacity);
     for (int i = 0; i < size; ++i)
         ittab->put(intf_id_hashcodes[i], intf_ids[i], intf_tables[i]);

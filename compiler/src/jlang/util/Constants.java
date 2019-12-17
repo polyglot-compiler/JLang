@@ -17,7 +17,7 @@ public class Constants {
 
     public static final String PRIMITIVE_CLASS_OBJECT_SUFFIX = "ClassObject";
 
-    public static final String CALLOC = "GC_malloc";
+    public static final String CALLOC = "__GC_malloc";
     public static final String ENTRY_TRAMPOLINE = "Java_jlang_runtime_MainWrapper_main";
     public static final int LLVM_ADDR_SPACE = 0;
 
@@ -35,6 +35,7 @@ public class Constants {
     public static final String RESUME_UNWIND_EXCEPTION = "_Unwind_Resume";
     public static final String MONITOR_ENTER = "jni_MonitorEnter";
     public static final String MONITOR_EXIT = "jni_MonitorExit";
+    public static final String GLOBAL_MUTEX_OBJECT = "Polyglot_native_GlobalMutexObject";
   
     public static final Set<String> NON_INVOKE_FUNCTIONS = new HashSet<>(CollectionUtil.list(
             CALLOC, CREATE_EXCEPTION, EXTRACT_EXCEPTION

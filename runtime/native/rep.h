@@ -13,6 +13,7 @@
 #include <cinttypes>
 #include <jni.h>
 #include <type_traits>
+#include <pthread.h>
 
 // Ensure that our C++ representations are POD types,
 // i.e., that they have the layout we'd expect from a C struct.
@@ -47,10 +48,9 @@ struct DispatchVector {
     void *methods_[0]; // a list of method pointers in dv.
 };
 
-// Currently unimplemented.
 struct sync_vars {
-    // pthread_mutex_t* mutex;
-    // pthread_cond_t *condition_variable;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
 };
 
 // Representation for java.lang.Object.
@@ -59,6 +59,7 @@ struct JObjectRep {
     sync_vars *SyncVars() { return sync_vars_; }
     jobject Wrap() { return reinterpret_cast<jobject>(this); }
     void SetCdv(DispatchVector *cdv) { cdv_ = cdv; }
+    void SetSyncVars(sync_vars *vars) { sync_vars_ = vars; }
 
   private:
     DispatchVector *cdv_;

@@ -2,4 +2,6 @@
 
 #pragma once
 
+#include <jni.h>
+
 void InitializeMainThread();

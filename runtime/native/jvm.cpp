@@ -1,29 +1,33 @@
 // Copyright (C) 2018 Cornell University
 
+#include "jvm.h"
+
 #include "class.h"
 #include "exception.h"
+#include "factory.h"
+#include "helper.h"
 #include "jni.h"
+#include "monitor.h"
 #include "rep.h"
 #include "signals.h"
 #include "stack_trace.h"
+#include "threads.h"
+
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
-
-#include "jvm.h"
-
-#include "factory.h"
-#include "helper.h"
 
 [[noreturn]] static void JvmUnimplemented(const char *name) {
     fprintf(stderr,
@@ -50,9 +54,6 @@
 #define JVM_T_SHORT 9
 #define JVM_T_INT 10
 #define JVM_T_LONG 11
-
-thread_local jobject currentThread = nullptr;
-thread_local bool currentThreadState = false;
 
 static void JvmIgnore(const char *name) {
     fprintf(stderr,
@@ -122,15 +123,15 @@ jint JVM_IHashCode(JNIEnv *env, jobject obj) {
 }
 
 void JVM_MonitorWait(JNIEnv *env, jobject obj, jlong ms) {
-    JvmUnimplemented("JVM_MonitorWait");
+    Monitor::Instance().wait(obj, ms);
 }
 
 void JVM_MonitorNotify(JNIEnv *env, jobject obj) {
-    JvmUnimplemented("JVM_MonitorNotify");
+    Monitor::Instance().notify(obj);
 }
 
 void JVM_MonitorNotifyAll(JNIEnv *env, jobject obj) {
-    JvmUnimplemented("JVM_MonitorNotifyAll");
+    Monitor::Instance().notifyAll(obj);
 }
 
 jobject JVM_Clone(JNIEnv *env, jobject obj) { return CloneJavaObject(obj); }
@@ -330,42 +331,27 @@ void JVM_EnableCompiler(JNIEnv *env, jclass compCls) {
 void JVM_DisableCompiler(JNIEnv *env, jclass compCls) { return; }
 
 void JVM_StartThread(JNIEnv *env, jobject thread) {
-    // TODO someday there will be synchronization
-    // printf("Starting thread\n");
-    // get run function pointer
-    jclass objectClass = Unwrap(thread)->Cdv()->Class()->Wrap();
-    const JavaClassInfo *info = GetJavaClassInfo(objectClass);
-    JavaMethodInfo *methods = info->methods;
-    for (int i = 0; i < info->num_methods; i++) {
-        if (strcmp(methods[i].name, "run") == 0) {
-            // printf("found run method: %p\n", methods[i].fnPtr);
-            jmethodID mtdId = reinterpret_cast<jmethodID>(&(methods[i]));
-            // CallJavaInstanceMethod<jobject>(thread, mtdId, (const jvalue*)
-            // &thread); intf is Runnable interface
-            // CallJavaInterfaceMethod(jobject obj, jclass intf, const char*
-            // name, const char* sig, const jvalue* args) {
-        }
-    }
-    return;
+    ScopedLock lock(Monitor::Instance().globalMutex());
+    
+    Threads::Instance().startThread(thread);
 }
 
 void JVM_StopThread(JNIEnv *env, jobject thread, jobject exception) {
-    // TODO someday there will be synchronization
+    JvmUnimplemented("JVM_StopThread is Deprecated in Java8");
     return;
 }
 
 jboolean JVM_IsThreadAlive(JNIEnv *env, jobject thread) {
-    //TODO return JNI_TRUE for any thread which is live, not just the currently running one.
-    return (thread == currentThread) ? currentThreadState : JNI_FALSE;
+    return Threads::Instance().threads[thread].threadStatus;
 }
 
 void JVM_SuspendThread(JNIEnv *env, jobject thread) {
-    // TODO someday there will be synchronization
+    JvmUnimplemented("JVM_SuspendThread is Deprecated in Java8");
     return;
 }
 
 void JVM_ResumeThread(JNIEnv *env, jobject thread) {
-    // TODO someday there will be synchronization
+    JvmUnimplemented("JVM_ResumeThread is Deprecated in Java8");
     return;
 }
 
@@ -375,7 +361,7 @@ void JVM_SetThreadPriority(JNIEnv *env, jobject thread, jint prio) {
 }
 
 void JVM_Yield(JNIEnv *env, jclass threadClass) {
-    // TODO someday there will be synchronization
+    sched_yield();
     return;
 }
 
@@ -552,6 +538,8 @@ jclass JVM_FindClassFromBootLoader(JNIEnv *env, const char *name) {
 
 jclass JVM_FindClassFromCaller(JNIEnv *env, const char *name, jboolean init,
                                jobject loader, jclass caller) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     auto clazz = GetJavaClassFromPathName(name);
     if (clazz != NULL) {
         return clazz;
@@ -694,6 +682,8 @@ std::vector<std::string> parseMethodSig(const std::string &sig) {
 
 jobjectArray JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass,
                                          jboolean publicOnly) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     const JavaClassInfo *info = GetJavaClassInfo(ofClass);
     if (info) {
         const char *methodArrType = "[Ljava.lang.reflect.Method;";
@@ -768,6 +758,7 @@ jobjectArray getEmptyObjectArray() {
 
 jobjectArray JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass,
                                         jboolean publicOnly) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
     try {
         return fieldsCache.at(ofClass);
     } catch (const std::out_of_range &oor) {
@@ -859,6 +850,7 @@ jobjectArray JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass,
 
 jobjectArray JVM_GetClassDeclaredConstructors(JNIEnv *env, jclass ofClass,
                                               jboolean publicOnly) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
     // TODO actually implement this - the following doesn't work yet
     auto class_info = GetJavaClassInfo(ofClass);
     if (class_info == NULL) {
@@ -878,6 +870,8 @@ jint JVM_GetClassAccessFlags(JNIEnv *env, jclass cls) {
 
 jobject JVM_InvokeMethod(JNIEnv *env, jobject method, jobject obj,
                          jobjectArray args0) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     const JavaClassInfo *info =
         GetJavaClassInfo(Unwrap(obj)->Cdv()->Class()->Wrap());
 

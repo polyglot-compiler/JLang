@@ -1,16 +1,22 @@
 // Copyright (C) 2018 Cornell University
 
+#include "class.h"
+#include "factory.h"
+#include "init.h"
+#include "jvm.h"
+#include "rep.h"
+#include "stack_trace.h"
+#include "threads.h"
+
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <pthread.h>
 
-#include "class.h"
-#include "factory.h"
-#include "gc.h"
-#include "rep.h"
-#include "stack_trace.h"
-#include "init.h"
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
 
 extern "C" {
 
@@ -68,4 +74,6 @@ int main(int argc, char **argv) {
     }
     InitializeMainThread();
     Polyglot_jlang_runtime_MainWrapper_runMain___3Ljava_lang_String_2(args);
+
+    Threads::Instance().join();
 }

@@ -4,23 +4,31 @@
 // Java class objects. These data structures are used to support
 // JVM/JNI functionality, such as reflection.
 #include "class.h"
+
 #include "array.h"
 #include "base_class.h"
 #include "constants.h"
 #include "jni.h"
 #include "jvm.h"
 #include "rep.h"
+#include "monitor.h"
+#include "threads.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <dlfcn.h>
-#include <gc.h>
 #include <stdexcept>
 #include <stdio.h>
 #include <string>
 #include <unordered_map>
+#include <pthread.h>
+
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
 
 #define MEMCPY(a, b, c) memcpy((void *)a, (void *)b, c)
 static constexpr bool kDebug = false;
@@ -112,6 +120,8 @@ void InternStringLit(jstring str) { *str = *internJString(str); }
  * info points to the info object for that class
  */
 void RegisterJavaClass(jclass cls, const JavaClassInfo *info) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     if (kDebug) {
         printf("loading %s %s with super class %s\n",
                (info->isIntf ? "interface" : "class"), info->name,
@@ -142,14 +152,9 @@ void RegisterJavaClass(jclass cls, const JavaClassInfo *info) {
                    m->name, m->sig, m->offset, m->fnPtr, m->trampoline);
         }
     }
-    // printf("loaded class %s\n", info->name);
-
     assert(classes.count(cls) == 0 && "Java class was loaded twice!");
     classes.emplace(cls, info);
     std::string cname(info->name);
-    // if (strstr(info->name, "FieldReflection") != NULL) {
-    //   printf("reg name: %s\n", info->name);
-    // }
     cnames.emplace(cname, cls);
 }
 
@@ -193,6 +198,8 @@ const char *getComponentName(const char *name) { return &(name[1]); }
  * Returns the newly created array class
  */
 const jclass initArrayClass(const char *name) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     int jclass_size = classSize;
     if (jclass_size == 0) {
         printf("WARNING: class size not yet initialized\n");
@@ -387,6 +394,8 @@ int arrayRepSize(jclass cls) {
  * Returns the class info object for the given java class object
  */
 const JavaClassInfo *GetJavaClassInfo(jclass cls) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+    
     try {
         return classes.at(cls);
     } catch (const std::out_of_range &oor) {
@@ -567,6 +576,8 @@ jarray create1DArray(const char *arrType, int len) {
  */
 const JavaStaticFieldInfo *GetJavaStaticFieldInfo(jclass cls, const char *name,
                                                   const char *sig) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     auto *clazz = classes.at(cls);
     auto *fields = clazz->static_fields;
     for (int32_t i = 0, e = clazz->num_static_fields; i < e; ++i) {
@@ -586,6 +597,8 @@ const JavaStaticFieldInfo *GetJavaStaticFieldInfo(jclass cls, const char *name,
  * Return the field information for the given class's field
  */
 const JavaFieldInfo *GetJavaFieldInfo(jclass cls, const char *name) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     auto *clazz = classes.at(cls);
     auto *fields = clazz->fields;
     for (int32_t i = 0, e = clazz->num_fields; i < e; ++i) {
@@ -604,6 +617,8 @@ const JavaFieldInfo *GetJavaFieldInfo(jclass cls, const char *name) {
 const std::pair<JavaMethodInfo *, int32_t>
 TryGetJavaMethodInfo(jclass cls, const char *name, const char *sig,
                      bool search_super) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+    
     auto *clazz = classes.at(cls);
     auto *methods = clazz->methods;
     for (int32_t i = 0, e = clazz->num_methods; i < e; ++i) {
