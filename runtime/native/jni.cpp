@@ -33,13 +33,7 @@ jclass jni_FindClass(JNIEnv *env, const char *name) {
     // files
     if (name == NULL)
         return NULL;
-    jclass clazz = GetJavaClassFromPathName(name);
-    if (clazz == NULL) {
-        ScopedLock lock(Monitor::Instance().globalMutex());
-        return LoadJavaClassFromLib(name);
-    } else {
-        return clazz;
-    }
+    return FindClassFromPathName(name);
 }
 
 jmethodID jni_FromReflectedMethod(JNIEnv *env, jobject method) {

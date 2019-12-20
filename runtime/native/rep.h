@@ -10,10 +10,15 @@
 #pragma once
 
 #include "interface.h"
+
 #include <cinttypes>
 #include <jni.h>
 #include <type_traits>
 #include <pthread.h>
+
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
 
 // Ensure that our C++ representations are POD types,
 // i.e., that they have the layout we'd expect from a C struct.

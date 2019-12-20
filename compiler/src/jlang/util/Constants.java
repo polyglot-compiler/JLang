@@ -35,7 +35,7 @@ public class Constants {
     public static final String RESUME_UNWIND_EXCEPTION = "_Unwind_Resume";
     public static final String MONITOR_ENTER = "jni_MonitorEnter";
     public static final String MONITOR_EXIT = "jni_MonitorExit";
-    public static final String GLOBAL_MUTEX_OBJECT = "Polyglot_native_GlobalMutexObject";
+    public static final String GET_GLOBAL_MUTEX_OBJECT = "getGlobalMutexObject";
   
     public static final Set<String> NON_INVOKE_FUNCTIONS = new HashSet<>(CollectionUtil.list(
             CALLOC, CREATE_EXCEPTION, EXTRACT_EXCEPTION

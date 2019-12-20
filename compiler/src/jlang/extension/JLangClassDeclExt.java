@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static jlang.extension.JLangSynchronizedExt.buildMonitorFunc;
+import static jlang.extension.JLangSynchronizedExt.buildMonitorFuncWithGlobalMutex;
 import static jlang.util.Constants.REGISTER_CLASS_FUNC;
 import static jlang.util.Constants.RUNTIME_ARRAY;
 import static org.bytedeco.javacpp.LLVM.*;
@@ -129,6 +130,22 @@ public class JLangClassDeclExt extends JLangExt {
         		.map(intf -> v.utils.getClassObjectGlobal(intf))
         		.toArray(LLVMValueRef[]::new);
 
+        LLVMTypeRef classInfoType = v.utils.structType(
+                v.utils.i8Ptr(), // char* name
+                v.utils.ptrTypeRef(classType), // jclass*
+                v.utils.i8Ptr(),   // void*
+                v.utils.i64(), // obj_size
+                v.utils.i8() , // jboolean
+                v.utils.i32(),  // int32_t
+                v.utils.ptrTypeRef(v.utils.ptrTypeRef(classType)),     // jclass **
+                v.utils.i32(),      // int32_t
+                v.utils.ptrTypeRef(fieldInfoType),     // JavaFieldInfo*
+                v.utils.i32(),      // int32_t
+                v.utils.ptrTypeRef(staticFieldType),     // JavaStaticFieldInfo*
+                v.utils.i32(),      // int32_t
+                v.utils.ptrTypeRef(methodInfoType)      // JavaMethodInfo*
+        );
+
         // This layout must precisely mirror the layout defined in the runtime (class.cpp).
         LLVMValueRef classInfo = v.utils.buildConstStruct(
 
@@ -145,7 +162,7 @@ public class JLangClassDeclExt extends JLangExt {
                 		LLVMConstNull(v.utils.i8Ptr()) :
                 		v.utils.buildCastToBytePtr(v.dv.getDispatchVectorFor(ct)),
 
-                // Object size (Base Object Rep + all fields) in bytes, i32
+                // Object size (Base Object Rep + all fields) in bytes, i64
                 v.obj.sizeOf(ct),
 
                 // Boolean isInterface, jboolean (i8)
@@ -181,7 +198,7 @@ public class JLangClassDeclExt extends JLangExt {
 
         // Emit class info as a global variable.
         String classInfoMangled = v.mangler.classInfoGlobal(ct);
-        LLVMValueRef classInfoGlobal = v.utils.getGlobal(classInfoMangled, LLVMTypeOf(classInfo));
+        LLVMValueRef classInfoGlobal = v.utils.getGlobal(classInfoMangled, classInfoType);
         LLVMSetInitializer(classInfoGlobal, classInfo);
         LLVMSetGlobalConstant(classInfoGlobal, 1);
         LLVMSetLinkage(classInfoGlobal, LLVMPrivateLinkage);
@@ -192,9 +209,7 @@ public class JLangClassDeclExt extends JLangExt {
 
         Runnable buildBody = () -> {
             // Synchronize the class loading function.
-            LLVMValueRef globalMutexPtr = v.utils.getGlobal(Constants.GLOBAL_MUTEX_OBJECT, v.utils.toLL(v.ts.Object()));
-            LLVMValueRef globalMutex = LLVMBuildLoad(v.builder, globalMutexPtr, "load.classLoad");
-            buildMonitorFunc(v, Constants.MONITOR_ENTER, globalMutex);
+            buildMonitorFuncWithGlobalMutex(v, Constants.MONITOR_ENTER);
 
             // Allocate and store a new java.lang.Class instance.
             // Note that we do not call any constructors for the allocated class objects.
@@ -252,7 +267,7 @@ public class JLangClassDeclExt extends JLangExt {
                 }
             }
 
-            buildMonitorFunc(v, Constants.MONITOR_EXIT, globalMutex);
+            buildMonitorFuncWithGlobalMutex(v, Constants.MONITOR_EXIT);
 
             // Return the loaded class.
             LLVMBuildRet(v.builder, clazz);

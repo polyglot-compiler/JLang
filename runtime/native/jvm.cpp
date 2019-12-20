@@ -19,7 +19,6 @@
 #include <cstring>
 #include <dlfcn.h>
 #include <fcntl.h>
-#include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -28,6 +27,11 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
+#include <pthread.h>
+
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
 
 [[noreturn]] static void JvmUnimplemented(const char *name) {
     fprintf(stderr,
@@ -97,6 +101,8 @@ template <> struct hash<HashableShortArray> {
 std::unordered_map<HashableShortArray, jstring> InternedStrings;
 
 jstring internJString(jstring str) {
+    ScopedLock lock(Monitor::Instance().globalMutex());
+
     HashableShortArray *h =
         (HashableShortArray *)malloc(sizeof(HashableShortArray));
     h->len = (int)Unwrap(str)->Chars()->Length();
@@ -123,6 +129,11 @@ jint JVM_IHashCode(JNIEnv *env, jobject obj) {
 }
 
 void JVM_MonitorWait(JNIEnv *env, jobject obj, jlong ms) {
+    // check interrupted before waiting
+    if (Threads::Instance().threads[currentThread].interrupted) {
+        Threads::Instance().threads[currentThread].interrupted = false;
+        throwInterruptedException(env);
+    }
     Monitor::Instance().wait(obj, ms);
 }
 
@@ -379,12 +390,14 @@ jint JVM_CountStackFrames(JNIEnv *env, jobject thread) {
 }
 
 void JVM_Interrupt(JNIEnv *env, jobject thread) {
-    JvmUnimplemented("JVM_Interrupt");
+    Threads::Instance().threads[thread].interrupted = true;
 }
 
 jboolean JVM_IsInterrupted(JNIEnv *env, jobject thread,
                            jboolean clearInterrupted) {
-    JvmUnimplemented("JVM_IsInterrupted");
+    bool interrupted = Threads::Instance().threads[thread].interrupted;
+    Threads::Instance().threads[thread].interrupted &= !static_cast<bool>(clearInterrupted);
+    return static_cast<jboolean>(interrupted);
 }
 
 jboolean JVM_HoldsLock(JNIEnv *env, jclass threadClass, jobject obj) {
@@ -540,18 +553,12 @@ jclass JVM_FindClassFromCaller(JNIEnv *env, const char *name, jboolean init,
                                jobject loader, jclass caller) {
     ScopedLock lock(Monitor::Instance().globalMutex());
 
-    auto clazz = GetJavaClassFromPathName(name);
-    if (clazz != NULL) {
-        return clazz;
-    } else { // try to load class from jdklib
-        clazz = LoadJavaClassFromLib(name);
-        if (clazz == NULL) {
-            throwClassNotFoundException(env, name);
-            return NULL; // to make the compiler happy
-        } else {
-            return clazz;
-        }
+    jclass clazz = FindClassFromPathName(name);
+    if (clazz == nullptr) {
+        throwClassNotFoundException(env, name);
+        return nullptr; // to make the compiler happy
     }
+    return clazz;
 }
 
 jclass JVM_FindClassFromClassLoader(JNIEnv *env, const char *name,
@@ -692,7 +699,7 @@ jobjectArray JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass,
             return (jobjectArray)create1DArray(methodArrType, 0);
         }
 
-        jclass MethodClass = env->FindClass("java.lang.reflect.Method");
+        jclass MethodClass = FindClass("java.lang.reflect.Method");
 
         // dw475 TODO take into account publiconly argument
 
@@ -712,9 +719,9 @@ jobjectArray JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass,
 
             if (methods[i].returnType == nullptr) {
                 methods[i].returnType =
-                    new jclass(GetJavaClassFromName(classNames.back().c_str()));
+                    new jclass(FindClass(classNames.back().c_str()));
             } else if (*methods[i].returnType == NULL) {
-                LoadJavaClassFromLib(classNames.back().c_str());
+                FindClass(classNames.back().c_str());
             }
             jclass returnType = *methods[i].returnType;
 
@@ -723,19 +730,24 @@ jobjectArray JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass,
             for (int k = 0; k < methods[i].numArgTypes; k++) {
                 if (methods[i].argTypes[k] == nullptr) {
                     methods[i].argTypes[k] =
-                        new jclass(GetJavaClassFromName(classNames[k].c_str()));
+                        new jclass(FindClass(classNames[k].c_str()));
                 } else if (*methods[i].argTypes[k] == nullptr) {
-                    LoadJavaClassFromLib(classNames[k].c_str());
+                    FindClass(classNames[k].c_str());
                 }
                 JVM_SetArrayElement(env, paramTypes, k,
                                     *methods[i].argTypes[k]);
             }
 
             jstring signature = env->NewStringUTF(methods[i].sig);
+
+            // TODO: use the correct checkedExceptions
+            jobjectArray checkedExceptions = (jobjectArray)create1DArray(
+                "[Ljava.lang.Class;", 0);
+            
             // TODO need to get the proper values
             // call the method constructor
             METHOD_INIT_FUNC(newMethod, ofClass, nameString, paramTypes,
-                             returnType, NULL, modifiers, slot, NULL, NULL,
+                             returnType, checkedExceptions, modifiers, slot, NULL, NULL,
                              NULL, NULL);
 
             JVM_SetArrayElement(env, ret, i, newMethod);
@@ -772,7 +784,7 @@ jobjectArray JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass,
             return (jobjectArray)create1DArray(fieldArrType, 0);
         }
 
-        jclass FieldsClass = env->FindClass("java.lang.reflect.Field");
+        jclass FieldsClass = FindClass("java.lang.reflect.Field");
 
         // dw475 TODO take into account publiconly argument
 
@@ -814,13 +826,12 @@ jobjectArray JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass,
                     printf("WARNING: Non-Array field has null type_ptr\n");
                 }
                 std::string className = SigToClassName(signature);
-                *typePtrPtr =
-                    new jclass(GetJavaClassFromName(className.c_str()));
+                *typePtrPtr = new jclass(FindClass(className.c_str()));
             } else if (**typePtrPtr == nullptr) {
                 // The typeClass that type_ptr points to has not initialized
                 // yet. Call the class loading function to load it.
                 std::string className = SigToClassName(signature);
-                LoadJavaClassFromLib(className.c_str());
+                FindClass(className.c_str());
                 if (**typePtrPtr == nullptr) {
                     printf("WARNING: Class is not loaded correctly\n");
                 }

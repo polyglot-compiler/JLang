@@ -684,3 +684,29 @@ jclass LoadJavaClassFromLib(const char *name) {
         return NULL;
     }
 }
+
+/**
+ * Find a class with the given name. If it is not loaded, the class loading
+ * function will be invoked. The class name is in the format java.lang.Class
+ */
+jclass FindClass(const char *name) {
+    ScopedLock scopedLock(Monitor::Instance().globalMutex());
+    jclass clazz = GetJavaClassFromName(name);
+    if (clazz == nullptr) {
+        clazz = LoadJavaClassFromLib(name);
+    }
+    return clazz;
+}
+
+/**
+ * Find a class with the given name. If it is not loaded, the class loading
+ * function will be invoked. The class name is in the format java/lang/Class
+ */
+jclass FindClassFromPathName(const char *name) {
+    ScopedLock scopedLock(Monitor::Instance().globalMutex());
+    jclass clazz = GetJavaClassFromPathName(name);
+    if (clazz == nullptr) {
+        clazz = LoadJavaClassFromLib(name);
+    }
+    return clazz;
+}

@@ -9,6 +9,7 @@
 void throwClassNotFoundException(JNIEnv *env, const char *name);
 void throwNewThrowable(JNIEnv *env, jclass clazz, const char *msg);
 void throwThrowable(JNIEnv *env, jthrowable obj);
+void throwInterruptedException(JNIEnv *env);
 
 extern "C" {
 

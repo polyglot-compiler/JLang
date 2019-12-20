@@ -1,8 +1,11 @@
 // Copyright (C) 2018 Cornell University
 
+#include "native.h"
+
 #include "class.h"
 #include "jni.h"
 #include "stack_trace.h"
+
 #include <cstdlib>
 #include <dlfcn.h>
 #include <string>
@@ -14,7 +17,6 @@
 #include <gc.h>
 #undef GC_THREADS
 
-#include "native.h"
 
 static constexpr bool kDebug = false;
 

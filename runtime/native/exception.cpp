@@ -65,6 +65,7 @@ void Polyglot_jlang_runtime_Exceptions_throwNewThrowable__Ljava_lang_Class_2Ljav
     jclass clazz, jstring str);
 void Polyglot_jlang_runtime_Exceptions_throwThrowable__Ljava_lang_Throwable_2(
     jthrowable obj);
+void Polyglot_jlang_runtime_Exceptions_throwInterruptedException__();
 // A distinct integer identifying our own exceptions.
 const uint64_t javaExceptionClass = 8101813523428701805ll;
 
@@ -519,4 +520,8 @@ void throwNewThrowable(JNIEnv *env, jclass clazz, const char *msg) {
 void throwThrowable(JNIEnv *env, jthrowable obj) {
     Polyglot_jlang_runtime_Exceptions_throwThrowable__Ljava_lang_Throwable_2(
         obj);
+}
+
+void throwInterruptedException(JNIEnv *env) {
+    Polyglot_jlang_runtime_Exceptions_throwInterruptedException__();
 }

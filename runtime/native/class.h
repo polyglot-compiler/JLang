@@ -64,7 +64,7 @@ struct JavaClassInfo {
     char *name;
     jclass *super_ptr;
     void *cdv;        // is a DispatchVector*
-    int32_t obj_size; // for array, it does not include data_size
+    int64_t obj_size; // for array, it does not include data_size
 
     jboolean isIntf;
 
@@ -117,6 +117,10 @@ const std::pair<JavaMethodInfo *, int32_t>
 GetJavaStaticMethodInfo(jclass cls, const char *name, const char *sig);
 
 jclass LoadJavaClassFromLib(const char *name);
+
+jclass FindClass(const char *name);
+
+jclass FindClassFromPathName(const char *name);
 
 bool isArrayClassName(const char *name);
 

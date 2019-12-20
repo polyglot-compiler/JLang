@@ -2,14 +2,19 @@
 
 #include <functional>
 #include <jvm.h>
-#include <pthread.h>
 #include <unordered_map>
+#include <pthread.h>
+
+#define GC_THREADS
+#include <gc.h>
+#undef GC_THREADS
 
 extern thread_local jobject currentThread;
 
 struct NativeThread {
     pthread_t tid;
     bool threadStatus;
+    bool interrupted;
 };
 
 class Threads {

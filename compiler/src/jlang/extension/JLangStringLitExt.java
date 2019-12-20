@@ -61,8 +61,9 @@ public class JLangStringLitExt extends JLangExt {
         LLVMSetInitializer(stringLit, charArray);
 
         LLVMValueRef dvString = v.dv.getDispatchVectorFor(v.ts.String());
+
         LLVMValueRef[] stringLitBody =
-                Stream.of(dvString, sync_vars, LLVMConstBitCast(stringLit, v.utils.toLL(arrayType)), LLVMConstInt(v.utils.intType(16), 0, 0))
+                Stream.of(dvString, sync_vars, LLVMConstBitCast(stringLit, v.utils.toLL(arrayType)))
                         .toArray(LLVMValueRef[]::new);
 
         LLVMValueRef string = v.utils.buildConstStruct(stringLitBody);

@@ -132,50 +132,6 @@ public class ConcurrentReflection {
                 output.add(fld.getModifiers());
                 output.add(fld.getType());
                 output.add(fld.get(aaa));
-                // TODO fix something with generics
-                // output.add(fld.getGenericType());
-
-                if (fld.getName().equals("a")) {
-                    fld.setInt(aaa, 123412);
-                } else if (fld.getName().equals("bb")) {
-                    fld.setBoolean(aaa, true);
-                } else if (fld.getName().equals("cc")) {
-                    fld.setShort(aaa, new Short((short)17));
-                    fld.set(aaa, new Short((short)34));
-                } else if (fld.getName().equals("ff")) {
-                    fld.setFloat(aaa, 0.3432f);
-                } else if (fld.getName().equals("d")) {
-                    fld.set(aaa, new Double(1234544.92));
-                } else if (fld.getName().equals("j")) {
-                    fld.setByte(aaa, (byte) 11);
-                } else if (fld.getName().equals("ll")) {
-                    fld.setLong(aaa, 12998769931L);
-                } else if (fld.getName().equals("ch")) {
-                    fld.setChar(aaa, 'h');
-                }
-
-                // should work with static arguments as well
-                if (fld.getName().equals("b")) {
-                    fld.set(aaa, 5533);
-                } else if (fld.getName().equals("ss")) {
-                    fld.set(aaa, "ABCD");
-                } else if (fld.getName().equals("ii")) {
-                    fld.setInt(aaa, 88991);
-                } else if (fld.getName().equals("sb")) {
-                    fld.setBoolean(aaa, true);
-                } else if (fld.getName().equals("sc")) {
-                    fld.setChar(aaa, 'o');
-                } else if (fld.getName().equals("sby")) {
-                    fld.setByte(aaa, (byte) 55);
-                } else if (fld.getName().equals("ssh")) {
-                    fld.setShort(aaa, (short) 1351);
-                } else if (fld.getName().equals("sf")) {
-                    fld.setFloat(aaa, 998.43211f);
-                } else if (fld.getName().equals("sd")) {
-                    fld.setDouble(aaa, 10985373.12312414);
-                } else if (fld.getName().equals("sl")) {
-                    fld.setLong(aaa, 1L);
-                }
             }
 
             output.add(aaa.a);
@@ -240,12 +196,10 @@ public class ConcurrentReflection {
         @Override
         public void run() {
             try {
-                for (int i = 0; i < 5; i++) {
-                    ClassReflection.run(output);
-                    MethodReflection.run(output);
-                    FieldReflection.run(output);
-                    PrimitiveReflection.run(output);
-                }
+                ClassReflection.run(output);
+                MethodReflection.run(output);
+                FieldReflection.run(output);
+                PrimitiveReflection.run(output);
             } catch (Exception e) {
                 e.printStackTrace();
             }

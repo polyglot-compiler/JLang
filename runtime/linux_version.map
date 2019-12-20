@@ -19,6 +19,7 @@ SUNWprivate_1.1 {
 		__createInterfaceTables;
 		__java_personality_v0;
 		__GC_malloc;
+        getGlobalMutexObject;
         local:
 	        *;
 };
