@@ -23,7 +23,7 @@ Status
 
 JLang currently supports all Java 7 language features, except concurrency and some reflection support. This includes expressions, control flow, exceptions, method dispatch, switch statements, try-with-resources, initializer blocks, implicit type conversions, etc. OpenJDK 7 support is still a work in progress but enough is supported for many standard use cases (such as printing and accessing files).
 
-All unit tests currently pass with OpenJDK 7, except for a number of advanced reflection features, primarily related to generics and array types.
+All unit tests currently pass with OpenJDK 7, except for a number of advanced reflection features, primarily related to generics types.
 
 See the [README](https://github.com/polyglot-compiler/JLang) in the repository for the most up-to-date status.
 
