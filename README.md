@@ -58,18 +58,16 @@ High-level project structure
 
 - [lib](lib) contains Polyglot (the frontend for JLang); a fork of [JavaCPP Presets](https://github.com/bytedeco/javacpp-presets) to generate Java stubs from LLVM headers; and various supporting `.jar` files.
 
-- [examples](examples) contains full Java 7 projects which can be compiled with JLang and executed. Currently, we have included only the CUP parser generator, which can be built with the `make cup` command in the top-level JLang dirctory and is executable with the script [cup.sh](examples/cup/bin/cup.sh).
+- [examples](examples) contains full Java 7 projects which can be compiled with JLang and executed. Currently, we have included only the CUP parser generator, which can be built with the `make cup` command in the top-level JLang directory and is executable with the script [cup.sh](examples/cup/bin/cup.sh).
 
-Status (August 2018)
+Status (December 2019)
 -----------------
 
-All translations from Java to LLVM IR are complete, with the exception of the `synchronized` keyword (see below on concurrency support). This means that all Java 7 language features---expressions, control flow, exceptions, method dispatch, switch statements, try-with-resources, initializer blocks, implicit type conversions, etc.---are translated robustly and as specified by the [JLS](https://docs.oracle.com/javase/specs/jls/se7/html/index.html). All of our [unit tests](tests/isolated) pass.
+All translations from Java to LLVM IR are complete. This means that all Java 7 language features---expressions, control flow, exceptions, method dispatch, switch statements, try-with-resources, initializer blocks, implicit type conversions, etc.---are translated robustly and as specified by the [JLS](https://docs.oracle.com/javase/specs/jls/se7/html/index.html). All of our [unit tests](tests/isolated) pass.
 
 However, JLang is still a work in progress for two important reasons.
 
-(1) Full JDK support & Reflection. The JDK includes thousands of classes that are critical to the Java ecosystem, such as `java.lang.Class`, `java.util.ArrayList`, `java.io.File`, and `java.net.Socket`. Thus it is important to be able to compile programs that rely on the JDK. So far we can fully support a hand-written "bare-bones" JDK that includes only the JDK classes that are necessary for unit tests (`java.lang.Object`, `java.lang.Class`, `java.lang.System`, etc.). We have also supported a large number of JVM features such that many operations in the JDK are supported. Many features are still missing, but most of them have analogues that are already implemented, which means that completing these features should be straightforward. The main feature we are missing is full Reflection support; most reflection methods beyond `Class.forName(String name)` are unimplemented. For more details see: [issue #18](https://github.com/polyglot-compiler/JLang/issues/18).
-
-(2) Concurrency support. Support for multiple threads and synchronization has not been started, as JDK support took priority. JLang will ignore the Java `synchronized` keyword, and the [native runtime code](runtime/native) is generally not thread-safe. Please see [issue #1](https://github.com/polyglot-compiler/JLang/issues/1) for more information.
+(1) Full JDK support & Reflection. The JDK includes thousands of classes that are critical to the Java ecosystem, such as `java.lang.Class`, `java.util.ArrayList`, `java.io.File`, and `java.net.Socket`. Thus it is important to be able to compile programs that rely on the JDK. So far we can fully support a hand-written "bare-bones" JDK that includes only the JDK classes that are necessary for unit tests (`java.lang.Object`, `java.lang.Class`, `java.lang.System`, etc.). We have also supported a large number of JVM features such that many operations in the JDK are supported. Many features are still missing, but most of them have analogues that are already implemented, which means that completing these features should be straightforward. Although there are still some reflection methods which are not supported yet, most commonly used reflection methods such as class reflection, field reflection, method reflection, and etc. For more details see: [issue #18](https://github.com/polyglot-compiler/JLang/issues/18).
 
 All other loose ends (minor bugs, build system issues, etc.) are tracked as GitHub issues as well. If you would like to contribute, please read through all of these tracked issues carefully!
 
