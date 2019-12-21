@@ -359,6 +359,8 @@ If you have a JLang-compiled executable that crashes at runtime, the first
 thing to do is use `lldb` or `gdb`. With `lldb` you can find exactly where the program
 crashes, and see the source code that corresponds to each stack frame.
 
+It is also possible to debug the program in vscode. Install the [Native Debug](https://marketplace.visualstudio.com/items?itemName=webfreak.debug) plugin and config it to use `lldb` or `gdb`. A sample `gdb` config is provided in `.vscode/launch.json`.
+
 Once you find where the program is crashing, it's usually helpful to find
 the corresponding LLVM IR (within the `.ll` files corresponding to the
 Java class of interest).
