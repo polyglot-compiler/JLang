@@ -4,6 +4,7 @@
 
 #include "reflect.h"
 #include "stack_trace.h"
+#include "threads.h"
 
 #include <cstdio>
 #include <cstring>
@@ -95,10 +96,16 @@ _Unwind_Exception *createUnwindException(jobject jexception) {
 void throwUnwindException(_Unwind_Exception *exception) {
     _Unwind_RaiseException(exception);
     fprintf(stderr, "- - - - - - - - - - - - - - - - - -\n"
-                    "Aborting due to uncaught exception.\n"
-                    "- - - - - - - - - - - - - - - - - -\n");
+                    "Aborting due to uncaught exception.\n");
     DumpStackTrace();
-    fflush(stderr);
+    fprintf(stderr, "- - - - - - - - - - - - - - - - - -\n");
+    fflush(stderr); 
+
+    if (currentThread == GetMainThread()) {
+        // make sure all non-daemon threads exit before abort
+        Threads::Instance().join();
+    }
+
     abort();
 }
 
