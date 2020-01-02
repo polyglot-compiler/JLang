@@ -65,7 +65,6 @@ Status (December 2019)
 
 All translations from Java to LLVM IR are complete. This means that all Java 7 language features---expressions, control flow, exceptions, method dispatch, switch statements, try-with-resources, initializer blocks, implicit type conversions, etc.---are translated robustly and as specified by the [JLS](https://docs.oracle.com/javase/specs/jls/se7/html/index.html). 
 
-All unit tests currently pass with OpenJDK 7, except for a number of advanced reflection features, primarily related to generics types.
+All unit tests currently pass with OpenJDK 7, except for a number of advanced reflection features, primarily related to generic types.
 
-All other loose ends (minor bugs, build system issues, etc.) are tracked as GitHub issues as well. If you would like to contribute, please read through all of these tracked issues carefully!
-
+All other loose ends (minor bugs, build system issues, etc.) are tracked as GitHub issues as well. If you would like to contribute, please read through these tracked issues to find a feature to add or a bug to fix!

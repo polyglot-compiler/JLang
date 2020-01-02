@@ -390,7 +390,7 @@ jint JVM_CountStackFrames(JNIEnv *env, jobject thread) {
 }
 
 void JVM_Interrupt(JNIEnv *env, jobject thread) {
-    // Cooperative threading model is used for now, so this function does not
+    // This is not a true scheduling primitive, so this function does not
     // acutally "interrupt" a thread. It only sets a boolean variable so that
     // the other thread could detect it.
     Threads::Instance().threads[thread].interrupted = true;

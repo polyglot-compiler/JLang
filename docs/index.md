@@ -21,9 +21,9 @@ To be more concrete, here's what Polyglot + JLang will allow you to do:
 Status
 ------
 
-JLang currently supports all Java 7 language features, except concurrency and some reflection support. This includes expressions, control flow, exceptions, method dispatch, switch statements, try-with-resources, initializer blocks, implicit type conversions, etc. OpenJDK 7 support is still a work in progress but enough is supported for many standard use cases (such as printing and accessing files).
+JLang currently supports all Java 7 language features, except for some reflection support. This includes expressions, control flow, exceptions, method dispatch, switch statements, try-with-resources, initializer blocks, implicit type conversions, etc. OpenJDK 7 support is still a work in progress but enough is supported for many standard use cases (such as printing and accessing files).
 
-All unit tests currently pass with OpenJDK 7, except for a number of advanced reflection features, primarily related to generics types.
+All unit tests currently pass with OpenJDK 7, except for a number of advanced reflection features, primarily related to generic types.
 
 See the [README](https://github.com/polyglot-compiler/JLang) in the repository for the most up-to-date status.
 
@@ -33,4 +33,3 @@ Contributing
 If you would like to contribute to JLang, you should fork the repo and create a new branch whose name is related to the [issue](https://github.com/polyglot-compiler/JLang/issues) that you would like to address. You can submit a pull-request in order to have your changes mreged.
 
 If you are interested in becoming more involved in JLang as, please follow and communicate via the <a href="mailto:{{ site.contact }}">jlang users list </a> for more information, discussion and updates. To subscribe the mailing list, fill out the subscription form on the [Contact Us](contact-us.html) page.
-

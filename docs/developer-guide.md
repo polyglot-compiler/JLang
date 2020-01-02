@@ -345,9 +345,9 @@ Some AST extensions are unneeded, either because they do not require a translati
 Concurrency and Synchronization
 -------------------------------
 
-Every Java thread is backed by a native thread (`pthread`) after it starts. Unlike HotSpot JVM, there is no JVM thread or runtime thread in our implementation. The Java main thread is run by the native main thread. In order to know which Java thread the current native thread is running, the current thread Java object is stored as a `thread_local` object in the runtime.
+Every Java thread is backed by a native thread (`pthread`) after it starts. Unlike HotSpot JVM, there is no JVM thread or runtime thread in our implementation. The Java main Thread is run by the native main thread. In order to know which Java Thread is currently executing, the current Java Thread object is stored as a [`thread_local`](https://en.cppreference.com/w/cpp/keyword/thread_local) variable in the runtime.
 
-Synchronization is also implemented by `pthread` primitives. Every object stores a pointer to synchronization variables which contain `pthread` mutex and condition variable primitives. These variables are used to implement `synchronized`, `notify`, `wait`, and etc. In addition, Java `synchronized` code block is translated into a try-finally block to make sure the monitor always exits.
+Synchronization is also implemented by `pthread` primitives. Every object stores a pointer to synchronization variables which contain `pthread` mutex and condition variable primitives. These variables are used to implement `synchronized`, `notify`, `wait`, etc. In addition, Java `synchronized` code blocks are translated into try-finally blocks to make sure the acquired monitor is always released.
 
 To have the garbage collector work correctly in multi-threaded code, we define a macro variable `GC_THREADS` before including `gc.h` but after `pthread.h`, as its [documentation](https://github.com/ivmai/bdwgc/blob/master/doc/gcinterface.md) specifies. Note that `gc.h` must be included after `pthread.h` even if functions in `gc.h` are not used in the current source file.
 
