@@ -225,7 +225,7 @@ used by native code to work with Java objects.
 
 A Java object currently looks like this:
 - Dispatch vector pointer
-- Pointer reserved for concurrency support (e.g., object monitors)
+- Pointer to synchornization variables (e.g., mutex, condition variable)
 - Field 1
 - Field 2
 - ...
@@ -345,7 +345,11 @@ Some AST extensions are unneeded, either because they do not require a translati
 Concurrency and Synchronization
 -------------------------------
 
-To have the garbage collector work correctly in multi-threaded code, we need to define a macro variable `GC_THREADS` before including `gc.h` but after `pthreads.h`, as its [documentation](https://github.com/ivmai/bdwgc/blob/master/doc/gcinterface.md) specifies.
+Every Java thread is backed by a native thread (`pthread`) after it starts. Unlike HotSpot JVM, there is no JVM thread or runtime thread in our implementation. The Java main Thread is run by the native main thread. In order to know which Java Thread is currently executing, the current Java Thread object is stored as a [`thread_local`](https://en.cppreference.com/w/cpp/keyword/thread_local) variable in the runtime.
+
+Synchronization is also implemented by `pthread` primitives. Every object stores a pointer to synchronization variables which contain `pthread` mutex and condition variable primitives. These variables are used to implement `synchronized`, `notify`, `wait`, etc. In addition, Java `synchronized` code blocks are translated into try-finally blocks to make sure the acquired monitor is always released.
+
+To have the garbage collector work correctly in multi-threaded code, we define a macro variable `GC_THREADS` before including `gc.h` but after `pthread.h`, as its [documentation](https://github.com/ivmai/bdwgc/blob/master/doc/gcinterface.md) specifies. Note that `gc.h` must be included after `pthread.h` even if functions in `gc.h` are not used in the current source file.
 
 
 Debugging Tips
@@ -354,6 +358,8 @@ Debugging Tips
 If you have a JLang-compiled executable that crashes at runtime, the first
 thing to do is use `lldb` or `gdb`. With `lldb` you can find exactly where the program
 crashes, and see the source code that corresponds to each stack frame.
+
+It is also possible to debug the program in vscode. Install the [Native Debug](https://marketplace.visualstudio.com/items?itemName=webfreak.debug) plugin and config it to use `lldb` or `gdb`. A sample `gdb` config is provided in `.vscode/launch.json`.
 
 Once you find where the program is crashing, it's usually helpful to find
 the corresponding LLVM IR (within the `.ll` files corresponding to the

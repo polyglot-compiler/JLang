@@ -5,14 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "lldb",
+            "type": "gdb",
             "request": "launch",
-            "name": "Debug",
-            "program": "${workspaceFolder}/playground/src/Sync.o",
-            "args": [],
-            "cwd": "${workspaceFolder}",
+            "name": "Launch Program",
+            "target": "./program.o",
+            "cwd": "${workspaceRoot}",
+            "valuesFormatting": "parseText",
             "env": {"JAVA_HOME": "/usr/lib/jvm/jdk1.7.0_80"},
-            "terminal": "console"
+            "autorun": ["handle SIGPWR nostop noprint", "handle SIGXCPU nostop noprint"]
         }
     ]
 }
