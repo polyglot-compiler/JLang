@@ -33,3 +33,14 @@ Contributing
 If you would like to contribute to JLang, you should fork the repo and create a new branch whose name is related to the [issue](https://github.com/polyglot-compiler/JLang/issues) that you would like to address. You can submit a pull-request in order to have your changes mreged.
 
 If you are interested in becoming more involved in JLang as, please follow and communicate via the <a href="mailto:{{ site.contact }}">jlang users list </a> for more information, discussion and updates. To subscribe the mailing list, fill out the subscription form on the [Contact Us](contact-us.html) page.
+
+Current and Past Contributors
+---------------
+
+- Daniel Donenfeld
+- Matthew Gharrity
+- Yiteng Guo
+- Andrew Myers
+- Daniel Weber
+- Drew Zagieboylo
+- Yizhou Zhang
