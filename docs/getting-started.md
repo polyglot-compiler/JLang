@@ -16,7 +16,7 @@ Installation
 
 Note: _JLang is not yet tested or built for use on Windows._
 
-Clone the [repo](https://github.com/polyglot-compiler/JLang) and build using the "Quick start guide" section of the [README](https://github.com/polyglot-compiler/JLang/blob/master/README.md).
+Clone [the repo](https://github.com/polyglot-compiler/JLang) and build using the "Quick start guide" section of the [README](https://github.com/polyglot-compiler/JLang/blob/master/README.md).
 
 Dependencies
 ----------------
