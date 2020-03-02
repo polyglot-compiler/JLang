@@ -4,6 +4,9 @@ kramdown:
 project: "JLang"
 contact: jlang-users-l@cornell.edu
 contact-join: jlang-users-l-request@cornell.edu
+update-month: March
+update-year: 2020
+update-date: 3-1-2020
 
 github:
   url: https://github.com/polyglot-compiler/JLang

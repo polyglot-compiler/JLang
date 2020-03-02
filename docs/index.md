@@ -25,7 +25,7 @@ JLang currently supports all Java 7 language features, except for some reflectio
 
 All unit tests currently pass with OpenJDK 7, except for a number of advanced reflection features, primarily related to generic types.
 
-See the [README](https://github.com/polyglot-compiler/JLang) in the repository for the most up-to-date status.
+See the [README](https://github.com/polyglot-compiler/JLang) in the repository and the [Relase Notes](https://github.com/polyglot-compiler/JLang/releases) for the most up-to-date status.
 
 
 Contributing

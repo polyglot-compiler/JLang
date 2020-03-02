@@ -3,7 +3,7 @@ title: "Developer Guide"
 layout: default
 ---
 
-This document is up to date as of December 2018.
+This document is up to date as of {{ site.update-month }} {{ site.update-year }}.
 
 Contents
 --------
