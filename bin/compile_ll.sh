@@ -32,7 +32,7 @@ else
 fi
 
 OBJ_NAME=$(echo "$1" | cut -f 1 -d '.')".o"
-"$CLANG" -Wno-override-module -lgc -g -L"$BASE_DIR"/runtime/out -ljvm -L"$JDK"/out -ljdk -Wl,-rpath,"$JDK7_LIB" -Wl,-rpath,"$JDK"/out -Wl,-rpath,"$BASE_DIR"/runtime/out -rdynamic -o "$OBJ_NAME" "$ARGS"
+"$CLANG" -Wno-override-module -lgc -g -L"$BASE_DIR"/runtime/out -ljvm -L"$JDK"/out -ljdk -Wl,-rpath,"$JDK7_LIB" -Wl,-rpath,"$JDK"/out -Wl,-rpath,"$BASE_DIR"/runtime/out -rdynamic -o "$OBJ_NAME" $ARGS
 
 printf "Wrote compiled binary to $OBJ_NAME\n"
 
